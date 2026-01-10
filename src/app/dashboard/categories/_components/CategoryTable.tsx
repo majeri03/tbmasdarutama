@@ -1,5 +1,5 @@
 "use client";
-
+import React from "react";
 import { useState } from "react";
 import { Search, Edit, Trash2, FolderTree, Calendar, Loader2, ChevronDown, ChevronRight, Package } from "lucide-react";
 import { format } from "date-fns";
@@ -187,7 +187,7 @@ export function CategoryTable({
                     const hasSubCategories = category._count.subCategories > 0;
 
                     return (
-                      <>
+                      <React.Fragment key={category.id}>
                         <tr
                           key={category.id}
                           className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${
@@ -296,7 +296,7 @@ export function CategoryTable({
                             </td>
                           </tr>
                         )}
-                      </>
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
