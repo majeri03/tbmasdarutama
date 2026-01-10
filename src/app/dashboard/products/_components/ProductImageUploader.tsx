@@ -12,30 +12,30 @@ interface ProductImageForm {
 interface ProductImageUploaderProps {
   images: ProductImageForm[];
   onChange: (images: ProductImageForm[]) => void;
-  error?: string;
   maxImages?: number;
 }
 
 export function ProductImageUploader({
   images,
   onChange,
-  error,
   maxImages = 5,
 }: ProductImageUploaderProps) {
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadError, setUploadError] = useState<string>("");
 
   const handleFileSelect = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
     // Check max images
     if (images.length + files.length > maxImages) {
-      alert(`Maksimal ${maxImages} gambar!`);
+      setUploadError(`Maksimal ${maxImages} gambar!`); // ✅ USE STATE
       return;
     }
 
     setUploading(true);
+    setUploadError(""); // ✅ CLEAR ERROR
 
     try {
       const newImages: ProductImageForm[] = [];
@@ -45,37 +45,45 @@ export function ProductImageUploader({
 
         // Validate file type
         if (!file.type.startsWith("image/")) {
-          alert(`File ${file.name} bukan gambar!`);
+          setUploadError(`File ${file.name} bukan gambar!`); // ✅ USE STATE
           continue;
         }
 
-        // Validate file size (max 2MB)
-        if (file.size > 2 * 1024 * 1024) {
-          alert(`File ${file.name} terlalu besar! Maksimal 2MB.`);
+        // Validate file size (max 5MB)
+        const maxSize = 5 * 1024 * 1024;
+        if (file.size > maxSize) {
+          setUploadError(`File ${file.name} terlalu besar! Maksimal 5MB.`); // ✅ USE STATE
           continue;
         }
 
-        // Convert to base64 for preview (temporary)
-        const reader = new FileReader();
-        const base64Promise = new Promise<string>((resolve) => {
-          reader.onloadend = () => {
-            resolve(reader.result as string);
-          };
-          reader.readAsDataURL(file);
+        // ✅ Upload to Cloudflare R2 via API
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const uploadResponse = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
         });
 
-        const base64 = await base64Promise;
+        if (!uploadResponse.ok) {
+          const error = await uploadResponse.json();
+          throw new Error(error.error || `Failed to upload ${file.name}`);
+        }
+
+        const uploadResult = await uploadResponse.json();
 
         newImages.push({
-          imageUrl: base64,
-          isPrimary: images.length === 0 && i === 0, // First image is primary
+          imageUrl: uploadResult.url,
+          isPrimary: images.length === 0 && i === 0,
         });
       }
 
       onChange([...images, ...newImages]);
+      setUploadError(""); // ✅ CLEAR ERROR ON SUCCESS
     } catch (error) {
       console.error("Error uploading images:", error);
-      alert("Gagal mengupload gambar!");
+      const errorMessage = error instanceof Error ? error.message : "Gagal mengupload gambar!";
+      setUploadError(errorMessage); // ✅ USE STATE
     } finally {
       setUploading(false);
     }
@@ -125,11 +133,10 @@ export function ProductImageUploader({
     <div className="space-y-4">
       {/* Upload Area */}
       <div
-        className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
-          dragActive
-            ? "border-blue-500 bg-blue-50"
-            : "border-gray-300 bg-gray-50 hover:bg-gray-100"
-        } ${images.length >= maxImages ? "opacity-50 pointer-events-none" : ""}`}
+        className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-colors ${dragActive
+          ? "border-blue-500 bg-blue-50"
+          : "border-gray-300 bg-gray-50 hover:bg-gray-100"
+          } ${images.length >= maxImages ? "opacity-50 pointer-events-none" : ""}`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
@@ -189,9 +196,8 @@ export function ProductImageUploader({
             {images.map((image, index) => (
               <div
                 key={index}
-                className={`relative group rounded-lg overflow-hidden border-2 ${
-                  image.isPrimary ? "border-blue-500" : "border-gray-200"
-                }`}
+                className={`relative group rounded-lg overflow-hidden border-2 ${image.isPrimary ? "border-blue-500" : "border-gray-200"
+                  }`}
               >
                 {/* Image */}
                 <div className="relative aspect-square bg-gray-100">
@@ -209,17 +215,15 @@ export function ProductImageUploader({
                   <button
                     type="button"
                     onClick={() => handleSetPrimary(index)}
-                    className={`p-2 rounded-full transition-all opacity-0 group-hover:opacity-100 ${
-                      image.isPrimary
-                        ? "bg-blue-600 text-white"
-                        : "bg-white/90 text-gray-700 hover:bg-white"
-                    }`}
+                    className={`p-2 rounded-full transition-all opacity-0 group-hover:opacity-100 ${image.isPrimary
+                      ? "bg-blue-600 text-white"
+                      : "bg-white/90 text-gray-700 hover:bg-white"
+                      }`}
                     title={image.isPrimary ? "Gambar utama" : "Jadikan utama"}
                   >
                     <Star
-                      className={`w-4 h-4 ${
-                        image.isPrimary ? "fill-current" : ""
-                      }`}
+                      className={`w-4 h-4 ${image.isPrimary ? "fill-current" : ""
+                        }`}
                     />
                   </button>
                   <button
@@ -271,11 +275,21 @@ export function ProductImageUploader({
         </div>
       )}
 
+      {/* Upload Error */}
       {/* Error Message */}
-      {error && (
-        <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200">
+      {uploadError && (
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 animate-slide-down">
           <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-red-600">{error}</p>
+          <div className="flex-1">
+            <p className="text-sm text-red-600">{uploadError}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setUploadError("")}
+            className="text-red-600 hover:text-red-700"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
