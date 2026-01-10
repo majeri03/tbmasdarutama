@@ -149,7 +149,15 @@
       0 2px 8px rgba(0, 0, 0, 0.05),
       inset 0 1px 0 rgba(255, 255, 255, 0.9);
   }
+  .btn-danger {
+    @apply flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+  }
 
+  .btn-danger:hover:not(:disabled) {
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+  }
   .btn-secondary:hover {
     background: rgba(255, 255, 255, 0.8);
     box-shadow: 

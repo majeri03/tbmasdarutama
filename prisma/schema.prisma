@@ -98,7 +98,7 @@ model Supplier {
   // Relations
   purchases      Purchase[]
   supplierDebts  SupplierDebt[]
-  
+  products    Product[] 
   @@map("suppliers")
 }
 
@@ -121,6 +121,7 @@ model Product {
   // Relations
   category      Category     @relation(fields: [categoryId], references: [id])
   subCategory   SubCategory? @relation(fields: [subCategoryId], references: [id])
+  supplier       Supplier?     @relation(fields: [supplierId], references: [id])
   productUnits  ProductUnit[]
   productImages ProductImage[]
   saleItems     SaleItem[]
