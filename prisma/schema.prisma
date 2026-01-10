@@ -115,6 +115,8 @@ model Product {
   minStock      Int      @default(0)
   currentStock  Int      @default(0)
   isActive      Boolean  @default(true)
+  deletedAt DateTime?
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   
@@ -128,6 +130,9 @@ model Product {
   purchaseItems PurchaseItem[]
   stockMovements StockMovement[]
   
+  @@index([categoryId])
+  @@index([supplierId])
+  @@index([deletedAt])
   @@map("products")
 }
 

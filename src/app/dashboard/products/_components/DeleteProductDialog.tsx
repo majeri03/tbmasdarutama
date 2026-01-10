@@ -79,7 +79,8 @@ export function DeleteProductDialog({
             {" "}(<span className="font-mono text-xs">{product.code}</span>)?
           </p>
           <p className="text-xs text-red-600 mt-2 font-semibold">
-            ⚠️ Semua satuan, gambar, dan riwayat stok akan ikut terhapus!
+            Produk ini akan dinonaktifkan dan disembunyikan dari daftar.
+            Data tetap tersimpan dan bisa direstore jika diperlukan.
           </p>
         </div>
 

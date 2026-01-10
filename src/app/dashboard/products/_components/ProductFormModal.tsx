@@ -4,10 +4,11 @@ import { useState, useEffect } from "react";
 import { X, Loader2, Package, DollarSign, Image as ImageIcon, ChevronRight, ChevronLeft } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createProductSchema, UpdateProductInput, updateProductSchema, type CreateProductInput } from "@/lib/validations/product.schema";
+import { UpdateProductInput, type CreateProductInput } from "@/lib/validations/product.schema";
 import { createProduct, updateProduct } from "@/lib/actions/product.actions";
 import { ProductUnitManager } from "./ProductUnitManager";
 import { ProductImageUploader } from "./ProductImageUploader";
+import z from "zod";
 
 interface Category {
   id: string;
@@ -94,6 +95,16 @@ type ProductFormData = {
   units?: ProductUnit[];
   images?: ProductImage[];
 };
+const basicInfoSchema = z.object({
+  name: z.string().min(1, "Nama produk wajib diisi"),
+  barcode: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
+  categoryId: z.string().min(1, "Kategori wajib dipilih"),
+  subCategoryId: z.string().optional().nullable(),
+  supplierId: z.string().optional().nullable(),
+  minStock: z.number().min(0, "Minimum stok tidak boleh negatif"),
+  isActive: z.boolean().default(true),
+});
 export function ProductFormModal({
   mode,
   product,
@@ -118,7 +129,8 @@ export function ProductFormModal({
     setValue,
     formState: { errors },
   } = useForm({
-    resolver: zodResolver(mode === "create" ? createProductSchema : updateProductSchema),
+    resolver: zodResolver(basicInfoSchema), // ✅ Validasi step 1
+    mode: "onChange",
     defaultValues: mode === "edit" && product ? {
       name: product.name,
       barcode: product.barcode || "",
@@ -139,7 +151,8 @@ export function ProductFormModal({
       isActive: true,
     },
   });
-
+  // ✅ Validation error state
+  const [validationError, setValidationError] = useState<string>("");
   const selectedCategoryId = watch("categoryId");
 
   // Initialize units and images for edit mode
@@ -174,7 +187,7 @@ export function ProductFormModal({
         (sub) => sub.categoryId === selectedCategoryId
       );
       setFilteredSubCategories(filtered);
-      
+
       // Reset subCategoryId if not in filtered list
       const currentSubCategoryId = watch("subCategoryId");
       if (currentSubCategoryId && !filtered.find(s => s.id === currentSubCategoryId)) {
@@ -187,9 +200,19 @@ export function ProductFormModal({
   }, [selectedCategoryId, subCategories, setValue, watch]);
 
   const onSubmit = async (data: ProductFormData) => {
-    // Validate units
-    if (formUnits.length === 0) {
-      onError("Minimal harus ada 1 satuan!");
+    setValidationError("");
+
+    // ✅ Final validation (images)
+    if (formImages.length > 5) {
+      setValidationError("Maksimal 5 gambar!");
+      onError("Maksimal 5 gambar!");
+      return;
+    }
+
+    const primaryImages = formImages.filter(img => img.isPrimary);
+    if (primaryImages.length > 1) {
+      setValidationError("Hanya boleh ada 1 gambar utama!");
+      onError("Hanya boleh ada 1 gambar utama!");
       return;
     }
 
@@ -228,14 +251,43 @@ export function ProductFormModal({
     }
   };
 
-  const handleNext = () => {
+  const handleNext = (e?: React.MouseEvent<HTMLButtonElement>) => {
+    e?.preventDefault(); // ✅ TAMBAHKAN ini
+    e?.stopPropagation(); // ✅ TAMBAHKAN ini
+
+    setValidationError(""); // Clear previous error
+
     if (currentStep === "basic") {
+      // Step 1 validation sudah di-handle oleh Zod
       setCurrentStep("units");
     } else if (currentStep === "units") {
+      // ✅ Validate units manually
       if (formUnits.length === 0) {
-        onError("Minimal harus ada 1 satuan sebelum lanjut!");
+        setValidationError("Minimal harus ada 1 satuan!");
+        onError("Minimal harus ada 1 satuan!");
         return;
       }
+
+      const primaryUnits = formUnits.filter(u => u.isPrimary);
+      if (primaryUnits.length !== 1) {
+        setValidationError("Harus ada tepat 1 satuan utama!");
+        onError("Harus ada tepat 1 satuan utama!");
+        return;
+      }
+
+      if (primaryUnits[0].conversionValue !== 1) {
+        setValidationError("Satuan utama harus memiliki konversi = 1!");
+        onError("Satuan utama harus memiliki konversi = 1!");
+        return;
+      }
+
+      const invalidPrices = formUnits.filter(u => u.sellPrice < u.buyPrice);
+      if (invalidPrices.length > 0) {
+        setValidationError("Harga jual harus lebih besar atau sama dengan harga beli!");
+        onError("Harga jual harus lebih besar atau sama dengan harga beli!");
+        return;
+      }
+
       setCurrentStep("images");
     }
   };
@@ -292,29 +344,26 @@ export function ProductFormModal({
                 <div key={step.id} className="flex items-center flex-1">
                   <div className="flex flex-col items-center flex-1">
                     <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                        isActive
-                          ? "bg-blue-600 text-white scale-110"
-                          : isCompleted
+                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isActive
+                        ? "bg-blue-600 text-white scale-110"
+                        : isCompleted
                           ? "bg-green-600 text-white"
                           : "bg-gray-200 text-gray-500"
-                      }`}
+                        }`}
                     >
                       <StepIcon className="w-5 h-5" />
                     </div>
                     <span
-                      className={`text-xs font-semibold mt-2 ${
-                        isActive ? "text-blue-600" : isCompleted ? "text-green-600" : "text-gray-500"
-                      }`}
+                      className={`text-xs font-semibold mt-2 ${isActive ? "text-blue-600" : isCompleted ? "text-green-600" : "text-gray-500"
+                        }`}
                     >
                       {step.label}
                     </span>
                   </div>
                   {index < steps.length - 1 && (
                     <div
-                      className={`h-1 flex-1 mx-2 rounded transition-all ${
-                        isCompleted ? "bg-green-600" : "bg-gray-200"
-                      }`}
+                      className={`h-1 flex-1 mx-2 rounded transition-all ${isCompleted ? "bg-green-600" : "bg-gray-200"
+                        }`}
                     />
                   )}
                 </div>
@@ -466,11 +515,15 @@ export function ProductFormModal({
             {/* Step 2: Units & Prices */}
             {currentStep === "units" && (
               <div className="animate-slide-up">
+                {validationError && ( // ✅ TAMBAHKAN INI
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                    {validationError}
+                  </div>
+                )}
                 <ProductUnitManager
                   units={formUnits}
                   availableUnits={units}
                   onChange={setFormUnits}
-                  error={errors.units?.message}
                 />
               </div>
             )}
@@ -478,10 +531,14 @@ export function ProductFormModal({
             {/* Step 3: Images */}
             {currentStep === "images" && (
               <div className="animate-slide-up">
+                {validationError && ( // ✅ TAMBAHKAN INI
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                    {validationError}
+                  </div>
+                )}
                 <ProductImageUploader
                   images={formImages}
                   onChange={setFormImages}
-                  error={errors.images?.message}
                 />
               </div>
             )}
@@ -516,7 +573,11 @@ export function ProductFormModal({
               {currentStep !== "images" ? (
                 <button
                   type="button"
-                  onClick={handleNext}
+                  onClick={(e) => {
+                    e.preventDefault(); // ✅ TAMBAHKAN
+                    e.stopPropagation(); // ✅ TAMBAHKAN
+                    handleNext();
+                  }}
                   disabled={loading}
                   className="btn-primary"
                 >

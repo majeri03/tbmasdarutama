@@ -9,6 +9,7 @@ import {
   type CreateProductInput,
   type UpdateProductInput,
 } from "@/lib/validations/product.schema";
+import { auth } from "../auth";
 
 // ==================== GENERATE PRODUCT CODE ====================
 async function generateProductCode(): Promise<string> {
@@ -478,6 +479,7 @@ export async function updateProduct(id: string, data: UpdateProductInput) {
 }
 
 // ==================== DELETE PRODUCT ====================
+// Delete product (soft delete)
 export async function deleteProduct(id: string) {
   try {
     const product = await prisma.product.findUnique({
@@ -499,17 +501,21 @@ export async function deleteProduct(id: string) {
       };
     }
 
-    // Check if has transactions
+    // ✅ Check if has transactions (PENTING!)
     if (product._count.saleItems > 0 || product._count.purchaseItems > 0) {
       return {
         success: false,
-        error: `Produk "${product.name}" tidak dapat dihapus karena memiliki transaksi terkait.`,
+        error: `Produk "${product.name}" tidak dapat dihapus karena memiliki ${product._count.saleItems} transaksi penjualan dan ${product._count.purchaseItems} transaksi pembelian.`,
       };
     }
 
-    // Delete product (cascade will handle units, images, stock movements)
-    await prisma.product.delete({
+    // ✅ Soft delete: Set deletedAt timestamp
+    await prisma.product.update({
       where: { id },
+      data: {
+        isActive: false,
+        deletedAt: new Date(),
+      },
     });
 
     revalidatePath("/dashboard/products");
@@ -526,7 +532,37 @@ export async function deleteProduct(id: string) {
     };
   }
 }
+// Restore deleted product
+export async function restoreProduct(id: string) {
+  try {
+    const session = await auth();
 
+    if (!session?.user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    await prisma.product.update({
+      where: { id },
+      data: {
+        deletedAt: null,
+        isActive: true,
+      },
+    });
+
+    revalidatePath("/dashboard/products");
+
+    return {
+      success: true,
+      message: "Produk berhasil direstore",
+    };
+  } catch (error) {
+    console.error("[RESTORE_PRODUCT_ERROR]", error);
+    return {
+      success: false,
+      error: "Gagal restore produk",
+    };
+  }
+}
 // ==================== TOGGLE PRODUCT STATUS ====================
 export async function toggleProductStatus(id: string) {
   try {

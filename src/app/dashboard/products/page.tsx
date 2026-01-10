@@ -27,11 +27,14 @@ async function getProductsData(searchParams: SearchParams) {
     const limit = 10;
     const categoryId = searchParams.categoryId || "";
     const supplierId = searchParams.supplierId || "";
-    const isActive = searchParams.isActive === "true" ? true : searchParams.isActive === "false" ? false : undefined;
+    const isActiveParam = searchParams.isActive;
+    const isActive = isActiveParam === "true" ? true : isActiveParam === "false" ? false : null;
     const lowStock = searchParams.lowStock === "true";
 
     // Build where clause
-    const where: Prisma.ProductWhereInput = {};
+    const where: Prisma.ProductWhereInput = {
+        deletedAt: null,
+    };
 
     if (search) {
         where.OR = [
@@ -49,7 +52,7 @@ async function getProductsData(searchParams: SearchParams) {
         where.supplierId = supplierId;
     }
 
-    if (isActive !== undefined) {
+    if (isActive !== null && isActive !== undefined) {
         where.isActive = isActive;
     }
 
@@ -133,9 +136,9 @@ async function getProductsData(searchParams: SearchParams) {
 
     // Fetch stats
     const [totalProducts, activeProducts, inactiveProducts, lowStockCount] = await Promise.all([
-        prisma.product.count(),
-        prisma.product.count({ where: { isActive: true } }),
-        prisma.product.count({ where: { isActive: false } }),
+        prisma.product.count({ where: { deletedAt: null } }),
+        prisma.product.count({ where: { isActive: true, deletedAt: null } }),
+        prisma.product.count({ where: { isActive: false, deletedAt: null } }),
         prisma.$queryRaw<Array<{ count: bigint }>>`
   SELECT COUNT(*)::int as count
   FROM products
@@ -208,9 +211,9 @@ async function getProductsData(searchParams: SearchParams) {
 }
 
 export default async function ProductsPage({
-  searchParams,
+    searchParams,
 }: {
-  searchParams: Promise<SearchParams>;
+    searchParams: Promise<SearchParams>;
 }) {
     const data = await getProductsData(await searchParams);
 

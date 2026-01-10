@@ -25,7 +25,7 @@ export function ProductImageDisplay({
 
   if (!images || images.length === 0) {
     return (
-      <div className="flex items-center justify-center w-full h-24 rounded-lg bg-gray-100 border-2 border-dashed border-gray-300">
+      <div className="flex items-center justify-center w-20 h-20 rounded-lg bg-gray-100 border-2 border-dashed border-gray-300">
         <div className="text-center">
           <ImageIcon className="w-8 h-8 text-gray-400 mx-auto mb-1" />
           <p className="text-xs text-gray-500">Tidak ada gambar</p>

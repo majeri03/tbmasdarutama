@@ -20,14 +20,12 @@ interface ProductUnitManagerProps {
   units: ProductUnitForm[];
   availableUnits: Unit[];
   onChange: (units: ProductUnitForm[]) => void;
-  error?: string;
 }
 
 export function ProductUnitManager({
   units,
   availableUnits,
   onChange,
-  error,
 }: ProductUnitManagerProps) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [formData, setFormData] = useState<ProductUnitForm>({
@@ -414,13 +412,6 @@ const displaySellPrice = autoCalculate && primaryUnit && !formData.isPrimary
           </div>
         </div>
       </div>
-
-      {/* Error Message */}
-      {error && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
-          {error}
-        </p>
-      )}
 
       {/* Help Text */}
       {units.length === 0 && (

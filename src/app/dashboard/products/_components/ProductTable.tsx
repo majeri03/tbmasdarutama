@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, Filter, Edit2, Trash2, Eye, Power, ChevronLeft, ChevronRight } from "lucide-react";
 import { ProductStockBadge } from "./ProductStockBadge";
 import { ProductUnitDisplay } from "./ProductUnitDisplay";
@@ -119,7 +119,24 @@ export function ProductTable({
   const [togglingStatus, setTogglingStatus] = useState<string | null>(null);
 
   const totalPages = Math.ceil(initialTotal / initialLimit);
+  // ✅ Initialize filters from URL on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
 
+      const urlSearch = urlParams.get('search');
+      const urlCategory = urlParams.get('categoryId');
+      const urlSupplier = urlParams.get('supplierId');
+      const urlIsActive = urlParams.get('isActive');
+      const urlLowStock = urlParams.get('lowStock');
+
+      if (urlSearch) setSearch(urlSearch);
+      if (urlCategory) setSelectedCategory(urlCategory);
+      if (urlSupplier) setSelectedSupplier(urlSupplier);
+      if (urlIsActive) setStatusFilter(urlIsActive === 'true');
+      if (urlLowStock) setLowStockFilter(urlLowStock === 'true');
+    }
+  }, []);
   // Handle search
   const handleSearch = (value: string) => {
     setSearch(value);
@@ -135,17 +152,17 @@ export function ProductTable({
   };
 
   // Handle filter change
-  const handleFilterChange = () => {
-    setCurrentPage(1);
-    onRefresh({
-      search,
-      page: 1,
-      categoryId: selectedCategory || undefined,
-      supplierId: selectedSupplier || undefined,
-      isActive: statusFilter,
-      lowStock: lowStockFilter,
-    });
-  };
+  // const handleFilterChange = () => {
+  //   setCurrentPage(1);
+  //   onRefresh({
+  //     search,
+  //     page: 1,
+  //     categoryId: selectedCategory || undefined,
+  //     supplierId: selectedSupplier || undefined,
+  //     isActive: statusFilter === null ? undefined : statusFilter,  // ✅ Convert null to undefined
+  //     lowStock: lowStockFilter,
+  //   });
+  // };
 
   // Handle page change
   const handlePageChange = (page: number) => {
@@ -224,9 +241,8 @@ export function ProductTable({
           {/* Filter Toggle Button */}
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`btn-secondary relative ${
-              activeFilterCount > 0 ? "ring-2 ring-blue-500" : ""
-            }`}
+            className={`btn-secondary relative ${activeFilterCount > 0 ? "ring-2 ring-blue-500" : ""
+              }`}
           >
             <Filter className="w-4 h-4" />
             <span>Filter</span>
@@ -250,8 +266,21 @@ export function ProductTable({
                 <select
                   value={selectedCategory}
                   onChange={(e) => {
-                    setSelectedCategory(e.target.value);
-                    handleFilterChange();
+                    const newCategory = e.target.value;
+                    setSelectedCategory(newCategory);
+
+                    // ✅ Trigger refresh dengan setTimeout
+                    setTimeout(() => {
+                      setCurrentPage(1);
+                      onRefresh({
+                        search,
+                        page: 1,
+                        categoryId: newCategory || undefined,
+                        supplierId: selectedSupplier || undefined,
+                        isActive: statusFilter === null ? undefined : statusFilter,
+                        lowStock: lowStockFilter,
+                      });
+                    }, 0);
                   }}
                   className="glass-input text-sm"
                 >
@@ -272,8 +301,21 @@ export function ProductTable({
                 <select
                   value={selectedSupplier}
                   onChange={(e) => {
-                    setSelectedSupplier(e.target.value);
-                    handleFilterChange();
+                    const newSupplier = e.target.value;
+                    setSelectedSupplier(newSupplier);
+
+                    // ✅ Trigger refresh dengan setTimeout
+                    setTimeout(() => {
+                      setCurrentPage(1);
+                      onRefresh({
+                        search,
+                        page: 1,
+                        categoryId: selectedCategory || undefined,
+                        supplierId: newSupplier || undefined,
+                        isActive: statusFilter === null ? undefined : statusFilter,
+                        lowStock: lowStockFilter,
+                      });
+                    }, 0);
                   }}
                   className="glass-input text-sm"
                 >
@@ -295,10 +337,21 @@ export function ProductTable({
                   value={statusFilter === null ? "" : statusFilter ? "active" : "inactive"}
                   onChange={(e) => {
                     const value = e.target.value;
-                    setStatusFilter(
-                      value === "" ? null : value === "active"
-                    );
-                    handleFilterChange();
+                    const newStatus = value === "" ? null : value === "active" ? true : false;  // ✅ Explicit true/false
+                    setStatusFilter(newStatus);
+
+                    // ✅ Trigger refresh dengan setTimeout agar state updated
+                    setTimeout(() => {
+                      setCurrentPage(1);
+                      onRefresh({
+                        search,
+                        page: 1,
+                        categoryId: selectedCategory || undefined,
+                        supplierId: selectedSupplier || undefined,
+                        isActive: newStatus === null ? undefined : newStatus,
+                        lowStock: lowStockFilter,
+                      });
+                    }, 0);
                   }}
                   className="glass-input text-sm"
                 >
@@ -318,8 +371,21 @@ export function ProductTable({
                     type="checkbox"
                     checked={lowStockFilter}
                     onChange={(e) => {
-                      setLowStockFilter(e.target.checked);
-                      handleFilterChange();
+                      const newLowStock = e.target.checked;
+                      setLowStockFilter(newLowStock);
+
+                      // ✅ Trigger refresh dengan setTimeout
+                      setTimeout(() => {
+                        setCurrentPage(1);
+                        onRefresh({
+                          search,
+                          page: 1,
+                          categoryId: selectedCategory || undefined,
+                          supplierId: selectedSupplier || undefined,
+                          isActive: statusFilter === null ? undefined : statusFilter,
+                          lowStock: newLowStock,
+                        });
+                      }, 0);
                     }}
                     className="w-4 h-4 text-blue-600 rounded"
                   />
@@ -465,15 +531,13 @@ export function ProductTable({
                       <button
                         onClick={() => handleToggleStatus(product)}
                         disabled={togglingStatus === product.id}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                          product.isActive
-                            ? "bg-green-100 text-green-700 hover:bg-green-200"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        } ${
-                          togglingStatus === product.id
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${product.isActive
+                          ? "bg-green-100 text-green-700 hover:bg-green-200"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          } ${togglingStatus === product.id
                             ? "opacity-50 cursor-not-allowed"
                             : ""
-                        }`}
+                          }`}
                       >
                         <Power className="w-3 h-3" />
                         <span>{product.isActive ? "Aktif" : "Nonaktif"}</span>
@@ -503,26 +567,24 @@ export function ProductTable({
                             product._count.saleItems > 0 ||
                             product._count.purchaseItems > 0
                           }
-                          className={`p-2 rounded-lg transition-colors group ${
-                            product._count.saleItems > 0 ||
+                          className={`p-2 rounded-lg transition-colors group ${product._count.saleItems > 0 ||
                             product._count.purchaseItems > 0
-                              ? "opacity-50 cursor-not-allowed"
-                              : "hover:bg-red-100"
-                          }`}
+                            ? "opacity-50 cursor-not-allowed"
+                            : "hover:bg-red-100"
+                            }`}
                           title={
                             product._count.saleItems > 0 ||
-                            product._count.purchaseItems > 0
+                              product._count.purchaseItems > 0
                               ? "Tidak dapat dihapus (ada transaksi terkait)"
                               : "Hapus"
                           }
                         >
                           <Trash2
-                            className={`w-4 h-4 ${
-                              product._count.saleItems > 0 ||
+                            className={`w-4 h-4 ${product._count.saleItems > 0 ||
                               product._count.purchaseItems > 0
-                                ? "text-gray-400"
-                                : "text-red-600 group-hover:scale-110 transition-transform"
-                            }`}
+                              ? "text-gray-400"
+                              : "text-red-600 group-hover:scale-110 transition-transform"
+                              }`}
                           />
                         </button>
                       </div>
@@ -564,11 +626,10 @@ export function ProductTable({
                         <button
                           key={page}
                           onClick={() => handlePageChange(page)}
-                          className={`px-3 py-1 rounded-lg text-sm font-semibold transition-colors ${
-                            page === currentPage
-                              ? "bg-blue-600 text-white"
-                              : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
-                          }`}
+                          className={`px-3 py-1 rounded-lg text-sm font-semibold transition-colors ${page === currentPage
+                            ? "bg-blue-600 text-white"
+                            : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+                            }`}
                         >
                           {page}
                         </button>

@@ -23,7 +23,7 @@ interface Supplier {
   id: string;
   code: string;
   name: string;
-  phone: string | null; 
+  phone: string | null;
 }
 
 interface Unit {
@@ -127,7 +127,7 @@ export function ProductsClient({
   }) => {
     // Build query params
     const searchParams = new URLSearchParams();
-    
+
     if (params.search) searchParams.set("search", params.search);
     if (params.page) searchParams.set("page", params.page.toString());
     if (params.categoryId) searchParams.set("categoryId", params.categoryId);
@@ -179,7 +179,7 @@ export function ProductsClient({
     });
     // Refresh page after success
     setTimeout(() => {
-      window.location.reload();
+      window.location.href = "/dashboard/products?t=" + Date.now();
     }, 1500);
   };
 
