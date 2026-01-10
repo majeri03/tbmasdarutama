@@ -1,0 +1,261 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply m-0 p-0 box-border;
+  }
+
+  body {
+    @apply antialiased;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f0f0f;
+    background-image: 
+      radial-gradient(at 40% 20%, rgba(96, 165, 250, 0.15) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, rgba(167, 139, 250, 0.15) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, rgba(244, 114, 182, 0.1) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(96, 165, 250, 0.1) 0px, transparent 50%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  /* ==================== GLASS MORPHISM CARDS ==================== */
+  .glass-card {
+    @apply relative overflow-hidden rounded-2xl border border-white/10;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .glass-card::before {
+    content: '';
+    @apply absolute top-0 left-0 right-0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent
+    );
+  }
+
+  .glass-card::after {
+    content: '';
+    @apply absolute top-0 left-0 h-full;
+    width: 1px;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.3),
+      transparent,
+      rgba(255, 255, 255, 0.1)
+    );
+  }
+
+  .glass-card-hover {
+    @apply glass-card transition-all duration-300;
+  }
+
+  .glass-card-hover:hover {
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 
+      0 12px 48px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+    transform: translateY(-4px);
+  }
+
+  /* ==================== GLASS INPUT ==================== */
+  .glass-input {
+    @apply w-full px-4 py-3 rounded-xl outline-none transition-all duration-300 text-white placeholder-gray-400;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .glass-input:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(96, 165, 250, 0.5);
+    box-shadow: 
+      0 0 0 3px rgba(96, 165, 250, 0.1),
+      0 0 20px rgba(96, 165, 250, 0.2);
+  }
+
+  .glass-input:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  /* ==================== BUTTONS ==================== */
+  .btn-primary {
+    @apply px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 relative overflow-hidden;
+    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+    color: white;
+    border: 1px solid rgba(96, 165, 250, 0.3);
+    box-shadow: 
+      0 4px 16px rgba(96, 165, 250, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  .btn-primary:hover {
+    box-shadow: 
+      0 8px 24px rgba(96, 165, 250, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+  }
+
+  .btn-primary:disabled {
+    @apply opacity-50 cursor-not-allowed;
+    transform: none;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 rounded-xl font-semibold transition-all duration-300;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .btn-danger {
+    @apply px-6 py-3 rounded-xl font-semibold transition-all duration-300;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+
+  .btn-danger:hover {
+    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+    transform: translateY(-2px);
+  }
+
+  /* ==================== TEXT ==================== */
+  .text-gradient {
+    @apply bg-gradient-to-r from-accent-blue via-accent-purple to-accent-pink bg-clip-text text-transparent;
+  }
+
+  .text-glow {
+    @apply text-white;
+    text-shadow: 0 0 20px rgba(96, 165, 250, 0.5);
+  }
+
+  /* ==================== BADGES ==================== */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm;
+  }
+
+  .badge-success {
+    @apply bg-status-success/20 text-status-success border border-status-success/30;
+  }
+
+  .badge-warning {
+    @apply bg-status-warning/20 text-status-warning border border-status-warning/30;
+  }
+
+  .badge-danger {
+    @apply bg-status-danger/20 text-status-danger border border-status-danger/30;
+  }
+
+  .badge-info {
+    @apply bg-status-info/20 text-status-info border border-status-info/30;
+  }
+
+  /* ==================== CARDS ==================== */
+  .stat-card {
+    @apply glass-card p-6 transition-all duration-300;
+  }
+
+  .stat-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-2px);
+  }
+}
+
+@layer utilities {
+  /* ==================== ANIMATIONS ==================== */
+  .animate-slide-up {
+    animation: slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.5s ease-in-out;
+  }
+
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite;
+  }
+
+  .animation-delay-200 {
+    animation-delay: 0.2s;
+  }
+
+  .animation-delay-400 {
+    animation-delay: 0.4s;
+  }
+
+  .animation-delay-600 {
+    animation-delay: 0.6s;
+  }
+}
+
+/* ==================== KEYFRAMES ==================== */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* ==================== SCROLLBAR ==================== */
+::-webkit-scrollbar {
+  @apply w-2;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(96, 165, 250, 0.3);
+  @apply rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(96, 165, 250, 0.5);
+}
