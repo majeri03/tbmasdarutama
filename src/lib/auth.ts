@@ -3,7 +3,28 @@ import type { NextAuthConfig } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+      role: string;
+      email: string;
+      name: string;
+    };
+  }
 
+  interface User {
+    id: string;
+    role: string;
+  }
+}
+
+declare module "@auth/core/jwt" {
+  interface JWT {
+    id: string;
+    role: string;
+  }
+}
 export const authConfig: NextAuthConfig = {
   providers: [
     CredentialsProvider({

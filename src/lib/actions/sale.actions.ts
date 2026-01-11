@@ -61,7 +61,11 @@ async function generateDebtNumber(
 export async function createSale(data: CreateSaleInput) {
   try {
     const session = await auth();
-
+    console.log("📌 DEBUG Session:", {
+      hasSession: !!session,
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
+    }); // ✅ Add debug log
     if (!session?.user?.id) {
       return {
         success: false,
@@ -69,10 +73,10 @@ export async function createSale(data: CreateSaleInput) {
       };
     }
     const cashier = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { id: true, name: true, role: true },
+      where: { email: session.user.email }, // ✅ Changed from id to email
+      select: { id: true, name: true, role: true, email: true },
     });
-
+    console.log("📌 DEBUG Cashier:", cashier);
     if (!cashier) {
       return {
         success: false,
@@ -197,10 +201,18 @@ export async function createSale(data: CreateSaleInput) {
 
     revalidatePath("/dashboard/pos");
     revalidatePath("/dashboard/sales");
-
+    const serializedSale = {
+      ...sale,
+      totalAmount: parseFloat(sale.totalAmount.toString()),
+      discount: parseFloat(sale.discount.toString()),
+      tax: parseFloat(sale.tax.toString()),
+      grandTotal: parseFloat(sale.grandTotal.toString()),
+      paidAmount: parseFloat(sale.paidAmount.toString()),
+      changeAmount: parseFloat(sale.changeAmount.toString()),
+    };
     return {
       success: true,
-      data: sale,
+      data: serializedSale,
       message: `Transaksi ${invoiceNumber} berhasil disimpan`,
     };
   } catch (error) {
@@ -322,63 +334,6 @@ export async function getSales(params?: SaleFilterInput) {
   }
 }
 
-// ==================== GET SALE BY ID ====================
-export async function getSaleById(id: string) {
-  try {
-    const session = await auth();
-
-    if (!session?.user) {
-      return {
-        success: false,
-        error: "Unauthorized",
-      };
-    }
-
-    const sale = await prisma.sale.findUnique({
-      where: { id },
-      include: {
-        customer: true,
-        cashier: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-        saleItems: {
-          // ✅ FIXED: saleItems
-          include: {
-            product: {
-              select: {
-                code: true,
-                name: true,
-                barcode: true,
-              },
-            },
-            unit: true, // ✅ FIXED: unit
-          },
-        },
-      },
-    });
-
-    if (!sale) {
-      return {
-        success: false,
-        error: "Transaksi tidak ditemukan",
-      };
-    }
-
-    return {
-      success: true,
-      data: sale,
-    };
-  } catch (error) {
-    console.error("Get sale by ID error:", error);
-    return {
-      success: false,
-      error: "Gagal mengambil detail transaksi",
-    };
-  }
-}
 
 // ==================== CANCEL SALE (ADMIN ONLY) ====================
 export async function cancelSale(id: string, reason: string) {
@@ -536,6 +491,81 @@ export async function getSalesStatistics(dateFrom?: Date, dateTo?: Date) {
     return {
       success: false,
       error: "Gagal mengambil statistik penjualan",
+    };
+  }
+}
+// Get sale by ID for invoice preview
+export async function getSaleById(saleId: string) {
+  try {
+    const sale = await prisma.sale.findUnique({
+      where: { id: saleId },
+      include: {
+        customer: {
+          select: {
+            code: true,
+            name: true,
+            type: true,
+            phone: true,
+            address: true,
+          },
+        },
+        cashier: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+        saleItems: {
+          include: {
+            product: {
+              select: {
+                code: true,
+                name: true,
+              },
+            },
+           unit: { // ✅ FIXED: unit instead of productUnit
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!sale) {
+      return {
+        success: false,
+        error: "Invoice tidak ditemukan",
+      };
+    }
+
+    // ✅ Serialize all Decimal fields
+    const serializedSale = {
+      ...sale,
+      totalAmount: parseFloat(sale.totalAmount.toString()),
+      discount: parseFloat(sale.discount.toString()),
+      tax: parseFloat(sale.tax.toString()),
+      grandTotal: parseFloat(sale.grandTotal.toString()),
+      paidAmount: parseFloat(sale.paidAmount.toString()),
+      changeAmount: parseFloat(sale.changeAmount.toString()),
+      saleItems: sale.saleItems.map((item) => ({
+        ...item,
+        unitPrice: parseFloat(item.unitPrice.toString()),
+        discount: parseFloat(item.discount.toString()),
+        subtotal: parseFloat(item.subtotal.toString()),
+      })),
+    };
+
+    return {
+      success: true,
+      data: serializedSale,
+    };
+  } catch (error) {
+    console.error("Get sale error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Gagal mengambil data invoice",
     };
   }
 }
