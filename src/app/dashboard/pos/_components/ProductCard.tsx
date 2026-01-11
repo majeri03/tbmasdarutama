@@ -79,7 +79,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
                             e.stopPropagation();
                             onAddToCart(product);
                         }}
-                        disabled={product.stock <= 0}
+                        disabled={product.currentStock <= 0}
                         className="w-full py-2 md:py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1 md:gap-2"
                     >
                         <ShoppingCart className="w-4 h-4 md:w-5 md:h-5" />

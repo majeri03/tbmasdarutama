@@ -14,6 +14,7 @@ import {
   ShoppingCart,
   CreditCard,
   X,
+  ShoppingBag,
 } from "lucide-react";
 import { Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
@@ -39,9 +40,17 @@ const menuGroups = [
     label: "Transaksi",
     items: [
       { href: "/dashboard/stocks", icon: <ShoppingCart />, label: "Stock" },
+      { href: "/dashboard/purchases", icon: <ShoppingBag />, label: "Purchase Orders" },
       { href: "/dashboard/pos", icon: <CreditCard />, label: "Point of Sale" },
     ],
   },
+  // {
+  //   label: "Utang & Piutang",
+  //   items: [
+  //     { href: "/dashboard/settings", icon: <Settings />, label: "Pengaturan" },
+  //     { href: "/logout", icon: <LogOut />, label: "Logout" },
+  //   ],
+  // },
   {
     label: "Lainnya",
     items: [
