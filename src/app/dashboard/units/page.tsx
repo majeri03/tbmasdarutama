@@ -117,7 +117,7 @@ export default function UnitsPage() {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="glass-card p-6 animate-slide-up">
-          <div className="flex items-start justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gradient mb-2">
                 Master Satuan

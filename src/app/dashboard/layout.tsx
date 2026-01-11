@@ -9,9 +9,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-blue-100/60 to-white/80">
+    <div className="flex min-h-screen bg-gradient-to-br from-blue-100/60 to-white/80 overflow-x-hidden">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1 ml-0 md:ml-64">
+      <div className="flex-1 w-full md:ml-64 transition-all duration-300">
         {/* Topbar mobile */}
         <div className="md:hidden flex items-center justify-between p-4">
           <button
@@ -26,7 +26,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </svg>
           </button>
         </div>
-        <main className="p-4 md:p-8">{children}</main>
+        <main className="p-4 md:p-6 lg:p-8 max-w-full">{children}</main>
       </div>
     </div>
   );

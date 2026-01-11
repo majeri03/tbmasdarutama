@@ -75,12 +75,12 @@ export default function Sidebar({
         }}
       />
       {/* Logo */}
-      <div className="flex items-center gap-2 px-6 py-6 relative z-10">
+      <div className="flex items-center gap-2 px-4 md:px-6 py-4 md:py-6 relative z-10 flex-shrink-0">
         <span className="inline-block w-8 h-8 bg-blue-600 rounded-lg shadow-lg" />
         <span className="font-bold text-xl text-gray-900 tracking-wide">Masdar Utama</span>
       </div>
       {/* Menu Groups */}
-      <nav className="flex-1 overflow-y-auto px-2 pb-6 relative z-10">
+      <nav className="flex-1 overflow-y-auto px-2 pb-6 relative z-10 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
         {menuGroups.map((group) => (
           <div key={group.label} className="mb-4">
             <div className="px-3 py-1 text-xs font-bold text-gray-500 uppercase tracking-wider select-none">
@@ -118,7 +118,7 @@ export default function Sidebar({
   return (
     <>
       {/* Desktop */}
-      <aside className="fixed z-40 top-0 left-0 h-full w-64 glass-card shadow-2xl border-r border-white/30 hidden md:flex flex-col backdrop-blur-xl">
+      <aside className="fixed z-30 top-0 left-0 h-screen w-64 glass-card shadow-2xl border-r border-white/30 hidden md:flex flex-col backdrop-blur-xl overflow-y-auto">
         {sidebarContent}
       </aside>
       {/* Mobile Drawer */}
