@@ -61,7 +61,6 @@ const menuGroups = [
     label: "Lainnya",
     items: [
       { href: "/dashboard/settings", icon: <Settings />, label: "Pengaturan" },
-      { href: "/logout", icon: <LogOut />, label: "Logout" },
     ],
   },
 ];
@@ -107,9 +106,8 @@ export default function Sidebar({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`sidebar-link ${
-                    pathname === item.href ? "active" : ""
-                  }`}
+                  className={`sidebar-link ${pathname === item.href ? "active" : ""
+                    }`}
                   onClick={() => {
                     setDrawerOpen(false);
                     onClose?.();
@@ -123,6 +121,19 @@ export default function Sidebar({
           </div>
         ))}
       </nav>
+      {/* Logout Button */}
+      <div className="px-4 pb-4 relative z-10">
+        <button
+          onClick={async () => {
+            const { logout } = await import("@/lib/actions/auth.actions");
+            await logout();
+          }}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-red-600 hover:bg-red-50 transition-all"
+        >
+          <LogOut className="w-5 h-5" />
+          <span>Logout</span>
+        </button>
+      </div>
       {/* Footer */}
       <div className="px-6 py-4 text-xs text-gray-400 relative z-10">
         &copy; {new Date().getFullYear()} TB Masdar Utama
