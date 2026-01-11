@@ -25,6 +25,8 @@ model User {
   purchases     Purchase[]
   debtPayments  DebtPayment[]
   cashMovements CashMovement[]
+  deliveryOrders  DeliveryOrder[]
+  stockMovements     StockMovement[] 
   
   @@map("users")
 }
@@ -38,6 +40,7 @@ enum Role {
 // ==================== MASTER SATUAN ====================
 model Unit {
   id          String   @id @default(cuid())
+  symbol      String?
   name        String   @unique // Sak, Pcs, Kg, Dus, Kardus, Box, Lusin, Meter
   description String?
   createdAt   DateTime @default(now())
@@ -47,7 +50,7 @@ model Unit {
   productUnits      ProductUnit[]
   saleItemsUnit     SaleItem[]         @relation("SaleItemUnit")
   purchaseItemsUnit PurchaseItem[]     @relation("PurchaseItemUnit")
-  
+  deliveryItems   DeliveryItem[]
   @@map("units")
 }
 
@@ -130,7 +133,8 @@ model Product {
   saleItems     SaleItem[]
   purchaseItems PurchaseItem[]
   stockMovements StockMovement[]
-  
+  deliveryItems   DeliveryItem[]
+
   @@index([categoryId])
   @@index([supplierId])
   @@index([deletedAt])
@@ -189,7 +193,8 @@ model Customer {
   // Relations
   sales         Sale[]
   customerDebts CustomerDebt[]
-  
+  deliveryOrders  DeliveryOrder[]
+
   @@map("customers")
 }
 
@@ -223,7 +228,8 @@ model Sale {
   cashier       User       @relation(fields: [cashierId], references: [id])
   saleItems     SaleItem[]
   customerDebts CustomerDebt[]
-  
+  deliveryOrder   DeliveryOrder?
+
   @@map("sales")
 }
 
@@ -397,10 +403,12 @@ model StockMovement {
   referenceType String? // Sale, Purchase, Adjustment
   referenceId   String?
   notes         String?
+  createdById   String
   createdAt     DateTime @default(now())
   
   // Relations
   product Product @relation(fields: [productId], references: [id])
+  createdBy User    @relation(fields: [createdById], references: [id])
   
   @@map("stock_movements")
 }
@@ -431,4 +439,54 @@ model CashMovement {
 enum CashType {
   IN
   OUT
+}
+
+// ==================== DELIVERY ORDER / SURAT JALAN ====================
+model DeliveryOrder {
+  id              String          @id @default(cuid())
+  doNumber        String          @unique // DO-20240101-001
+  customerId      String
+  saleId          String?         @unique // Optional: link ke sale jika dari POS
+  deliveryDate    DateTime
+  driver          String?
+  vehicle         String?
+  notes           String?
+  status          DeliveryStatus  @default(PENDING)
+  receivedBy      String?
+  receivedDate    DateTime?
+  createdById     String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  // Relations
+  customer        Customer        @relation(fields: [customerId], references: [id])
+  sale            Sale?           @relation(fields: [saleId], references: [id])
+  createdBy       User            @relation(fields: [createdById], references: [id])
+  deliveryItems   DeliveryItem[]
+  
+  @@map("delivery_orders")
+}
+
+model DeliveryItem {
+  id                String         @id @default(cuid())
+  deliveryOrderId   String
+  productId         String
+  unitId            String
+  quantity          Decimal        @db.Decimal(10, 2)
+  notes             String?
+  createdAt         DateTime       @default(now())
+  
+  // Relations
+  deliveryOrder DeliveryOrder @relation(fields: [deliveryOrderId], references: [id], onDelete: Cascade)
+  product       Product       @relation(fields: [productId], references: [id])
+  unit          Unit          @relation(fields: [unitId], references: [id])
+  
+  @@map("delivery_items")
+}
+
+enum DeliveryStatus {
+  PENDING
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
 }

@@ -209,6 +209,7 @@ export async function createStockAdjustment(input: StockAdjustmentInput) {
           referenceType: validated.referenceType || "Manual Adjustment",
           referenceId: validated.referenceId,
           notes: validated.notes,
+          createdById: session.user.id,
         },
       });
 

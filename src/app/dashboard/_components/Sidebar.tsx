@@ -15,6 +15,10 @@ import {
   CreditCard,
   X,
   ShoppingBag,
+  TrendingDown,
+  TrendingUp,
+  Send,
+  DollarSign,
 } from "lucide-react";
 import { Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
@@ -34,23 +38,25 @@ const menuGroups = [
       { href: "/dashboard/units", icon: <Layers />, label: "Satuan" },
       { href: "/dashboard/suppliers", icon: <Truck />, label: "Supplier" },
       { href: "/dashboard/customers", icon: <Users />, label: "Customer" },
+      { href: "/dashboard/stocks", icon: <ShoppingCart />, label: "Stock" },
     ],
   },
   {
     label: "Transaksi",
     items: [
-      { href: "/dashboard/stocks", icon: <ShoppingCart />, label: "Stock" },
+      { href: "/dashboard/delivery-orders", icon: <Send />, label: "Pengiriman" },
       { href: "/dashboard/purchases", icon: <ShoppingBag />, label: "Purchase Orders" },
+      { href: "/dashboard/sales", icon: <DollarSign />, label: "Penjualan" },
       { href: "/dashboard/pos", icon: <CreditCard />, label: "Point of Sale" },
     ],
   },
-  // {
-  //   label: "Utang & Piutang",
-  //   items: [
-  //     { href: "/dashboard/settings", icon: <Settings />, label: "Pengaturan" },
-  //     { href: "/logout", icon: <LogOut />, label: "Logout" },
-  //   ],
-  // },
+  {
+    label: "Utang & Piutang",
+    items: [
+      { href: "/dashboard/supplier-debts", icon: <TrendingDown />, label: "Utang Supplier" },
+      { href: "/dashboard/customer-debts", icon: <TrendingUp />, label: "Piutang Customer" },
+    ],
+  },
   {
     label: "Lainnya",
     items: [

@@ -9,6 +9,7 @@ import {
   type CreateCustomerInput,
   type UpdateCustomerInput,
 } from "@/lib/validations/customer.schema";
+import { Prisma } from "@prisma/client";
 
 // ==================== GENERATE CUSTOMER CODE ====================
 async function generateCustomerCode(): Promise<string> {
@@ -260,6 +261,45 @@ export async function toggleCustomerStatus(id: string) {
     return {
       success: false,
       error: "Gagal mengubah status customer.",
+    };
+  }
+}
+// ==================== GET ALL CUSTOMERS ====================
+export async function getCustomers(filters?: { status?: "ACTIVE" | "INACTIVE" }) {
+  try {
+    const where: Prisma.CustomerWhereInput = {};
+
+    if (filters?.status === "ACTIVE") {
+      where.isActive = true;
+    } else if (filters?.status === "INACTIVE") {
+      where.isActive = false;
+    }
+
+    const customers = await prisma.customer.findMany({
+      where,
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        phone: true,
+        email: true,
+        address: true,
+        city: true,
+        province: true,
+        type: true,
+        isActive: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
+
+    return { success: true, data: customers };
+  } catch (error) {
+    console.error("[GET_CUSTOMERS_ERROR]", error);
+    return {
+      success: false,
+      error: "Gagal mengambil data customer.",
     };
   }
 }

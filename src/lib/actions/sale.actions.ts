@@ -10,6 +10,7 @@ import {
 } from "@/lib/validations/sale.schema";
 import { revalidatePath } from "next/cache";
 import { PaymentMethod, SaleStatus, Prisma } from "@prisma/client";
+import { SaleFilters } from "@/types/sale";
 
 // ==================== GENERATE INVOICE NUMBER ====================
 async function generateInvoiceNumber(): Promise<string> {
@@ -123,7 +124,12 @@ export async function createSale(data: CreateSaleInput) {
             paymentMethod: validated.paymentMethod,
             paidAmount: validated.paidAmount,
             changeAmount: validated.changeAmount,
-            status: SaleStatus.COMPLETED,
+            status:
+              validated.paymentMethod === PaymentMethod.CREDIT
+                ? validated.paidAmount >= validated.grandTotal
+                  ? SaleStatus.COMPLETED
+                  : SaleStatus.PENDING
+                : SaleStatus.COMPLETED,
             notes: validated.notes || null,
           },
           include: {
@@ -174,6 +180,7 @@ export async function createSale(data: CreateSaleInput) {
               notes: `Penjualan ${invoiceNumber}`,
               referenceType: "Sale",
               referenceId: newSale.id,
+              createdById: session.user.id,
             },
           });
         }
@@ -184,13 +191,18 @@ export async function createSale(data: CreateSaleInput) {
 
           await tx.customerDebt.create({
             data: {
-              debtNumber, // ✅ FIXED: Added debtNumber
-              saleId: newSale.id, // ✅ FIXED: Direct relation to Sale
+              debtNumber,
+              saleId: newSale.id,
               customerId: validated.customerId,
-              totalDebt: validated.grandTotal, // ✅ FIXED: totalDebt instead of amount
-              remainingDebt: validated.grandTotal, // ✅ FIXED: remainingDebt
+              totalDebt: validated.grandTotal,
+              paidAmount: validated.paidAmount, // ✅ TAMBAH INI
+              remainingDebt: validated.grandTotal - validated.paidAmount, // ✅ FIX INI
               dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-              notes: `Utang dari penjualan ${invoiceNumber}`, // ✅ FIXED: notes instead of description
+              status:
+                validated.paidAmount >= validated.grandTotal
+                  ? "PAID"
+                  : "UNPAID", // ✅ TAMBAH INI
+              notes: `Utang dari penjualan ${invoiceNumber}`,
             },
           });
         }
@@ -310,14 +322,92 @@ export async function getSales(params?: SaleFilterInput) {
               unit: true, // ✅ FIXED: unit instead of productUnit
             },
           },
+          customerDebts: {
+            // ✅ FIX: plural customerDebts
+            select: {
+              id: true,
+              totalDebt: true,
+              paidAmount: true,
+              remainingDebt: true,
+              status: true,
+            },
+          },
         },
       }),
       prisma.sale.count({ where }),
     ]);
 
+    // LINE 330-365, GANTI DENGAN KONSTRUKSI MANUAL:
     return {
       success: true,
-      data: sales,
+      data: sales.map((sale) => {
+        // ✅ Manual construct untuk menghindari spread operator
+        const serializedSale = {
+          id: sale.id,
+          invoiceNumber: sale.invoiceNumber,
+          customerId: sale.customerId,
+          cashierId: sale.cashierId,
+          saleDate: sale.saleDate,
+          totalAmount: Number(sale.totalAmount),
+          discount: Number(sale.discount),
+          tax: Number(sale.tax),
+          grandTotal: Number(sale.grandTotal),
+          paymentMethod: sale.paymentMethod,
+          paidAmount: Number(sale.paidAmount),
+          changeAmount: Number(sale.changeAmount),
+          notes: sale.notes,
+          status: sale.status,
+          createdAt: sale.createdAt,
+          updatedAt: sale.updatedAt,
+
+          // ✅ Customer (manual)
+          customer: sale.customer
+            ? {
+                code: sale.customer.code,
+                name: sale.customer.name,
+                type: sale.customer.type,
+              }
+            : null,
+
+          // ✅ Cashier (manual)
+          cashier: {
+            name: sale.cashier.name,
+            email: sale.cashier.email,
+          },
+
+          // ✅ Sale Items (manual map)
+          saleItems: sale.saleItems.map((item) => ({
+            id: item.id,
+            saleId: item.saleId,
+            productId: item.productId,
+            unitId: item.unitId,
+            quantity: item.quantity,
+            unitPrice: Number(item.unitPrice),
+            discount: Number(item.discount),
+            subtotal: Number(item.subtotal),
+            createdAt: item.createdAt,
+            product: {
+              code: item.product.code,
+              name: item.product.name,
+            },
+            unit: item.unit,
+          })),
+
+          // ✅ Customer Debt (manual construct - INI KUNCINYA!)
+          customerDebt:
+            sale.customerDebts && sale.customerDebts.length > 0
+              ? {
+                  id: sale.customerDebts[0].id,
+                  totalDebt: Number(sale.customerDebts[0].totalDebt),
+                  paidAmount: Number(sale.customerDebts[0].paidAmount),
+                  remainingDebt: Number(sale.customerDebts[0].remainingDebt),
+                  status: sale.customerDebts[0].status,
+                }
+              : null,
+        };
+
+        return serializedSale;
+      }),
       pagination: {
         total,
         page,
@@ -333,7 +423,6 @@ export async function getSales(params?: SaleFilterInput) {
     };
   }
 }
-
 
 // ==================== CANCEL SALE (ADMIN ONLY) ====================
 export async function cancelSale(id: string, reason: string) {
@@ -403,6 +492,7 @@ export async function cancelSale(id: string, reason: string) {
             notes: `Pembatalan penjualan ${sale.invoiceNumber} - ${reason}`,
             referenceType: "Sale Cancellation",
             referenceId: sale.id,
+            createdById: session.user.id,
           },
         });
       }
@@ -523,11 +613,23 @@ export async function getSaleById(saleId: string) {
                 name: true,
               },
             },
-           unit: { // ✅ FIXED: unit instead of productUnit
+            unit: {
+              // ✅ FIXED: unit instead of productUnit
               select: {
                 name: true,
+                symbol: true,
               },
             },
+          },
+        },
+        customerDebts: {
+          // ✅ TAMBAH INI
+          select: {
+            id: true,
+            totalDebt: true,
+            paidAmount: true,
+            remainingDebt: true,
+            status: true,
           },
         },
       },
@@ -542,19 +644,59 @@ export async function getSaleById(saleId: string) {
 
     // ✅ Serialize all Decimal fields
     const serializedSale = {
-      ...sale,
+      // ✅ Manual construct - TIDAK pakai spread operator
+      id: sale.id,
+      invoiceNumber: sale.invoiceNumber,
+      customerId: sale.customerId,
+      cashierId: sale.cashierId,
+      saleDate: sale.saleDate,
+      status: sale.status,
+      paymentMethod: sale.paymentMethod,
+      notes: sale.notes,
+      createdAt: sale.createdAt,
+      updatedAt: sale.updatedAt,
+
+      // ✅ Convert Decimal fields
       totalAmount: parseFloat(sale.totalAmount.toString()),
       discount: parseFloat(sale.discount.toString()),
       tax: parseFloat(sale.tax.toString()),
       grandTotal: parseFloat(sale.grandTotal.toString()),
       paidAmount: parseFloat(sale.paidAmount.toString()),
       changeAmount: parseFloat(sale.changeAmount.toString()),
+
+      // ✅ Customer
+      customer: sale.customer,
+
+      // ✅ Cashier
+      cashier: sale.cashier,
+
+      // ✅ Sale Items
       saleItems: sale.saleItems.map((item) => ({
-        ...item,
+        id: item.id,
+        saleId: item.saleId,
+        productId: item.productId,
+        unitId: item.unitId,
+        quantity: item.quantity,
         unitPrice: parseFloat(item.unitPrice.toString()),
         discount: parseFloat(item.discount.toString()),
         subtotal: parseFloat(item.subtotal.toString()),
+        createdAt: item.createdAt,
+        product: item.product,
+        unit: item.unit,
       })),
+
+      // ✅ Customer Debt (manual construct)
+      customerDebt: sale.customerDebts?.[0]
+        ? {
+            id: sale.customerDebts[0].id,
+            status: sale.customerDebts[0].status,
+            totalDebt: parseFloat(sale.customerDebts[0].totalDebt.toString()),
+            paidAmount: parseFloat(sale.customerDebts[0].paidAmount.toString()),
+            remainingDebt: parseFloat(
+              sale.customerDebts[0].remainingDebt.toString()
+            ),
+          }
+        : null,
     };
 
     return {
@@ -565,7 +707,193 @@ export async function getSaleById(saleId: string) {
     console.error("Get sale error:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Gagal mengambil data invoice",
+      error:
+        error instanceof Error ? error.message : "Gagal mengambil data invoice",
     };
+  }
+}
+
+// ==================== GET SALES FOR TABLE ====================
+export async function getSalesForTable(params?: SaleFilters) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const validated = saleFilterSchema.parse(params || {});
+    const {
+      search,
+      customerId,
+      cashierId,
+      paymentMethod,
+      status,
+      dateFrom,
+      dateTo,
+      page,
+      limit,
+    } = validated;
+
+    const skip = (page - 1) * limit;
+    const where: Prisma.SaleWhereInput = {};
+
+    if (search) {
+      where.OR = [
+        { invoiceNumber: { contains: search, mode: "insensitive" } },
+        { customer: { name: { contains: search, mode: "insensitive" } } },
+      ];
+    }
+
+    if (customerId) where.customerId = customerId;
+    if (cashierId) where.cashierId = cashierId;
+    if (paymentMethod) where.paymentMethod = paymentMethod;
+    if (status) where.status = status;
+
+    if (dateFrom || dateTo) {
+      where.saleDate = {};
+      if (dateFrom) where.saleDate.gte = dateFrom;
+      if (dateTo) where.saleDate.lte = dateTo;
+    }
+
+    const [sales, total] = await Promise.all([
+      prisma.sale.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { saleDate: "desc" },
+        include: {
+          customer: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              type: true,
+            },
+          },
+          cashier: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          _count: {
+            select: {
+              saleItems: true,
+            },
+          },
+        },
+      }),
+      prisma.sale.count({ where }),
+    ]);
+
+    const serialized = sales.map((sale) => ({
+      ...sale,
+      totalAmount: Number(sale.totalAmount),
+      discount: Number(sale.discount),
+      tax: Number(sale.tax),
+      grandTotal: Number(sale.grandTotal),
+      paidAmount: Number(sale.paidAmount),
+      changeAmount: Number(sale.changeAmount),
+    }));
+
+    return {
+      success: true,
+      data: serialized,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  } catch (error) {
+    console.error("Get sales error:", error);
+    return { success: false, error: "Gagal mengambil data penjualan" };
+  }
+}
+
+// ==================== GET TODAY STATS ====================
+export async function getTodaySalesStats() {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const [totalSales, totalRevenue, todaySales, pendingSales] =
+      await Promise.all([
+        prisma.sale.count({
+          where: { status: SaleStatus.COMPLETED },
+        }),
+        prisma.sale.aggregate({
+          where: { status: SaleStatus.COMPLETED },
+          _sum: { grandTotal: true },
+        }),
+        prisma.sale.count({
+          where: {
+            saleDate: { gte: today, lt: tomorrow },
+            status: SaleStatus.COMPLETED,
+          },
+        }),
+        prisma.sale.count({
+          where: { status: SaleStatus.PENDING },
+        }),
+      ]);
+
+    return {
+      success: true,
+      data: {
+        totalSales,
+        totalRevenue: Number(totalRevenue._sum.grandTotal || 0),
+        todaySales,
+        pendingSales,
+      },
+    };
+  } catch (error) {
+    console.error("Get stats error:", error);
+    return { success: false, error: "Gagal mengambil statistik" };
+  }
+}
+// ==================== DELETE SALE ====================
+export async function deleteSale(id: string) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const sale = await prisma.sale.findUnique({
+      where: { id },
+      include: { saleItems: true },
+    });
+
+    if (!sale) {
+      return { success: false, error: "Penjualan tidak ditemukan" };
+    }
+
+    if (sale.status !== SaleStatus.PENDING) {
+      return {
+        success: false,
+        error: "Hanya penjualan PENDING yang bisa dihapus",
+      };
+    }
+
+    // Delete sale (cascade will delete saleItems)
+    await prisma.sale.delete({ where: { id } });
+
+    revalidatePath("/dashboard/sales");
+
+    return {
+      success: true,
+      message: `Penjualan ${sale.invoiceNumber} berhasil dihapus`,
+    };
+  } catch (error) {
+    console.error("Delete sale error:", error);
+    return { success: false, error: "Gagal menghapus penjualan" };
   }
 }

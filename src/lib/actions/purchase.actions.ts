@@ -429,6 +429,7 @@ export async function receivePurchase(input: ReceivePurchaseInput) {
             referenceType: "Purchase",
             referenceId: purchase.poNumber,
             notes: `Receive from PO: ${purchase.poNumber}`,
+            createdById: session.user.id,
           },
         });
       }

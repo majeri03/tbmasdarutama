@@ -31,6 +31,10 @@ async function generateProductCode(): Promise<string> {
 // ==================== CREATE PRODUCT ====================
 export async function createProduct(data: CreateProductInput) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return { success: false, error: "Unauthorized" };
+    }
     const validatedData = createProductSchema.parse(data);
 
     // Check duplicate barcode if provided
@@ -153,6 +157,7 @@ export async function createProduct(data: CreateProductInput) {
           quantity: 0,
           referenceType: "Initial Stock",
           notes: "Stok awal produk",
+          createdById: session.user.id,
         },
       });
 
@@ -292,10 +297,24 @@ export async function getProducts(params?: {
       }),
       prisma.product.count({ where }),
     ]);
-
+    const serialized = products.map((product) => ({
+      ...product,
+      productUnits: product.productUnits.map((pu) => ({
+        ...pu,
+        conversionValue: Number(pu.conversionValue),
+        buyPrice: Number(pu.buyPrice),
+        sellPrice: Number(pu.sellPrice),
+        unit: {
+          id: pu.unit.id,
+          name: pu.unit.name,
+          symbol: "",
+        },
+      })),
+      productImages: product.productImages,
+    }));
     return {
       success: true,
-      data: products,
+      data: serialized,
       pagination: {
         total,
         page,
@@ -387,7 +406,10 @@ export async function updateProduct(id: string, data: UpdateProductInput) {
     }
 
     // Check duplicate barcode (exclude current product)
-    if (validatedData.barcode && validatedData.barcode !== existingProduct.barcode) {
+    if (
+      validatedData.barcode &&
+      validatedData.barcode !== existingProduct.barcode
+    ) {
       const duplicateBarcode = await prisma.product.findFirst({
         where: {
           barcode: validatedData.barcode,
