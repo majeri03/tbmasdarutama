@@ -14,7 +14,7 @@ import { POSProduct, CartItem, POSCustomer } from "@/types/pos";
 import { getPOSProducts, getProductByBarcode, getPOSCustomers } from "@/lib/actions/pos.actions";
 import { validateStock, getCustomerDiscount } from "@/lib/utils/pos-helpers";
 import { useToast } from "@/components/ui/toast";
-
+import { X } from "lucide-react"; 
 export default function POSPage() {
     // States
     const [products, setProducts] = useState<POSProduct[]>([]);
@@ -28,6 +28,7 @@ export default function POSPage() {
     const [lastInvoice, setLastInvoice] = useState({ number: "", saleId: "" });
 
     const searchRef = useRef<ProductSearchHandle>(null);
+    const [showMobileCart, setShowMobileCart] = useState(false);
     const { showToast } = useToast();
 
     // Load default customer (Customer Umum)
@@ -60,7 +61,14 @@ export default function POSPage() {
         }
         setIsLoadingProducts(false);
     }, []);
-
+    // Handle mobile cart modal
+    useEffect(() => {
+        const handleOpenMobileCart = () => {
+            setShowMobileCart(true);
+        };
+        window.addEventListener('openMobileCart', handleOpenMobileCart);
+        return () => window.removeEventListener('openMobileCart', handleOpenMobileCart);
+    }, []);
     // Load on mount
     useEffect(() => {
         loadDefaultCustomer();
@@ -207,6 +215,7 @@ export default function POSPage() {
     return (
         <>
             <POSLayout
+                cartItemsCount={cartItems.length}
                 customer={
                     <CustomerSelector
                         selectedCustomer={selectedCustomer}
@@ -290,6 +299,50 @@ export default function POSPage() {
                 onClearCart={handleClearCart}
                 canCheckout={cartItems.length > 0 && !!selectedCustomer}
             />
+            {/* Mobile Cart Modal */}
+            {showMobileCart && (
+                <div className="md:hidden fixed inset-0 bg-black/50 z-50 flex flex-col">
+                    {/* Header */}
+                    <div className="glass-card p-4 flex items-center justify-between border-b border-gray-200">
+                        <h2 className="text-lg font-semibold text-gray-900">Keranjang Belanja</h2>
+                        <button
+                            onClick={() => setShowMobileCart(false)}
+                            className="text-gray-400 hover:text-gray-600"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
+
+                    {/* Cart Content */}
+                    <div className="flex-1 overflow-hidden">
+                        <ShoppingCart
+                            items={cartItems}
+                            customer={selectedCustomer}
+                            discount={discount}
+                            onUpdateQuantity={handleUpdateQuantity}
+                            onUpdateDiscount={handleUpdateDiscount}
+                            onRemoveItem={handleRemoveItem}
+                            onDiscountChange={setDiscount}
+                            onClear={handleClearCart}
+                        />
+                    </div>
+
+                    {/* Checkout Button */}
+                    {cartItems.length > 0 && (
+                        <div className="p-4 glass-card border-t border-gray-200">
+                            <button
+                                onClick={() => {
+                                    setShowMobileCart(false);
+                                    handleCheckout();
+                                }}
+                                className="w-full py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-semibold text-lg"
+                            >
+                                Checkout ({cartItems.length} item)
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
         </>
     );
 }

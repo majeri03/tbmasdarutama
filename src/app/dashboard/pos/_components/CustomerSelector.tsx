@@ -76,7 +76,7 @@ export function CustomerSelector({ selectedCustomer, onSelectCustomer, onQuickAd
             {/* Selected Customer Display */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full glass-card p-4 flex items-center justify-between hover:shadow-md transition-shadow"
+                className="w-full glass-card p-2 md:p-4 flex items-center justify-between hover:shadow-md transition-shadow"
             >
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">

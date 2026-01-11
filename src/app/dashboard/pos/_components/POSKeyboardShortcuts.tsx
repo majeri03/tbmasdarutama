@@ -51,7 +51,7 @@ export function POSKeyboardShortcuts({
   }, [onSearchFocus, onCheckout, onClearCart, canCheckout]);
 
   return (
-    <div className="fixed bottom-4 left-4 glass-card p-3 text-xs text-gray-600 shadow-lg">
+    <div className="hidden md:block fixed bottom-4 left-4 glass-card p-3 text-xs text-gray-600 shadow-lg">
       <p className="font-semibold text-gray-900 mb-1">Shortcut Keyboard:</p>
       <div className="space-y-0.5">
         <div className="flex items-center gap-2">

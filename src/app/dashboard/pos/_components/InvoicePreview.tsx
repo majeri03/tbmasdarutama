@@ -155,6 +155,7 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
 
             // Calculate proper dimensions
             const pdfWidth = 210; // A4 width in mm
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const pdfHeight = 297; // A4 height in mm
             const imgWidth = pdfWidth - 20; // 10mm margin on each side
             const imgHeight = (canvas.height * imgWidth) / canvas.width;

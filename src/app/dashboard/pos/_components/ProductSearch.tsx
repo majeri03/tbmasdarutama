@@ -84,7 +84,7 @@ export const ProductSearch = forwardRef<ProductSearchHandle, ProductSearchProps>
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Cari produk (nama/kode) atau scan barcode..."
-          className="w-full pl-12 pr-12 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+          className="w-full pl-10 md:pl-12 pr-10 md:pr-12 py-2 md:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base"
         />
         {isLoading ? (
           <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-600 animate-spin" />

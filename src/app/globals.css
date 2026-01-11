@@ -246,7 +246,24 @@
     font-weight: 600;
   }
 }
+/* ==================== MOBILE POS FIXES ==================== */
+@media (max-width: 768px) {
+  .glass-card {
+    border-radius: 12px;
+  }
 
+  /* Compact buttons on mobile */
+  .btn-primary,
+  .btn-secondary {
+    @apply px-3 py-2 text-sm;
+  }
+
+  /* Smaller inputs on mobile */
+  input[type="number"],
+  input[type="text"] {
+    @apply text-sm;
+  }
+}
 @layer utilities {
   /* ==================== ANIMATIONS ==================== */
   .animate-slide-up {

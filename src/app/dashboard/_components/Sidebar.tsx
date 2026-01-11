@@ -12,6 +12,7 @@ import {
   Settings,
   LogOut,
   ShoppingCart,
+  CreditCard,
   X,
 } from "lucide-react";
 import { Fragment } from "react";
@@ -38,7 +39,7 @@ const menuGroups = [
     label: "Transaksi",
     items: [
       { href: "/dashboard/stocks", icon: <ShoppingCart />, label: "Stock" },
-      // Tambahkan menu POS di sini nanti
+      { href: "/dashboard/pos", icon: <CreditCard />, label: "Point of Sale" },
     ],
   },
   {
