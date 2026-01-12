@@ -112,7 +112,7 @@ export default function SalesPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="page-title">Manajemen Penjualan</h1>
+                    <h1 className="text-2xl font-bold text-gray-900">Manajemen Penjualan</h1>
                     <p className="page-subtitle">Kelola transaksi penjualan</p>
                 </div>
                 <SaleFormModal onSuccess={loadSales} />

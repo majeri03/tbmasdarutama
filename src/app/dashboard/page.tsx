@@ -1,28 +1,29 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { 
-  Store, 
-  Package, 
-  Users, 
-  TrendingUp, 
+import {
+  Store,
+  Package,
+  Users,
+  TrendingUp,
   AlertCircle,
   ShoppingCart,
   DollarSign,
-  Activity,
   BarChart3,
   Calendar,
   ArrowUpRight,
   ArrowDownRight,
-  Sparkles
+  Sparkles,
 } from "lucide-react";
-
+import { getDashboardStats } from "@/lib/actions/dashboard.actions";
+import Link from "next/link";
 export default async function DashboardPage() {
   const session = await auth();
 
   if (!session || !session.user) {
     redirect("/login");
   }
-
+  const statsResult = await getDashboardStats();
+  const stats = statsResult.success ? statsResult.data : null;
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -43,11 +44,11 @@ export default async function DashboardPage() {
                 <span className="text-gray-400 text-sm">•</span>
                 <span className="text-gray-600 text-sm flex items-center gap-1">
                   <Calendar className="w-3.5 h-3.5" />
-                  {new Date().toLocaleDateString('id-ID', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
+                  {new Date().toLocaleDateString('id-ID', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
                   })}
                 </span>
               </div>
@@ -74,12 +75,16 @@ export default async function DashboardPage() {
               </div>
               <div className="flex items-center gap-1 text-green-600 text-sm font-semibold">
                 <ArrowUpRight className="w-4 h-4" />
-                <span>12.5%</span>
+                <span>{stats?.sales.growth ?? 0}%</span>
               </div>
             </div>
             <h3 className="text-gray-600 text-sm font-semibold mb-1">Total Penjualan</h3>
-            <p className="text-3xl font-bold text-gray-900 mb-1">Rp 45.2M</p>
-            <p className="text-gray-500 text-xs">+Rp 5.2M dari bulan lalu</p>
+            <p className="text-3xl font-bold text-gray-900 mb-1">
+              Rp {stats?.sales.total ? (stats.sales.total / 1000000).toFixed(1) : '0'}M
+            </p>
+            <p className="text-gray-500 text-xs">
+              {stats?.sales.growth ?? 0}% dari bulan lalu
+            </p>
           </div>
 
           {/* Total Produk */}
@@ -93,12 +98,16 @@ export default async function DashboardPage() {
               </div>
               <div className="flex items-center gap-1 text-green-600 text-sm font-semibold">
                 <ArrowUpRight className="w-4 h-4" />
-                <span>8.2%</span>
+                <span>{stats?.products.growth ?? 0}%</span>
               </div>
             </div>
             <h3 className="text-gray-600 text-sm font-semibold mb-1">Total Produk</h3>
-            <p className="text-3xl font-bold text-gray-900 mb-1">1,248</p>
-            <p className="text-gray-500 text-xs">+94 produk baru</p>
+            <p className="text-3xl font-bold text-gray-900 mb-1">
+              {stats?.products.total.toLocaleString('id-ID') ?? '0'}
+            </p>
+            <p className="text-gray-500 text-xs">
+              +{stats?.products.newThisMonth ?? 0} produk baru
+            </p>
           </div>
 
           {/* Total Customer */}
@@ -112,12 +121,16 @@ export default async function DashboardPage() {
               </div>
               <div className="flex items-center gap-1 text-green-600 text-sm font-semibold">
                 <ArrowUpRight className="w-4 h-4" />
-                <span>15.3%</span>
+                <span>{stats?.customers.growth ?? 0}%</span>
               </div>
             </div>
             <h3 className="text-gray-600 text-sm font-semibold mb-1">Total Customer</h3>
-            <p className="text-3xl font-bold text-gray-900 mb-1">324</p>
-            <p className="text-gray-500 text-xs">+43 customer baru</p>
+            <p className="text-3xl font-bold text-gray-900 mb-1">
+              {stats?.customers.total.toLocaleString('id-ID') ?? '0'}
+            </p>
+            <p className="text-gray-500 text-xs">
+              +{stats?.customers.newThisMonth ?? 0} customer baru
+            </p>
           </div>
 
           {/* Utang Customer */}
@@ -129,21 +142,30 @@ export default async function DashboardPage() {
               }}>
                 <DollarSign className="w-6 h-6 text-red-600" />
               </div>
-              <div className="flex items-center gap-1 text-red-600 text-sm font-semibold">
-                <ArrowDownRight className="w-4 h-4" />
-                <span>3.8%</span>
+              <div className={`flex items-center gap-1 text-sm font-semibold ${(stats?.debt.change ?? 0) < 0 ? 'text-green-600' : 'text-red-600'
+                }`}>
+                {(stats?.debt.change ?? 0) < 0 ? (
+                  <ArrowDownRight className="w-4 h-4" />
+                ) : (
+                  <ArrowUpRight className="w-4 h-4" />
+                )}
+                <span>{Math.abs(stats?.debt.change ?? 0)}%</span>
               </div>
             </div>
             <h3 className="text-gray-600 text-sm font-semibold mb-1">Utang Customer</h3>
-            <p className="text-3xl font-bold text-gray-900 mb-1">Rp 8.5M</p>
-            <p className="text-gray-500 text-xs">-Rp 320K dari bulan lalu</p>
+            <p className="text-3xl font-bold text-gray-900 mb-1">
+              Rp {stats?.debt.total ? (stats.debt.total / 1000000).toFixed(1) : '0'}M
+            </p>
+            <p className="text-gray-500 text-xs">
+              {stats?.debt.change ?? 0}% dari bulan lalu
+            </p>
           </div>
         </div>
 
         {/* Charts & Activities */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
           {/* Chart */}
-          <div className="lg:col-span-2 glass-card p-6">
+          <div className="glass-card p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-xl font-bold text-gray-900 mb-1">Grafik Penjualan</h2>
@@ -156,84 +178,155 @@ export default async function DashboardPage() {
                 <BarChart3 className="w-5 h-5 text-blue-600" />
               </div>
             </div>
-            <div className="h-64 flex items-end justify-between gap-4">
-              {[
-                { height: 65, value: 6.5 },
-                { height: 45, value: 4.5 },
-                { height: 78, value: 7.8 },
-                { height: 52, value: 5.2 },
-                { height: 90, value: 9.0 },
-                { height: 67, value: 6.7 },
-                { height: 82, value: 8.2 }
-              ].map((data, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                  <div 
-                    className="w-full rounded-t-xl transition-all duration-500 hover:opacity-80 relative group cursor-pointer"
-                    style={{
-                      height: `${data.height}%`,
-                      background: `linear-gradient(180deg, rgba(96, 165, 250, 0.9) 0%, rgba(96, 165, 250, 0.5) 100%)`,
-                      boxShadow: '0 -4px 12px rgba(96, 165, 250, 0.2)'
-                    }}
-                  >
-                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="glass-card px-3 py-1.5 text-xs text-gray-900 font-semibold whitespace-nowrap">
-                        Rp {data.value}M
-                      </div>
-                    </div>
-                  </div>
-                  <span className="text-gray-600 text-xs font-medium">
-                    {['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'][i]}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
 
-          {/* Recent Activities */}
-          <div className="glass-card p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-lg" style={{
-                background: 'rgba(96, 165, 250, 0.1)',
-                border: '1px solid rgba(96, 165, 250, 0.2)'
-              }}>
-                <Activity className="w-4 h-4 text-blue-600" />
-              </div>
-              <h2 className="text-lg font-bold text-gray-900">Aktivitas Terbaru</h2>
-            </div>
-            <div className="space-y-3">
-              {[
-                { icon: ShoppingCart, text: 'Transaksi baru #TRX-1234', time: '5 menit lalu', color: 'blue' },
-                { icon: Package, text: 'Produk baru ditambahkan', time: '15 menit lalu', color: 'purple' },
-                { icon: Users, text: 'Customer baru terdaftar', time: '1 jam lalu', color: 'pink' },
-                { icon: AlertCircle, text: 'Stock rendah: Semen 50kg', time: '2 jam lalu', color: 'red' },
-              ].map((activity, i) => (
-                <div 
-                  key={i} 
-                  className="flex items-start gap-3 p-3 rounded-xl transition-all hover:bg-white/60 cursor-pointer group"
-                >
-                  <div 
-                    className={`p-2 rounded-lg transition-all group-hover:scale-110`} 
-                    style={{
-                      background: `rgba(${activity.color === 'blue' ? '96, 165, 250' : activity.color === 'purple' ? '167, 139, 250' : activity.color === 'pink' ? '244, 114, 182' : '239, 68, 68'}, 0.15)`,
-                      border: `1px solid rgba(${activity.color === 'blue' ? '96, 165, 250' : activity.color === 'purple' ? '167, 139, 250' : activity.color === 'pink' ? '244, 114, 182' : '239, 68, 68'}, 0.3)`
-                    }}
-                  >
-                    <activity.icon className={`w-4 h-4 ${
-                      activity.color === 'blue' ? 'text-blue-600' :
-                      activity.color === 'purple' ? 'text-purple-600' :
-                      activity.color === 'pink' ? 'text-pink-600' :
-                      'text-red-600'
-                    }`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-gray-900 text-sm font-medium">{activity.text}</p>
-                    <p className="text-gray-500 text-xs mt-0.5">{activity.time}</p>
-                  </div>
+            {/* Chart Container */}
+            <div className="relative h-80">
+              {(stats?.chart ?? []).length === 0 ? (
+                // Empty State
+                <div className="flex flex-col items-center justify-center h-full">
+                  <BarChart3 className="w-16 h-16 text-gray-300 mb-4" />
+                  <p className="text-gray-500 text-sm">Belum ada data penjualan</p>
+                  <p className="text-gray-400 text-xs mt-1">Data akan muncul setelah ada transaksi</p>
                 </div>
-              ))}
+              ) : (
+                <>
+                  {/* Trend Line SVG */}
+                  <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
+                    <defs>
+                      <linearGradient id="trendGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="rgba(96, 165, 250, 0.8)" />
+                        <stop offset="100%" stopColor="rgba(167, 139, 250, 0.8)" />
+                      </linearGradient>
+                      <filter id="glow">
+                        <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+                        <feMerge>
+                          <feMergeNode in="coloredBlur" />
+                          <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                      </filter>
+                    </defs>
+                    {stats?.chart && stats.chart.length > 1 && (() => {
+                      const chartData = stats.chart;
+                      const maxValue = Math.max(...chartData.map(d => d.total), 1);
+                      const padding = 40;
+                      const width = 100;
+                      const height = 320 - padding * 2;
+
+                      const points = chartData.map((data, i) => {
+                        const x = (i / (chartData.length - 1)) * (width - 10) + 5;
+                        const y = padding + height - (data.total / maxValue) * height;
+                        return `${x}%,${y}`;
+                      }).join(' ');
+
+                      return (
+                        <>
+                          {/* Gradient Fill */}
+                          <path
+                            d={`M ${chartData.map((data, i) => {
+                              const x = (i / (chartData.length - 1)) * (width - 10) + 5;
+                              const y = padding + height - (data.total / maxValue) * height;
+                              return `${x}% ${y}`;
+                            }).join(' L ')} L ${width - 5}% ${padding + height} L 5% ${padding + height} Z`}
+                            fill="url(#trendGradient)"
+                            opacity="0.1"
+                          />
+
+                          {/* Trend Line */}
+                          <polyline
+                            points={points}
+                            fill="none"
+                            stroke="url(#trendGradient)"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            filter="url(#glow)"
+                          />
+
+                          {/* Data Points */}
+                          {chartData.map((data, i) => {
+                            const x = (i / (chartData.length - 1)) * (width - 10) + 5;
+                            const y = padding + height - (data.total / maxValue) * height;
+                            return (
+                              <g key={i}>
+                                <circle
+                                  cx={`${x}%`}
+                                  cy={y}
+                                  r="6"
+                                  fill="white"
+                                  stroke="url(#trendGradient)"
+                                  strokeWidth="3"
+                                  filter="url(#glow)"
+                                />
+                                <circle
+                                  cx={`${x}%`}
+                                  cy={y}
+                                  r="3"
+                                  fill="url(#trendGradient)"
+                                />
+                              </g>
+                            );
+                          })}
+                        </>
+                      );
+                    })()}
+                  </svg>
+
+                  {/* Bar Chart */}
+                  <div className="relative h-full flex items-end justify-around gap-2 px-4" style={{ zIndex: 0 }}>
+                    {(stats?.chart ?? []).map((data, i) => {
+                      const maxValue = Math.max(...(stats?.chart ?? []).map(d => d.total), 1);
+                      const height = (data.total / maxValue) * 100;
+                      const minHeight = data.total > 0 ? Math.max(height, 5) : 0;
+
+                      return (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-3 max-w-[120px]">
+                          <div
+                            className="w-full rounded-t-xl transition-all duration-500 hover:opacity-80 relative group cursor-pointer"
+                            style={{
+                              minHeight: data.total > 0 ? '20px' : '0',
+                              height: `${minHeight}%`,
+                              background: data.total > 0
+                                ? `linear-gradient(180deg, rgba(96, 165, 250, 0.3) 0%, rgba(96, 165, 250, 0.1) 100%)`
+                                : 'rgba(229, 231, 235, 0.3)',
+                              border: data.total > 0
+                                ? '2px solid rgba(96, 165, 250, 0.3)'
+                                : '2px solid rgba(209, 213, 219, 0.3)',
+                              boxShadow: data.total > 0
+                                ? '0 -4px 12px rgba(96, 165, 250, 0.15)'
+                                : 'none'
+                            }}
+                          >
+                            {/* Tooltip */}
+                            <div className="absolute -top-16 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                              <div className="glass-card px-4 py-2 text-center whitespace-nowrap">
+                                <p className="text-xs text-gray-600 mb-0.5">
+                                  {new Date(data.date).toLocaleDateString('id-ID', {
+                                    day: 'numeric',
+                                    month: 'short'
+                                  })}
+                                </p>
+                                <p className="text-sm text-gray-900 font-bold">
+                                  Rp {(data.total / 1000000).toFixed(1)}M
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Day Label */}
+                          <span className="text-gray-600 text-sm font-medium">
+                            {new Date(data.date).toLocaleDateString('id-ID', { weekday: 'short' })}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
+
+
 
         {/* Quick Actions */}
         <div className="glass-card p-6">
@@ -243,31 +336,31 @@ export default async function DashboardPage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { icon: ShoppingCart, label: 'Buat Transaksi', color: 'blue', gradient: 'from-blue-500 to-blue-600' },
-              { icon: Package, label: 'Tambah Produk', color: 'purple', gradient: 'from-purple-500 to-purple-600' },
-              { icon: Users, label: 'Data Customer', color: 'pink', gradient: 'from-pink-500 to-pink-600' },
-              { icon: BarChart3, label: 'Laporan', color: 'blue', gradient: 'from-blue-500 to-indigo-600' },
+              { icon: ShoppingCart, label: 'Buat Transaksi', color: 'blue', gradient: 'from-blue-500 to-blue-600', href: '/dashboard/pos' },
+              { icon: Package, label: 'Tambah Produk', color: 'purple', gradient: 'from-purple-500 to-purple-600', href: '/dashboard/products' },
+              { icon: Users, label: 'Data Customer', color: 'pink', gradient: 'from-pink-500 to-pink-600', href: '/dashboard/customers' },
+              { icon: BarChart3, label: 'Laporan', color: 'blue', gradient: 'from-blue-500 to-indigo-600', href: '/dashboard/sales' },
             ].map((action, i) => (
-              <button
+              <Link
                 key={i}
-                className="glass-card-hover p-5 text-center group relative overflow-hidden"
+                href={action.href}
+                className="glass-card-hover p-5 text-center group relative overflow-hidden block"
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${action.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}></div>
-                <div 
-                  className={`inline-flex p-3.5 rounded-xl mb-3 transition-all group-hover:scale-110`} 
+                <div
+                  className={`inline-flex p-3.5 rounded-xl mb-3 transition-all group-hover:scale-110`}
                   style={{
                     background: `rgba(${action.color === 'blue' ? '96, 165, 250' : action.color === 'purple' ? '167, 139, 250' : '244, 114, 182'}, 0.15)`,
                     border: `1px solid rgba(${action.color === 'blue' ? '96, 165, 250' : action.color === 'purple' ? '167, 139, 250' : '244, 114, 182'}, 0.3)`
                   }}
                 >
-                  <action.icon className={`w-6 h-6 ${
-                    action.color === 'blue' ? 'text-blue-600' :
+                  <action.icon className={`w-6 h-6 ${action.color === 'blue' ? 'text-blue-600' :
                     action.color === 'purple' ? 'text-purple-600' :
-                    'text-pink-600'
-                  }`} />
+                      'text-pink-600'
+                    }`} />
                 </div>
                 <p className="text-gray-900 text-sm font-semibold">{action.label}</p>
-              </button>
+              </Link>
             ))}
           </div>
         </div>
@@ -277,15 +370,13 @@ export default async function DashboardPage() {
           <div className="flex items-center gap-2 mb-5">
             <AlertCircle className="w-5 h-5 text-red-600" />
             <h2 className="text-lg font-bold text-gray-900">Peringatan Stock Rendah</h2>
-            <span className="badge badge-danger ml-auto">5 Item</span>
+            <span className="badge badge-danger ml-auto">
+              {stats?.lowStock.length ?? 0} Item
+            </span>
           </div>
           <div className="space-y-3">
-            {[
-              { name: 'Semen Gresik 50kg', stock: 12, min: 50, unit: 'Sak' },
-              { name: 'Cat Tembok Putih 5L', stock: 8, min: 20, unit: 'Pcs' },
-              { name: 'Pipa PVC 3 inch', stock: 15, min: 30, unit: 'Batang' },
-            ].map((item, i) => (
-              <div 
+            {(stats?.lowStock ?? []).map((item, i) => (
+              <div
                 key={i}
                 className="flex items-center justify-between p-4 rounded-xl transition-all hover:bg-white/60"
                 style={{
@@ -302,7 +393,9 @@ export default async function DashboardPage() {
                   </div>
                   <div>
                     <p className="text-gray-900 text-sm font-semibold">{item.name}</p>
-                    <p className="text-gray-500 text-xs mt-0.5">Min. stock: {item.min} {item.unit}</p>
+                    <p className="text-gray-500 text-xs mt-0.5">
+                      Min. stock: {item.minStock} {item.unit}
+                    </p>
                   </div>
                 </div>
                 <div className="text-right">
