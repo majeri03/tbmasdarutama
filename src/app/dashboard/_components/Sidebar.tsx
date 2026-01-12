@@ -19,6 +19,7 @@ import {
   TrendingUp,
   Send,
   DollarSign,
+  BarChart3,
 } from "lucide-react";
 import { Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
@@ -60,6 +61,7 @@ const menuGroups = [
   {
     label: "Lainnya",
     items: [
+      { href: "/dashboard/reports", icon: <BarChart3 />, label: "Laporan" },
       { href: "/dashboard/settings", icon: <Settings />, label: "Pengaturan" },
     ],
   },

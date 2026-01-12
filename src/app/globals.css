@@ -487,3 +487,51 @@
     @apply px-2 py-2;
   }
 }
+
+/* Print Styles */
+@media print {
+  /* Hide semua elemen kecuali report content */
+  body * {
+    visibility: hidden;
+  }
+  
+  /* Show hanya elemen yang akan di-print */
+  #print-content,
+  #print-content * {
+    visibility: visible;
+  }
+  
+  /* Reset positioning untuk print */
+  #print-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  
+  /* Hide buttons, filters, sidebar */
+  button,
+  nav,
+  aside,
+  header,
+  .no-print {
+    display: none !important;
+  }
+  
+  /* Set ukuran A4 */
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+  
+  /* Remove background colors untuk print */
+  * {
+    background: white !important;
+    color: black !important;
+  }
+  
+  /* Preserve borders dan warna tertentu */
+  table, th, td {
+    border-color: #000 !important;
+  }
+}
