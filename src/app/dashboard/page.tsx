@@ -171,154 +171,159 @@ export default async function DashboardPage() {
                 <h2 className="text-xl font-bold text-gray-900 mb-1">Grafik Penjualan</h2>
                 <p className="text-gray-600 text-sm">Performa penjualan 7 hari terakhir</p>
               </div>
-              <div className="p-2.5 rounded-lg" style={{
-                background: 'rgba(96, 165, 250, 0.1)',
-                border: '1px solid rgba(96, 165, 250, 0.2)'
-              }}>
-                <BarChart3 className="w-5 h-5 text-blue-600" />
-              </div>
+              {/* Icon BarChart3 sudah dihapus sepenuhnya */}
             </div>
 
             {/* Chart Container */}
-            <div className="relative h-80">
-              {(stats?.chart ?? []).length === 0 ? (
-                // Empty State
+            <div className="relative h-80 bg-gradient-to-b from-blue-50/20 to-transparent rounded-xl p-6">
+              {(!stats?.chart || stats.chart.length === 0) ? (
+                // Empty State - Safety check untuk error 'stats is possibly null'
                 <div className="flex flex-col items-center justify-center h-full">
-                  <BarChart3 className="w-16 h-16 text-gray-300 mb-4" />
                   <p className="text-gray-500 text-sm">Belum ada data penjualan</p>
                   <p className="text-gray-400 text-xs mt-1">Data akan muncul setelah ada transaksi</p>
                 </div>
               ) : (
                 <>
-                  {/* Trend Line SVG */}
-                  <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
-                    <defs>
-                      <linearGradient id="trendGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="rgba(96, 165, 250, 0.8)" />
-                        <stop offset="100%" stopColor="rgba(167, 139, 250, 0.8)" />
-                      </linearGradient>
-                      <filter id="glow">
-                        <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-                        <feMerge>
-                          <feMergeNode in="coloredBlur" />
-                          <feMergeNode in="SourceGraphic" />
-                        </feMerge>
-                      </filter>
-                    </defs>
-                    {stats?.chart && stats.chart.length > 1 && (() => {
-                      const chartData = stats.chart;
+                  {/* Y-Axis Labels */}
+                  <div className="absolute left-0 top-0 bottom-12 flex flex-col justify-between py-6 pr-4">
+                    {[100, 75, 50, 25, 0].map((percent) => {
+                      // Fix error TS: pastikan stats?.chart tersedia sebelum dimap
+                      const chartData = stats?.chart ?? [];
                       const maxValue = Math.max(...chartData.map(d => d.total), 1);
-                      const padding = 40;
-                      const width = 100;
-                      const height = 320 - padding * 2;
-
-                      const points = chartData.map((data, i) => {
-                        const x = (i / (chartData.length - 1)) * (width - 10) + 5;
-                        const y = padding + height - (data.total / maxValue) * height;
-                        return `${x}%,${y}`;
-                      }).join(' ');
-
+                      const value = (maxValue * percent) / 100;
                       return (
-                        <>
-                          {/* Gradient Fill */}
-                          <path
-                            d={`M ${chartData.map((data, i) => {
-                              const x = (i / (chartData.length - 1)) * (width - 10) + 5;
-                              const y = padding + height - (data.total / maxValue) * height;
-                              return `${x}% ${y}`;
-                            }).join(' L ')} L ${width - 5}% ${padding + height} L 5% ${padding + height} Z`}
-                            fill="url(#trendGradient)"
-                            opacity="0.1"
-                          />
-
-                          {/* Trend Line */}
-                          <polyline
-                            points={points}
-                            fill="none"
-                            stroke="url(#trendGradient)"
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            filter="url(#glow)"
-                          />
-
-                          {/* Data Points */}
-                          {chartData.map((data, i) => {
-                            const x = (i / (chartData.length - 1)) * (width - 10) + 5;
-                            const y = padding + height - (data.total / maxValue) * height;
-                            return (
-                              <g key={i}>
-                                <circle
-                                  cx={`${x}%`}
-                                  cy={y}
-                                  r="6"
-                                  fill="white"
-                                  stroke="url(#trendGradient)"
-                                  strokeWidth="3"
-                                  filter="url(#glow)"
-                                />
-                                <circle
-                                  cx={`${x}%`}
-                                  cy={y}
-                                  r="3"
-                                  fill="url(#trendGradient)"
-                                />
-                              </g>
-                            );
-                          })}
-                        </>
-                      );
-                    })()}
-                  </svg>
-
-                  {/* Bar Chart */}
-                  <div className="relative h-full flex items-end justify-around gap-2 px-4" style={{ zIndex: 0 }}>
-                    {(stats?.chart ?? []).map((data, i) => {
-                      const maxValue = Math.max(...(stats?.chart ?? []).map(d => d.total), 1);
-                      const height = (data.total / maxValue) * 100;
-                      const minHeight = data.total > 0 ? Math.max(height, 5) : 0;
-
-                      return (
-                        <div key={i} className="flex-1 flex flex-col items-center gap-3 max-w-[120px]">
-                          <div
-                            className="w-full rounded-t-xl transition-all duration-500 hover:opacity-80 relative group cursor-pointer"
-                            style={{
-                              minHeight: data.total > 0 ? '20px' : '0',
-                              height: `${minHeight}%`,
-                              background: data.total > 0
-                                ? `linear-gradient(180deg, rgba(96, 165, 250, 0.3) 0%, rgba(96, 165, 250, 0.1) 100%)`
-                                : 'rgba(229, 231, 235, 0.3)',
-                              border: data.total > 0
-                                ? '2px solid rgba(96, 165, 250, 0.3)'
-                                : '2px solid rgba(209, 213, 219, 0.3)',
-                              boxShadow: data.total > 0
-                                ? '0 -4px 12px rgba(96, 165, 250, 0.15)'
-                                : 'none'
-                            }}
-                          >
-                            {/* Tooltip */}
-                            <div className="absolute -top-16 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                              <div className="glass-card px-4 py-2 text-center whitespace-nowrap">
-                                <p className="text-xs text-gray-600 mb-0.5">
-                                  {new Date(data.date).toLocaleDateString('id-ID', {
-                                    day: 'numeric',
-                                    month: 'short'
-                                  })}
-                                </p>
-                                <p className="text-sm text-gray-900 font-bold">
-                                  Rp {(data.total / 1000000).toFixed(1)}M
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Day Label */}
-                          <span className="text-gray-600 text-sm font-medium">
-                            {new Date(data.date).toLocaleDateString('id-ID', { weekday: 'short' })}
-                          </span>
+                        <div key={percent} className="text-xs text-gray-400 font-medium">
+                          {value >= 1000000
+                            ? `${(value / 1000000).toFixed(1)}M`
+                            : value >= 1000
+                              ? `${(value / 1000).toFixed(0)}K`
+                              : value.toFixed(0)
+                          }
                         </div>
                       );
                     })}
+                  </div>
+
+                  {/* Grid Lines */}
+                  <div className="absolute left-12 right-0 top-0 bottom-12 py-6">
+                    {[0, 25, 50, 75, 100].map((percent) => (
+                      <div
+                        key={percent}
+                        className="absolute w-full border-t border-dashed"
+                        style={{
+                          top: `${percent}%`,
+                          borderColor: 'rgba(156, 163, 175, 0.1)'
+                        }}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Chart Area */}
+                  <div className="absolute left-12 right-0 top-0 bottom-12 py-6">
+                    <svg
+                      className="w-full h-full"
+                      viewBox="0 0 100 100"
+                      preserveAspectRatio="none"
+                    >
+                      <defs>
+                        <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="#3b82f6" />
+                          <stop offset="100%" stopColor="#8b5cf6" />
+                        </linearGradient>
+
+                        <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="rgba(59, 130, 246, 0.2)" />
+                          <stop offset="100%" stopColor="rgba(59, 130, 246, 0)" />
+                        </linearGradient>
+                      </defs>
+
+                      {(() => {
+                        const chartData = stats?.chart ?? [];
+                        if (chartData.length < 2) return null;
+
+                        const maxValue = Math.max(...chartData.map(d => d.total), 1);
+
+                        // Kalkulasi Titik
+                        const points = chartData.map((data, i) => ({
+                          x: (i / (chartData.length - 1)) * 100,
+                          y: 100 - (data.total / maxValue) * 100
+                        }));
+
+                        // Perbaikan Garis: Menggunakan L (Line) sederhana agar normal/biasa aja
+                        // Jika ingin sedikit melengkung tanpa "loop", gunakan Path yang bersih
+                        let pathData = `M ${points[0].x} ${points[0].y}`;
+
+                        // 2. Gunakan Cubic Bezier (C) untuk kelengkungan yang natural
+                        for (let i = 0; i < points.length - 1; i++) {
+                          const curr = points[i];
+                          const next = points[i + 1];
+
+                          // Menentukan control points di tengah antara dua titik (smooth transition)
+                          const cp1x = curr.x + (next.x - curr.x) / 2;
+                          const cp2x = curr.x + (next.x - curr.x) / 2;
+
+                          pathData += ` C ${cp1x} ${curr.y}, ${cp2x} ${next.y}, ${next.x} ${next.y}`;
+                        }
+
+                        // 3. Gabungkan untuk area pengisian (fill)
+                        const areaPath = `${pathData} L 100 100 L 0 100 Z`;
+
+                        return (
+                          <>
+                            {/* Area di bawah garis */}
+                            <path d={areaPath} fill="url(#areaGradient)" />
+
+                            {/* Garis Utama - strokeWidth diperkecil jadi 2 */}
+                            <path
+                              d={pathData}
+                              fill="none"
+                              stroke="url(#lineGradient)"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+
+                            {/* SEMUA <circle> ATAU ICON BUNDAR DI SINI SUDAH DIHAPUS */}
+                          </>
+                        );
+                      })()}
+                    </svg>
+
+                    {/* Interactive hover areas */}
+                    <div className="absolute inset-0 flex items-end justify-between">
+                      {(stats?.chart ?? []).map((data, i) => (
+                        <div
+                          key={i}
+                          className="flex-1 h-full relative group cursor-pointer"
+                        >
+                          {/* Garis vertikal saat hover */}
+                          <div className="absolute inset-x-0 top-0 bottom-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="w-px h-full mx-auto bg-blue-200" />
+                          </div>
+
+                          {/* Tooltip minimalis */}
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-10">
+                            <div className="bg-gray-900 text-white px-3 py-1.5 rounded text-xs shadow-xl whitespace-nowrap">
+                              <p className="font-bold">Rp {data.total.toLocaleString('id-ID')}</p>
+                              <p className="text-[10px] opacity-70">
+                                {new Date(data.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* X-Axis Labels */}
+                  <div className="absolute left-12 right-0 bottom-0 flex justify-between">
+                    {(stats?.chart ?? []).map((data, i) => (
+                      <div key={i} className="flex-1 text-center">
+                        <p className="text-[10px] font-semibold text-gray-500">
+                          {new Date(data.date).toLocaleDateString('id-ID', { weekday: 'short' })}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </>
               )}
