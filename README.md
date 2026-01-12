@@ -49,3 +49,5 @@ Faktur Pembelian: PO ke supplier
 Faktur Penjualan: Invoice customer
 Faktur Pengiriman: Delivery note
 Print & export PDF
+
+

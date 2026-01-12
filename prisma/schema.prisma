@@ -27,6 +27,7 @@ model User {
   cashMovements CashMovement[]
   deliveryOrders  DeliveryOrder[]
   stockMovements     StockMovement[] 
+  passwordResetTokens PasswordResetToken[]
   
   @@map("users")
 }
@@ -489,4 +490,73 @@ enum DeliveryStatus {
   IN_TRANSIT
   DELIVERED
   CANCELLED
+}
+
+// ==================== SETTINGS MODULE ====================
+model StoreSetting {
+  id          String   @id @default(cuid())
+  name        String   @default("TB Masdar Utama")
+  tagline     String?
+  logoUrl     String?
+  phone       String?
+  email       String?
+  address     String?  @db.Text
+  city        String?
+  province    String?
+  postalCode  String?
+  website     String?
+  instagram   String?
+  facebook    String?
+  whatsapp    String?
+  taxNumber   String?  // NPWP
+  bankName    String?
+  bankAccount String?
+  bankHolder  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("store_settings")
+}
+
+model LandingPageSetting {
+  id                  String   @id @default(cuid())
+  heroTitle           String   @default("TB Masdar Utama")
+  heroSubtitle        String   @default("Distributor Bahan Bangunan Terpercaya")
+  aboutUs             String?  @db.Text
+  whyChooseUs         String?  @db.Text
+  showFeaturedProducts Boolean @default(true)
+  contactMapUrl       String?  // Google Maps embed URL
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  heroImages          HeroImage[]
+  
+  @@map("landing_page_settings")
+}
+
+model HeroImage {
+  id          String              @id @default(cuid())
+  landingId   String
+  imageUrl    String
+  order       Int                 @default(0)
+  isActive    Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  
+  landing     LandingPageSetting  @relation(fields: [landingId], references: [id], onDelete: Cascade)
+  
+  @@index([landingId])
+  @@map("hero_images")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
