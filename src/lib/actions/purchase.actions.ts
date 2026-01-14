@@ -13,7 +13,7 @@ import {
 } from "@/lib/validations/purchase.schema";
 import { Prisma, PurchaseStatus, MovementType } from "@prisma/client";
 
-// ==================== GENERATE PO NUMBER ====================
+//    GENERATE PO NUMBER   
 async function generatePONumber(): Promise<string> {
   const today = new Date();
   const year = today.getFullYear();
@@ -41,7 +41,7 @@ async function generatePONumber(): Promise<string> {
   return `PO-${datePrefix}-${String(sequence).padStart(3, "0")}`;
 }
 
-// ==================== CREATE PURCHASE ====================
+//    CREATE PURCHASE   
 export async function createPurchase(input: CreatePurchaseInput) {
   try {
     const session = await auth();
@@ -160,7 +160,7 @@ export async function createPurchase(input: CreatePurchaseInput) {
   }
 }
 
-// ==================== GET ALL PURCHASES ====================
+//    GET ALL PURCHASES   
 export async function getAllPurchases(filters?: {
   search?: string;
   supplierId?: string;
@@ -283,7 +283,7 @@ export async function getAllPurchases(filters?: {
   }
 }
 
-// ==================== GET PURCHASE BY ID ====================
+//    GET PURCHASE BY ID   
 export async function getPurchaseById(id: string) {
   try {
     const purchase = await prisma.purchase.findUnique({
@@ -347,7 +347,7 @@ export async function getPurchaseById(id: string) {
   }
 }
 
-// ==================== RECEIVE PURCHASE (UPDATE STOCK) ====================
+//    RECEIVE PURCHASE (UPDATE STOCK)   
 export async function receivePurchase(input: ReceivePurchaseInput) {
   try {
     const session = await auth();
@@ -462,7 +462,7 @@ export async function receivePurchase(input: ReceivePurchaseInput) {
   }
 }
 
-// ==================== UPDATE PURCHASE ====================
+//    UPDATE PURCHASE   
 export async function updatePurchase(input: UpdatePurchaseInput) {
   try {
     const session = await auth();
@@ -504,7 +504,6 @@ export async function updatePurchase(input: UpdatePurchaseInput) {
 
     // Update purchase
     const purchase = await prisma.$transaction(async (tx) => {
-      // Delete old items
       await tx.purchaseItem.deleteMany({
         where: { purchaseId: validated.id },
       });
@@ -559,7 +558,6 @@ export async function updatePurchase(input: UpdatePurchaseInput) {
           },
         });
       } else if (validated.paidAmount < grandTotal) {
-        // Create new debt
         const remainingDebt = grandTotal - validated.paidAmount;
         const dueDate = new Date();
         dueDate.setDate(dueDate.getDate() + 30);
@@ -611,7 +609,7 @@ export async function updatePurchase(input: UpdatePurchaseInput) {
   }
 }
 
-// ==================== DELETE PURCHASE ====================
+//    DELETE PURCHASE   
 export async function deletePurchase(id: string) {
   try {
     const session = await auth();
@@ -647,7 +645,7 @@ export async function deletePurchase(id: string) {
       };
     }
 
-    // ✅ Delete in transaction with proper order
+    //Delete in transaction with proper order
     await prisma.$transaction(async (tx) => {
       // 1. Delete supplier debts first (foreign key constraint)
       await tx.supplierDebt.deleteMany({
@@ -681,7 +679,7 @@ export async function deletePurchase(id: string) {
   }
 }
 
-// ==================== GET PURCHASE STATISTICS ====================
+//    GET PURCHASE STATISTICS   
 export async function getPurchaseStatistics() {
   try {
     const today = new Date();

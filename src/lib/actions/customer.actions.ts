@@ -11,7 +11,7 @@ import {
 } from "@/lib/validations/customer.schema";
 import { Prisma } from "@prisma/client";
 
-// ==================== GENERATE CUSTOMER CODE ====================
+//GENERATE CUSTOMER CODE
 async function generateCustomerCode(): Promise<string> {
   const lastCustomer = await prisma.customer.findFirst({
     orderBy: { code: "desc" },
@@ -27,7 +27,7 @@ async function generateCustomerCode(): Promise<string> {
   return `CUST-${newNumber.toString().padStart(5, "0")}`;
 }
 
-// ==================== CREATE CUSTOMER ====================
+//   CREATE CUSTOMER  
 export async function createCustomer(data: CreateCustomerInput) {
   try {
     const session = await auth();
@@ -88,7 +88,7 @@ export async function createCustomer(data: CreateCustomerInput) {
   }
 }
 
-// ==================== UPDATE CUSTOMER ====================
+//   UPDATE CUSTOMER  
 export async function updateCustomer(id: string, data: UpdateCustomerInput) {
   try {
     const session = await auth();
@@ -160,7 +160,7 @@ export async function updateCustomer(id: string, data: UpdateCustomerInput) {
   }
 }
 
-// ==================== DELETE CUSTOMER ====================
+//   DELETE CUSTOMER  
 export async function deleteCustomer(id: string) {
   try {
     const session = await auth();
@@ -185,7 +185,6 @@ export async function deleteCustomer(id: string) {
       return { success: false, error: "Customer tidak ditemukan." };
     }
 
-    // Check if has transactions
     if (customer._count.sales > 0) {
       return {
         success: false,
@@ -193,7 +192,6 @@ export async function deleteCustomer(id: string) {
       };
     }
 
-    // Check if has debts
     if (customer._count.customerDebts > 0) {
       return {
         success: false,
@@ -226,7 +224,7 @@ export async function deleteCustomer(id: string) {
   }
 }
 
-// ==================== TOGGLE ACTIVE STATUS ====================
+//   TOGGLE ACTIVE STATUS  
 export async function toggleCustomerStatus(id: string) {
   try {
     const session = await auth();
@@ -264,7 +262,7 @@ export async function toggleCustomerStatus(id: string) {
     };
   }
 }
-// ==================== GET ALL CUSTOMERS ====================
+//   GET ALL CUSTOMERS  
 export async function getCustomers(filters?: { status?: "ACTIVE" | "INACTIVE" }) {
   try {
     const where: Prisma.CustomerWhereInput = {};

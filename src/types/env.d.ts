@@ -6,7 +6,7 @@ declare global {
       NEXTAUTH_SECRET: string;
       NODE_ENV: "development" | "production";
       
-      // ✅ Cloudflare R2
+      // Data Base Cloudflare R2
       CLOUDFLARE_WORKER_URL: string;
       CLOUDFLARE_R2_PUBLIC_URL: string;
     }

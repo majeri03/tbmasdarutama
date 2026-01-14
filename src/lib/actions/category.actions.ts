@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
-// ==================== SCHEMAS ====================
+//SCHEMAS
 const categoryServerSchema = z.object({
   name: z.string().min(1).max(100).trim(),
   description: z.string().trim().nullable().default(null),
@@ -20,12 +20,11 @@ const subCategoryServerSchema = z.object({
 export type CategoryFormData = z.infer<typeof categoryServerSchema>;
 export type SubCategoryFormData = z.infer<typeof subCategoryServerSchema>;
 
-// ==================== CREATE CATEGORY ====================
+//CREATE CATEGORY
 export async function createCategory(data: CategoryFormData) {
   try {
     const validatedData = categoryServerSchema.parse(data);
 
-    // Check duplicate name
     const existingCategory = await prisma.category.findUnique({
       where: { name: validatedData.name },
     });
@@ -65,7 +64,7 @@ export async function createCategory(data: CategoryFormData) {
   }
 }
 
-// ==================== GET ALL CATEGORIES ====================
+//GET ALL CATEGORIES
 export async function getCategories(params?: {
   search?: string;
   page?: number;
@@ -141,7 +140,7 @@ export async function getCategories(params?: {
   }
 }
 
-// ==================== GET CATEGORY BY ID ====================
+//GET CATEGORY BY ID
 export async function getCategoryById(id: string) {
   try {
     const category = await prisma.category.findUnique({
@@ -186,7 +185,7 @@ export async function getCategoryById(id: string) {
   }
 }
 
-// ==================== UPDATE CATEGORY ====================
+//UPDATE CATEGORY
 export async function updateCategory(id: string, data: CategoryFormData) {
   try {
     const validatedData = categoryServerSchema.parse(data);
@@ -202,7 +201,7 @@ export async function updateCategory(id: string, data: CategoryFormData) {
       };
     }
 
-    // Check duplicate name (exclude current)
+
     if (validatedData.name !== existingCategory.name) {
       const duplicateCategory = await prisma.category.findUnique({
         where: { name: validatedData.name },
@@ -245,7 +244,7 @@ export async function updateCategory(id: string, data: CategoryFormData) {
   }
 }
 
-// ==================== DELETE CATEGORY ====================
+//DELETE CATEGORY
 export async function deleteCategory(id: string) {
   try {
     const category = await prisma.category.findUnique({
@@ -267,7 +266,6 @@ export async function deleteCategory(id: string) {
       };
     }
 
-    // Check if has products
     if (category._count.products > 0) {
       return {
         success: false,
@@ -275,7 +273,6 @@ export async function deleteCategory(id: string) {
       };
     }
 
-    // Check if has sub-categories
     if (category._count.subCategories > 0) {
       return {
         success: false,
@@ -302,12 +299,11 @@ export async function deleteCategory(id: string) {
   }
 }
 
-// ==================== CREATE SUB-CATEGORY ====================
+//CREATE SUB-CATEGORY
 export async function createSubCategory(data: SubCategoryFormData) {
   try {
     const validatedData = subCategoryServerSchema.parse(data);
 
-    // Check if category exists
     const category = await prisma.category.findUnique({
       where: { id: validatedData.categoryId },
     });
@@ -319,7 +315,6 @@ export async function createSubCategory(data: SubCategoryFormData) {
       };
     }
 
-    // Check duplicate name in same category
     const existingSubCategory = await prisma.subCategory.findFirst({
       where: {
         name: validatedData.name,
@@ -362,7 +357,7 @@ export async function createSubCategory(data: SubCategoryFormData) {
   }
 }
 
-// ==================== UPDATE SUB-CATEGORY ====================
+//UPDATE SUB-CATEGORY
 export async function updateSubCategory(id: string, data: SubCategoryFormData) {
   try {
     const validatedData = subCategoryServerSchema.parse(data);
@@ -378,7 +373,6 @@ export async function updateSubCategory(id: string, data: SubCategoryFormData) {
       };
     }
 
-    // Check duplicate name (exclude current)
     if (
       validatedData.name !== existingSubCategory.name ||
       validatedData.categoryId !== existingSubCategory.categoryId
@@ -428,7 +422,7 @@ export async function updateSubCategory(id: string, data: SubCategoryFormData) {
   }
 }
 
-// ==================== DELETE SUB-CATEGORY ====================
+//DELETE SUB-CATEGORY
 export async function deleteSubCategory(id: string) {
   try {
     const subCategory = await prisma.subCategory.findUnique({
@@ -449,7 +443,7 @@ export async function deleteSubCategory(id: string) {
       };
     }
 
-    // Check if has products
+
     if (subCategory._count.products > 0) {
       return {
         success: false,
@@ -476,7 +470,7 @@ export async function deleteSubCategory(id: string) {
   }
 }
 
-// ==================== GET CATEGORIES FOR SELECT ====================
+//GET CATEGORIES FOR SELECT
 export async function getCategoriesForSelect() {
   try {
     const categories = await prisma.category.findMany({

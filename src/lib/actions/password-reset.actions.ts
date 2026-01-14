@@ -75,7 +75,7 @@ export async function requestPasswordReset(email: string) {
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
 
-    const expiresAt = new Date(Date.now() + 3600000); // 1 hour
+    const expiresAt = new Date(Date.now() + 3600000);
 
     // Delete old tokens
     await prisma.passwordResetToken.deleteMany({
@@ -102,7 +102,6 @@ export async function requestPasswordReset(email: string) {
 
     if (!emailResult.success) {
       console.error("[EMAIL_SEND_ERROR]", emailResult.error);
-      // Don't throw error, just log it
     }
 
     return {

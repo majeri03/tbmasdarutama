@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth";
 import { DebtStatus, Prisma } from "@prisma/client";
 import { addPaymentSchema, AddPaymentInput } from "@/lib/validations/customer-debt.schema";
 
-// ==================== GET ALL CUSTOMER DEBTS ====================
+//GET ALL CUSTOMER DEBTS
 export async function getAllCustomerDebts(filters?: {
   search?: string;
   customerId?: string;
@@ -92,7 +92,6 @@ export async function getAllCustomerDebts(filters?: {
       })
     );
 
-    // Serialize Decimal to number
     const serializedDebts = debtsWithPayments.map((debt) => ({
       ...debt,
       totalDebt: Number(debt.totalDebt),
@@ -115,7 +114,7 @@ export async function getAllCustomerDebts(filters?: {
   }
 }
 
-// ==================== GET CUSTOMER DEBT STATISTICS ====================
+//GET CUSTOMER DEBT STATISTICS
 export async function getCustomerDebtStatistics() {
   try {
     const today = new Date();
@@ -163,7 +162,7 @@ export async function getCustomerDebtStatistics() {
   }
 }
 
-// ==================== GET CUSTOMER DEBT BY ID ====================
+//GET CUSTOMER DEBT BY ID
 export async function getCustomerDebtById(id: string) {
   try {
     const debt = await prisma.customerDebt.findUnique({
@@ -187,7 +186,6 @@ export async function getCustomerDebtById(id: string) {
       return { success: false, error: "Debt not found" };
     }
 
-    // Get payments separately
     const payments = await prisma.debtPayment.findMany({
       where: { customerDebtId: id },
       include: {
@@ -203,7 +201,6 @@ export async function getCustomerDebtById(id: string) {
       },
     });
 
-    // Serialize
     const serializedDebt = {
       ...debt,
       totalDebt: Number(debt.totalDebt),
@@ -238,7 +235,7 @@ export async function getCustomerDebtById(id: string) {
   }
 }
 
-// ==================== ADD PAYMENT ====================
+//ADD PAYMENT
 export async function addCustomerDebtPayment(input: AddPaymentInput) {
   try {
     const session = await auth();
@@ -248,7 +245,6 @@ export async function addCustomerDebtPayment(input: AddPaymentInput) {
 
     const validated = addPaymentSchema.parse(input);
 
-    // Get debt
     const debt = await prisma.customerDebt.findUnique({
       where: { id: validated.debtId },
     });
@@ -266,18 +262,14 @@ export async function addCustomerDebtPayment(input: AddPaymentInput) {
       return { success: false, error: "Payment amount exceeds remaining debt" };
     }
 
-    // Calculate new values
     const newPaidAmount = Number(debt.paidAmount) + validated.amount;
     const newRemainingDebt = remainingDebt - validated.amount;
     const newStatus = newRemainingDebt === 0 ? DebtStatus.PAID : DebtStatus.PARTIAL;
 
-    // Update in transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Generate payment number
       const paymentCount = await tx.debtPayment.count();
       const paymentNumber = `PAY-${String(paymentCount + 1).padStart(6, '0')}`;
 
-      // Create payment record
       const payment = await tx.debtPayment.create({
         data: {
           paymentNumber,
@@ -286,11 +278,10 @@ export async function addCustomerDebtPayment(input: AddPaymentInput) {
           paymentMethod: validated.paymentMethod,
           paymentDate: validated.paymentDate,
           notes: validated.notes,
-          adminId: session.user.id, // ✅ FIX: Use adminId instead of createdBy
+          adminId: session.user.id,
         },
       });
 
-      // Update debt
       const updatedDebt = await tx.customerDebt.update({
         where: { id: validated.debtId },
         data: {
@@ -327,7 +318,7 @@ export async function addCustomerDebtPayment(input: AddPaymentInput) {
   }
 }
 
-// ==================== DELETE CUSTOMER DEBT ====================
+//DELETE CUSTOMER DEBT
 export async function deleteCustomerDebt(id: string) {
   try {
     const session = await auth();
@@ -339,7 +330,6 @@ export async function deleteCustomerDebt(id: string) {
       return { success: false, error: "Kasir tidak memiliki akses untuk hapus debt" };
     }
 
-    // Check debt and payment count
     const debt = await prisma.customerDebt.findUnique({
       where: { id },
     });
@@ -348,7 +338,6 @@ export async function deleteCustomerDebt(id: string) {
       return { success: false, error: "Debt not found" };
     }
 
-    // Check payment count separately
     const paymentCount = await prisma.debtPayment.count({
       where: { customerDebtId: id },
     });
@@ -377,7 +366,7 @@ export async function deleteCustomerDebt(id: string) {
   }
 }
 
-// ==================== UPDATE OVERDUE STATUS (Cron Job Helper) ====================
+//UPDATE OVERDUE STATUS (Cron Job Helper)
 export async function updateOverdueDebts() {
   try {
     const today = new Date();

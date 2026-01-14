@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { cache } from "react";
-import { decimalToNumber } from "@/lib/utils"; // ✅ Import dari utils
+import { decimalToNumber } from "@/lib/utils";
 
 export const getPublicLandingData = cache(async () => {
   try {
