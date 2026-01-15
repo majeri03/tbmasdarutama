@@ -3,11 +3,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { Eye, X, User, Calendar, CreditCard, Printer, Download } from "lucide-react";
 import { getSaleById } from "@/lib/actions/sale.actions";
+import { getStoreSetting } from "@/lib/actions/store-setting.actions"; // Import ini
 import { SaleStatusBadge } from "./SaleStatusBadge";
 import { PaymentMethodBadge } from "./PaymentMethodBadge";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { SaleStatus, PaymentMethod } from "@prisma/client";
+import { StoreSetting } from "@/types/settings"; // Pastikan tipe ini ada
+import { printInvoice } from "@/lib/utils/invoice-printer";
+
+
 interface SaleItem {
     id: string;
     quantity: number;
@@ -26,13 +31,12 @@ interface SaleItem {
     };
 }
 
-// LINE 29-51, GANTI LAGI dengan:
 interface SaleDetail {
     id: string;
     invoiceNumber: string;
     saleDate: Date;
-    status: SaleStatus;  // ✅ FIX: use imported type
-    paymentMethod: PaymentMethod;  // ✅ FIX: use imported type
+    status: SaleStatus;
+    paymentMethod: PaymentMethod;
     totalAmount: number;
     discount: number;
     tax: number;
@@ -43,12 +47,13 @@ interface SaleDetail {
     customer: {
         name: string;
         phone: string | null;
+        address?: string | null; // Ditambahkan opsional agar bisa dipakai di print
     } | null;
     cashier: {
         name: string;
     };
     saleItems: SaleItem[];
-    customerDebt?: {  // ✅ TAMBAH INI
+    customerDebt?: {
         totalDebt: number;
         paidAmount: number;
         remainingDebt: number;
@@ -64,22 +69,32 @@ export function SaleViewModal({ saleId }: SaleViewModalProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [sale, setSale] = useState<SaleDetail | null>(null);
+    const [storeSetting, setStoreSetting] = useState<StoreSetting | null>(null); // State untuk setting toko
     const [error, setError] = useState("");
 
-    const loadSale = useCallback(async () => {
+    const loadData = useCallback(async () => {
         setLoading(true);
         setError("");
         try {
-            const result = await getSaleById(saleId);
-            if (result.success && result.data) {
-                setSale(result.data as unknown as SaleDetail);
+            // Ambil data sale dan setting toko secara paralel
+            const [saleResult, settingResult] = await Promise.all([
+                getSaleById(saleId),
+                getStoreSetting()
+            ]);
+
+            if (saleResult.success && saleResult.data) {
+                setSale(saleResult.data as unknown as SaleDetail);
             } else {
-                setError(result.error || "Gagal memuat data");
-                setIsOpen(false);
+                setError(saleResult.error || "Gagal memuat data penjualan");
             }
-        } catch {
+
+            if (settingResult.success && settingResult.data) {
+                setStoreSetting(settingResult.data as StoreSetting);
+            }
+
+        } catch (err) {
+            console.error(err);
             setError("Gagal memuat detail penjualan");
-            setIsOpen(false);
         } finally {
             setLoading(false);
         }
@@ -87,13 +102,15 @@ export function SaleViewModal({ saleId }: SaleViewModalProps) {
 
     useEffect(() => {
         if (isOpen) {
-            loadSale();
+            loadData();
         }
-    }, [isOpen, loadSale]);
+    }, [isOpen, loadData]);
 
+    // Fungsi Print yang mendefinisikan HTML Invoice secara manual
     const handlePrint = () => {
-        window.print();
-    };
+    if (!sale || !storeSetting) return;
+    printInvoice(sale , storeSetting);
+};
 
     const handleDownloadPDF = async () => {
         setError("Fitur PDF sedang dalam pengembangan");
@@ -139,7 +156,7 @@ export function SaleViewModal({ saleId }: SaleViewModalProps) {
                             </div>
                         ) : sale ? (
                             <div className="modal-body">
-                                {/* Header Info */}
+                                {/* Header Info (TAMPILAN DI LAYAR - TETAP SAMA) */}
                                 <div className="glass-card p-6 mb-6">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
@@ -264,7 +281,6 @@ export function SaleViewModal({ saleId }: SaleViewModalProps) {
                                             </span>
                                         </div>
 
-                                        {/* ✅ TAMBAH INFO SISA HUTANG */}
                                         {sale.customerDebt && sale.customerDebt.remainingDebt > 0 && (
                                             <div className="flex justify-between text-sm bg-yellow-50 p-2 rounded">
                                                 <span className="text-gray-700 font-medium">Sisa Hutang:</span>
@@ -303,7 +319,7 @@ export function SaleViewModal({ saleId }: SaleViewModalProps) {
                             </button>
                             <button onClick={handlePrint} className="btn-info">
                                 <Printer className="w-4 h-4" />
-                                Print
+                                Print Invoice
                             </button>
                             <button onClick={handleDownloadPDF} className="btn-primary">
                                 <Download className="w-4 h-4" />

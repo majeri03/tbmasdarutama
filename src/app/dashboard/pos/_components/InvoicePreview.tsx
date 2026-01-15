@@ -1,5 +1,5 @@
 "use client";
-
+import { getStoreSetting } from "@/lib/actions/store-setting.actions";
 import { useState, useEffect, useRef } from "react";
 import { X, Printer, Download, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
@@ -7,7 +7,8 @@ import { getSaleById } from "@/lib/actions/sale.actions";
 import { formatCurrency } from "@/lib/utils/pos-helpers";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-
+import Image from "next/image";
+import { StoreSetting } from "@prisma/client";
 interface InvoicePreviewProps {
     isOpen: boolean;
     onClose: () => void;
@@ -87,19 +88,28 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
     const [saleData, setSaleData] = useState<SaleData | null>(null);
     const { showToast } = useToast();
     const invoiceRef = useRef<HTMLDivElement>(null);
-
+    const [storeSetting, setStoreSetting] = useState<StoreSetting | null>(null);
     useEffect(() => {
         if (isOpen && saleId) {
             const loadInvoiceData = async () => {
                 setIsLoading(true);
-                setSaleData(null);
 
-                const result = await getSaleById(saleId);
-                if (result.success && result.data) {
-                    setSaleData(result.data as SaleData);
+                // Ambil data sale dan store setting secara paralel
+                const [saleResult, storeResult] = await Promise.all([
+                    getSaleById(saleId),
+                    getStoreSetting()
+                ]);
+
+                if (saleResult.success && saleResult.data) {
+                    setSaleData(saleResult.data as SaleData);
                 } else {
-                    showToast(result.error || "Gagal memuat invoice", "error");
+                    showToast(saleResult.error || "Gagal memuat invoice", "error");
                 }
+
+                if (storeResult.success && storeResult.data) {
+                    setStoreSetting(storeResult.data);
+                }
+
                 setIsLoading(false);
             };
 
@@ -155,34 +165,34 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
     };
 
     const handleDownload = async () => {
-    if (!invoiceRef.current || !saleData) return;
-    setIsPrinting(true);
-    try {
-        const canvas = await html2canvas(invoiceRef.current, {
-            scale: 3, // Agar gambar PDF tajam (tidak pecah)
-            useCORS: true,
-            backgroundColor: '#ffffff',
-        });
+        if (!invoiceRef.current || !saleData) return;
+        setIsPrinting(true);
+        try {
+            const canvas = await html2canvas(invoiceRef.current, {
+                scale: 3, // Agar gambar PDF tajam (tidak pecah)
+                useCORS: true,
+                backgroundColor: '#ffffff',
+            });
 
-        const imgData = canvas.toDataURL("image/png", 1.0);
-        const pdf = new jsPDF({
-            orientation: "portrait",
-            unit: "mm",
-            format: "a4",
-        });
+            const imgData = canvas.toDataURL("image/png", 1.0);
+            const pdf = new jsPDF({
+                orientation: "portrait",
+                unit: "mm",
+                format: "a4",
+            });
 
-        const imgWidth = 190; // Lebar A4 (210mm) dikurang margin
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            const imgWidth = 190; // Lebar A4 (210mm) dikurang margin
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-        pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight);
-        pdf.save(`Invoice-${saleData.invoiceNumber}.pdf`);
-        showToast("PDF berhasil didownload!", "success");
-    } catch  {
-        showToast("Gagal membuat PDF", "error");
-    } finally {
-        setIsPrinting(false);
-    }
-};
+            pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight);
+            pdf.save(`Invoice-${saleData.invoiceNumber}.pdf`);
+            showToast("PDF berhasil didownload!", "success");
+        } catch {
+            showToast("Gagal membuat PDF", "error");
+        } finally {
+            setIsPrinting(false);
+        }
+    };
 
     return (
         <>
@@ -229,14 +239,34 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                             >
                                 {/* ==================== HEADER ==================== */}
                                 <div className="border-2 border-black p-3 mb-3">
-                                    <div className="flex justify-between items-end">
-                                        {/* Company Info */}
-                                        <div>
-                                            <h1 className="text-base font-bold mb-1">PT. TB MASDAR UTAMA</h1>
-                                            <p className="text-[10px]">Ruko Graha Arteri Mas</p>
-                                            <p className="text-[10px]">Jl. Panjang Blok 101 No.1, Jakarta 12233</p>
-                                            <p className="text-[10px]">Phone: (021) 58365578 (Hunting)</p>
-                                            <p className="text-[10px]">Fax: (021) 58453581</p>
+                                    <div className="flex justify-between items-start">
+                                        {/* Company Info + Logo */}
+                                        <div className="flex gap-3">
+                                            {storeSetting?.logoUrl && (
+                                                <div className="relative w-12 h-12">
+                                                    <Image
+                                                        src={storeSetting.logoUrl}
+                                                        alt="Logo Toko"
+                                                        fill
+                                                        className="object-contain"
+                                                        unoptimized // Tambahkan ini jika logo berasal dari URL eksternal/upload
+                                                    />
+                                                </div>
+                                            )}
+                                            <div>
+                                                <h1 className="text-base font-bold mb-1 uppercase">
+                                                    {storeSetting?.name || "PT. TB MASDAR UTAMA"}
+                                                </h1>
+                                                <p className="text-[10px] max-w-[250px]">
+                                                    {storeSetting?.address || "Alamat belum diatur"}
+                                                    {storeSetting?.city && `, ${storeSetting.city}`}
+                                                    {storeSetting?.postalCode && ` ${storeSetting.postalCode}`}
+                                                </p>
+                                                <p className="text-[10px]">
+                                                    Phone: {storeSetting?.phone || "-"}
+                                                    {storeSetting?.email && ` | Email: ${storeSetting.email}`}
+                                                </p>
+                                            </div>
                                         </div>
 
                                         {/* Invoice Info */}
@@ -313,30 +343,26 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
 
                                             return (
                                                 <tr key={item.id}>
-                                                    <td className="border border-black px-1 py-0.5 text-center">{index + 1}</td>
-                                                    <td className="border border-black px-1 py-0.5">
+                                                    <td className="border border-black   text-center">{index + 1}</td>
+                                                    <td className="border border-black  ">
                                                         <span className="font-semibold">{item.product.name}</span>
-                                                        <br />
-                                                        <span className="text-[8px] text-gray-600">
-                                                            {item.product.code}
-                                                        </span>
                                                     </td>
-                                                    <td className="border border-black px-1 py-0.5 text-center">
+                                                    <td className="border border-black  text-center">
                                                         {item.quantity} {item.unit.name}
                                                     </td>
-                                                    <td className="border border-black px-1 py-0.5 text-right">
+                                                    <td className="border border-black   text-center">
                                                         {formatCurrency(item.unitPrice).replace("Rp ", "").replace(/\s/g, "")}
                                                     </td>
-                                                    <td className="border border-black px-1 py-0.5 text-right">
+                                                    <td className="border border-black text-center">
                                                         {formatCurrency(grossAmount).replace("Rp ", "").replace(/\s/g, "")}
                                                     </td>
-                                                    <td className="border border-black px-1 py-0.5 text-center">
+                                                    <td className="border border-black  py-0.5 text-center">
                                                         {discountPercent}%
                                                     </td>
-                                                    <td className="border border-black px-1 py-0.5 text-right">
+                                                    <td className="border border-black py-0.5 text-center">
                                                         {formatCurrency(item.discount).replace("Rp ", "").replace(/\s/g, "")}
                                                     </td>
-                                                    <td className="border border-black px-1 py-0.5 text-right font-semibold">
+                                                    <td className="border border-black  py-0.5 text-center font-semibold">
                                                         {formatCurrency(item.subtotal).replace("Rp ", "").replace(/\s/g, "")}
                                                     </td>
                                                 </tr>
@@ -354,10 +380,16 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                                         </p>
                                         <p className="text-[9px]"><strong>Remark:</strong></p>
                                         <div className="mt-3 pt-3 border-t border-gray-300">
-                                            <p className="text-[9px] font-bold">TRANSFER VIA</p>
-                                            <p className="text-[9px]">BCA-IDR</p>
-                                            <p className="text-[9px]">A/C: 164-800-3321</p>
-                                            <p className="text-[9px]">A/N: PT. TB MASDAR UTAMA</p>
+                                            <p className="text-[9px] font-bold uppercase">TRANSFER VIA</p>
+                                            {storeSetting?.bankName ? (
+                                                <>
+                                                    <p className="text-[9px]">{storeSetting.bankName}</p>
+                                                    <p className="text-[9px]">A/C: {storeSetting.bankAccount || "-"}</p>
+                                                    <p className="text-[9px]">A/N: {storeSetting.bankHolder || "-"}</p>
+                                                </>
+                                            ) : (
+                                                <p className="text-[9px] text-gray-500 italic">Informasi bank belum diatur</p>
+                                            )}
                                         </div>
                                         <div className="mt-6 pt-4 border-t border-gray-300 text-center">
                                             <p className="text-[9px] font-bold">{saleData.cashier.name}</p>
