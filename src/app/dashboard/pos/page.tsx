@@ -13,8 +13,8 @@ import { POSKeyboardShortcuts } from "./_components/POSKeyboardShortcuts";
 import { POSProduct, CartItem, POSCustomer } from "@/types/pos";
 import { getPOSProducts, getProductByBarcode, getPOSCustomers } from "@/lib/actions/pos.actions";
 import { validateStock, getCustomerDiscount } from "@/lib/utils/pos-helpers";
-import { useToast } from "@/components/ui/toast";
-import { X } from "lucide-react"; 
+import { Toast, useToast } from "@/components/ui/toast";
+import { X } from "lucide-react";
 export default function POSPage() {
     // States
     const [products, setProducts] = useState<POSProduct[]>([]);
@@ -29,7 +29,7 @@ export default function POSPage() {
 
     const searchRef = useRef<ProductSearchHandle>(null);
     const [showMobileCart, setShowMobileCart] = useState(false);
-    const { showToast } = useToast();
+    const { showToast, toast, hideToast } = useToast();
 
     // Load default customer (Customer Umum)
     const loadDefaultCustomer = useCallback(async () => {
@@ -196,8 +196,12 @@ export default function POSPage() {
     const handlePaymentSuccess = (invoiceNumber: string, saleId: string) => {
         setLastInvoice({ number: invoiceNumber, saleId });
         setShowPaymentModal(false);
-        setShowInvoicePreview(true);
+        showToast("Transaksi berhasil!", "success");
+        setTimeout(() => {
+            setShowInvoicePreview(true);
+        }, 300);
         handleClearCart();
+        loadProducts();
     };
 
     // Handle quick add customer
@@ -282,6 +286,7 @@ export default function POSPage() {
                     customer={selectedCustomer}
                     discount={discount}
                     onSuccess={handlePaymentSuccess}
+                    showToast={showToast}
                 />
             )}
 
@@ -342,6 +347,13 @@ export default function POSPage() {
                         </div>
                     )}
                 </div>
+            )}
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={hideToast}
+                />
             )}
         </>
     );

@@ -113,75 +113,82 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
     if (!isOpen) return null;
 
     const handlePrint = () => {
-        setIsPrinting(true);
-        try {
-            window.print();
-            showToast("Invoice berhasil dicetak!", "success");
-        } catch {
-            showToast("Gagal mencetak invoice", "error");
-        } finally {
-            setIsPrinting(false);
-        }
+        const printContent = document.getElementById('invoice-content');
+        if (!printContent) return;
+
+        // Buka jendela baru
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        // Tulis HTML dan CSS yang bersih ke jendela baru
+        printWindow.document.write(`
+        <html>
+            <head>
+                <title>Print Invoice - ${invoiceNumber}</title>
+                <script src="https://cdn.tailwindcss.com"></script>
+                <style>
+                    @page { size: A4 portrait; margin: 10mm; }
+                    body { background: white !important; padding: 0; margin: 0; }
+                    #invoice-content { width: 100%; border: none !important; box-shadow: none !important; }
+                    table { border-collapse: collapse !important; }
+                    th, td { border: 1px solid black !important;}
+                    .print-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
+                </style>
+            </head>
+            <body>
+                <div class="p-4">
+                    ${printContent.innerHTML}
+                </div>
+                <script>
+                    // Tunggu Tailwind selesai memproses class sebelum print
+                    window.onload = function() {
+                        setTimeout(() => {
+                            window.print();
+                            window.close(); // Otomatis menutup tab dan kembali ke asal
+                        }, 500);
+                    };
+                </script>
+            </body>
+        </html>
+    `);
+        printWindow.document.close();
     };
 
     const handleDownload = async () => {
-        if (!invoiceRef.current || !saleData) return;
+    if (!invoiceRef.current || !saleData) return;
+    setIsPrinting(true);
+    try {
+        const canvas = await html2canvas(invoiceRef.current, {
+            scale: 3, // Agar gambar PDF tajam (tidak pecah)
+            useCORS: true,
+            backgroundColor: '#ffffff',
+        });
 
-        setIsPrinting(true);
-        try {
-            // Hide scrollbar temporarily
-            const originalOverflow = document.body.style.overflow;
-            document.body.style.overflow = 'hidden';
+        const imgData = canvas.toDataURL("image/png", 1.0);
+        const pdf = new jsPDF({
+            orientation: "portrait",
+            unit: "mm",
+            format: "a4",
+        });
 
-            const canvas = await html2canvas(invoiceRef.current, {
-                scale: 3, // ✅ Increase from 2 to 3 for better quality
-                logging: false,
-                useCORS: true,
-                backgroundColor: '#ffffff',
-                windowWidth: 1200, // ✅ Force consistent width
-                windowHeight: invoiceRef.current.scrollHeight,
-            });
+        const imgWidth = 190; // Lebar A4 (210mm) dikurang margin
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-            // Restore overflow
-            document.body.style.overflow = originalOverflow;
-
-            const imgData = canvas.toDataURL("image/png", 1.0); // ✅ Max quality
-            const pdf = new jsPDF({
-                orientation: "portrait",
-                unit: "mm",
-                format: "a4",
-                compress: false, // ✅ No compression for better quality
-            });
-
-            // Calculate proper dimensions
-            const pdfWidth = 210; // A4 width in mm
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const pdfHeight = 297; // A4 height in mm
-            const imgWidth = pdfWidth - 20; // 10mm margin on each side
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-            // Center the image
-            const x = 10; // 10mm left margin
-            const y = 10; // 10mm top margin
-
-            pdf.addImage(imgData, "PNG", x, y, imgWidth, imgHeight, undefined, 'FAST');
-            pdf.save(`Invoice-${saleData.invoiceNumber}.pdf`);
-
-            showToast("PDF berhasil didownload!", "success");
-        } catch (error) {
-            console.error("PDF generation error:", error);
-            showToast("Gagal membuat PDF", "error");
-        } finally {
-            setIsPrinting(false);
-        }
-    };
+        pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight);
+        pdf.save(`Invoice-${saleData.invoiceNumber}.pdf`);
+        showToast("PDF berhasil didownload!", "success");
+    } catch  {
+        showToast("Gagal membuat PDF", "error");
+    } finally {
+        setIsPrinting(false);
+    }
+};
 
     return (
         <>
             {/* Backdrop */}
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 print:relative print:bg-white print:z-0">
-                {/* Modal */}
-                <div className="glass-card w-full max-w-4xl max-h-[90vh] flex flex-col print:max-h-none print:max-w-none print:shadow-none">
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                <div className="glass-card w-full max-w-4xl max-h-[90vh] flex flex-col ">
                     {/* Header */}
                     <div className="flex items-center justify-between p-4 border-b border-gray-200 print:hidden">
                         <div>
@@ -198,7 +205,7 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                     </div>
 
                     {/* Preview Area */}
-                    <div className="flex-1 overflow-y-auto p-4 bg-gray-50 print:p-0 print:bg-white print:overflow-visible">
+                    <div className="flex-1 overflow-y-auto p-4 bg-gray-50 print:overflow-visible print:p-0 print:bg-white">
                         {isLoading ? (
                             <div className="text-center py-8 print:hidden">
                                 <Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" />
@@ -208,16 +215,21 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                             <div
                                 id="invoice-content"
                                 ref={invoiceRef}
-                                className="bg-white p-6 shadow-sm rounded-lg print:shadow-none print:rounded-none print:p-0 pdf-container"
+                                className="bg-white shadow-sm rounded-lg print:shadow-none print:rounded-none"
                                 style={{
                                     fontFamily: 'Arial, sans-serif',
-                                    fontSize: '11px',
-                                    lineHeight: '1.7'
+                                    fontSize: '12px',
+                                    lineHeight: '1.3',
+                                    width: '210mm', // A4 width
+                                    minHeight: '297mm', // A4 height
+                                    margin: '0 auto',
+                                    padding: '10mm', // Sama dengan margin @page
+                                    boxSizing: 'border-box'
                                 }}
                             >
                                 {/* ==================== HEADER ==================== */}
                                 <div className="border-2 border-black p-3 mb-3">
-                                    <div className="flex justify-between items-start">
+                                    <div className="flex justify-between items-end">
                                         {/* Company Info */}
                                         <div>
                                             <h1 className="text-base font-bold mb-1">PT. TB MASDAR UTAMA</h1>
@@ -229,15 +241,15 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
 
                                         {/* Invoice Info */}
                                         <div className="text-right">
-                                            <h2 className="text-xl font-bold mb-1">INVOICE</h2>
-                                            <table className="text-[9px] ml-auto">
+                                            <h2 className="text-xl font-bold mb-2">INVOICE</h2>
+                                            <table className="text-[9px] ml-auto border-collapse">
                                                 <tbody>
                                                     <tr>
                                                         <td className="pr-2 text-left">Number</td>
                                                         <td className="text-left">: {saleData.invoiceNumber}</td>
                                                     </tr>
                                                     <tr>
-                                                        <td className="pr-2 text-left">Inv. Date</td>
+                                                        <td className="pr-3 text-left font-semibold">Inv. Date</td>
                                                         <td className="text-left">
                                                             : {new Date(saleData.saleDate).toLocaleDateString("en-GB")}
                                                         </td>
@@ -267,33 +279,29 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                                 </div>
 
                                 {/* ==================== CUSTOMER INFO ==================== */}
-                                <div className="mb-3">
-                                    <div className="border border-black">
-                                        <div className="bg-gray-100 px-2 py-0.5 border-b border-black">
-                                            <p className="text-[10px] font-bold">Customer</p>
-                                        </div>
-                                        <div className="px-2 py-0.5">
-                                            <p className="text-[10px] font-bold">{saleData.customer.name}</p>
-                                            <p className="text-[9px]">Phone: {saleData.customer.phone || "-"}</p>
-                                            <p className="text-[9px]">
-                                                Address: {saleData.customer.address || "-"}
-                                            </p>
-                                        </div>
+                                <div className="mb-3 border border-black">
+                                    <div className="bg-gray-100 px-2 py-1 border-b border-black">
+                                        <p className="text-[10px] font-bold">Customer</p>
+                                    </div>
+                                    <div className="px-2 py-1">
+                                        <p className="text-[10px] font-bold">{saleData.customer.name}</p>
+                                        <p className="text-[9px]">Phone: {saleData.customer.phone || "-"}</p>
+                                        <p className="text-[9px]">Address: {saleData.customer.address || "-"}</p>
                                     </div>
                                 </div>
 
                                 {/* ==================== ITEMS TABLE ==================== */}
-                                <table className="w-full border border-black mb-2 text-[10px]">
+                                <table className="w-full border-collapse border-black mb-2 text-[11px]">
                                     <thead>
                                         <tr className="bg-gray-100">
-                                            <th className="border border-black px-1 py-0.5 text-left w-6">No.</th>
-                                            <th className="border border-black px-1 py-0.5 text-left">Product Description</th>
-                                            <th className="border border-black px-1 py-0.5 text-center w-20">Quantity UOM</th>
-                                            <th className="border border-black px-1 py-0.5 text-right w-20">Unit Price</th>
-                                            <th className="border border-black px-1 py-0.5 text-right w-20">Gross Amt.</th>
-                                            <th className="border border-black px-1 py-0.5 text-center w-10">%</th>
-                                            <th className="border border-black px-1 py-0.5 text-right w-16">Discount</th>
-                                            <th className="border border-black px-1 py-0.5 text-right w-20">Net Amount</th>
+                                            <th className="border border-black px-2 py-1.5 text-left w-8">No.</th>
+                                            <th className="border border-black px-2 py-1.5 text-left">Product Description</th>
+                                            <th className="border border-black px-2 py-1.5 text-center w-20">Quantity UOM</th>
+                                            <th className="border border-black px-2 py-1.5 text-right w-20">Unit Price</th>
+                                            <th className="border border-black px-2 py-1.5 text-right w-20">Gross Amt.</th>
+                                            <th className="border border-black px-2 py-1.5 text-center w-10">%</th>
+                                            <th className="border border-black px-2 py-1.5 text-right w-16">Discount</th>
+                                            <th className="border border-black px-2 py-1.5 text-right w-20">Net Amount</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -351,7 +359,7 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                                             <p className="text-[9px]">A/C: 164-800-3321</p>
                                             <p className="text-[9px]">A/N: PT. TB MASDAR UTAMA</p>
                                         </div>
-                                        <div className="mt-3 text-center">
+                                        <div className="mt-6 pt-4 border-t border-gray-300 text-center">
                                             <p className="text-[9px] font-bold">{saleData.cashier.name}</p>
                                         </div>
                                     </div>
@@ -384,10 +392,7 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                                                         {formatCurrency(saleData.tax).replace("Rp ", "").replace(/\s/g, "")}
                                                     </td>
                                                 </tr>
-                                                <tr>
-                                                    <td className="border-b border-black px-2 py-0.5">Freight Charge</td>
-                                                    <td className="border-b border-black px-2 py-0.5 text-right">0.00</td>
-                                                </tr>
+
                                                 <tr className="bg-gray-100">
                                                     <td className="border-b border-black px-2 py-0.5 font-bold">Net Total</td>
                                                     <td className="border-b border-black px-2 py-0.5 text-right font-bold text-[11px]">
@@ -442,52 +447,6 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                 </div>
             </div>
 
-            {/* Print Styles */}
-            <style jsx global>{`
-    @media print {
-        @page {
-            size: A4 portrait;
-            margin: 10mm;
-        }
-
-        * {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-
-        html, body {
-            width: 210mm;
-            height: 297mm;
-            margin: 0;
-            padding: 0;
-            overflow: visible;
-            background: white;
-        }
-
-        body * {
-            visibility: hidden;
-        }
-
-        #invoice-content,
-        #invoice-content * {
-            visibility: visible;
-        }
-
-        #invoice-content {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            max-width: 190mm;
-            padding: 10mm;
-            font-size: 11px !important;
-        }
-
-        .print\\:hidden {
-            display: none !important;
-        }
-    }
-`}</style>
         </>
     );
 }

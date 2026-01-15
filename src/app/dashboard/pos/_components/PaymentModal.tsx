@@ -6,7 +6,6 @@ import { PaymentMethod } from "@prisma/client";
 import { createSale } from "@/lib/actions/sale.actions";
 import { formatCurrency, calculateCart, calculateChange } from "@/lib/utils/pos-helpers";
 import { X, Loader2, CreditCard, Banknote, Wallet } from "lucide-react";
-import { useToast } from "@/components/ui/toast";
 
 interface PaymentModalProps {
     isOpen: boolean;
@@ -15,13 +14,13 @@ interface PaymentModalProps {
     customer: POSCustomer;
     discount: number;
     onSuccess: (invoiceNumber: string, saleId: string) => void;
+    showToast: (message: string, type?: "success" | "error" | "info") => void;
 }
 
-export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuccess }: PaymentModalProps) {
+export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuccess, showToast }: PaymentModalProps) {
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
     const [paidAmount, setPaidAmount] = useState<number>(0);
     const [isLoading, setIsLoading] = useState(false);
-    const { showToast } = useToast();
     const calculation = calculateCart(items, customer, discount);
     const changeAmount = calculateChange(paidAmount, calculation.grandTotal);
 
@@ -87,7 +86,6 @@ export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuc
             });
             console.log("✅ Payment result:", result); 
             if (result.success && result.data) {
-                showToast(result.message || "Transaksi berhasil!", "success");
                 onSuccess(result.data.invoiceNumber, result.data.id);
             } else {
                 console.error("❌ Payment failed:", result.error);

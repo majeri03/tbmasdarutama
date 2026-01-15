@@ -65,14 +65,15 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
                 <p className="text-xs text-gray-500 mt-1">{product.code}</p>
 
                 {/* Price & Unit */}
-                <div className="mt-3 flex items-center justify-between">
+                <div className="mt-3 space-y-3">
+                    <div className="flex items-center justify-between">
                     <div>
                         <p className="text-lg font-bold text-blue-600">{formatCurrency(displayPrice)}</p>
                         {primaryUnit && (
                             <p className="text-xs text-gray-500">per {primaryUnit.unit.name}</p>
                         )}
                     </div>
-
+                    </div>
                     {/* Add to Cart Button */}
                     <button
                         onClick={(e) => {
