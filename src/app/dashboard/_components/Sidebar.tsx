@@ -79,7 +79,6 @@ export default function Sidebar({
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Sidebar content
   const sidebarContent = (
     <div className="flex flex-col h-full relative">
       {/* Abstrak background */}
@@ -143,7 +142,6 @@ export default function Sidebar({
     </div>
   );
 
-  // Desktop sidebar
   return (
     <>
       {/* Desktop */}

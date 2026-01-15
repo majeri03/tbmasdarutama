@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 
-// ✅ Only need Worker URL
 const WORKER_URL = process.env.CLOUDFLARE_WORKER_URL;
 
 if (!WORKER_URL) {
@@ -23,7 +22,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    // Validate file type
+
     if (!file.type.startsWith("image/")) {
       return NextResponse.json(
         { error: "File harus berupa gambar (jpg, png, webp)" },
@@ -31,7 +30,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file size (max 5MB)
+
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
       return NextResponse.json(
@@ -40,16 +39,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate unique filename
+   
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 15);
     const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
     const filename = `products/${timestamp}-${randomString}.${extension}`;
 
-    // Convert file to buffer
+   
     const arrayBuffer = await file.arrayBuffer();
 
-    // Upload to Cloudflare R2 via Worker
+
     const uploadResponse = await fetch(`${WORKER_URL}/upload`, {
       method: "POST",
       headers: {
@@ -67,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     const result = await uploadResponse.json();
 
-    // ✅ Worker returns full URL with /files/ endpoint
+ 
     return NextResponse.json({
       success: true,
       url: result.url, // https://worker.dev/files/products/xxx.jpg

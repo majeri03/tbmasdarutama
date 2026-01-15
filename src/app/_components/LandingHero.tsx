@@ -101,7 +101,6 @@ export default function LandingHero({ landing }: Props) {
           )}
         </>
       ) : (
-        // Fallback gradient background
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500" />
       )}
 

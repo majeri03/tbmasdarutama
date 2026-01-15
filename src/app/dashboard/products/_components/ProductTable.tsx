@@ -56,11 +56,11 @@ interface Product {
   currentStock: number;
   minStock: number;
   isActive: boolean;
-  createdAt: Date;              // ✅ TAMBAHKAN
-  updatedAt: Date;              // ✅ TAMBAHKAN
-  categoryId: string;           // ✅ TAMBAHKAN
-  subCategoryId: string | null; // ✅ TAMBAHKAN
-  supplierId: string | null;    // ✅ TAMBAHKAN
+  createdAt: Date;              
+  updatedAt: Date;              
+  categoryId: string;           
+  subCategoryId: string | null; 
+  supplierId: string | null;    
   category: Category;
   subCategory: SubCategory | null;
   supplier: Supplier | null;
@@ -119,7 +119,6 @@ export function ProductTable({
   const [togglingStatus, setTogglingStatus] = useState<string | null>(null);
 
   const totalPages = Math.ceil(initialTotal / initialLimit);
-  // ✅ Initialize filters from URL on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
@@ -137,7 +136,6 @@ export function ProductTable({
       if (urlLowStock) setLowStockFilter(urlLowStock === 'true');
     }
   }, []);
-  // Handle search
   const handleSearch = (value: string) => {
     setSearch(value);
     setCurrentPage(1);

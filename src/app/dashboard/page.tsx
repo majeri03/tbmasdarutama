@@ -177,7 +177,6 @@ export default async function DashboardPage() {
             {/* Chart Container */}
             <div className="relative h-80 bg-gradient-to-b from-blue-50/20 to-transparent rounded-xl p-6">
               {(!stats?.chart || stats.chart.length === 0) ? (
-                // Empty State - Safety check untuk error 'stats is possibly null'
                 <div className="flex flex-col items-center justify-center h-full">
                   <p className="text-gray-500 text-sm">Belum ada data penjualan</p>
                   <p className="text-gray-400 text-xs mt-1">Data akan muncul setelah ada transaksi</p>
@@ -187,7 +186,6 @@ export default async function DashboardPage() {
                   {/* Y-Axis Labels */}
                   <div className="absolute left-0 top-0 bottom-12 flex flex-col justify-between py-6 pr-4">
                     {[100, 75, 50, 25, 0].map((percent) => {
-                      // Fix error TS: pastikan stats?.chart tersedia sebelum dimap
                       const chartData = stats?.chart ?? [];
                       const maxValue = Math.max(...chartData.map(d => d.total), 1);
                       const value = (maxValue * percent) / 100;
@@ -243,29 +241,28 @@ export default async function DashboardPage() {
 
                         const maxValue = Math.max(...chartData.map(d => d.total), 1);
 
-                        // Kalkulasi Titik
+
                         const points = chartData.map((data, i) => ({
                           x: (i / (chartData.length - 1)) * 100,
                           y: 100 - (data.total / maxValue) * 100
                         }));
 
-                        // Perbaikan Garis: Menggunakan L (Line) sederhana agar normal/biasa aja
-                        // Jika ingin sedikit melengkung tanpa "loop", gunakan Path yang bersih
+                 
                         let pathData = `M ${points[0].x} ${points[0].y}`;
 
-                        // 2. Gunakan Cubic Bezier (C) untuk kelengkungan yang natural
+
                         for (let i = 0; i < points.length - 1; i++) {
                           const curr = points[i];
                           const next = points[i + 1];
 
-                          // Menentukan control points di tengah antara dua titik (smooth transition)
+                       
                           const cp1x = curr.x + (next.x - curr.x) / 2;
                           const cp2x = curr.x + (next.x - curr.x) / 2;
 
                           pathData += ` C ${cp1x} ${curr.y}, ${cp2x} ${next.y}, ${next.x} ${next.y}`;
                         }
 
-                        // 3. Gabungkan untuk area pengisian (fill)
+              
                         const areaPath = `${pathData} L 100 100 L 0 100 Z`;
 
                         return (

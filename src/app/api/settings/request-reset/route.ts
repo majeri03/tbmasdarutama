@@ -6,10 +6,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     
-    // Validate
     const validated = requestPasswordResetSchema.parse(body);
     
-    // Process
     const result = await requestPasswordReset(validated.email);
     
     return NextResponse.json(result);
