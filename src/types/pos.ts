@@ -4,8 +4,8 @@ import { Product, ProductUnit, Unit, Customer} from "@prisma/client";
 export interface POSProduct extends Omit<Product, "productUnits"> {
   productUnits: Array<
     Omit<ProductUnit, "buyPrice" | "sellPrice"> & {
-      buyPrice: number; // ✅ Changed from Decimal to number
-      sellPrice: number; // ✅ Changed from Decimal to number
+      buyPrice: number;
+      sellPrice: number;
       unit: Unit;
     }
   >;
@@ -47,5 +47,5 @@ export interface CartCalculation {
 
 // Customer with type
 export interface POSCustomer extends Customer {
-  discountPercent: number; // Auto-calculated from type
+  discountPercent: number;
 }

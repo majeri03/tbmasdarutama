@@ -11,7 +11,7 @@ import {
   UpdateDeliveryStatusInput,
 } from "@/lib/validations/delivery-order.schema";
 import { requirePermission } from "../utils/role";
-// ==================== GENERATE DO NUMBER ====================
+//    GENERATE DO NUMBER   
 async function generateDONumber(): Promise<string> {
   const today = new Date();
   const year = today.getFullYear();
@@ -45,7 +45,7 @@ async function generateDONumber(): Promise<string> {
 
   return `${prefix}/${String(nextNumber).padStart(4, "0")}`;
 }
-// ==================== GET ALL DELIVERY ORDERS ====================
+//    GET ALL DELIVERY ORDERS   
 export async function getAllDeliveryOrders(filters?: {
   search?: string;
   customerId?: string;
@@ -147,7 +147,7 @@ requirePermission(session, "VIEW_DELIVERY_ORDERS");
   }
 }
 
-// ==================== GET DELIVERY ORDER STATISTICS ====================
+//    GET DELIVERY ORDER STATISTICS   
 export async function getDeliveryOrderStatistics() {
   const session = await auth();
 requirePermission(session, "VIEW_DELIVERY_ORDERS");
@@ -192,7 +192,7 @@ requirePermission(session, "VIEW_DELIVERY_ORDERS");
   }
 }
 
-// ==================== GET DELIVERY ORDER BY ID ====================
+//    GET DELIVERY ORDER BY ID   
 export async function getDeliveryOrderById(id: string) {
   const session = await auth();
 requirePermission(session, "VIEW_DELIVERY_ORDERS");
@@ -257,7 +257,7 @@ requirePermission(session, "VIEW_DELIVERY_ORDERS");
   }
 }
 
-// ==================== CREATE DELIVERY ORDER ====================
+//    CREATE DELIVERY ORDER   
 export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
   try {
     const session = await auth();
@@ -388,7 +388,7 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
   }
 }
 
-// ==================== UPDATE DELIVERY STATUS ====================
+//    UPDATE DELIVERY STATUS   
 export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
   try {
     const session = await auth();
@@ -555,7 +555,7 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
   }
 }
 
-// ==================== DELETE DELIVERY ORDER ====================
+//    DELETE DELIVERY ORDER   
 export async function deleteDeliveryOrder(id: string) {
   try {
     const session = await auth();

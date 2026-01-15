@@ -21,14 +21,13 @@ const subCategoryServerSchema = z.object({
 export type CategoryFormData = z.infer<typeof categoryServerSchema>;
 export type SubCategoryFormData = z.infer<typeof subCategoryServerSchema>;
 
-// ==================== CREATE CATEGORY ====================
+//CREATE CATEGORY
 export async function createCategory(data: CategoryFormData) {
   const session = await auth();
 requireMinimumRole(session, "ADMIN");
   try {
     const validatedData = categoryServerSchema.parse(data);
 
-    // Check duplicate name
     const existingCategory = await prisma.category.findUnique({
       where: { name: validatedData.name },
     });
@@ -68,7 +67,7 @@ requireMinimumRole(session, "ADMIN");
   }
 }
 
-// ==================== GET ALL CATEGORIES ====================
+//GET ALL CATEGORIES
 export async function getCategories(params?: {
   search?: string;
   page?: number;
@@ -146,7 +145,7 @@ requireMinimumRole(session, "ADMIN");
   }
 }
 
-// ==================== GET CATEGORY BY ID ====================
+//GET CATEGORY BY ID
 export async function getCategoryById(id: string) {
   const session = await auth();
 requireMinimumRole(session, "ADMIN");
@@ -193,7 +192,7 @@ requireMinimumRole(session, "ADMIN");
   }
 }
 
-// ==================== UPDATE CATEGORY ====================
+//UPDATE CATEGORY
 export async function updateCategory(id: string, data: CategoryFormData) {
   const session = await auth();
 requireMinimumRole(session, "ADMIN");
@@ -211,7 +210,7 @@ requireMinimumRole(session, "ADMIN");
       };
     }
 
-    // Check duplicate name (exclude current)
+
     if (validatedData.name !== existingCategory.name) {
       const duplicateCategory = await prisma.category.findUnique({
         where: { name: validatedData.name },
@@ -254,7 +253,7 @@ requireMinimumRole(session, "ADMIN");
   }
 }
 
-// ==================== DELETE CATEGORY ====================
+//DELETE CATEGORY
 export async function deleteCategory(id: string) {
   const session = await auth();
 requireMinimumRole(session, "ADMIN");
@@ -278,7 +277,6 @@ requireMinimumRole(session, "ADMIN");
       };
     }
 
-    // Check if has products
     if (category._count.products > 0) {
       return {
         success: false,
@@ -286,7 +284,6 @@ requireMinimumRole(session, "ADMIN");
       };
     }
 
-    // Check if has sub-categories
     if (category._count.subCategories > 0) {
       return {
         success: false,
@@ -313,14 +310,13 @@ requireMinimumRole(session, "ADMIN");
   }
 }
 
-// ==================== CREATE SUB-CATEGORY ====================
+//CREATE SUB-CATEGORY
 export async function createSubCategory(data: SubCategoryFormData) {
   const session = await auth();
 requireMinimumRole(session, "ADMIN");
   try {
     const validatedData = subCategoryServerSchema.parse(data);
 
-    // Check if category exists
     const category = await prisma.category.findUnique({
       where: { id: validatedData.categoryId },
     });
@@ -332,7 +328,6 @@ requireMinimumRole(session, "ADMIN");
       };
     }
 
-    // Check duplicate name in same category
     const existingSubCategory = await prisma.subCategory.findFirst({
       where: {
         name: validatedData.name,
@@ -375,7 +370,7 @@ requireMinimumRole(session, "ADMIN");
   }
 }
 
-// ==================== UPDATE SUB-CATEGORY ====================
+//UPDATE SUB-CATEGORY
 export async function updateSubCategory(id: string, data: SubCategoryFormData) {
   const session = await auth();
 requireMinimumRole(session, "ADMIN");
@@ -393,7 +388,6 @@ requireMinimumRole(session, "ADMIN");
       };
     }
 
-    // Check duplicate name (exclude current)
     if (
       validatedData.name !== existingSubCategory.name ||
       validatedData.categoryId !== existingSubCategory.categoryId
@@ -443,7 +437,7 @@ requireMinimumRole(session, "ADMIN");
   }
 }
 
-// ==================== DELETE SUB-CATEGORY ====================
+//DELETE SUB-CATEGORY
 export async function deleteSubCategory(id: string) {
   const session = await auth();
 requireMinimumRole(session, "ADMIN");
@@ -466,7 +460,7 @@ requireMinimumRole(session, "ADMIN");
       };
     }
 
-    // Check if has products
+
     if (subCategory._count.products > 0) {
       return {
         success: false,
@@ -493,7 +487,7 @@ requireMinimumRole(session, "ADMIN");
   }
 }
 
-// ==================== GET CATEGORIES FOR SELECT ====================
+//GET CATEGORIES FOR SELECT
 export async function getCategoriesForSelect() {
   const session = await auth();
 requireMinimumRole(session, "ADMIN");

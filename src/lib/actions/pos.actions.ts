@@ -6,7 +6,7 @@ import { generateSearchQuery } from "@/lib/utils/pos-helpers";
 import { Prisma } from "@prisma/client";
 import { requirePermission } from "../utils/role";
 
-// Get products for POS (with stock > 0 and active only)
+// Get products for POS
 export async function getPOSProducts(search?: string, categoryId?: string) {
   try {
     const session = await auth();
@@ -18,15 +18,15 @@ export async function getPOSProducts(search?: string, categoryId?: string) {
       };
     }
     requirePermission(session, "ACCESS_POS");
-    // ✅ FIXED: Proper typing
+
+    //Proper typing
     const where: Prisma.ProductWhereInput = {
       isActive: true,
-      currentStock: { gt: 0 }, // Only products with stock
+      currentStock: { gt: 0 },
     };
 
     // Search by barcode, code, or name
     if (search && search.trim()) {
-      // ✅ Check if search not empty
       const searchQuery = generateSearchQuery(search);
 
       where.OR = [];
@@ -76,7 +76,7 @@ export async function getPOSProducts(search?: string, categoryId?: string) {
       },
     });
 
-    // ✅ Convert Decimal to number before sending to client
+    //Convert Decimal to number before sending to client
     const serializedProducts = products.map((product) => ({
       ...product,
       productUnits: product.productUnits.map((pu) => ({
@@ -140,7 +140,7 @@ export async function getProductByBarcode(barcode: string) {
       };
     }
 
-    // ✅ Convert Decimal to number
+    //Convert Decimal to number
     const serializedProduct = {
       ...product,
       productUnits: product.productUnits.map((pu) => ({
@@ -175,7 +175,8 @@ export async function getPOSCustomers(search?: string) {
       };
     }
     requirePermission(session, "ACCESS_POS");
-    // ✅ FIXED: Proper typing
+
+    //FIXED: Proper typing
     const where: Prisma.CustomerWhereInput = {
       isActive: true,
     };
@@ -190,7 +191,7 @@ export async function getPOSCustomers(search?: string) {
 
     const customers = await prisma.customer.findMany({
       where,
-      take: 20, // Limit for performance
+      take: 20,
       orderBy: [{ code: "asc" }],
       select: {
         id: true,

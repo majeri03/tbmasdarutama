@@ -11,7 +11,8 @@ import {
 } from "@/lib/validations/product.schema";
 import { auth } from "../auth";
 import { requireMinimumRole, requirePermission } from "@/lib/utils/role";
-// ==================== GENERATE PRODUCT CODE ====================
+
+//    GENERATE PRODUCT CODE   
 async function generateProductCode(): Promise<string> {
   const lastProduct = await prisma.product.findFirst({
     orderBy: { code: "desc" },
@@ -28,7 +29,7 @@ async function generateProductCode(): Promise<string> {
   return `PRD-${nextNumber.toString().padStart(5, "0")}`;
 }
 
-// ==================== CREATE PRODUCT ====================
+//    CREATE PRODUCT   
 export async function createProduct(data: CreateProductInput) {
   try {
     const session = await auth();
@@ -106,7 +107,6 @@ export async function createProduct(data: CreateProductInput) {
       }
     }
 
-    // Generate product code
     const code = await generateProductCode();
 
     // Create product with units and images in transaction
@@ -122,7 +122,7 @@ export async function createProduct(data: CreateProductInput) {
           subCategoryId: validatedData.subCategoryId,
           supplierId: validatedData.supplierId,
           minStock: validatedData.minStock,
-          currentStock: 0, // Initial stock = 0
+          currentStock: 0,
           isActive: validatedData.isActive,
         },
       });
@@ -189,7 +189,7 @@ export async function createProduct(data: CreateProductInput) {
   }
 }
 
-// ==================== GET ALL PRODUCTS ====================
+//    GET ALL PRODUCTS   
 export async function getProducts(params?: {
   search?: string;
   page?: number;
@@ -280,14 +280,14 @@ export async function getProducts(params?: {
               },
             },
             orderBy: {
-              isPrimary: "desc", // Primary unit first
+              isPrimary: "desc",
             },
           },
           productImages: {
             orderBy: {
-              isPrimary: "desc", // Primary image first
+              isPrimary: "desc",
             },
-            take: 1, // Only get primary image for list
+            take: 1,
           },
           _count: {
             select: {
@@ -337,7 +337,7 @@ export async function getProducts(params?: {
   }
 }
 
-// ==================== GET PRODUCT BY ID ====================
+//    GET PRODUCT BY ID   
 export async function getProductById(id: string) {
   const session = await auth();
   requirePermission(session, "VIEW_PRODUCTS");
@@ -413,7 +413,7 @@ export async function getProductById(id: string) {
   }
 }
 
-// ==================== UPDATE PRODUCT ====================
+//    UPDATE PRODUCT   
 export async function updateProduct(id: string, data: UpdateProductInput) {
   const session = await auth();
   requirePermission(session, "EDIT_PRODUCT");
@@ -455,7 +455,6 @@ export async function updateProduct(id: string, data: UpdateProductInput) {
       }
     }
 
-    // Update product with units and images in transaction
     const product = await prisma.$transaction(async (tx) => {
       // 1. Update main product data
       const updatedProduct = await tx.product.update({
@@ -474,7 +473,6 @@ export async function updateProduct(id: string, data: UpdateProductInput) {
 
       // 2. Update product units if provided
       if (validatedData.units) {
-        // Delete all existing units
         await tx.productUnit.deleteMany({
           where: { productId: id },
         });
@@ -492,9 +490,8 @@ export async function updateProduct(id: string, data: UpdateProductInput) {
         });
       }
 
-      // 3. Update product images if provided
+      //3. Update product images if provided
       if (validatedData.images) {
-        // Delete all existing images
         await tx.productImage.deleteMany({
           where: { productId: id },
         });
@@ -530,8 +527,7 @@ export async function updateProduct(id: string, data: UpdateProductInput) {
   }
 }
 
-// ==================== DELETE PRODUCT ====================
-// Delete product (soft delete)
+//    DELETE PRODUCT   
 export async function deleteProduct(id: string) {
   const session = await auth();
   requirePermission(session, "DELETE_PRODUCT");
@@ -555,7 +551,7 @@ export async function deleteProduct(id: string) {
       };
     }
 
-    // ✅ Check if has transactions (PENTING!)
+    //Check if has transactions (PENTING!)
     if (product._count.saleItems > 0 || product._count.purchaseItems > 0) {
       return {
         success: false,
@@ -563,7 +559,7 @@ export async function deleteProduct(id: string) {
       };
     }
 
-    // ✅ Soft delete: Set deletedAt timestamp
+    //Soft delete: Set deletedAt timestamp
     await prisma.product.update({
       where: { id },
       data: {
@@ -617,7 +613,7 @@ export async function restoreProduct(id: string) {
     };
   }
 }
-// ==================== TOGGLE PRODUCT STATUS ====================
+//    TOGGLE PRODUCT STATUS   
 export async function toggleProductStatus(id: string) {
   const session = await auth();
   requirePermission(session, "EDIT_PRODUCT");
@@ -658,7 +654,7 @@ export async function toggleProductStatus(id: string) {
   }
 }
 
-// ==================== GET PRODUCTS FOR SELECT ====================
+//    GET PRODUCTS FOR SELECT   
 export async function getProductsForSelect() {
   const session = await auth();
   requireMinimumRole(session, "KASIR"); // All roles can view for POS
