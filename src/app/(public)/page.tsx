@@ -12,7 +12,6 @@ export default async function LandingPage() {
   const result = await getPublicLandingData();
 
   if (!result.success || !result.data) {
-    // Jika belum ada data, redirect ke setup atau dashboard
     redirect("/dashboard");
   }
 

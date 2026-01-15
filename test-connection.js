@@ -1,12 +1,11 @@
 import { Client } from 'pg';
 
-// Test tanpa password
 const client1 = new Client({
   host: 'localhost',
   port: 5432,
   database: 'tb_masdarutama',
   user: 'postgres',
-  password: '', // kosong
+  password: '', 
 });
 
 client1.connect()
@@ -17,7 +16,6 @@ client1.connect()
   .catch(() => {
     console.log('❌ Failed with empty password');
     
-    // Test dengan password = root
     const client2 = new Client({
       host: 'localhost',
       port: 5432,

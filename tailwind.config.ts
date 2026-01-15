@@ -9,18 +9,15 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Primary Gray Scale
         "glass-dark": "#1a1a1a",
         "glass-base": "#2a2a2a",
         "glass-light": "#3a3a3a",
         "glass-lighter": "#4a4a4a",
         
-        // Accent Colors
         "accent-blue": "#60a5fa",
         "accent-purple": "#a78bfa",
         "accent-pink": "#f472b6",
         
-        // Status Colors
         "status-success": "#10b981",
         "status-warning": "#f59e0b",
         "status-danger": "#ef4444",

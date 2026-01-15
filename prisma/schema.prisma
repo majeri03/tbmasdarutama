@@ -7,28 +7,26 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ==================== USER MANAGEMENT ====================
 model User {
-  id            String    @id @default(cuid())
-  name          String
-  email         String    @unique
-  password      String
-  role          Role      @default(KASIR)
-  phone         String?
-  address       String?
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  // Relations
-  sales         Sale[]
-  purchases     Purchase[]
-  debtPayments  DebtPayment[]
-  cashMovements CashMovement[]
-  deliveryOrders  DeliveryOrder[]
-  stockMovements     StockMovement[] 
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(KASIR)
+  phone     String?
+  address   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sales               Sale[]
+  purchases           Purchase[]
+  debtPayments        DebtPayment[]
+  cashMovements       CashMovement[]
+  deliveryOrders      DeliveryOrder[]
+  stockMovements      StockMovement[]
   passwordResetTokens PasswordResetToken[]
-  
+
   @@map("users")
 }
 
@@ -38,35 +36,32 @@ enum Role {
   KASIR
 }
 
-// ==================== MASTER SATUAN ====================
 model Unit {
   id          String   @id @default(cuid())
   symbol      String?
-  name        String   @unique // Sak, Pcs, Kg, Dus, Kardus, Box, Lusin, Meter
+  name        String   @unique
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
-  // Relations
+
   productUnits      ProductUnit[]
-  saleItemsUnit     SaleItem[]         @relation("SaleItemUnit")
-  purchaseItemsUnit PurchaseItem[]     @relation("PurchaseItemUnit")
-  deliveryItems   DeliveryItem[]
+  saleItemsUnit     SaleItem[]     @relation("SaleItemUnit")
+  purchaseItemsUnit PurchaseItem[] @relation("PurchaseItemUnit")
+  deliveryItems     DeliveryItem[]
+
   @@map("units")
 }
 
-// ==================== KATEGORI & SUB-KATEGORI ====================
 model Category {
   id          String   @id @default(cuid())
   name        String   @unique
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
-  // Relations
+
   subCategories SubCategory[]
   products      Product[]
-  
+
   @@map("categories")
 }
 
@@ -77,18 +72,16 @@ model SubCategory {
   categoryId  String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
-  // Relations
+
   category Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   products Product[]
-  
+
   @@map("sub_categories")
 }
 
-// ==================== SUPPLIER ====================
 model Supplier {
   id          String   @id @default(cuid())
-  code        String   @unique // SUP-001
+  code        String   @unique
   name        String
   phone       String?
   email       String?
@@ -99,42 +92,40 @@ model Supplier {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
-  // Relations
-  purchases      Purchase[]
-  supplierDebts  SupplierDebt[]
-  products    Product[] 
+
+  purchases     Purchase[]
+  supplierDebts SupplierDebt[]
+  products      Product[]
+
   @@map("suppliers")
 }
 
-// ==================== PRODUK ====================
 model Product {
-  id            String   @id @default(cuid())
-  code          String   @unique // PRD-001
-  barcode       String?  @unique
+  id            String    @id @default(cuid())
+  code          String    @unique
+  barcode       String?   @unique
   name          String
   description   String?
   categoryId    String
   subCategoryId String?
   supplierId    String?
-  minStock      Int      @default(0)
-  currentStock  Int      @default(0)
-  isActive      Boolean  @default(true)
-  deletedAt DateTime?
+  minStock      Int       @default(0)
+  currentStock  Int       @default(0)
+  isActive      Boolean   @default(true)
+  deletedAt     DateTime?
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  // Relations
-  category      Category     @relation(fields: [categoryId], references: [id])
-  subCategory   SubCategory? @relation(fields: [subCategoryId], references: [id])
-  supplier       Supplier?     @relation(fields: [supplierId], references: [id])
-  productUnits  ProductUnit[]
-  productImages ProductImage[]
-  saleItems     SaleItem[]
-  purchaseItems PurchaseItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  category       Category        @relation(fields: [categoryId], references: [id])
+  subCategory    SubCategory?    @relation(fields: [subCategoryId], references: [id])
+  supplier       Supplier?       @relation(fields: [supplierId], references: [id])
+  productUnits   ProductUnit[]
+  productImages  ProductImage[]
+  saleItems      SaleItem[]
+  purchaseItems  PurchaseItem[]
   stockMovements StockMovement[]
-  deliveryItems   DeliveryItem[]
+  deliveryItems  DeliveryItem[]
 
   @@index([categoryId])
   @@index([supplierId])
@@ -142,59 +133,53 @@ model Product {
   @@map("products")
 }
 
-// ==================== PRODUK SATUAN & HARGA ====================
 model ProductUnit {
   id              String   @id @default(cuid())
   productId       String
   unitId          String
-  conversionValue Int      @default(1) // 1 Sak = 50 Kg (value: 50)
+  conversionValue Int      @default(1)
   buyPrice        Decimal  @db.Decimal(15, 2)
   sellPrice       Decimal  @db.Decimal(15, 2)
-  isPrimary       Boolean  @default(false) // Satuan utama
+  isPrimary       Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  
-  // Relations
+
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   unit    Unit    @relation(fields: [unitId], references: [id])
-  
+
   @@unique([productId, unitId])
   @@map("product_units")
 }
 
-// ==================== PRODUK GAMBAR ====================
 model ProductImage {
   id        String   @id @default(cuid())
   productId String
   imageUrl  String
   isPrimary Boolean  @default(false)
   createdAt DateTime @default(now())
-  
-  // Relations
+
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
+
   @@map("product_images")
 }
 
-// ==================== CUSTOMER ====================
 model Customer {
-  id          String   @id @default(cuid())
-  code        String   @unique // CUST-001
-  name        String
-  phone       String?
-  email       String?
-  address     String?
-  city        String?
-  province    String?
-  type        CustomerType @default(REGULER)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Relations
-  sales         Sale[]
-  customerDebts CustomerDebt[]
-  deliveryOrders  DeliveryOrder[]
+  id        String       @id @default(cuid())
+  code      String       @unique
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  city      String?
+  province  String?
+  type      CustomerType @default(REGULER)
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  sales          Sale[]
+  customerDebts  CustomerDebt[]
+  deliveryOrders DeliveryOrder[]
 
   @@map("customers")
 }
@@ -205,51 +190,48 @@ enum CustomerType {
   PROYEK
 }
 
-// ==================== PENJUALAN (POS) ====================
 model Sale {
-  id              String   @id @default(cuid())
-  invoiceNumber   String   @unique // INV-20240101-001
-  customerId      String?
-  cashierId       String
-  saleDate        DateTime @default(now())
-  totalAmount     Decimal  @db.Decimal(15, 2)
-  discount        Decimal  @default(0) @db.Decimal(15, 2)
-  tax             Decimal  @default(0) @db.Decimal(15, 2)
-  grandTotal      Decimal  @db.Decimal(15, 2)
-  paymentMethod   PaymentMethod
-  paidAmount      Decimal  @db.Decimal(15, 2)
-  changeAmount    Decimal  @default(0) @db.Decimal(15, 2)
-  notes           String?
-  status          SaleStatus @default(COMPLETED)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Relations
-  customer      Customer?  @relation(fields: [customerId], references: [id])
-  cashier       User       @relation(fields: [cashierId], references: [id])
+  id            String        @id @default(cuid())
+  invoiceNumber String        @unique
+  customerId    String?
+  cashierId     String
+  saleDate      DateTime      @default(now())
+  totalAmount   Decimal       @db.Decimal(15, 2)
+  discount      Decimal       @default(0) @db.Decimal(15, 2)
+  tax           Decimal       @default(0) @db.Decimal(15, 2)
+  grandTotal    Decimal       @db.Decimal(15, 2)
+  paymentMethod PaymentMethod
+  paidAmount    Decimal       @db.Decimal(15, 2)
+  changeAmount  Decimal       @default(0) @db.Decimal(15, 2)
+  notes         String?
+  status        SaleStatus    @default(COMPLETED)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  customer      Customer?      @relation(fields: [customerId], references: [id])
+  cashier       User           @relation(fields: [cashierId], references: [id])
   saleItems     SaleItem[]
   customerDebts CustomerDebt[]
-  deliveryOrder   DeliveryOrder?
+  deliveryOrder DeliveryOrder?
 
   @@map("sales")
 }
 
 model SaleItem {
-  id         String   @id @default(cuid())
-  saleId     String
-  productId  String
-  unitId     String
-  quantity   Int
-  unitPrice  Decimal  @db.Decimal(15, 2)
-  discount   Decimal  @default(0) @db.Decimal(15, 2)
-  subtotal   Decimal  @db.Decimal(15, 2)
-  createdAt  DateTime @default(now())
-  
-  // Relations
+  id        String   @id @default(cuid())
+  saleId    String
+  productId String
+  unitId    String
+  quantity  Int
+  unitPrice Decimal  @db.Decimal(15, 2)
+  discount  Decimal  @default(0) @db.Decimal(15, 2)
+  subtotal  Decimal  @db.Decimal(15, 2)
+  createdAt DateTime @default(now())
+
   sale    Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
   unit    Unit    @relation("SaleItemUnit", fields: [unitId], references: [id])
-  
+
   @@map("sale_items")
 }
 
@@ -268,31 +250,29 @@ enum SaleStatus {
   RETURN
 }
 
-// ==================== PEMBELIAN (PURCHASE ORDER) ====================
 model Purchase {
-  id              String   @id @default(cuid())
-  poNumber        String   @unique // PO-20240101-001
-  supplierId      String
-  adminId         String
-  purchaseDate    DateTime @default(now())
-  totalAmount     Decimal  @db.Decimal(15, 2)
-  discount        Decimal  @default(0) @db.Decimal(15, 2)
-  tax             Decimal  @default(0) @db.Decimal(15, 2)
-  grandTotal      Decimal  @db.Decimal(15, 2)
-  paidAmount      Decimal  @default(0) @db.Decimal(15, 2)
-  paymentMethod   PaymentMethod?
-  notes           String?
-  status          PurchaseStatus @default(PENDING)
-  receivedDate    DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Relations
-  supplier       Supplier       @relation(fields: [supplierId], references: [id])
-  admin          User           @relation(fields: [adminId], references: [id])
-  purchaseItems  PurchaseItem[]
-  supplierDebts  SupplierDebt[]
-  
+  id            String         @id @default(cuid())
+  poNumber      String         @unique
+  supplierId    String
+  adminId       String
+  purchaseDate  DateTime       @default(now())
+  totalAmount   Decimal        @db.Decimal(15, 2)
+  discount      Decimal        @default(0) @db.Decimal(15, 2)
+  tax           Decimal        @default(0) @db.Decimal(15, 2)
+  grandTotal    Decimal        @db.Decimal(15, 2)
+  paidAmount    Decimal        @default(0) @db.Decimal(15, 2)
+  paymentMethod PaymentMethod?
+  notes         String?
+  status        PurchaseStatus @default(PENDING)
+  receivedDate  DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  supplier      Supplier       @relation(fields: [supplierId], references: [id])
+  admin         User           @relation(fields: [adminId], references: [id])
+  purchaseItems PurchaseItem[]
+  supplierDebts SupplierDebt[]
+
   @@map("purchases")
 }
 
@@ -306,12 +286,11 @@ model PurchaseItem {
   discount   Decimal  @default(0) @db.Decimal(15, 2)
   subtotal   Decimal  @db.Decimal(15, 2)
   createdAt  DateTime @default(now())
-  
-  // Relations
+
   purchase Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
   product  Product  @relation(fields: [productId], references: [id])
   unit     Unit     @relation("PurchaseItemUnit", fields: [unitId], references: [id])
-  
+
   @@map("purchase_items")
 }
 
@@ -322,69 +301,64 @@ enum PurchaseStatus {
   CANCELLED
 }
 
-// ==================== UTANG CUSTOMER ====================
 model CustomerDebt {
-  id              String   @id @default(cuid())
-  debtNumber      String   @unique // DEBT-CUST-001
-  saleId          String
-  customerId      String
-  totalDebt       Decimal  @db.Decimal(15, 2)
-  paidAmount      Decimal  @default(0) @db.Decimal(15, 2)
-  remainingDebt   Decimal  @db.Decimal(15, 2)
-  dueDate         DateTime
-  status          DebtStatus @default(UNPAID)
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Relations
-  sale            Sale            @relation(fields: [saleId], references: [id])
-  customer        Customer        @relation(fields: [customerId], references: [id])
-  debtPayments    DebtPayment[]
-  
+  id            String     @id @default(cuid())
+  debtNumber    String     @unique
+  saleId        String
+  customerId    String
+  totalDebt     Decimal    @db.Decimal(15, 2)
+  paidAmount    Decimal    @default(0) @db.Decimal(15, 2)
+  remainingDebt Decimal    @db.Decimal(15, 2)
+  dueDate       DateTime
+  status        DebtStatus @default(UNPAID)
+  notes         String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  sale         Sale          @relation(fields: [saleId], references: [id])
+  customer     Customer      @relation(fields: [customerId], references: [id])
+  debtPayments DebtPayment[]
+
   @@map("customer_debts")
 }
 
-// ==================== UTANG SUPPLIER ====================
 model SupplierDebt {
-  id              String   @id @default(cuid())
-  debtNumber      String   @unique // DEBT-SUPP-001
-  purchaseId      String
-  supplierId      String
-  totalDebt       Decimal  @db.Decimal(15, 2)
-  paidAmount      Decimal  @default(0) @db.Decimal(15, 2)
-  remainingDebt   Decimal  @db.Decimal(15, 2)
-  dueDate         DateTime
-  status          DebtStatus @default(UNPAID)
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Relations
-  purchase        Purchase        @relation(fields: [purchaseId], references: [id])
-  supplier        Supplier        @relation(fields: [supplierId], references: [id])
-  debtPayments    DebtPayment[]
-  
+  id            String     @id @default(cuid())
+  debtNumber    String     @unique
+  purchaseId    String
+  supplierId    String
+  totalDebt     Decimal    @db.Decimal(15, 2)
+  paidAmount    Decimal    @default(0) @db.Decimal(15, 2)
+  remainingDebt Decimal    @db.Decimal(15, 2)
+  dueDate       DateTime
+  status        DebtStatus @default(UNPAID)
+  notes         String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  purchase     Purchase      @relation(fields: [purchaseId], references: [id])
+  supplier     Supplier      @relation(fields: [supplierId], references: [id])
+  debtPayments DebtPayment[]
+
   @@map("supplier_debts")
 }
 
-// ==================== PEMBAYARAN UTANG ====================
 model DebtPayment {
-  id              String   @id @default(cuid())
-  paymentNumber   String   @unique // PAY-001
-  customerDebtId  String?
-  supplierDebtId  String?
-  paymentDate     DateTime @default(now())
-  amount          Decimal  @db.Decimal(15, 2)
-  paymentMethod   PaymentMethod
-  notes           String?
-  adminId         String 
-  createdAt       DateTime @default(now())
-  
-  // Relations
+  id             String        @id @default(cuid())
+  paymentNumber  String        @unique
+  customerDebtId String?
+  supplierDebtId String?
+  paymentDate    DateTime      @default(now())
+  amount         Decimal       @db.Decimal(15, 2)
+  paymentMethod  PaymentMethod
+  notes          String?
+  adminId        String
+  createdAt      DateTime      @default(now())
+
   customerDebt CustomerDebt? @relation(fields: [customerDebtId], references: [id])
   supplierDebt SupplierDebt? @relation(fields: [supplierDebtId], references: [id])
-  admin           User           @relation(fields: [adminId], references: [id])
+  admin        User          @relation(fields: [adminId], references: [id])
+
   @@map("debt_payments")
 }
 
@@ -395,22 +369,20 @@ enum DebtStatus {
   OVERDUE
 }
 
-// ==================== STOCK MOVEMENT ====================
 model StockMovement {
-  id            String   @id @default(cuid())
+  id            String       @id @default(cuid())
   productId     String
   type          MovementType
   quantity      Int
-  referenceType String? // Sale, Purchase, Adjustment
+  referenceType String?
   referenceId   String?
   notes         String?
   createdById   String
-  createdAt     DateTime @default(now())
-  
-  // Relations
-  product Product @relation(fields: [productId], references: [id])
+  createdAt     DateTime     @default(now())
+
+  product   Product @relation(fields: [productId], references: [id])
   createdBy User    @relation(fields: [createdById], references: [id])
-  
+
   @@map("stock_movements")
 }
 
@@ -421,7 +393,6 @@ enum MovementType {
   RETURN
 }
 
-// ==================== CASH MANAGEMENT ====================
 model CashMovement {
   id          String   @id @default(cuid())
   type        CashType
@@ -430,10 +401,9 @@ model CashMovement {
   category    String?
   userId      String
   createdAt   DateTime @default(now())
-  
-  // Relations
+
   user User @relation(fields: [userId], references: [id])
-  
+
   @@map("cash_movements")
 }
 
@@ -442,46 +412,43 @@ enum CashType {
   OUT
 }
 
-// ==================== DELIVERY ORDER / SURAT JALAN ====================
 model DeliveryOrder {
-  id              String          @id @default(cuid())
-  doNumber        String          @unique // DO-20240101-001
-  customerId      String
-  saleId          String?         @unique // Optional: link ke sale jika dari POS
-  deliveryDate    DateTime
-  driver          String?
-  vehicle         String?
-  notes           String?
-  status          DeliveryStatus  @default(PENDING)
-  receivedBy      String?
-  receivedDate    DateTime?
-  createdById     String
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  
-  // Relations
-  customer        Customer        @relation(fields: [customerId], references: [id])
-  sale            Sale?           @relation(fields: [saleId], references: [id])
-  createdBy       User            @relation(fields: [createdById], references: [id])
-  deliveryItems   DeliveryItem[]
-  
+  id           String         @id @default(cuid())
+  doNumber     String         @unique
+  customerId   String
+  saleId       String?        @unique
+  deliveryDate DateTime
+  driver       String?
+  vehicle      String?
+  notes        String?
+  status       DeliveryStatus @default(PENDING)
+  receivedBy   String?
+  receivedDate DateTime?
+  createdById  String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  customer      Customer       @relation(fields: [customerId], references: [id])
+  sale          Sale?          @relation(fields: [saleId], references: [id])
+  createdBy     User           @relation(fields: [createdById], references: [id])
+  deliveryItems DeliveryItem[]
+
   @@map("delivery_orders")
 }
 
 model DeliveryItem {
-  id                String         @id @default(cuid())
-  deliveryOrderId   String
-  productId         String
-  unitId            String
-  quantity          Decimal        @db.Decimal(10, 2)
-  notes             String?
-  createdAt         DateTime       @default(now())
-  
-  // Relations
+  id              String   @id @default(cuid())
+  deliveryOrderId String
+  productId       String
+  unitId          String
+  quantity        Decimal  @db.Decimal(10, 2)
+  notes           String?
+  createdAt       DateTime @default(now())
+
   deliveryOrder DeliveryOrder @relation(fields: [deliveryOrderId], references: [id], onDelete: Cascade)
   product       Product       @relation(fields: [productId], references: [id])
   unit          Unit          @relation(fields: [unitId], references: [id])
-  
+
   @@map("delivery_items")
 }
 
@@ -492,7 +459,6 @@ enum DeliveryStatus {
   CANCELLED
 }
 
-// ==================== SETTINGS MODULE ====================
 model StoreSetting {
   id          String   @id @default(cuid())
   name        String   @default("TB Masdar Utama")
@@ -508,42 +474,42 @@ model StoreSetting {
   instagram   String?
   facebook    String?
   whatsapp    String?
-  taxNumber   String?  // NPWP
+  taxNumber   String?
   bankName    String?
   bankAccount String?
   bankHolder  String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   @@map("store_settings")
 }
 
 model LandingPageSetting {
-  id                  String   @id @default(cuid())
-  heroTitle           String   @default("TB Masdar Utama")
-  heroSubtitle        String   @default("Distributor Bahan Bangunan Terpercaya")
-  aboutUs             String?  @db.Text
-  whyChooseUs         String?  @db.Text
-  showFeaturedProducts Boolean @default(true)
-  contactMapUrl       String?  // Google Maps embed URL
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  
-  heroImages          HeroImage[]
-  
+  id                   String   @id @default(cuid())
+  heroTitle            String   @default("TB Masdar Utama")
+  heroSubtitle         String   @default("Distributor Bahan Bangunan Terpercaya")
+  aboutUs              String?  @db.Text
+  whyChooseUs          String?  @db.Text
+  showFeaturedProducts Boolean  @default(true)
+  contactMapUrl        String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  heroImages HeroImage[]
+
   @@map("landing_page_settings")
 }
 
 model HeroImage {
-  id          String              @id @default(cuid())
-  landingId   String
-  imageUrl    String
-  order       Int                 @default(0)
-  isActive    Boolean             @default(true)
-  createdAt   DateTime            @default(now())
-  
-  landing     LandingPageSetting  @relation(fields: [landingId], references: [id], onDelete: Cascade)
-  
+  id        String   @id @default(cuid())
+  landingId String
+  imageUrl  String
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  landing LandingPageSetting @relation(fields: [landingId], references: [id], onDelete: Cascade)
+
   @@index([landingId])
   @@map("hero_images")
 }
@@ -554,9 +520,9 @@ model PasswordResetToken {
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
-  
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@index([userId])
   @@map("password_reset_tokens")
 }
