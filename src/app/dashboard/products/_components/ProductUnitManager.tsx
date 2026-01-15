@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Plus, Edit2, Trash2, CheckCircle, Calculator } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { hasPermission } from "@/lib/utils/role";
 
 interface Unit {
   id: string;
@@ -27,6 +29,10 @@ export function ProductUnitManager({
   availableUnits,
   onChange,
 }: ProductUnitManagerProps) {
+  const { data: session } = useSession();
+  
+  // Check if user can view purchase price
+  const canViewPurchasePrice = hasPermission(session, "EDIT_PRODUCT");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [formData, setFormData] = useState<ProductUnitForm>({
     unitId: "",
@@ -190,12 +196,14 @@ const displaySellPrice = autoCalculate && primaryUnit && !formData.isPrimary
                           {!unit.isPrimary && " × satuan utama"}
                         </p>
                       </div>
+                       {canViewPurchasePrice && (
                       <div>
                         <p className="text-gray-600 text-xs">Harga Beli</p>
                         <p className="font-semibold text-gray-900">
                           Rp {unit.buyPrice.toLocaleString("id-ID")}
                         </p>
                       </div>
+                       )}
                       <div>
                         <p className="text-gray-600 text-xs">Harga Jual</p>
                         <p className="font-semibold text-green-600">
@@ -318,6 +326,7 @@ const displaySellPrice = autoCalculate && primaryUnit && !formData.isPrimary
 
           {/* Prices */}
           <div className="grid grid-cols-2 gap-3">
+             {canViewPurchasePrice && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Harga Beli <span className="text-red-500">*</span>
@@ -337,6 +346,7 @@ const displaySellPrice = autoCalculate && primaryUnit && !formData.isPrimary
                 placeholder="0"
               />
             </div>
+             )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Harga Jual <span className="text-red-500">*</span>

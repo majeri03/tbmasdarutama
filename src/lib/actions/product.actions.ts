@@ -10,7 +10,7 @@ import {
   type UpdateProductInput,
 } from "@/lib/validations/product.schema";
 import { auth } from "../auth";
-
+import { requireMinimumRole, requirePermission } from "@/lib/utils/role";
 // ==================== GENERATE PRODUCT CODE ====================
 async function generateProductCode(): Promise<string> {
   const lastProduct = await prisma.product.findFirst({
@@ -35,6 +35,7 @@ export async function createProduct(data: CreateProductInput) {
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
+    requirePermission(session, "CREATE_PRODUCT");
     const validatedData = createProductSchema.parse(data);
 
     // Check duplicate barcode if provided
@@ -198,6 +199,8 @@ export async function getProducts(params?: {
   isActive?: boolean | null;
   lowStock?: boolean;
 }) {
+  const session = await auth();
+  requirePermission(session, "VIEW_PRODUCTS");
   try {
     const {
       search = "",
@@ -297,12 +300,13 @@ export async function getProducts(params?: {
       }),
       prisma.product.count({ where }),
     ]);
+    const isKasir = session?.user?.role === "KASIR";
     const serialized = products.map((product) => ({
       ...product,
       productUnits: product.productUnits.map((pu) => ({
         ...pu,
         conversionValue: Number(pu.conversionValue),
-        buyPrice: Number(pu.buyPrice),
+        buyPrice: isKasir ? 0 : Number(pu.buyPrice),
         sellPrice: Number(pu.sellPrice),
         unit: {
           id: pu.unit.id,
@@ -335,6 +339,8 @@ export async function getProducts(params?: {
 
 // ==================== GET PRODUCT BY ID ====================
 export async function getProductById(id: string) {
+  const session = await auth();
+  requirePermission(session, "VIEW_PRODUCTS");
   try {
     const product = await prisma.product.findUnique({
       where: { id },
@@ -372,9 +378,31 @@ export async function getProductById(id: string) {
       };
     }
 
+    const isKasir = session?.user?.role === "KASIR";
+
+    // Sanitize data for KASIR
+    const sanitizedProduct = isKasir
+      ? {
+          ...product,
+          productUnits: product.productUnits.map((pu) => ({
+            ...pu,
+            buyPrice: 0, // Hide purchase price
+            conversionValue: Number(pu.conversionValue),
+            sellPrice: Number(pu.sellPrice),
+          })),
+        }
+      : {
+          ...product,
+          productUnits: product.productUnits.map((pu) => ({
+            ...pu,
+            buyPrice: Number(pu.buyPrice),
+            conversionValue: Number(pu.conversionValue),
+            sellPrice: Number(pu.sellPrice),
+          })),
+        };
     return {
       success: true,
-      data: product,
+      data: sanitizedProduct,
     };
   } catch (error) {
     console.error("[GET_PRODUCT_BY_ID_ERROR]", error);
@@ -387,6 +415,8 @@ export async function getProductById(id: string) {
 
 // ==================== UPDATE PRODUCT ====================
 export async function updateProduct(id: string, data: UpdateProductInput) {
+  const session = await auth();
+  requirePermission(session, "EDIT_PRODUCT");
   try {
     const validatedData = updateProductSchema.parse(data);
 
@@ -503,6 +533,8 @@ export async function updateProduct(id: string, data: UpdateProductInput) {
 // ==================== DELETE PRODUCT ====================
 // Delete product (soft delete)
 export async function deleteProduct(id: string) {
+  const session = await auth();
+  requirePermission(session, "DELETE_PRODUCT");
   try {
     const product = await prisma.product.findUnique({
       where: { id },
@@ -562,7 +594,7 @@ export async function restoreProduct(id: string) {
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
-
+    requirePermission(session, "EDIT_PRODUCT");
     await prisma.product.update({
       where: { id },
       data: {
@@ -587,6 +619,8 @@ export async function restoreProduct(id: string) {
 }
 // ==================== TOGGLE PRODUCT STATUS ====================
 export async function toggleProductStatus(id: string) {
+  const session = await auth();
+  requirePermission(session, "EDIT_PRODUCT");
   try {
     const product = await prisma.product.findUnique({
       where: { id },
@@ -626,6 +660,8 @@ export async function toggleProductStatus(id: string) {
 
 // ==================== GET PRODUCTS FOR SELECT ====================
 export async function getProductsForSelect() {
+  const session = await auth();
+  requireMinimumRole(session, "KASIR"); // All roles can view for POS
   try {
     const products = await prisma.product.findMany({
       where: { isActive: true },

@@ -10,6 +10,7 @@ import {
   type UpdateCustomerInput,
 } from "@/lib/validations/customer.schema";
 import { Prisma } from "@prisma/client";
+import { requireMinimumRole } from "../utils/role";
 
 // ==================== GENERATE CUSTOMER CODE ====================
 async function generateCustomerCode(): Promise<string> {
@@ -35,7 +36,7 @@ export async function createCustomer(data: CreateCustomerInput) {
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
-
+    requireMinimumRole(session, "ADMIN");
     // Validate input
     const validatedData = createCustomerSchema.parse(data);
 
@@ -96,7 +97,7 @@ export async function updateCustomer(id: string, data: UpdateCustomerInput) {
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
-
+    requireMinimumRole(session, "ADMIN");
     // Validate input
     const validatedData = updateCustomerSchema.parse(data);
 
@@ -168,7 +169,7 @@ export async function deleteCustomer(id: string) {
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
-
+    requireMinimumRole(session, "ADMIN");
     const customer = await prisma.customer.findUnique({
       where: { id },
       include: {
@@ -234,7 +235,7 @@ export async function toggleCustomerStatus(id: string) {
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
-
+    requireMinimumRole(session, "ADMIN");
     const customer = await prisma.customer.findUnique({
       where: { id },
     });
@@ -266,6 +267,8 @@ export async function toggleCustomerStatus(id: string) {
 }
 // ==================== GET ALL CUSTOMERS ====================
 export async function getCustomers(filters?: { status?: "ACTIVE" | "INACTIVE" }) {
+  const session = await auth();
+requireMinimumRole(session, "KASIR"); // All roles can view
   try {
     const where: Prisma.CustomerWhereInput = {};
 

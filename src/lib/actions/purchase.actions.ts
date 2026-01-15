@@ -12,6 +12,7 @@ import {
   type ReceivePurchaseInput,
 } from "@/lib/validations/purchase.schema";
 import { Prisma, PurchaseStatus, MovementType } from "@prisma/client";
+import { requirePermission } from "../utils/role";
 
 // ==================== GENERATE PO NUMBER ====================
 async function generatePONumber(): Promise<string> {
@@ -55,7 +56,7 @@ export async function createPurchase(input: CreatePurchaseInput) {
         error: "Kasir tidak memiliki akses untuk membuat PO",
       };
     }
-
+    requirePermission(session, "CREATE_PURCHASE");
     const validated = createPurchaseSchema.parse(input);
 
     // Calculate totals
@@ -170,6 +171,8 @@ export async function getAllPurchases(filters?: {
   page?: number;
   limit?: number;
 }) {
+  const session = await auth();
+  requirePermission(session, "VIEW_PURCHASES");
   try {
     const page = filters?.page || 1;
     const limit = filters?.limit || 10;
@@ -285,6 +288,8 @@ export async function getAllPurchases(filters?: {
 
 // ==================== GET PURCHASE BY ID ====================
 export async function getPurchaseById(id: string) {
+  const session = await auth();
+  requirePermission(session, "VIEW_PURCHASES");
   try {
     const purchase = await prisma.purchase.findUnique({
       where: { id },
@@ -361,7 +366,7 @@ export async function receivePurchase(input: ReceivePurchaseInput) {
         error: "Kasir tidak memiliki akses untuk receive barang",
       };
     }
-
+    requirePermission(session, "RECEIVE_PURCHASE");
     const validated = receivePurchaseSchema.parse(input);
 
     // Get purchase with items
@@ -476,7 +481,7 @@ export async function updatePurchase(input: UpdatePurchaseInput) {
         error: "Kasir tidak memiliki akses untuk update PO",
       };
     }
-
+    requirePermission(session, "EDIT_PURCHASE");
     const validated = updatePurchaseSchema.parse(input);
 
     // Check if purchase can be updated
@@ -620,9 +625,12 @@ export async function deletePurchase(id: string) {
     }
 
     if (session.user.role === "KASIR") {
-      return { success: false, error: "Kasir tidak memiliki akses untuk hapus PO" };
+      return {
+        success: false,
+        error: "Kasir tidak memiliki akses untuk hapus PO",
+      };
     }
-
+    requirePermission(session, "DELETE_PURCHASE");
     // Check if purchase exists
     const purchase = await prisma.purchase.findUnique({
       where: { id },
@@ -683,6 +691,8 @@ export async function deletePurchase(id: string) {
 
 // ==================== GET PURCHASE STATISTICS ====================
 export async function getPurchaseStatistics() {
+  const session = await auth();
+  requirePermission(session, "VIEW_PURCHASES");
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);

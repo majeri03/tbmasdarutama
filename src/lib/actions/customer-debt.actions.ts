@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { DebtStatus, Prisma } from "@prisma/client";
 import { addPaymentSchema, AddPaymentInput } from "@/lib/validations/customer-debt.schema";
-
+import { requirePermission, requireMinimumRole } from "@/lib/utils/role";
 // ==================== GET ALL CUSTOMER DEBTS ====================
 export async function getAllCustomerDebts(filters?: {
   search?: string;
@@ -14,6 +14,8 @@ export async function getAllCustomerDebts(filters?: {
   dateFrom?: Date;
   dateTo?: Date;
 }) {
+  const session = await auth();
+requirePermission(session, "VIEW_CUSTOMER_DEBTS");
   try {
     const where: Prisma.CustomerDebtWhereInput = {};
 
@@ -117,6 +119,8 @@ export async function getAllCustomerDebts(filters?: {
 
 // ==================== GET CUSTOMER DEBT STATISTICS ====================
 export async function getCustomerDebtStatistics() {
+  const session = await auth();
+requirePermission(session, "VIEW_CUSTOMER_DEBTS");
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -165,6 +169,8 @@ export async function getCustomerDebtStatistics() {
 
 // ==================== GET CUSTOMER DEBT BY ID ====================
 export async function getCustomerDebtById(id: string) {
+  const session = await auth();
+requirePermission(session, "VIEW_CUSTOMER_DEBTS");
   try {
     const debt = await prisma.customerDebt.findUnique({
       where: { id },
@@ -245,6 +251,7 @@ export async function addCustomerDebtPayment(input: AddPaymentInput) {
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
+    requirePermission(session, "MANAGE_CUSTOMER_DEBTS");
 
     const validated = addPaymentSchema.parse(input);
 
@@ -335,10 +342,7 @@ export async function deleteCustomerDebt(id: string) {
       return { success: false, error: "Unauthorized" };
     }
 
-    if (session.user.role === "KASIR") {
-      return { success: false, error: "Kasir tidak memiliki akses untuk hapus debt" };
-    }
-
+    requirePermission(session, "MANAGE_CUSTOMER_DEBTS");
     // Check debt and payment count
     const debt = await prisma.customerDebt.findUnique({
       where: { id },
@@ -379,6 +383,8 @@ export async function deleteCustomerDebt(id: string) {
 
 // ==================== UPDATE OVERDUE STATUS (Cron Job Helper) ====================
 export async function updateOverdueDebts() {
+  const session = await auth();
+requireMinimumRole(session, "ADMIN");
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);

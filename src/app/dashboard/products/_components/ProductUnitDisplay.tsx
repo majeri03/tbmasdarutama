@@ -1,6 +1,8 @@
 "use client";
 
+import { hasPermission } from "@/lib/utils/role";
 import { Package } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 interface ProductUnit {
   id: string;
@@ -20,6 +22,10 @@ interface ProductUnitDisplayProps {
 }
 
 export function ProductUnitDisplay({ units, variant = "compact" }: ProductUnitDisplayProps) {
+  const { data: session } = useSession();
+  
+  // Check if user can view purchase price
+  const canViewPurchasePrice = hasPermission(session, "EDIT_PRODUCT");
   if (!units || units.length === 0) {
     return (
       <span className="text-sm text-gray-500 italic">Belum ada satuan</span>
@@ -95,9 +101,13 @@ export function ProductUnitDisplay({ units, variant = "compact" }: ProductUnitDi
             <p className="text-sm font-semibold text-gray-900">
               Rp {unit.sellPrice.toLocaleString("id-ID")}
             </p>
+             {canViewPurchasePrice && (
+            <div>
             <p className="text-xs text-gray-600">
               Beli: Rp {unit.buyPrice.toLocaleString("id-ID")}
             </p>
+            </div>
+             )}
           </div>
         </div>
       ))}

@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { startOfDay, endOfDay } from "date-fns";
 import { SaleStatus, DebtStatus, PurchaseStatus } from "@prisma/client";
+import { requirePermission } from "../utils/role";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -37,7 +38,7 @@ export async function getSalesReport(filters: ReportFilters) {
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
-
+    requirePermission(session, "VIEW_REPORTS");
     const { dateFrom, dateTo, customerId, status } = filters;
 
     const sales = await prisma.sale.findMany({
@@ -94,7 +95,7 @@ export async function getInventoryReport(filters: ReportFilters) {
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
-
+    requirePermission(session, "VIEW_REPORTS");
     const { categoryId, supplierId } = filters;
 
     const products = await prisma.product.findMany({
@@ -156,7 +157,7 @@ export async function getFinancialReport(filters: DateRangeFilter) {
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
-
+    requirePermission(session, "VIEW_REPORTS");
     const { dateFrom, dateTo } = filters;
 
     const sales = await prisma.sale.findMany({
@@ -241,7 +242,7 @@ export async function getDebtsReport(filters: ReportFilters) {
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
-
+    requirePermission(session, "VIEW_REPORTS");
     const { customerId, supplierId, status } = filters;
 
     const customerDebts = await prisma.customerDebt.findMany({
@@ -317,7 +318,7 @@ export async function getPurchasesReport(filters: ReportFilters) {
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
-
+    requirePermission(session, "VIEW_REPORTS");
     const { dateFrom, dateTo, supplierId, status } = filters;
 
     const purchases = await prisma.purchase.findMany({
@@ -376,7 +377,7 @@ export async function getProductListReport(filters: ReportFilters) {
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
-
+    requirePermission(session, "VIEW_REPORTS");
     const { categoryId, supplierId } = filters;
 
     const products = await prisma.product.findMany({

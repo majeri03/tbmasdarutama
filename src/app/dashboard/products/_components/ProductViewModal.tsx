@@ -72,6 +72,7 @@ interface ProductViewModalProps {
 }
 
 export function ProductViewModal({ product, onClose, onEdit }: ProductViewModalProps) {
+  
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-fade-in overflow-y-auto">
       <div className="glass-card w-full max-w-4xl my-8 animate-slide-up max-h-[90vh] overflow-y-auto">

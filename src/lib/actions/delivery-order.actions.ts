@@ -10,6 +10,7 @@ import {
   CreateDeliveryOrderInput,
   UpdateDeliveryStatusInput,
 } from "@/lib/validations/delivery-order.schema";
+import { requirePermission } from "../utils/role";
 // ==================== GENERATE DO NUMBER ====================
 async function generateDONumber(): Promise<string> {
   const today = new Date();
@@ -52,6 +53,8 @@ export async function getAllDeliveryOrders(filters?: {
   dateFrom?: Date;
   dateTo?: Date;
 }) {
+  const session = await auth();
+requirePermission(session, "VIEW_DELIVERY_ORDERS");
   try {
     const where: Prisma.DeliveryOrderWhereInput = {};
 
@@ -146,6 +149,8 @@ export async function getAllDeliveryOrders(filters?: {
 
 // ==================== GET DELIVERY ORDER STATISTICS ====================
 export async function getDeliveryOrderStatistics() {
+  const session = await auth();
+requirePermission(session, "VIEW_DELIVERY_ORDERS");
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -189,6 +194,8 @@ export async function getDeliveryOrderStatistics() {
 
 // ==================== GET DELIVERY ORDER BY ID ====================
 export async function getDeliveryOrderById(id: string) {
+  const session = await auth();
+requirePermission(session, "VIEW_DELIVERY_ORDERS");
   try {
     const deliveryOrder = await prisma.deliveryOrder.findUnique({
       where: { id },
@@ -257,7 +264,7 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
-
+    requirePermission(session, "CREATE_DELIVERY_ORDER");
     const validated = createDeliveryOrderSchema.parse(input);
     // ✅ Check stock availability
     for (const item of validated.items) {
@@ -388,7 +395,7 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
-
+    requirePermission(session, "UPDATE_DELIVERY_STATUS");
     const validated = updateDeliveryStatusSchema.parse(input);
 
     // Get delivery order with items
@@ -556,12 +563,7 @@ export async function deleteDeliveryOrder(id: string) {
       return { success: false, error: "Unauthorized" };
     }
 
-    if (session.user.role === "KASIR") {
-      return {
-        success: false,
-        error: "Kasir tidak memiliki akses untuk hapus delivery order",
-      };
-    }
+    requirePermission(session, "DELETE_DELIVERY_ORDER");
 
     const deliveryOrder = await prisma.deliveryOrder.findUnique({
       where: { id },

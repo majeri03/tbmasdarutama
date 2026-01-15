@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { DebtStatus, Prisma } from "@prisma/client";
-import { addSupplierPaymentSchema, AddSupplierPaymentInput } from "@/lib/validations/supplier-debt.schema";
+import {
+  addSupplierPaymentSchema,
+  AddSupplierPaymentInput,
+} from "@/lib/validations/supplier-debt.schema";
+import { requireMinimumRole, requirePermission } from "../utils/role";
 
 // ==================== GET ALL SUPPLIER DEBTS ====================
 export async function getAllSupplierDebts(filters?: {
@@ -14,14 +18,22 @@ export async function getAllSupplierDebts(filters?: {
   dateFrom?: Date;
   dateTo?: Date;
 }) {
+  const session = await auth();
+  requirePermission(session, "VIEW_SUPPLIER_DEBTS");
   try {
     const where: Prisma.SupplierDebtWhereInput = {};
 
     if (filters?.search) {
       where.OR = [
         { debtNumber: { contains: filters.search, mode: "insensitive" } },
-        { supplier: { name: { contains: filters.search, mode: "insensitive" } } },
-        { purchase: { poNumber: { contains: filters.search, mode: "insensitive" } } },
+        {
+          supplier: { name: { contains: filters.search, mode: "insensitive" } },
+        },
+        {
+          purchase: {
+            poNumber: { contains: filters.search, mode: "insensitive" },
+          },
+        },
       ];
     }
 
@@ -117,36 +129,41 @@ export async function getAllSupplierDebts(filters?: {
 
 // ==================== GET SUPPLIER DEBT STATISTICS ====================
 export async function getSupplierDebtStatistics() {
+  const session = await auth();
+  requirePermission(session, "VIEW_SUPPLIER_DEBTS");
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-    const [activeDebts, overdueCount, paidThisMonth, totalActive] = await Promise.all([
-      prisma.supplierDebt.count({
-        where: {
-          status: { in: [DebtStatus.UNPAID, DebtStatus.PARTIAL] },
-        },
-      }),
-      prisma.supplierDebt.count({
-        where: {
-          status: DebtStatus.OVERDUE,
-        },
-      }),
-      prisma.debtPayment.aggregate({
-        _sum: { amount: true },
-        where: {
-          supplierDebtId: { not: null },
-          paymentDate: { gte: firstDayOfMonth },
-        },
-      }),
-      prisma.supplierDebt.aggregate({
-        _sum: { remainingDebt: true },
-        where: {
-          status: { in: [DebtStatus.UNPAID, DebtStatus.PARTIAL, DebtStatus.OVERDUE] },
-        },
-      }),
-    ]);
+    const [activeDebts, overdueCount, paidThisMonth, totalActive] =
+      await Promise.all([
+        prisma.supplierDebt.count({
+          where: {
+            status: { in: [DebtStatus.UNPAID, DebtStatus.PARTIAL] },
+          },
+        }),
+        prisma.supplierDebt.count({
+          where: {
+            status: DebtStatus.OVERDUE,
+          },
+        }),
+        prisma.debtPayment.aggregate({
+          _sum: { amount: true },
+          where: {
+            supplierDebtId: { not: null },
+            paymentDate: { gte: firstDayOfMonth },
+          },
+        }),
+        prisma.supplierDebt.aggregate({
+          _sum: { remainingDebt: true },
+          where: {
+            status: {
+              in: [DebtStatus.UNPAID, DebtStatus.PARTIAL, DebtStatus.OVERDUE],
+            },
+          },
+        }),
+      ]);
 
     return {
       success: true,
@@ -165,6 +182,8 @@ export async function getSupplierDebtStatistics() {
 
 // ==================== GET SUPPLIER DEBT BY ID ====================
 export async function getSupplierDebtById(id: string) {
+  const session = await auth();
+  requirePermission(session, "VIEW_SUPPLIER_DEBTS");
   try {
     const debt = await prisma.supplierDebt.findUnique({
       where: { id },
@@ -244,7 +263,7 @@ export async function addSupplierDebtPayment(input: AddSupplierPaymentInput) {
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
-
+    requirePermission(session, "MANAGE_SUPPLIER_DEBTS");
     const validated = addSupplierPaymentSchema.parse(input);
 
     // Get debt
@@ -268,7 +287,8 @@ export async function addSupplierDebtPayment(input: AddSupplierPaymentInput) {
     // Calculate new values
     const newPaidAmount = Number(debt.paidAmount) + validated.amount;
     const newRemainingDebt = remainingDebt - validated.amount;
-    const newStatus = newRemainingDebt === 0 ? DebtStatus.PAID : DebtStatus.PARTIAL;
+    const newStatus =
+      newRemainingDebt === 0 ? DebtStatus.PAID : DebtStatus.PARTIAL;
 
     // Generate payment number
     const today = new Date();
@@ -278,7 +298,10 @@ export async function addSupplierDebtPayment(input: AddSupplierPaymentInput) {
         paymentNumber: { startsWith: `PAY-${dateStr}` },
       },
     });
-    const paymentNumber = `PAY-${dateStr}-${String(count + 1).padStart(3, "0")}`;
+    const paymentNumber = `PAY-${dateStr}-${String(count + 1).padStart(
+      3,
+      "0"
+    )}`;
 
     // Update in transaction
     const result = await prisma.$transaction(async (tx) => {
@@ -341,9 +364,12 @@ export async function deleteSupplierDebt(id: string) {
     }
 
     if (session.user.role === "KASIR") {
-      return { success: false, error: "Kasir tidak memiliki akses untuk hapus debt" };
+      return {
+        success: false,
+        error: "Kasir tidak memiliki akses untuk hapus debt",
+      };
     }
-
+    requirePermission(session, "MANAGE_SUPPLIER_DEBTS");
     // Check debt and payment count
     const debt = await prisma.supplierDebt.findUnique({
       where: { id },
@@ -359,7 +385,10 @@ export async function deleteSupplierDebt(id: string) {
     });
 
     if (paymentCount > 0) {
-      return { success: false, error: "Cannot delete debt with payment history" };
+      return {
+        success: false,
+        error: "Cannot delete debt with payment history",
+      };
     }
 
     if (debt.status === DebtStatus.PAID) {
@@ -384,6 +413,8 @@ export async function deleteSupplierDebt(id: string) {
 
 // ==================== UPDATE OVERDUE STATUS ====================
 export async function updateOverdueSupplierDebts() {
+  const session = await auth();
+  requireMinimumRole(session, "ADMIN");
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);

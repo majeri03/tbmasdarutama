@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-
+import { requireMinimumRole } from "@/lib/utils/role";
+import { auth } from "@/lib/auth";
 // Schema untuk validasi di server
 const unitServerSchema = z.object({
   name: z.string().min(1).max(50).trim().toUpperCase(),
@@ -15,6 +16,8 @@ export type UnitFormData = z.infer<typeof unitServerSchema>;
 
 // ==================== CREATE UNIT ====================
 export async function createUnit(data: UnitFormData) {
+  const session = await auth();
+  requireMinimumRole(session, "ADMIN"); // SUPER_ADMIN & ADMIN
   try {
     // Validate input
     const validatedData = unitServerSchema.parse(data);
@@ -66,6 +69,8 @@ export async function getUnits(params?: {
   page?: number;
   limit?: number;
 }) {
+  const session = await auth();
+  requireMinimumRole(session, "ADMIN"); // SUPER_ADMIN & ADMIN
   try {
     const { search = "", page = 1, limit = 10 } = params || {};
     const skip = (page - 1) * limit;
@@ -121,6 +126,8 @@ export async function getUnits(params?: {
 
 // ==================== GET UNIT BY ID ====================
 export async function getUnitById(id: string) {
+  const session = await auth();
+  requireMinimumRole(session, "ADMIN");
   try {
     const unit = await prisma.unit.findUnique({
       where: { id },
@@ -155,6 +162,8 @@ export async function getUnitById(id: string) {
 
 // ==================== UPDATE UNIT ====================
 export async function updateUnit(id: string, data: UnitFormData) {
+  const session = await auth();
+  requireMinimumRole(session, "ADMIN");
   try {
     // Validate input
     const validatedData = unitServerSchema.parse(data);
@@ -217,6 +226,8 @@ export async function updateUnit(id: string, data: UnitFormData) {
 
 // ==================== DELETE UNIT ====================
 export async function deleteUnit(id: string) {
+  const session = await auth();
+  requireMinimumRole(session, "ADMIN");
   try {
     // Check if unit exists and has relations
     const unit = await prisma.unit.findUnique({
@@ -274,6 +285,8 @@ export async function deleteUnit(id: string) {
 
 // ==================== GET UNITS FOR SELECT ====================
 export async function getUnitsForSelect() {
+  const session = await auth();
+  requireMinimumRole(session, "ADMIN");
   try {
     const units = await prisma.unit.findMany({
       select: {

@@ -23,46 +23,47 @@ import {
 } from "lucide-react";
 import { Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
-
+import { useSession } from "next-auth/react";
+import { hasPermission } from "@/lib/utils/role";
 const menuGroups = [
   {
     label: "Main",
     items: [
-      { href: "/dashboard", icon: <Home />, label: "Dashboard" },
+      { href: "/dashboard", icon: <Home />, label: "Dashboard", permission: "VIEW_DASHBOARD" as const },
     ],
   },
   {
     label: "Manajemen Data",
     items: [
-      { href: "/dashboard/products", icon: <Package />, label: "Produk" },
-      { href: "/dashboard/categories", icon: <Box />, label: "Kategori" },
-      { href: "/dashboard/units", icon: <Layers />, label: "Satuan" },
-      { href: "/dashboard/suppliers", icon: <Truck />, label: "Supplier" },
-      { href: "/dashboard/customers", icon: <Users />, label: "Customer" },
-      { href: "/dashboard/stocks", icon: <ShoppingCart />, label: "Stock" },
+      { href: "/dashboard/products", icon: <Package />, label: "Produk", permission: "VIEW_PRODUCTS" as const },
+      { href: "/dashboard/categories", icon: <Box />, label: "Kategori", permission: "VIEW_CATEGORIES" as const },
+      { href: "/dashboard/units", icon: <Layers />, label: "Satuan", permission: "VIEW_UNITS" as const },
+      { href: "/dashboard/suppliers", icon: <Truck />, label: "Supplier", permission: "VIEW_SUPPLIERS" as const },
+      { href: "/dashboard/customers", icon: <Users />, label: "Customer", permission: "VIEW_CUSTOMERS" as const },
+      { href: "/dashboard/stocks", icon: <ShoppingCart />, label: "Stock", permission: "VIEW_STOCK" as const },
     ],
   },
   {
     label: "Transaksi",
     items: [
-      { href: "/dashboard/delivery-orders", icon: <Send />, label: "Pengiriman" },
-      { href: "/dashboard/purchases", icon: <ShoppingBag />, label: "Purchase Orders" },
-      { href: "/dashboard/sales", icon: <DollarSign />, label: "Penjualan" },
-      { href: "/dashboard/pos", icon: <CreditCard />, label: "Point of Sale" },
+      { href: "/dashboard/delivery-orders", icon: <Send />, label: "Pengiriman", permission: "VIEW_DELIVERY_ORDERS" as const, },
+      { href: "/dashboard/purchases", icon: <ShoppingBag />, label: "Purchase Orders", permission: "VIEW_PURCHASES" as const },
+      { href: "/dashboard/sales", icon: <DollarSign />, label: "Penjualan", permission: "VIEW_SALES" as const },
+      { href: "/dashboard/pos", icon: <CreditCard />, label: "Point of Sale", permission: "ACCESS_POS" as const },
     ],
   },
   {
     label: "Utang & Piutang",
     items: [
-      { href: "/dashboard/supplier-debts", icon: <TrendingDown />, label: "Utang Supplier" },
-      { href: "/dashboard/customer-debts", icon: <TrendingUp />, label: "Piutang Customer" },
+      { href: "/dashboard/supplier-debts", icon: <TrendingDown />, label: "Utang Supplier", permission: "VIEW_SUPPLIER_DEBTS" as const},
+      { href: "/dashboard/customer-debts", icon: <TrendingUp />, label: "Piutang Customer", permission: "VIEW_CUSTOMER_DEBTS" as const },
     ],
   },
   {
     label: "Lainnya",
     items: [
-      { href: "/dashboard/reports", icon: <BarChart3 />, label: "Laporan" },
-      { href: "/dashboard/settings", icon: <Settings />, label: "Pengaturan" },
+      { href: "/dashboard/reports", icon: <BarChart3 />, label: "Laporan", permission: "VIEW_REPORTS" as const },
+      { href: "/dashboard/settings", icon: <Settings />, label: "Pengaturan",  permission: "VIEW_SETTINGS" as const },
     ],
   },
 ];
@@ -78,6 +79,17 @@ export default function Sidebar({
 }) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { data: session } = useSession();
+
+  const filteredMenuGroups = menuGroups.map(group => ({
+    ...group,
+    items: group.items.filter(item => {
+      // If no permission specified, show to all
+      if (!item.permission) return true;
+      // Check if user has permission
+      return hasPermission(session, item.permission);
+    })
+  })).filter(group => group.items.length > 0);
 
   // Sidebar content
   const sidebarContent = (
@@ -98,7 +110,7 @@ export default function Sidebar({
       </div>
       {/* Menu Groups */}
       <nav className="flex-1 overflow-y-auto px-2 pb-6 relative z-10 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-        {menuGroups.map((group) => (
+        {filteredMenuGroups.map((group) => (
           <div key={group.label} className="mb-4">
             <div className="px-3 py-1 text-xs font-bold text-gray-500 uppercase tracking-wider select-none">
               {group.label}

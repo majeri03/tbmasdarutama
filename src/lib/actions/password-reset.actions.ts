@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 import { changePasswordSchema } from "@/lib/validations/password-reset.schema";
 import { revalidatePath } from "next/cache";
 import { generatePasswordResetEmail, sendEmail } from "../utils/email";
-
+import { requireAuth } from "@/lib/utils/role";
 export async function changePassword(formData: {
   currentPassword: string;
   newPassword: string;
@@ -18,7 +18,7 @@ export async function changePassword(formData: {
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
-
+    requireAuth(session); // Just need to be logged in
     // Validate
     const validated = changePasswordSchema.parse(formData);
 

@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-
+import { requireMinimumRole } from "@/lib/utils/role";
+import { auth } from "@/lib/auth";
 // ==================== SCHEMAS ====================
 const supplierServerSchema = z.object({
   name: z.string().min(1).max(100).trim(),
@@ -38,6 +39,8 @@ async function generateSupplierCode(): Promise<string> {
 
 // ==================== CREATE SUPPLIER ====================
 export async function createSupplier(data: SupplierFormData) {
+  const session = await auth();
+requireMinimumRole(session, "ADMIN");
   try {
     const validatedData = supplierServerSchema.parse(data);
 
@@ -108,6 +111,8 @@ export async function getSuppliers(params?: {
   limit?: number;
   isActive?: boolean | null;
 }) {
+  const session = await auth();
+requireMinimumRole(session, "ADMIN");
   try {
     const { search = "", page = 1, limit = 10, isActive = null } = params || {};
     const skip = (page - 1) * limit;
@@ -170,6 +175,8 @@ export async function getSuppliers(params?: {
 
 // ==================== GET SUPPLIER BY ID ====================
 export async function getSupplierById(id: string) {
+  const session = await auth();
+requireMinimumRole(session, "ADMIN");
   try {
     const supplier = await prisma.supplier.findUnique({
       where: { id },
@@ -205,6 +212,8 @@ export async function getSupplierById(id: string) {
 
 // ==================== UPDATE SUPPLIER ====================
 export async function updateSupplier(id: string, data: SupplierFormData) {
+  const session = await auth();
+requireMinimumRole(session, "ADMIN");
   try {
     const validatedData = supplierServerSchema.parse(data);
 
@@ -284,6 +293,8 @@ export async function updateSupplier(id: string, data: SupplierFormData) {
 
 // ==================== DELETE SUPPLIER ====================
 export async function deleteSupplier(id: string) {
+  const session = await auth();
+requireMinimumRole(session, "ADMIN");
   try {
     const supplier = await prisma.supplier.findUnique({
       where: { id },
@@ -340,6 +351,8 @@ export async function deleteSupplier(id: string) {
 
 // ==================== TOGGLE SUPPLIER STATUS ====================
 export async function toggleSupplierStatus(id: string) {
+  const session = await auth();
+requireMinimumRole(session, "ADMIN");
   try {
     const supplier = await prisma.supplier.findUnique({
       where: { id },
@@ -379,6 +392,8 @@ export async function toggleSupplierStatus(id: string) {
 
 // ==================== GET SUPPLIERS FOR SELECT ====================
 export async function getSuppliersForSelect() {
+  const session = await auth();
+requireMinimumRole(session, "ADMIN");
   try {
     const suppliers = await prisma.supplier.findMany({
       where: { isActive: true },

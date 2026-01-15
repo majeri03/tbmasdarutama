@@ -11,6 +11,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { PaymentMethod, SaleStatus, Prisma } from "@prisma/client";
 import { SaleFilters } from "@/types/sale";
+import { requirePermission } from "../utils/role";
 
 // ==================== GENERATE INVOICE NUMBER ====================
 async function generateInvoiceNumber(): Promise<string> {
@@ -62,6 +63,7 @@ async function generateDebtNumber(
 export async function createSale(data: CreateSaleInput) {
   try {
     const session = await auth();
+    requirePermission(session, "CREATE_SALE");
     console.log("📌 DEBUG Session:", {
       hasSession: !!session,
       userId: session?.user?.id,
@@ -248,13 +250,13 @@ export async function createSale(data: CreateSaleInput) {
 export async function getSales(params?: SaleFilterInput) {
   try {
     const session = await auth();
-
     if (!session?.user) {
       return {
         success: false,
         error: "Unauthorized",
       };
     }
+    requirePermission(session, "VIEW_SALES");
 
     const validated = saleFilterSchema.parse(params || {});
     const {
@@ -428,20 +430,21 @@ export async function getSales(params?: SaleFilterInput) {
 export async function cancelSale(id: string, reason: string) {
   try {
     const session = await auth();
-
+    
     if (!session?.user) {
       return {
         success: false,
         error: "Unauthorized",
       };
     }
-
+    
     if (session.user.role !== "SUPER_ADMIN" && session.user.role !== "ADMIN") {
       return {
         success: false,
         error: "Anda tidak memiliki akses untuk membatalkan transaksi",
       };
     }
+    requirePermission(session, "CANCEL_SALE");
 
     const sale = await prisma.sale.findUnique({
       where: { id },
@@ -532,13 +535,14 @@ export async function cancelSale(id: string, reason: string) {
 export async function getSalesStatistics(dateFrom?: Date, dateTo?: Date) {
   try {
     const session = await auth();
-
+    
     if (!session?.user) {
       return {
         success: false,
         error: "Unauthorized",
       };
     }
+    requirePermission(session, "VIEW_SALES");
 
     const where: Prisma.SaleWhereInput = {
       status: SaleStatus.COMPLETED,
@@ -586,6 +590,8 @@ export async function getSalesStatistics(dateFrom?: Date, dateTo?: Date) {
 }
 // Get sale by ID for invoice preview
 export async function getSaleById(saleId: string) {
+  const session = await auth();
+requirePermission(session, "VIEW_SALES");
   try {
     const sale = await prisma.sale.findUnique({
       where: { id: saleId },
@@ -717,9 +723,8 @@ export async function getSaleById(saleId: string) {
 export async function getSalesForTable(params?: SaleFilters) {
   try {
     const session = await auth();
-    if (!session?.user) {
-      return { success: false, error: "Unauthorized" };
-    }
+    requirePermission(session, "VIEW_SALES");
+   
 
     const validated = saleFilterSchema.parse(params || {});
     const {
@@ -816,9 +821,7 @@ export async function getSalesForTable(params?: SaleFilters) {
 export async function getTodaySalesStats() {
   try {
     const session = await auth();
-    if (!session?.user) {
-      return { success: false, error: "Unauthorized" };
-    }
+    requirePermission(session, "VIEW_SALES");
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -863,9 +866,7 @@ export async function getTodaySalesStats() {
 export async function deleteSale(id: string) {
   try {
     const session = await auth();
-    if (!session?.user) {
-      return { success: false, error: "Unauthorized" };
-    }
+    requirePermission(session, "DELETE_SALE");
 
     const sale = await prisma.sale.findUnique({
       where: { id },

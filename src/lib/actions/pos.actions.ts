@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { generateSearchQuery } from "@/lib/utils/pos-helpers";
 import { Prisma } from "@prisma/client";
+import { requirePermission } from "../utils/role";
 
 // Get products for POS (with stock > 0 and active only)
 export async function getPOSProducts(search?: string, categoryId?: string) {
@@ -16,7 +17,7 @@ export async function getPOSProducts(search?: string, categoryId?: string) {
         error: "Unauthorized",
       };
     }
-
+    requirePermission(session, "ACCESS_POS");
     // ✅ FIXED: Proper typing
     const where: Prisma.ProductWhereInput = {
       isActive: true,
@@ -109,7 +110,7 @@ export async function getProductByBarcode(barcode: string) {
         error: "Unauthorized",
       };
     }
-
+    requirePermission(session, "ACCESS_POS");
     const product = await prisma.product.findFirst({
       where: {
         barcode: { equals: barcode, mode: "insensitive" },
@@ -173,7 +174,7 @@ export async function getPOSCustomers(search?: string) {
         error: "Unauthorized",
       };
     }
-
+    requirePermission(session, "ACCESS_POS");
     // ✅ FIXED: Proper typing
     const where: Prisma.CustomerWhereInput = {
       isActive: true,

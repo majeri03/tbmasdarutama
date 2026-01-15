@@ -4,8 +4,10 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { landingPageSchema } from "@/lib/validations/landing-page.schema";
 import { revalidatePath } from "next/cache";
-
+import { requirePermission } from "@/lib/utils/role";
 export async function getLandingPageSettings() {
+  const session = await auth();
+requirePermission(session, "VIEW_SETTINGS");
   try {
     const settings = await prisma.landingPageSetting.findFirst({
       include: {
@@ -30,7 +32,7 @@ export async function updateLandingPageSettings(formData: unknown) {
     if (!session?.user || session.user.role !== "SUPER_ADMIN") {
       return { success: false, error: "Unauthorized" };
     }
-
+    requirePermission(session, "MANAGE_LANDING_PAGE");
     const validated = landingPageSchema.parse(formData);
     
     const existing = await prisma.landingPageSetting.findFirst();
@@ -68,7 +70,7 @@ export async function addHeroImage(imageUrl: string) {
     if (!session?.user || session.user.role !== "SUPER_ADMIN") {
       return { success: false, error: "Unauthorized" };
     }
-
+    requirePermission(session, "MANAGE_LANDING_PAGE");
     // Get or create landing page setting
     let landing = await prisma.landingPageSetting.findFirst();
     
@@ -123,7 +125,7 @@ export async function deleteHeroImage(id: string) {
     if (!session?.user || session.user.role !== "SUPER_ADMIN") {
       return { success: false, error: "Unauthorized" };
     }
-
+    requirePermission(session, "MANAGE_LANDING_PAGE");
     await prisma.heroImage.delete({
       where: { id },
     });
@@ -148,7 +150,7 @@ export async function reorderHeroImages(images: { id: string; order: number }[])
     if (!session?.user || session.user.role !== "SUPER_ADMIN") {
       return { success: false, error: "Unauthorized" };
     }
-
+    requirePermission(session, "MANAGE_LANDING_PAGE");
     await prisma.$transaction(
       images.map((img) =>
         prisma.heroImage.update({

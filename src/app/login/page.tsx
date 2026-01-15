@@ -69,7 +69,6 @@ export default function LoginPage() {
             TB MASDAR UTAMA
           </h1>
           <p className="text-gray-600 flex items-center justify-center gap-2">
-            <Store className="w-4 h-4" />
             Sistem Manajemen Toko Bangunan
           </p>
         </div>

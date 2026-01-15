@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { startOfMonth, subDays } from "date-fns";
+import { requirePermission } from "../utils/role";
 
 export async function getDashboardStats() {
   try {
@@ -10,7 +11,7 @@ export async function getDashboardStats() {
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
-
+    requirePermission(session, "VIEW_DASHBOARD");
     const now = new Date();
     const startMonth = startOfMonth(now);
     const last30Days = subDays(now, 30);

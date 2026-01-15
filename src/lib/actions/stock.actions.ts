@@ -8,6 +8,7 @@ import {
 } from "@/lib/validations/stock.schema";
 import { MovementType, Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
+import { requireMinimumRole, requirePermission } from "../utils/role";
 
 // ==================== GET STOCK MOVEMENTS ====================
 export async function getStockMovements(filters?: {
@@ -19,6 +20,8 @@ export async function getStockMovements(filters?: {
   page?: number;
   limit?: number;
 }) {
+  const session = await auth();
+  requireMinimumRole(session, "KASIR"); // All roles can view
   try {
     const page = filters?.page || 1;
     const limit = filters?.limit || 10;
@@ -102,6 +105,8 @@ export async function getStockMovements(filters?: {
 
 // ==================== GET LOW STOCK PRODUCTS ====================
 export async function getLowStockProducts() {
+  const session = await auth();
+  requireMinimumRole(session, "KASIR");
   try {
     const lowStockProducts = await prisma.product.findMany({
       where: {
@@ -164,6 +169,7 @@ export async function createStockAdjustment(input: StockAdjustmentInput) {
         error: "Unauthorized",
       };
     }
+    requirePermission(session, "ADJUST_STOCK");
 
     // Validate input
     const validated = stockAdjustmentSchema.parse(input);
@@ -247,6 +253,8 @@ export async function createStockAdjustment(input: StockAdjustmentInput) {
 
 // ==================== GET STOCK STATISTICS ====================
 export async function getStockStatistics() {
+  const session = await auth();
+requireMinimumRole(session, "KASIR");
   try {
     // Total products
     const totalProducts = await prisma.product.count({
@@ -359,6 +367,8 @@ export async function getStockStatistics() {
 
 // ==================== GET STOCK BY PRODUCT ====================
 export async function getStockByProduct(productId: string) {
+  const session = await auth();
+requireMinimumRole(session, "KASIR");
   try {
     const product = await prisma.product.findUnique({
       where: { id: productId },
@@ -417,7 +427,8 @@ export async function deleteStockMovement(id: string) {
         error: "Hanya admin yang dapat menghapus pergerakan stock",
       };
     }
-
+    requirePermission(session, "DELETE_STOCK_MOVEMENT");
+    
     // Get movement details
     const movement = await prisma.stockMovement.findUnique({
       where: { id },
