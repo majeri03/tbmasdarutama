@@ -1,8 +1,8 @@
 "use client";
 
-import { Package, Tag } from "lucide-react";
+import { Package } from "lucide-react";
 import Image from "next/image";
-import { formatCurrency } from "@/lib/utils";
+// formatCurrency dan Tag tidak perlu diimport lagi karena harga dihapus
 
 interface Product {
   id: string;
@@ -71,32 +71,11 @@ export default function LandingProducts({ products }: Props) {
                 </div>
               </div>
 
-              {/* Content */}
-              <div className="p-6">
-                <h3 className="font-bold text-lg text-gray-800 mb-2 line-clamp-2">
+              {/* Content - Hanya Nama Saja */}
+              <div className="p-4 text-center">
+                <h3 className="font-bold text-lg text-gray-800 line-clamp-2">
                   {product.name}
                 </h3>
-
-                {product.description && (
-                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                    {product.description}
-                  </p>
-                )}
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
-                      <Tag className="w-3 h-3" />
-                      <span>Harga</span>
-                    </div>
-                    <div className="text-xl font-bold text-gradient">
-                      {formatCurrency(product.sellingPrice)}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      per {product.unit.name}
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           ))}

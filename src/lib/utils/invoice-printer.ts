@@ -1,7 +1,6 @@
 import { format } from "date-fns";
 import { formatCurrency } from "./pos-helpers";
 
-// Tipe data khusus untuk Invoice agar type-safe & fleksibel
 export interface InvoiceData {
     invoiceNumber: string;
     saleDate: Date | string;
@@ -15,7 +14,6 @@ export interface InvoiceData {
     cashier: {
         name: string;
     };
-    // Izinkan null atau undefined agar kompatibel dengan data Prisma
     customer?: {
         name: string;
         phone?: string | null;
@@ -35,6 +33,16 @@ export interface InvoiceData {
             symbol?: string | null;
         };
     }>;
+}
+
+export interface StoreSetting {
+    name?: string;
+    address?: string | null;
+    phone?: string | null;
+    logoUrl?: string | null;
+    bankName?: string | null;
+    bankAccount?: string | null;
+    bankHolder?: string | null;
 }
 
 // Helper: Terbilang
@@ -65,24 +73,8 @@ function numberToWords(num: number): string {
     return "Angka terlalu besar";
 }
 
-// Gunakan interface InvoiceData, bukan 'any'
-export interface StoreSetting {
-    name?: string;
-    address?: string | null;
-    phone?: string | null;
-    logoUrl?: string | null;
-    bankName?: string | null;
-    bankAccount?: string | null;
-    bankHolder?: string | null;
-}
-
-export const printInvoice = (sale: InvoiceData, storeSetting: StoreSetting) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-        alert("Pop-up diblokir. Izinkan pop-up untuk mencetak invoice.");
-        return;
-    }
-
+// --- FUNGSI BARU: GENERATE HTML SAJA ---
+export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSetting | null): string => {
     const storeName = storeSetting?.name || "PT. TB MASDAR UTAMA";
     const storeAddress = storeSetting?.address || "Alamat belum diatur";
     const storePhone = storeSetting?.phone ? `Phone: ${storeSetting.phone}` : "";
@@ -101,7 +93,6 @@ export const printInvoice = (sale: InvoiceData, storeSetting: StoreSetting) => {
         : `<p class="italic text-gray-500">Informasi bank belum diatur</p>`;
 
     const itemsHtml = sale.saleItems.map((item, index) => {
-        // Karena sudah type-safe, tidak perlu casting Number() lagi di sini jika data yang masuk sudah number
         const unitPrice = item.unitPrice;
         const quantity = item.quantity;
         const discount = item.discount;
@@ -133,7 +124,7 @@ export const printInvoice = (sale: InvoiceData, storeSetting: StoreSetting) => {
         `;
     }).join("");
 
-    const htmlContent = `
+    return `
         <html>
             <head>
                 <title>Invoice - ${sale.invoiceNumber}</title>
@@ -229,19 +220,39 @@ export const printInvoice = (sale: InvoiceData, storeSetting: StoreSetting) => {
                 <div class="mt-4 text-center text-xxs border-t-2 border-black pt-1">
                     <p class="font-bold">BARANG YANG SUDAH DIBELI TIDAK DAPAT DITUKAR/DIKEMBALIKAN KECUALI ADA PERJANJIAN.</p>
                 </div>
-
-                <script>
-                    window.onload = function() {
-                        setTimeout(() => {
-                            window.print();
-                            window.close();
-                        }, 800);
-                    };
-                </script>
             </body>
         </html>
     `;
+};
 
-    printWindow.document.write(htmlContent);
+// --- UPDATE FUNGSI PRINT: PAKAI HTML DARI ATAS ---
+export const printInvoice = (sale: InvoiceData, storeSetting: StoreSetting) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        alert("Pop-up diblokir. Izinkan pop-up untuk mencetak invoice.");
+        return;
+    }
+
+    const htmlContent = generateInvoiceHtml(sale, storeSetting);
+    
+    // Tambahkan script: onafterprint akan mentrigger window.close()
+    const htmlWithScript = htmlContent.replace('</body>', `
+        <script>
+            window.onload = function() {
+                // Beri jeda sedikit agar style ter-load sempurna
+                setTimeout(() => {
+                    window.print();
+                }, 1000);
+            };
+
+            // Event listener ini berjalan setelah dialog print ditutup (baik print atau cancel)
+            window.onafterprint = function() {
+                window.close();
+            };
+        </script>
+        </body>
+    `);
+
+    printWindow.document.write(htmlWithScript);
     printWindow.document.close();
 };

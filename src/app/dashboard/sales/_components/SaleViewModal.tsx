@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Eye, X, User, Calendar, CreditCard, Printer, Download } from "lucide-react";
+import { Eye, X, User, Calendar, CreditCard } from "lucide-react";
 import { getSaleById } from "@/lib/actions/sale.actions";
 import { getStoreSetting } from "@/lib/actions/store-setting.actions"; // Import ini
 import { SaleStatusBadge } from "./SaleStatusBadge";
@@ -10,7 +10,6 @@ import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { SaleStatus, PaymentMethod } from "@prisma/client";
 import { StoreSetting } from "@/types/settings"; // Pastikan tipe ini ada
-import { printInvoice } from "@/lib/utils/invoice-printer";
 
 
 interface SaleItem {
@@ -69,7 +68,7 @@ export function SaleViewModal({ saleId }: SaleViewModalProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [sale, setSale] = useState<SaleDetail | null>(null);
-    const [storeSetting, setStoreSetting] = useState<StoreSetting | null>(null); // State untuk setting toko
+    const [, setStoreSetting] = useState<StoreSetting | null>(null); // State untuk setting toko
     const [error, setError] = useState("");
 
     const loadData = useCallback(async () => {
@@ -106,15 +105,6 @@ export function SaleViewModal({ saleId }: SaleViewModalProps) {
         }
     }, [isOpen, loadData]);
 
-    // Fungsi Print yang mendefinisikan HTML Invoice secara manual
-    const handlePrint = () => {
-    if (!sale || !storeSetting) return;
-    printInvoice(sale , storeSetting);
-};
-
-    const handleDownloadPDF = async () => {
-        setError("Fitur PDF sedang dalam pengembangan");
-    };
 
     return (
         <>
@@ -316,14 +306,6 @@ export function SaleViewModal({ saleId }: SaleViewModalProps) {
                                 className="btn-secondary"
                             >
                                 Tutup
-                            </button>
-                            <button onClick={handlePrint} className="btn-info">
-                                <Printer className="w-4 h-4" />
-                                Print Invoice
-                            </button>
-                            <button onClick={handleDownloadPDF} className="btn-primary">
-                                <Download className="w-4 h-4" />
-                                Download PDF
                             </button>
                         </div>
                     </div>
