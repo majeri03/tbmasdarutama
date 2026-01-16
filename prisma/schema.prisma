@@ -402,6 +402,7 @@ model StockMovement {
   type          MovementType
   quantity      Int
   referenceType String? // Sale, Purchase, Adjustment
+  reference     String?
   referenceId   String?
   notes         String?
   createdById   String
