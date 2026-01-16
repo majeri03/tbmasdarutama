@@ -14,6 +14,9 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "TB MASDAR UTAMA",
+  icons: {
+    icon: "/vercel.svg",
+  },
   description: "Sistem Informasi Toko Bangunan Masdar Utama",
 };
 
