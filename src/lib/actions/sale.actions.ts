@@ -210,7 +210,8 @@ export async function createSale(data: CreateSaleInput) {
         }
 
         return newSale;
-      }
+      },
+      { timeout: 10000 } // 10 detik
     );
 
     revalidatePath("/dashboard/pos");
