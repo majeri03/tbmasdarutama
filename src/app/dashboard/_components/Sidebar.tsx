@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
+import { getStoreSetting } from "@/lib/actions/store-setting.actions";
 import { usePathname } from "next/navigation";
 import {
   Home,
@@ -20,8 +22,9 @@ import {
   Send,
   DollarSign,
   BarChart3,
+  Shield,
 } from "lucide-react";
-import { Fragment } from "react";
+import { Fragment, useEffect } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { useSession } from "next-auth/react";
 import { hasPermission } from "@/lib/utils/role";
@@ -55,7 +58,7 @@ const menuGroups = [
   {
     label: "Utang & Piutang",
     items: [
-      { href: "/dashboard/supplier-debts", icon: <TrendingDown />, label: "Utang Supplier", permission: "VIEW_SUPPLIER_DEBTS" as const},
+      { href: "/dashboard/supplier-debts", icon: <TrendingDown />, label: "Utang Supplier", permission: "VIEW_SUPPLIER_DEBTS" as const },
       { href: "/dashboard/customer-debts", icon: <TrendingUp />, label: "Piutang Customer", permission: "VIEW_CUSTOMER_DEBTS" as const },
     ],
   },
@@ -63,7 +66,10 @@ const menuGroups = [
     label: "Lainnya",
     items: [
       { href: "/dashboard/reports", icon: <BarChart3 />, label: "Laporan", permission: "VIEW_REPORTS" as const },
-      { href: "/dashboard/settings", icon: <Settings />, label: "Pengaturan",  permission: "VIEW_SETTINGS" as const },
+      {
+        href: "/dashboard/users", icon: <Shield />, label: "Manajemen Akun", permission: "MANAGE_USERS" as const
+      },
+      { href: "/dashboard/settings", icon: <Settings />, label: "Pengaturan", permission: "VIEW_SETTINGS" as const },
     ],
   },
 ];
@@ -80,7 +86,24 @@ export default function Sidebar({
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { data: session } = useSession();
+  const [storeLogo, setStoreLogo] = useState<string | null>(null);
+  const [storeName, setStoreName] = useState("TB Masdar Utama"); // Default name
 
+  // 3. TAMBAHKAN USE EFFECT UNTUK FETCH SETTING
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await getStoreSetting();
+        if (res.success && res.data) {
+          if (res.data.logoUrl) setStoreLogo(res.data.logoUrl);
+          if (res.data.name) setStoreName(res.data.name);
+        }
+      } catch (error) {
+        console.error("Gagal memuat setting toko di sidebar", error);
+      }
+    };
+    fetchSettings();
+  }, []);
   const filteredMenuGroups = menuGroups.map(group => ({
     ...group,
     items: group.items.filter(item => {
@@ -104,9 +127,31 @@ export default function Sidebar({
         }}
       />
       {/* Logo */}
-      <div className="flex items-center gap-2 px-4 md:px-6 py-4 md:py-6 relative z-10 flex-shrink-0">
-        <span className="inline-block w-8 h-8 bg-blue-600 rounded-lg shadow-lg" />
-        <span className="font-bold text-xl text-gray-900 tracking-wide">Masdar Utama</span>
+      <div className="h-16 flex items-center px-6 border-b border-gray-100/50">
+        <Link href="/dashboard" className="flex items-center gap-3 group w-full">
+          {storeLogo ? (
+            // TAMPILKAN LOGO GAMBAR
+            <div className="relative w-8 h-8 flex-shrink-0 transition-transform group-hover:scale-110">
+              <Image
+                src={storeLogo}
+                alt="Logo"
+                fill
+                className="object-contain"
+                sizes="32px"
+              />
+            </div>
+          ) : (
+            // FALLBACK JIKA TIDAK ADA LOGO (Inisial Huruf)
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white shadow-md shadow-blue-200 flex-shrink-0 transition-transform group-hover:scale-110">
+              <span className="font-bold text-sm">{storeName.charAt(0)}</span>
+            </div>
+          )}
+
+          {/* NAMA TOKO */}
+          <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-800 to-gray-600 truncate">
+            {storeName}
+          </span>
+        </Link>
       </div>
       {/* Menu Groups */}
       <nav className="flex-1 overflow-y-auto px-2 pb-6 relative z-10 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">

@@ -80,6 +80,7 @@ export const PERMISSIONS = {
   MANAGE_STORE_SETTINGS: ["SUPER_ADMIN"] as Role[],
   MANAGE_LANDING_PAGE: ["SUPER_ADMIN"] as Role[],
   MANAGE_USERS: ["SUPER_ADMIN"] as Role[],
+
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;

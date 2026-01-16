@@ -91,3 +91,7 @@ export const authConfig: NextAuthConfig = {
 };
 
 export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
+export const getCurrentUser = async () => {
+  const session = await auth();
+  return session?.user;
+};
