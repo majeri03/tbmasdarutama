@@ -6,7 +6,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { requireMinimumRole } from "@/lib/utils/role";
 import { auth } from "@/lib/auth";
-// Schema untuk validasi di server
+
 const unitServerSchema = z.object({
   name: z.string().min(1).max(50).trim().toUpperCase(),
   description: z.string().trim().nullable().default(null),
@@ -17,7 +17,7 @@ export type UnitFormData = z.infer<typeof unitServerSchema>;
 // ==================== CREATE UNIT ====================
 export async function createUnit(data: UnitFormData) {
   const session = await auth();
-  requireMinimumRole(session, "ADMIN"); // SUPER_ADMIN & ADMIN
+  requireMinimumRole(session, "ADMIN");
   try {
     // Validate input
     const validatedData = unitServerSchema.parse(data);
@@ -70,7 +70,7 @@ export async function getUnits(params?: {
   limit?: number;
 }) {
   const session = await auth();
-  requireMinimumRole(session, "ADMIN"); // SUPER_ADMIN & ADMIN
+  requireMinimumRole(session, "ADMIN");
   try {
     const { search = "", page = 1, limit = 10 } = params || {};
     const skip = (page - 1) * limit;
@@ -229,7 +229,6 @@ export async function deleteUnit(id: string) {
   const session = await auth();
   requireMinimumRole(session, "ADMIN");
   try {
-    // Check if unit exists and has relations
     const unit = await prisma.unit.findUnique({
       where: { id },
       include: {

@@ -50,7 +50,6 @@ export const createProductSchema = z
       .transform((val) => (val === "" ? null : val)),
     minStock: z.number().int().min(0, "Min stock tidak boleh negatif").default(0),
     isActive: z.boolean().default(true),
-    // Nested arrays
     units: z
       .array(productUnitSchema)
       .min(1, "Minimal harus ada 1 satuan")
@@ -86,7 +85,6 @@ export const createProductSchema = z
   })
   .refine(
     (data) => {
-      // Validasi: tidak boleh ada unit yang sama
       const unitIds = data.units.map((u) => u.unitId);
       return unitIds.length === new Set(unitIds).size;
     },

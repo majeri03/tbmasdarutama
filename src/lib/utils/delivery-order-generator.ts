@@ -1,5 +1,5 @@
 import { DeliveryOrderData } from "@/types/delivery-order";
-import { getStoreSetting } from "@/lib/actions/store-setting.actions"; // Import Action
+import { getStoreSetting } from "@/lib/actions/store-setting.actions";
 
 // Interface untuk Setting Toko
 export interface StoreSetting {
@@ -9,7 +9,7 @@ export interface StoreSetting {
   logoUrl?: string | null;
 }
 
-// 1. Fungsi Generate HTML (Tetap Menerima Data, Tidak Fetch Sendiri)
+// (Tetap Menerima Data, Tidak Fetch Sendiri)
 export function generateDeliveryOrderHTML(
   deliveryOrder: DeliveryOrderData,
   storeSetting: StoreSetting | null
@@ -155,16 +155,14 @@ export function generateDeliveryOrderHTML(
   `;
 }
 
-// 2. Fungsi Print (ASYNC: Mengambil Data Toko Dulu Baru Print)
+// 2. Print (ASYNC: Mengambil Data Toko Dulu Baru Print)
 export async function printDeliveryOrder(deliveryOrder: DeliveryOrderData) {
-  // Buka window kosong dulu agar tidak kena popup blocker
   const printWindow = window.open("", "_blank");
   
   if (printWindow) {
     printWindow.document.write("<p>Memuat data toko...</p>");
     
     try {
-        // FETCH DATA SETTING DARI SERVER ACTION
         const res = await getStoreSetting();
         let settings: StoreSetting | null = null;
         
@@ -189,7 +187,6 @@ export async function printDeliveryOrder(deliveryOrder: DeliveryOrderData) {
         printWindow.onload = () => {
             setTimeout(() => {
                 printWindow.print();
-                // printWindow.close(); // Opsional: tutup setelah print
             }, 500);
         };
 

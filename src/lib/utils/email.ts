@@ -10,11 +10,10 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions) {
   try {
     const port = Number(process.env.EMAIL_PORT) || 587;
     
-    // ✅ CONDITIONAL: secure = true hanya untuk port 465
     const transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST || "smtp.gmail.com",
       port: port,
-      secure: port === 465, // ✅ true untuk 465, false untuk 587
+      secure: port === 465,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD,
