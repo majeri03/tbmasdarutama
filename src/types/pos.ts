@@ -12,9 +12,18 @@ export interface POSProduct extends Omit<Product, "productUnits"> {
   productImages: { imageUrl: string; isPrimary: boolean }[];
   category?: { name: string };
 }
+export interface ProductUnitData {
+  id: string;      // ID dari tabel ProductUnit
+  unitId: string;  // ID dari tabel Unit (Master Data)
+  unitName: string; // Nama satuan (Pcs, Box, Pack)
+  conversionFactor: number;
+  price: number;   // Harga khusus untuk satuan ini
+  isBase: boolean;
+}
 
 // Cart item structure
 export interface CartItem {
+  id: string; // Unique identifier for the cart item units
   productId: string;
   productCode: string;
   productName: string;
@@ -25,8 +34,11 @@ export interface CartItem {
   unitPrice: number;
   discount: number;
   subtotal: number;
-}
 
+  originalPrice: number;
+  // -- TAMBAHAN UNTUK MULTI-UNIT --
+  availableUnits: ProductUnitData[];
+}
 // Cart state
 export interface CartState {
   items: CartItem[];

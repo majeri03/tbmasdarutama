@@ -36,7 +36,7 @@ const menuGroups = [
     ],
   },
   {
-    label: "Manajemen Data",
+    label: "Inventory",
     items: [
       { href: "/dashboard/products", icon: <Package />, label: "Produk", permission: "VIEW_PRODUCTS" as const },
       { href: "/dashboard/categories", icon: <Box />, label: "Kategori", permission: "VIEW_CATEGORIES" as const },
@@ -47,7 +47,7 @@ const menuGroups = [
     ],
   },
   {
-    label: "Transaksi",
+    label: "Transactions",
     items: [
       { href: "/dashboard/delivery-orders", icon: <Send />, label: "Pengiriman", permission: "VIEW_DELIVERY_ORDERS" as const, },
       { href: "/dashboard/purchases", icon: <ShoppingBag />, label: "Purchase Orders", permission: "VIEW_PURCHASES" as const },
@@ -56,14 +56,14 @@ const menuGroups = [
     ],
   },
   {
-    label: "Utang & Piutang",
+    label: "Debts & Receivables",
     items: [
       { href: "/dashboard/supplier-debts", icon: <TrendingDown />, label: "Utang Supplier", permission: "VIEW_SUPPLIER_DEBTS" as const },
       { href: "/dashboard/customer-debts", icon: <TrendingUp />, label: "Piutang Customer", permission: "VIEW_CUSTOMER_DEBTS" as const },
     ],
   },
   {
-    label: "Lainnya",
+    label: "Others",
     items: [
       { href: "/dashboard/reports", icon: <BarChart3 />, label: "Laporan", permission: "VIEW_REPORTS" as const },
       {

@@ -15,6 +15,7 @@ interface ShoppingCartProps {
   onRemoveItem: (productId: string, unitId: string) => void;
   onDiscountChange: (discount: number) => void;
   onClear: () => void;
+  onUpdateUnit: (itemId: string, newUnitId: string, newPrice: number) => void;
 }
 
 export function ShoppingCart({
@@ -26,6 +27,7 @@ export function ShoppingCart({
   onRemoveItem,
   onDiscountChange,
   onClear,
+  onUpdateUnit,
 }: ShoppingCartProps) {
   const calculation = calculateCart(items, customer, discount);
 
@@ -66,6 +68,7 @@ export function ShoppingCart({
               onUpdateQuantity={onUpdateQuantity}
               onUpdateDiscount={onUpdateDiscount}
               onRemove={onRemoveItem}
+              onUpdateUnit={onUpdateUnit}
             />
           ))
         )}

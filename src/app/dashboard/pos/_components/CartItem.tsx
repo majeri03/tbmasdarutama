@@ -9,18 +9,50 @@ interface CartItemProps {
   onUpdateQuantity: (productId: string, unitId: string, quantity: number) => void;
   onUpdateDiscount: (productId: string, unitId: string, discount: number) => void;
   onRemove: (productId: string, unitId: string) => void;
+  onUpdateUnit?: (itemId: string, newUnitId: string, newPrice: number) => void;
 }
 
-export function CartItem({ item, onUpdateQuantity, onUpdateDiscount, onRemove }: CartItemProps) {
+export function CartItem({ item, onUpdateQuantity, onUpdateDiscount, onRemove, onUpdateUnit}: CartItemProps) {
+  const handleUnitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newUnitId = e.target.value;
+    // Cari data unit yang dipilih dari availableUnits
+    const selectedUnit = item.availableUnits.find(u => u.unitId === newUnitId);
+    
+    if (selectedUnit && onUpdateUnit) {
+      // Panggil fungsi update di parent
+      onUpdateUnit(item.id, selectedUnit.unitId, selectedUnit.price);
+    }
+  };
   return (
     <div className="p-3 bg-white/50 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors">
       {/* Product Name */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex-1 min-w-0">
           <h4 className="font-medium text-gray-900 text-sm truncate">{item.productName}</h4>
-          <p className="text-xs text-gray-500">
-            {item.productCode} • {item.unitName}
-          </p>
+          
+          {/* LOGIC DROPDOWN DISINI */}
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs text-gray-500">{item.productCode} •</span>
+            
+            {item.availableUnits && item.availableUnits.length > 1 ? (
+              // Jika ada lebih dari 1 satuan, tampilkan Dropdown
+              <select 
+                className="text-xs border border-gray-300 rounded px-1 py-0.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                value={item.unitId}
+                onChange={handleUnitChange}
+              >
+                {item.availableUnits.map((unit) => (
+                  <option key={unit.unitId} value={unit.unitId}>
+                    {unit.unitName}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              // Jika cuma 1 satuan, tampilkan teks biasa
+              <span className="text-xs text-gray-500">{item.unitName}</span>
+            )}
+          </div>
+
         </div>
         <button
           onClick={() => onRemove(item.productId, item.unitId)}

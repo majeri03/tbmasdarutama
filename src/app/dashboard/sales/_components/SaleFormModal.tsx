@@ -71,15 +71,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
     // Product search
     const [searchProduct, setSearchProduct] = useState("");
     const [showProductDropdown, setShowProductDropdown] = useState(false);
-
-    useEffect(() => {
-        if (isOpen) {
-            loadCustomers();
-            loadProducts();
-        } else {
-            resetForm();
-        }
-    }, [isOpen]);
+    const [, setIsSearching] = useState(false);
 
     const loadCustomers = async () => {
         const result = await getCustomers({});
@@ -88,18 +80,42 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
         }
     };
 
-    const loadProducts = async () => {
-        const result = await getProducts({});
+    const loadProducts = async (query = "") => {
+        setIsSearching(true);
+        // Kita hanya minta 20 produk yang relevan saja, bukan 2000!
+        const result = await getProducts({ 
+            search: query, 
+            limit: 20,
+            isActive: true // Pastikan hanya produk aktif
+        });
+        
         if (result.success && result.data) {
             setProducts(result.data);
         }
+        setIsSearching(false);
     };
 
-    const filteredProducts = products.filter(
-        (p) =>
-            p.name.toLowerCase().includes(searchProduct.toLowerCase()) ||
-            p.code.toLowerCase().includes(searchProduct.toLowerCase())
-    );
+    useEffect(() => {
+        if (isOpen) {
+            loadCustomers();
+            loadProducts(); // Load default (tanpa search)
+        } else {
+            resetForm();
+        }
+    }, [isOpen]);
+
+    // 3. LOGIC DEBOUNCE: Panggil server hanya saat user selesai mengetik (jeda 500ms)
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (isOpen) { // Hanya cari kalau modal terbuka
+                loadProducts(searchProduct);
+            }
+        }, 500); // Tunggu 500ms setelah user stop mengetik
+
+        return () => clearTimeout(timer); // Cleanup timer jika user mengetik lagi
+    }, [searchProduct, isOpen]);
+
+   
 
     const addToCart = (product: Product, unitId: string) => {
         const unit = product.productUnits.find((u) => u.unitId === unitId);
@@ -236,6 +252,13 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
     };
 
     const totals = calculateTotals();
+
+    // Filter products based on search input (case-insensitive, by name or code)
+    const filteredProducts = products.filter(
+        (product) =>
+            product.name.toLowerCase().includes(searchProduct.toLowerCase()) ||
+            product.code.toLowerCase().includes(searchProduct.toLowerCase())
+    );
 
     return (
         <>
