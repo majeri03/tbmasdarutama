@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { X, Plus, Trash2, Package, Search } from "lucide-react";
 import { createDeliveryOrder } from "@/lib/actions/delivery-order.actions";
 import { getCustomers } from "@/lib/actions/customer.actions";
@@ -34,6 +34,7 @@ interface Product {
   }>;
 }
 
+// UPDATE: Tambahkan availableUnits agar dropdown unit tidak hilang saat searching
 interface DeliveryItem {
   productId: string;
   unitId: string;
@@ -41,6 +42,7 @@ interface DeliveryItem {
   notes: string;
   productName?: string;
   unitName?: string;
+  availableUnits?: Product["units"]; // Simpan opsi unit disini
 }
 
 export function DeliveryOrderFormModal({
@@ -51,9 +53,11 @@ export function DeliveryOrderFormModal({
   const [isLoading, setIsLoading] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [searchProducts, setSearchProducts] = useState<string[]>([]);
 
-  // Form fields
+  // State untuk teks input pencarian
+  const [searchProducts, setSearchProducts] = useState<string[]>([]);
+  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+
   const [customerId, setCustomerId] = useState("");
   const [deliveryDate, setDeliveryDate] = useState(
     new Date().toISOString().split("T")[0]
@@ -70,40 +74,29 @@ export function DeliveryOrderFormModal({
   useEffect(() => {
     if (isOpen) {
       loadData();
+    } else {
+      // Reset saat tutup modal
+      setProducts([]);
+      setSearchProducts([]);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [isOpen]);
 
   const loadData = async () => {
     try {
-      const [customersResult, productsResult] = await Promise.all([
+      const [customersResult] = await Promise.all([
         getCustomers({ status: "ACTIVE" }),
-        getProducts({}),
+        // Load produk tidak perlu di awal, nanti saat user ngetik saja (Server Search)
       ]);
 
       if (customersResult.success && customersResult.data) {
         setCustomers(customersResult.data);
       }
 
-      if (productsResult.success && productsResult.data) {
-        const mappedProducts = productsResult.data.map((product) => ({
-          id: product.id,
-          code: product.code,
-          name: product.name,
-          units: product.productUnits.map((pu) => ({
-            id: pu.id,
-            unitId: pu.unitId,
-            unit: {
-              id: pu.unit.id,
-              name: pu.unit.name,
-              symbol: pu.unit.symbol || "",
-            },
-          })),
-        }));
-        setProducts(mappedProducts);
-        setSearchProducts(Array(items.length).fill(""));
-        setItems([{ productId: "", unitId: "", quantity: 1, notes: "" }]);
-      }
+      // Reset form
+      setSearchProducts([""]);
+      setItems([{ productId: "", unitId: "", quantity: 1, notes: "" }]);
+
     } catch (error) {
       console.error("Error loading data:", error);
     }
@@ -130,52 +123,82 @@ export function DeliveryOrderFormModal({
     value: string | number
   ) => {
     const newItems = [...items];
+
     newItems[index] = { ...newItems[index], [field]: value };
 
     if (field === "productId") {
+      // Cari produk dari hasil pencarian saat ini
       const product = products.find((p) => p.id === value);
-      newItems[index].unitId = "";
-      newItems[index].productName = product?.name;
-      
-      // Update search text
-      const newSearch = [...searchProducts];
-      newSearch[index] = product ? `${product.code} - ${product.name}` : "";
-      setSearchProducts(newSearch);
-    }
 
-    if (field === "unitId") {
-      const product = products.find((p) => p.id === newItems[index].productId);
-      const productUnit = product?.units.find((pu) => pu.unitId === value);
-      newItems[index].unitName = productUnit?.unit.name;
+      if (product) {
+        newItems[index].unitId = "";
+        newItems[index].productName = product.name;
+
+        // PENTING: Simpan daftar unit ke dalam item itu sendiri
+        // Agar saat user mencari produk lain, unit baris ini tidak hilang
+        newItems[index].availableUnits = product.units;
+
+        // Update teks input agar sesuai nama produk yang dipilih
+        const newSearch = [...searchProducts];
+        newSearch[index] = `${product.code} - ${product.name}`;
+        setSearchProducts(newSearch);
+      }
     }
 
     setItems(newItems);
   };
 
   const handleSearchChange = (index: number, value: string) => {
+    // 1. Update teks input segera
     const newSearch = [...searchProducts];
     newSearch[index] = value;
     setSearchProducts(newSearch);
-  };
 
-  const getFilteredProducts = (index: number) => {
-    const search = searchProducts[index]?.toLowerCase() || "";
-    if (!search) return products;
-    
-    return products.filter(
-      (p) =>
-        p.code.toLowerCase().includes(search) ||
-        p.name.toLowerCase().includes(search)
-    );
-  };
+    // 2. Debounce Search ke Server
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
+    }
 
-  const getAvailableUnits = (productId: string) => {
-    const product = products.find((p) => p.id === productId);
-    return product?.units || [];
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        // Hanya cari jika ada teks, kalau kosong jangan panggil server
+        if (!value.trim()) return;
+
+        const result = await getProducts({
+          search: value,
+          limit: 20 // Ambil 20 hasil teratas
+        });
+
+        if (result.success && result.data) {
+          // Mapping data
+          const mappedProducts = result.data.map((product) => ({
+            id: product.id,
+            code: product.code,
+            name: product.name,
+            units: product.productUnits.map((pu) => ({
+              id: pu.id,
+              unitId: pu.unitId,
+              unit: {
+                id: pu.unit.id,
+                name: pu.unit.name,
+                symbol: pu.unit.symbol || "",
+              },
+            })),
+          }));
+
+          // Update state global products (hanya untuk dropdown)
+          setProducts(mappedProducts);
+        }
+      } catch (error) {
+        console.error("Search error:", error);
+      }
+    }, 400); // Tunggu 400ms
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return; // Cegah double click
+
     setIsLoading(true);
 
     try {
@@ -184,7 +207,13 @@ export function DeliveryOrderFormModal({
       );
 
       if (validItems.length === 0) {
-        showToast("Tambahkan minimal 1 item", "error");
+        showToast("Tambahkan minimal 1 item yang lengkap", "error");
+        setIsLoading(false);
+        return;
+      }
+
+      if (!customerId) {
+        showToast("Pilih customer terlebih dahulu", "error");
         setIsLoading(false);
         return;
       }
@@ -198,16 +227,13 @@ export function DeliveryOrderFormModal({
         items: validItems.map((item) => ({
           productId: item.productId,
           unitId: item.unitId,
-          quantity: item.quantity,
+          quantity: Number(item.quantity),
           notes: item.notes || undefined,
         })),
       });
 
       if (result.success) {
-        showToast(
-          result.message || "Surat jalan berhasil dibuat",
-          "success"
-        );
+        showToast(result.message || "Surat jalan berhasil dibuat", "success");
         onSuccess();
         onClose();
         resetForm();
@@ -216,7 +242,7 @@ export function DeliveryOrderFormModal({
       }
     } catch (error) {
       console.error("Error creating delivery order:", error);
-      showToast("Terjadi kesalahan", "error");
+      showToast("Terjadi kesalahan sistem", "error");
     } finally {
       setIsLoading(false);
     }
@@ -235,32 +261,30 @@ export function DeliveryOrderFormModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl w-full max-w-6xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-          <h2 className="text-xl font-bold text-gray-900">
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
+          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            <Package className="w-5 h-5 text-blue-600" />
             Buat Surat Jalan Baru
           </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6 flex-1 overflow-y-auto">
           {/* Customer & Date */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-4 rounded-lg border border-gray-100">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Customer <span className="text-red-500">*</span>
               </label>
               <select
                 value={customerId}
                 onChange={(e) => setCustomerId(e.target.value)}
-                className="input-field"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                 required
               >
                 <option value="">Pilih Customer</option>
@@ -273,257 +297,205 @@ export function DeliveryOrderFormModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Tanggal Kirim <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 value={deliveryDate}
                 onChange={(e) => setDeliveryDate(e.target.value)}
-                className="input-field"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                 required
               />
             </div>
-          </div>
 
-          {/* Driver & Vehicle */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Driver & Vehicle fields (sama seperti kode Anda) */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Pengemudi
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Pengemudi</label>
               <input
                 type="text"
                 value={driver}
                 onChange={(e) => setDriver(e.target.value)}
-                className="input-field"
-                placeholder="Nama pengemudi"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                placeholder="Nama supir"
               />
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Kendaraan
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Kendaraan</label>
               <input
                 type="text"
                 value={vehicle}
                 onChange={(e) => setVehicle(e.target.value)}
-                className="input-field"
-                placeholder="No. polisi / jenis kendaraan"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                placeholder="Plat nomor"
               />
             </div>
           </div>
 
-          {/* Items */}
+          {/* Items Section */}
           <div>
             <div className="flex items-center justify-between mb-4">
               <label className="block text-sm font-medium text-gray-700">
-                Items <span className="text-red-500">*</span>
+                Daftar Barang
               </label>
               <button
                 type="button"
                 onClick={handleAddItem}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200"
               >
-                <Plus className="w-4 h-4" />
-                Tambah Item
+                <Plus className="w-3.5 h-3.5" /> Tambah Baris
               </button>
             </div>
 
             <div className="space-y-4">
               {items.map((item, index) => (
-                <div
-                  key={index}
-                  className="glass-card p-5 relative"
-                >
+                <div key={index} className="relative bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:border-blue-300 transition-all">
+
                   {items.length > 1 && (
                     <button
                       type="button"
                       onClick={() => handleRemoveItem(index)}
-                      className="absolute top-3 right-3 p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors z-10"
+                      className="absolute -top-2 -right-2 p-1.5 bg-white text-red-500 border border-red-100 rounded-full shadow-sm hover:bg-red-50 z-10"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
 
-                  <div className="grid grid-cols-1 gap-4">
-                    {/* Row 1: Product Search & Unit */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {/* Product - Searchable */}
-                      <div className="md:col-span-2">
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                          Produk *
-                        </label>
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                          <input
-                            type="text"
-                            value={searchProducts[index] || ""}
-                            onChange={(e) => handleSearchChange(index, e.target.value)}
-                            onFocus={(e) => e.target.select()}
-                            className="input-field pl-10"
-                            placeholder="Cari kode atau nama produk..."
-                            list={`products-${index}`}
-                          />
-                          <datalist id={`products-${index}`}>
-                            {getFilteredProducts(index).map((product) => (
-                              <option
-                                key={product.id}
-                                value={`${product.code} - ${product.name}`}
-                                onClick={() =>
-                                  handleItemChange(index, "productId", product.id)
-                                }
-                              />
-                            ))}
-                          </datalist>
-                        </div>
-                        {/* Product Selector (hidden but functional) */}
-                        <select
-                          value={item.productId}
-                          onChange={(e) =>
-                            handleItemChange(index, "productId", e.target.value)
-                          }
-                          className="hidden"
-                          required
-                        >
-                          <option value="">Pilih Produk</option>
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+
+                    {/* 1. PRODUCT SEARCH (Input Text + Datalist) */}
+                    <div className="md:col-span-5 relative">
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Produk</label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="text"
+                          value={searchProducts[index] || ""}
+                          onChange={(e) => handleSearchChange(index, e.target.value)}
+                          onFocus={() => handleSearchChange(index, searchProducts[index] || "")}
+                          className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                          placeholder="Ketik nama produk..."
+                          list={`products-${index}`}
+                        />
+                        {/* Datalist hanya untuk suggest, value asli di-set lewat onInput/onChange event logic di atas */}
+                        <datalist id={`products-${index}`}>
                           {products.map((product) => (
                             <option key={product.id} value={product.id}>
                               {product.code} - {product.name}
                             </option>
                           ))}
-                        </select>
-                        {/* Quick select dropdown */}
-                        {searchProducts[index] && getFilteredProducts(index).length > 0 && (
-                          <div className="mt-1 max-h-40 overflow-y-auto border border-gray-200 rounded-lg bg-white shadow-lg">
-                            {getFilteredProducts(index).slice(0, 5).map((product) => (
-                              <button
-                                key={product.id}
-                                type="button"
-                                onClick={() => {
-                                  handleItemChange(index, "productId", product.id);
-                                  handleSearchChange(index, `${product.code} - ${product.name}`);
-                                }}
-                                className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 transition-colors"
-                              >
-                                <span className="font-semibold text-blue-600">{product.code}</span>
-                                {" - "}
-                                <span className="text-gray-700">{product.name}</span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                        </datalist>
                       </div>
 
-                      {/* Unit */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                          Satuan *
-                        </label>
-                        <select
-                          value={item.unitId}
-                          onChange={(e) =>
-                            handleItemChange(index, "unitId", e.target.value)
-                          }
-                          className="input-field"
-                          required
-                          disabled={!item.productId}
-                        >
-                          <option value="">Pilih Satuan</option>
-                          {getAvailableUnits(item.productId).map((pu) => (
-                            <option key={pu.unitId} value={pu.unitId}>
-                              {pu.unit.name}
-                            </option>
+                      {/* --- FIX UTAMA: HAPUS SELECT HIDDEN DISINI --- */}
+                      {/* Kita ganti dengan logika custom dropdown manual jika datalist bermasalah, 
+                          tapi untuk sekarang kita pakai trick mapping ID */}
+
+                      {/* Helper UI: Jika produk ada di hasil search, tampilkan tombol pilih manual (opsional tapi membantu UX) */}
+                      {searchProducts[index] && !item.productId && products.length > 0 && (
+                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                          {products.map((product) => (
+                            <div
+                              key={product.id}
+                              className="px-4 py-2 text-sm hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0"
+                              onClick={() => {
+                                // Set Product ID manual saat diklik
+                                handleItemChange(index, "productId", product.id);
+                              }}
+                            >
+                              <span className="font-bold">{product.code}</span> - {product.name}
+                            </div>
                           ))}
-                        </select>
-                      </div>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Row 2: Quantity & Notes */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      {/* Quantity */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                          Jumlah *
-                        </label>
-                        <input
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) =>
-                            handleItemChange(
-                              index,
-                              "quantity",
-                              parseFloat(e.target.value) || 0
-                            )
-                          }
-                          className="input-field"
-                          placeholder="0"
-                          min="0.01"
-                          step="0.01"
-                          required
-                        />
-                      </div>
-
-                      {/* Notes */}
-                      <div className="md:col-span-3">
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                          Catatan Item
-                        </label>
-                        <input
-                          type="text"
-                          value={item.notes}
-                          onChange={(e) =>
-                            handleItemChange(index, "notes", e.target.value)
-                          }
-                          className="input-field"
-                          placeholder="Catatan untuk item ini (opsional)"
-                        />
-                      </div>
+                    {/* 2. UNIT (Dropdown) */}
+                    <div className="md:col-span-3">
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Satuan</label>
+                      <select
+                        value={item.unitId}
+                        onChange={(e) => handleItemChange(index, "unitId", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50"
+                        required
+                        disabled={!item.productId}
+                      >
+                        <option value="">Pilih</option>
+                        {/* --- FIX: AMBIL UNIT DARI ITEM SENDIRI --- */}
+                        {(item.availableUnits || []).map((pu) => (
+                          <option key={pu.unitId} value={pu.unitId}>
+                            {pu.unit.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
+
+                    {/* 3. QTY (No Decimal) */}
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Jumlah</label>
+                      <input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => handleItemChange(index, "quantity", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-center"
+                        min="1"
+                        step="1"
+                        required
+                        // --- FIX: BLOKIR KOMA/TITIK ---
+                        onKeyDown={(e) => {
+                          if (["e", "E", "+", "-", ".", ","].includes(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                      />
+                    </div>
+
+                    {/* 4. NOTES */}
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Catatan</label>
+                      <input
+                        type="text"
+                        value={item.notes}
+                        onChange={(e) => handleItemChange(index, "notes", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        placeholder="..."
+                      />
+                    </div>
+                    {/* Notes / Catatan Keseluruhan */}
                   </div>
                 </div>
               ))}
+                    <div className="mt-6">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Catatan Pengiriman
+                      </label>
+                      <textarea
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                        rows={3}
+                        placeholder="Catatan tambahan untuk pengiriman (opsional)"
+                      />
+                    </div>
             </div>
           </div>
 
-          {/* Notes */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Catatan Pengiriman
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="input-field"
-              rows={3}
-              placeholder="Catatan tambahan untuk pengiriman (opsional)"
-            />
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-4 pt-6 border-t border-gray-200">
+          {/* Footer Actions */}
+          <div className="sticky bottom-0 bg-white border-t border-gray-100 pt-4 mt-6 flex justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="btn-secondary flex-1"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               disabled={isLoading}
             >
               Batal
             </button>
             <button
-              type="submit"
-              className="btn-primary flex-1 flex items-center justify-center gap-2"
+              type="submit" // Trigger handleSubmit
+              className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
               disabled={isLoading}
             >
-              {isLoading ? (
-                "Memproses..."
-              ) : (
-                <>
-                  <Package className="w-4 h-4" />
-                  Buat Surat Jalan
-                </>
-              )}
+              {isLoading ? "Memproses..." : "Simpan Surat Jalan"}
             </button>
           </div>
         </form>

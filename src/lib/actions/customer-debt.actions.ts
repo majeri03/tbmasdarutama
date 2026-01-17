@@ -253,31 +253,42 @@ export async function addCustomerDebtPayment(input: AddPaymentInput) {
 
     const validated = addPaymentSchema.parse(input);
 
+    // 1. Ambil Data Hutang
     const debt = await prisma.customerDebt.findUnique({
       where: { id: validated.debtId },
+      include: { sale: true }, // Kita butuh ini untuk update Sale nanti
     });
-
+    
     if (!debt) {
       return { success: false, error: "Debt not found" };
     }
-
+    if (validated.amount > Number(debt.remainingDebt)) {
+      return {
+        success: false,
+        error: `Payment amount exceeds remaining debt (${debt.remainingDebt})`,
+      };
+    }
     if (debt.status === DebtStatus.PAID) {
       return { success: false, error: "Debt already paid" };
     }
 
     const remainingDebt = Number(debt.remainingDebt);
+    // Cek double proteksi (opsional, tapi aman)
     if (validated.amount > remainingDebt) {
       return { success: false, error: "Payment amount exceeds remaining debt" };
     }
 
+    // Hitung angka-angka baru
     const newPaidAmount = Number(debt.paidAmount) + validated.amount;
     const newRemainingDebt = remainingDebt - validated.amount;
     const newStatus = newRemainingDebt === 0 ? DebtStatus.PAID : DebtStatus.PARTIAL;
 
+    // 2. TRANSAKSI DATABASE (Update Debt + Payment + SALE)
     const result = await prisma.$transaction(async (tx) => {
       const paymentCount = await tx.debtPayment.count();
       const paymentNumber = `PAY-${String(paymentCount + 1).padStart(6, '0')}`;
 
+      // A. Buat History Pembayaran
       const payment = await tx.debtPayment.create({
         data: {
           paymentNumber,
@@ -286,10 +297,11 @@ export async function addCustomerDebtPayment(input: AddPaymentInput) {
           paymentMethod: validated.paymentMethod,
           paymentDate: validated.paymentDate,
           notes: validated.notes,
-          adminId: session.user.id,
+          adminId: session.user.id, // Sesuaikan dengan field Anda (adminId/createdById)
         },
       });
 
+      // B. Update Data Hutang (CustomerDebt)
       const updatedDebt = await tx.customerDebt.update({
         where: { id: validated.debtId },
         data: {
@@ -302,10 +314,35 @@ export async function addCustomerDebtPayment(input: AddPaymentInput) {
         },
       });
 
+      // C. [BAGIAN INI YANG HILANG SEBELUMNYA] Update Data Penjualan (Sale)
+      // Agar status di menu 'Penjualan' ikut berubah jadi Lunas/Partial
+      if (debt.saleId) {
+        
+        // Tentukan status baru untuk Sale berdasarkan pelunasan hutang
+        // Jika Hutang Lunas (PAID) -> Sale jadi COMPLETED
+        // Jika Masih Nyicil (PARTIAL) -> Sale tetap PENDING (atau biarkan status lama)
+        
+        const saleUpdateData: Prisma.SaleUpdateInput = {
+           paidAmount: { increment: validated.amount }
+        };
+
+        // Jika hutang sudah lunas total, kita tandai Sale sebagai COMPLETED
+        if (newStatus === DebtStatus.PAID) {
+           saleUpdateData.status = "COMPLETED";
+        } 
+       
+
+        await tx.sale.update({
+          where: { id: debt.saleId },
+          data: saleUpdateData,
+        });
+      }
+
       return { payment, debt: updatedDebt };
     });
 
     revalidatePath("/dashboard/customer-debts");
+    revalidatePath("/dashboard/sales"); // Refresh halaman sales agar angka berubah
 
     return {
       success: true,
