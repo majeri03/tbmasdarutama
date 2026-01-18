@@ -59,51 +59,48 @@ async function generateDebtNumber(
   return `DEBT-CUST-${newNumber.toString().padStart(3, "0")}`;
 }
 
-// ==================== CREATE SALE ====================
+// ==================== CREATE SALE (OPTIMIZED) ====================
 export async function createSale(data: CreateSaleInput) {
   try {
     const session = await auth();
     requirePermission(session, "CREATE_SALE");
-    console.log("📌 DEBUG Session:", {
-      hasSession: !!session,
-      userId: session?.user?.id,
-      userEmail: session?.user?.email,
-    }); // ✅ Add debug log
+
+    // --- 1. Validasi User & Session ---
     if (!session?.user?.id) {
-      return {
-        success: false,
-        error: "Unauthorized. Please login first.",
-      };
+      return { success: false, error: "Unauthorized. Please login first." };
     }
+
     const cashier = await prisma.user.findUnique({
-      where: { email: session.user.email }, // ✅ Changed from id to email
+      where: { email: session.user.email || "" },
       select: { id: true, name: true, role: true, email: true },
     });
-    console.log("📌 DEBUG Cashier:", cashier);
+
     if (!cashier) {
-      return {
-        success: false,
-        error: "User tidak ditemukan di database",
-      };
+      return { success: false, error: "User tidak ditemukan di database" };
     }
+
     const validated = createSaleSchema.parse(data);
-    const invoiceNumber = await generateInvoiceNumber();
 
-    // Validasi stock
+    // --- 2. Validasi Stok (PRE-TRANSACTION / DI LUAR TRANSAKSI) ---
+    // Mengambil semua data produk sekaligus (Bulk Read) agar cepat
+    const productIds = validated.items.map((i) => i.productId);
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, currentStock: true, name: true, code: true },
+    });
+
+    // Buat Map untuk pencarian cepat
+    const productMap = new Map(products.map((p) => [p.id, p]));
+
     for (const item of validated.items) {
-      const product = await prisma.product.findUnique({
-        where: { id: item.productId },
-        select: { currentStock: true, name: true, code: true },
-      });
-
+      const product = productMap.get(item.productId);
+      
       if (!product) {
-        return {
-          success: false,
-          error: `Produk tidak ditemukan`,
-        };
+        return { success: false, error: `Produk tidak ditemukan: ${item.productId}` };
       }
 
-      if (product.currentStock < item.quantity) {
+      // Cek Stok (Tanpa Query DB lagi)
+      if (Number(product.currentStock) < item.quantity) {
         return {
           success: false,
           error: `Stock ${product.name} (${product.code}) tidak mencukupi. Tersedia: ${product.currentStock}, Diminta: ${item.quantity}`,
@@ -111,9 +108,22 @@ export async function createSale(data: CreateSaleInput) {
       }
     }
 
-    const sale = await prisma.$transaction(
-      async (tx: Prisma.TransactionClient) => {
-        // 1. Create Sale
+    // --- 3. Persiapkan Data Item untuk Disimpan Sekaligus ---
+    const saleItemsData = validated.items.map((item) => ({
+      productId: item.productId,
+      unitId: item.productUnitId, // ✅ Tetap menjaga fix Anda (unitId)
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      discount: item.discount,
+      subtotal: item.subtotal,
+    }));
+
+    // Generate Invoice Number (Di luar transaksi jika tidak butuh lock ketat, sesuai kode asli)
+    const invoiceNumber = await generateInvoiceNumber();
+
+    // --- 4. DATABASE TRANSACTION (OPTIMIZED) ---
+    const sale = await prisma.$transaction(async (tx) => {
+        // A. Create Sale + Sale Items (Nested Write - Lebih Cepat)
         const newSale = await tx.sale.create({
           data: {
             invoiceNumber,
@@ -133,63 +143,51 @@ export async function createSale(data: CreateSaleInput) {
                   : SaleStatus.PENDING
                 : SaleStatus.COMPLETED,
             notes: validated.notes || null,
+            // OPTIMASI: Simpan item langsung di sini (Nested Create)
+            saleItems: {
+              create: saleItemsData
+            }
           },
           include: {
             customer: {
-              select: {
-                code: true,
-                name: true,
-                type: true,
-              },
+              select: { code: true, name: true, type: true },
             },
             cashier: {
-              select: {
-                name: true,
-                email: true,
-              },
+              select: { name: true, email: true },
             },
           },
         });
 
-        // 2. Create Sale Items & Update Stock
-        for (const item of validated.items) {
-          await tx.saleItem.create({
-            data: {
-              saleId: newSale.id,
-              productId: item.productId,
-              unitId: item.productUnitId, // ✅ FIXED: unitId instead of productUnitId
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              discount: item.discount,
-              subtotal: item.subtotal,
-            },
-          });
-
-          await tx.product.update({
-            where: { id: item.productId },
-            data: {
-              currentStock: {
-                decrement: item.quantity,
+        // B. Update Stock & Create Log (PARALLEL EXECUTION)
+        // Jalankan semua update stok secara paralel, bukan antrian
+        await Promise.all(
+          validated.items.map(async (item) => {
+            // 1. Update Product Stock
+            await tx.product.update({
+              where: { id: item.productId },
+              data: {
+                currentStock: { decrement: item.quantity },
               },
-            },
-          });
+            });
 
-          await tx.stockMovement.create({
-            data: {
-              productId: item.productId,
-              type: "OUT",
-              quantity: item.quantity,
-              notes: `Penjualan ${invoiceNumber}`,
-              referenceType: "Sale",
-              referenceId: newSale.id,
-              createdById: session.user.id,
-            },
-          });
-        }
+            // 2. Create Stock Movement
+            await tx.stockMovement.create({
+              data: {
+                productId: item.productId,
+                type: "OUT",
+                quantity: item.quantity,
+                notes: `Penjualan ${invoiceNumber}`,
+                referenceType: "Sale",
+                referenceId: newSale.id,
+                createdById: session.user.id,
+              },
+            });
+          })
+        );
 
-        // 3. Create customer debt if CREDIT
+        // C. Create Customer Debt (Jika Credit)
         if (validated.paymentMethod === PaymentMethod.CREDIT) {
-          const debtNumber = await generateDebtNumber(tx);
+          const debtNumber = await generateDebtNumber(tx); // Asumsi fungsi ini butuh tx
 
           await tx.customerDebt.create({
             data: {
@@ -197,13 +195,10 @@ export async function createSale(data: CreateSaleInput) {
               saleId: newSale.id,
               customerId: validated.customerId,
               totalDebt: validated.grandTotal,
-              paidAmount: validated.paidAmount, // ✅ TAMBAH INI
-              remainingDebt: validated.grandTotal - validated.paidAmount, // ✅ FIX INI
-              dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-              status:
-                validated.paidAmount >= validated.grandTotal
-                  ? "PAID"
-                  : "UNPAID", // ✅ TAMBAH INI
+              paidAmount: validated.paidAmount,
+              remainingDebt: validated.grandTotal - validated.paidAmount,
+              dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 Hari
+              status: validated.paidAmount >= validated.grandTotal ? "PAID" : "UNPAID",
               notes: `Utang dari penjualan ${invoiceNumber}`,
             },
           });
@@ -211,39 +206,37 @@ export async function createSale(data: CreateSaleInput) {
 
         return newSale;
       },
-      { timeout: 10000 } // 10 detik
+      // Config Timeout: Beri waktu lebih (20 detik)
+      { maxWait: 5000, timeout: 20000 }
     );
 
+    // --- 5. Revalidate & Return ---
     revalidatePath("/dashboard/pos");
     revalidatePath("/dashboard/sales");
+
+    // Serialize Decimal ke Number agar aman di client
     const serializedSale = {
       ...sale,
-      totalAmount: parseFloat(sale.totalAmount.toString()),
-      discount: parseFloat(sale.discount.toString()),
-      tax: parseFloat(sale.tax.toString()),
-      grandTotal: parseFloat(sale.grandTotal.toString()),
-      paidAmount: parseFloat(sale.paidAmount.toString()),
-      changeAmount: parseFloat(sale.changeAmount.toString()),
+      totalAmount: Number(sale.totalAmount),
+      discount: Number(sale.discount),
+      tax: Number(sale.tax),
+      grandTotal: Number(sale.grandTotal),
+      paidAmount: Number(sale.paidAmount),
+      changeAmount: Number(sale.changeAmount),
     };
+
     return {
       success: true,
       data: serializedSale,
       message: `Transaksi ${invoiceNumber} berhasil disimpan`,
     };
+
   } catch (error) {
     console.error("Create sale error:", error);
-
     if (error instanceof Error) {
-      return {
-        success: false,
-        error: error.message,
-      };
+      return { success: false, error: error.message };
     }
-
-    return {
-      success: false,
-      error: "Gagal menyimpan transaksi",
-    };
+    return { success: false, error: "Gagal menyimpan transaksi" };
   }
 }
 

@@ -5,7 +5,7 @@ import { X, Plus, Trash2, Package, Search } from "lucide-react";
 import { createDeliveryOrder } from "@/lib/actions/delivery-order.actions";
 import { getCustomers } from "@/lib/actions/customer.actions";
 import { getProducts } from "@/lib/actions/product.actions";
-import { useToast } from "@/components/ui/toast";
+import { useToast, Toast } from "@/components/ui/toast";
 
 interface DeliveryOrderFormModalProps {
   isOpen: boolean;
@@ -53,7 +53,7 @@ export function DeliveryOrderFormModal({
   const [isLoading, setIsLoading] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-
+  const { toast, showToast, hideToast } = useToast();
   // State untuk teks input pencarian
   const [searchProducts, setSearchProducts] = useState<string[]>([]);
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -69,7 +69,6 @@ export function DeliveryOrderFormModal({
     { productId: "", unitId: "", quantity: 1, notes: "" },
   ]);
 
-  const { showToast } = useToast();
 
   useEffect(() => {
     if (isOpen) {
@@ -499,6 +498,13 @@ export function DeliveryOrderFormModal({
             </button>
           </div>
         </form>
+        {toast && (
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={hideToast}
+      />
+    )}
       </div>
     </div>
   );

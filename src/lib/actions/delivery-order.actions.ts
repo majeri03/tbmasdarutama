@@ -244,31 +244,40 @@ requirePermission(session, "VIEW_DELIVERY_ORDERS");
 }
 
 // --- HELPER UNTUK GENERATE NOMOR INVOICE (FIXED) ---
+// --- HELPER UNTUK GENERATE NOMOR INVOICE (FIXED & ROBUST) ---
 async function generateInvoiceNumber(tx: Prisma.TransactionClient) {
   const date = new Date();
   const dateStr = `${date.getFullYear()}${(date.getMonth() + 1)
     .toString()
     .padStart(2, "0")}${date.getDate().toString().padStart(2, "0")}`;
 
-  // Cari yang paling terakhir dibuat hari ini
+  // 1. Cari nomor terakhir berdasarkan ABJAD (invoiceNumber), BUKAN tanggal (createdAt)
   const lastSale = await tx.sale.findFirst({
     where: {
       invoiceNumber: { startsWith: `INV-${dateStr}` },
     },
-    orderBy: { createdAt: "desc" }, // Ganti order by createdAt agar lebih akurat
+    orderBy: { invoiceNumber: "desc" }, // <--- GANTI JADI INI (PENTING!)
   });
 
   let nextNumber = 1;
   if (lastSale) {
     const parts = lastSale.invoiceNumber.split("-");
-    const lastNum = parseInt(parts[2]); // Ambil angka urutan
+    const lastNum = parseInt(parts[2]); 
     if (!isNaN(lastNum)) {
       nextNumber = lastNum + 1;
     }
   }
 
-  // Format: INV-20240117-0001
-  return `INV-${dateStr}-${nextNumber.toString().padStart(4, "0")}`;
+  // 2. SAFETY CHECK: Pastikan nomor benar-benar belum ada (Anti-Crash)
+  let invoiceNumber = `INV-${dateStr}-${nextNumber.toString().padStart(4, "0")}`;
+  
+  // Cek ke database apakah nomor ini sudah ada? Jika ada, naikkan +1 lagi
+  while (await tx.sale.findUnique({ where: { invoiceNumber } })) {
+    nextNumber++;
+    invoiceNumber = `INV-${dateStr}-${nextNumber.toString().padStart(4, "0")}`;
+  }
+
+  return invoiceNumber;
 }
 
 // --- HELPER: GENERATE DEBT NUMBER ---

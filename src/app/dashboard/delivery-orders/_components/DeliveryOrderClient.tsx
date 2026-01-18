@@ -12,7 +12,7 @@ import { DeliveryOrderDetailModal } from "./DeliveryOrderDetailModal";
 import { ReceiveDeliveryModal } from "./ReceiveDeliveryModal";
 import { DeleteDeliveryDialog } from "./DeleteDeliveryDialog";
 import { printDeliveryOrder } from "@/lib/utils/delivery-order-generator";
-
+import { useToast, Toast } from "@/components/ui/toast";
 export function DeliveryOrderClient() {
     const [deliveryOrders, setDeliveryOrders] = useState<DeliveryOrderData[]>([]);
     const [filteredOrders, setFilteredOrders] = useState<DeliveryOrderData[]>([]);
@@ -36,7 +36,7 @@ export function DeliveryOrderClient() {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState<DeliveryOrderData | null>(null);
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-
+    const { toast, showToast, hideToast } = useToast();
     useEffect(() => {
         loadData();
     }, []);
@@ -128,6 +128,7 @@ export function DeliveryOrderClient() {
 
     const handleSuccess = () => {
         loadData();
+        showToast("Data berhasil diperbarui", "success");
     };
 
     const clearFilters = () => {
@@ -286,6 +287,13 @@ export function DeliveryOrderClient() {
                 onSuccess={handleSuccess}
                 deliveryOrder={selectedOrder}
             />
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={hideToast}
+                />
+            )}
         </div>
     );
 }
