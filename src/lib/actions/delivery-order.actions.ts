@@ -243,138 +243,6 @@ requirePermission(session, "VIEW_DELIVERY_ORDERS");
   }
 }
 
-
-//    CREATE DELIVERY ORDER   
-// export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
-//   try {
-//     const session = await auth();
-//     if (!session?.user) {
-//       return { success: false, error: "Unauthorized" };
-//     }
-//     requirePermission(session, "CREATE_DELIVERY_ORDER");
-//     const validated = createDeliveryOrderSchema.parse(input);
-//     // ✅ Check stock availability
-//     for (const item of validated.items) {
-//       const product = await prisma.product.findUnique({
-//         where: { id: item.productId },
-//         select: {
-//           id: true,
-//           name: true,
-//           currentStock: true,
-//           productUnits: {
-//             include: {
-//               unit: true,
-//             },
-//           },
-//         },
-//       });
-
-//       if (!product) {
-//         return {
-//           success: false,
-//           error: `Product not found: ${item.productId}`,
-//         };
-//       }
-
-//       // Get primary unit
-//       const primaryUnit = product.productUnits.find((pu) => pu.isPrimary);
-//       if (!primaryUnit) {
-//         return {
-//           success: false,
-//           error: `No primary unit for product: ${product.name}`,
-//         };
-//       }
-
-//       // Get item unit conversion
-//       const itemUnit = product.productUnits.find(
-//         (pu) => pu.unitId === item.unitId
-//       );
-//       if (!itemUnit) {
-//         return {
-//           success: false,
-//           error: `Invalid unit for product: ${product.name}`,
-//         };
-//       }
-
-//       // Calculate required stock in primary unit
-//       const requiredStock = item.quantity * Number(itemUnit.conversionValue);
-
-//       if (Number(product.currentStock) < requiredStock) {
-//         return {
-//           success: false,
-//           error: `Insufficient stock for ${product.name}. Available: ${product.currentStock} ${primaryUnit.unit.name}, Required: ${requiredStock} ${primaryUnit.unit.name}`,
-//         };
-//       }
-//     }
-//     // Generate DO Number
-//     const doNumber = await generateDONumber();
-
-//     // Check if saleId already has delivery order
-//     if (validated.saleId) {
-//       const existingDO = await prisma.deliveryOrder.findFirst({
-//         where: { saleId: validated.saleId },
-//       });
-//       if (existingDO) {
-//         return {
-//           success: false,
-//           error: "Sale already has a delivery order",
-//         };
-//       }
-//     }
-
-//     // Create delivery order with items
-//     const deliveryOrder = await prisma.deliveryOrder.create({
-//       data: {
-//         doNumber,
-//         customerId: validated.customerId,
-//         saleId: validated.saleId,
-//         deliveryDate: validated.deliveryDate,
-//         driver: validated.driver,
-//         vehicle: validated.vehicle,
-//         notes: validated.notes,
-//         createdById: session.user.id,
-//         deliveryItems: {
-//           create: validated.items.map((item) => ({
-//             productId: item.productId,
-//             unitId: item.unitId,
-//             quantity: item.quantity,
-//             notes: item.notes,
-//           })),
-//         },
-//       },
-//       include: {
-//         customer: true,
-//         deliveryItems: {
-//           include: {
-//             product: true,
-//             unit: true,
-//           },
-//         },
-//       },
-//     });
-
-//     revalidatePath("/dashboard/delivery-orders");
-
-//     return {
-//       success: true,
-//       message: `Delivery order ${doNumber} created successfully`,
-//       data: {
-//         ...deliveryOrder,
-//         deliveryItems: deliveryOrder.deliveryItems.map((item) => ({
-//           ...item,
-//           quantity: Number(item.quantity),
-//         })),
-//       },
-//     };
-//   } catch (error) {
-//     console.error("Error creating delivery order:", error);
-//     if (error instanceof Error) {
-//       return { success: false, error: error.message };
-//     }
-//     return { success: false, error: "Failed to create delivery order" };
-//   }
-// }
-
 // --- HELPER UNTUK GENERATE NOMOR INVOICE (FIXED) ---
 async function generateInvoiceNumber(tx: Prisma.TransactionClient) {
   const date = new Date();
@@ -411,6 +279,9 @@ async function generateDebtNumber(tx: Prisma.TransactionClient) {
 // --- FUNGSI UTAMA CREATE DELIVERY ORDER (FIXED) ---
 
 
+// Pastikan import PaymentMethod ada di paling atas file
+// import { DeliveryStatus, Prisma, PaymentMethod } from "@prisma/client";
+
 export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
   try {
     const session = await auth();
@@ -418,12 +289,15 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
       return { success: false, error: "Unauthorized" };
     }
     requirePermission(session, "CREATE_DELIVERY_ORDER");
-    
+
     // 1. Validasi Input Zod
     const validated = createDeliveryOrderSchema.parse(input);
 
-    // 2. Validasi Stok (Kode asli Anda)
+    // =========================================================
+    // 2. VALIDASI STOK (PENTING: Jangan dihapus)
+    // =========================================================
     for (const item of validated.items) {
+      // Kita cek stok saat ini di database
       const product = await prisma.product.findUnique({
         where: { id: item.productId },
         select: {
@@ -434,20 +308,24 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
         },
       });
 
-      if (!product) return { success: false, error: `Product not found: ${item.productId}` };
+      if (!product) {
+        return { success: false, error: `Produk tidak ditemukan: ${item.productId}` };
+      }
 
-      const primaryUnit = product.productUnits.find((pu) => pu.isPrimary);
-      if (!primaryUnit) return { success: false, error: `No primary unit for: ${product.name}` };
-
+      // Validasi Unit
       const itemUnit = product.productUnits.find((pu) => pu.unitId === item.unitId);
-      if (!itemUnit) return { success: false, error: `Invalid unit for: ${product.name}` };
+      if (!itemUnit) {
+        return { success: false, error: `Satuan tidak valid untuk produk: ${product.name}` };
+      }
 
+      // Hitung kebutuhan stok dalam satuan dasar (misal: 1 Dus = 10 Pcs)
       const requiredStock = item.quantity * Number(itemUnit.conversionValue);
 
+      // Cek apakah stok cukup
       if (Number(product.currentStock) < requiredStock) {
         return {
           success: false,
-          error: `Stok tidak cukup untuk ${product.name}. Ada: ${product.currentStock}, Butuh: ${requiredStock}`,
+          error: `Stok ${product.name} tidak cukup. Tersedia: ${product.currentStock}, Butuh: ${requiredStock}`,
         };
       }
     }
@@ -457,55 +335,101 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
       const existingDO = await prisma.deliveryOrder.findFirst({
         where: { saleId: validated.saleId },
       });
-      if (existingDO) return { success: false, error: "Sale already has a delivery order" };
+      if (existingDO) return { success: false, error: "Transaksi ini sudah dibuatkan Surat Jalan." };
     }
 
-    // ---------------------------------------------------------
-    // 4. DATABASE TRANSACTION (DO + SALE + DEBT + STOCK)
-    // ---------------------------------------------------------
+    // =========================================================
+    // OPTIMISASI: PERSIAPAN DATA (PRE-CALCULATION)
+    // =========================================================
+    
+    // A. Ambil info harga & konversi untuk semua item sekaligus
+    const productUnits = await prisma.productUnit.findMany({
+      where: {
+        productId: { in: validated.items.map((i) => i.productId) },
+        unitId: { in: validated.items.map((i) => i.unitId) },
+      },
+    });
+
+    // Map untuk akses cepat (Supaya tidak query berulang)
+    const unitMap = new Map<string, { sellPrice: number; conversionValue: number }>();
+    productUnits.forEach((pu) => {
+      unitMap.set(`${pu.productId}-${pu.unitId}`, {
+        sellPrice: Number(pu.sellPrice),
+        conversionValue: Number(pu.conversionValue),
+      });
+    });
+
+    // B. Siapkan variable data dengan TIPE EKSPLISIT (Fix Error TypeScript)
+    let grandTotal = 0;
+    
+    // Tipe data eksplisit untuk Sale Item
+    const saleItemsData: {
+      productId: string;
+      unitId: string;
+      quantity: number;
+      unitPrice: number;
+      subtotal: number;
+      discount: number;
+    }[] = [];
+
+    // Tipe data eksplisit untuk Stock Update
+    const stockUpdates: {
+      productId: string;
+      qtyBase: number;
+    }[] = [];
+
+    // C. Loop Kalkulasi (Tanpa Query Database)
+    for (const item of validated.items) {
+      const unitKey = `${item.productId}-${item.unitId}`;
+      const unitData = unitMap.get(unitKey);
+
+      if (!unitData) throw new Error(`Data satuan tidak ditemukan untuk produk ${item.productId}`);
+
+      // Hitung Subtotal Harga
+      const subtotal = unitData.sellPrice * item.quantity;
+      grandTotal += subtotal;
+
+      // Masukkan ke array Sale Items
+      saleItemsData.push({
+        productId: item.productId,
+        unitId: item.unitId,
+        quantity: item.quantity,
+        unitPrice: unitData.sellPrice,
+        subtotal: subtotal,
+        discount: 0,
+      });
+
+      // Hitung Pengurangan Stok (Qty x Nilai Konversi)
+      const totalQtyBase = item.quantity * unitData.conversionValue;
+      
+      // Masukkan ke array Stock Updates
+      stockUpdates.push({
+        productId: item.productId,
+        qtyBase: totalQtyBase,
+      });
+    }
+
+    // =========================================================
+    // 4. DATABASE TRANSACTION (OPTIMIZED)
+    // =========================================================
     const result = await prisma.$transaction(async (tx) => {
-      // A. Generate Nomor
+      // A. Generate Nomor Surat Jalan
       const doNumber = await generateDONumber();
       
-      // B. Hitung Total Harga untuk Invoice
-      let grandTotal = 0;
-      const saleItemsData = [];
-
-      for (const item of validated.items) {
-        const productUnit = await tx.productUnit.findFirst({
-          where: { productId: item.productId, unitId: item.unitId },
-        });
-
-        if (!productUnit) throw new Error(`Unit info missing for ${item.productId}`);
-
-        const price = Number(productUnit.sellPrice);
-        const subtotal = price * item.quantity;
-        grandTotal += subtotal;
-
-        saleItemsData.push({
-          productId: item.productId,
-          unitId: item.unitId,
-          quantity: item.quantity,
-          unitPrice: price,
-          subtotal: subtotal,
-          discount: 0
-        });
-      }
-
-      // C. Logic Invoice & Hutang (Jika DO dibuat manual tanpa POS)
+      // B. Logic Invoice Otomatis (Jika DO dibuat manual tanpa POS)
       let createdSaleId = validated.saleId; 
 
       if (!createdSaleId) {
         const invoiceNumber = await generateInvoiceNumber(tx);
         
-        // Buat Sale (Status: PENDING/CREDIT)
+        // Buat Sale Baru
         const newSale = await tx.sale.create({
           data: {
             invoiceNumber,
             customerId: validated.customerId,
             cashierId: session.user.id,
-            paymentMethod: PaymentMethod.CREDIT, // Otomatis Hutang/Tempo
-            status: "PENDING", // Belum Lunas
+            paymentMethod: PaymentMethod.CREDIT, // Default Hutang
+            status: "PENDING",
             totalAmount: grandTotal,
             tax: 0,
             discount: 0,
@@ -514,16 +438,16 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
             changeAmount: 0,
             notes: `Auto-Invoice DO: ${doNumber}. ${validated.notes || ""}`,
             saleItems: {
-              create: saleItemsData
+              create: saleItemsData // Data yang sudah disiapkan di atas
             }
           }
         });
         createdSaleId = newSale.id;
 
-        // Buat Data Hutang (CustomerDebt)
+        // Catat Hutang Customer
         const debtNumber = await generateDebtNumber(tx);
         const dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + 30); // Default Jatuh Tempo 30 Hari
+        dueDate.setDate(dueDate.getDate() + 30); // Jatuh tempo 30 hari
 
         await tx.customerDebt.create({
           data: {
@@ -540,7 +464,7 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
         });
       }
 
-      // D. Buat Delivery Order (Surat Jalan)
+      // C. Buat Delivery Order (Surat Jalan)
       const deliveryOrder = await tx.deliveryOrder.create({
         data: {
           doNumber,
@@ -569,47 +493,20 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
         },
       });
 
-      // E. Kurangi Stok Fisik & Catat Log
-      for (const item of validated.items) {
-        const pUnit = await tx.productUnit.findFirst({
-            where: { productId: item.productId, unitId: item.unitId }
-        });
-        
-        const conversion = Number(pUnit?.conversionValue || 1);
-        const totalQtyBase = Number(item.quantity) * conversion;
-
-        // Stock Movement
-        await tx.stockMovement.create({
-            data: {
-                productId: item.productId,
-                type: "OUT",
-                quantity: totalQtyBase,
-                referenceType: "DELIVERY_ORDER",
-                referenceId: deliveryOrder.id,
-                notes: `DO: ${doNumber}`,
-                createdById: session.user.id
-            }
-        });
-        
-        // Update Product Stock
-        await tx.product.update({
-            where: { id: item.productId },
-            data: {
-                currentStock: {
-                    decrement: totalQtyBase
-                }
-            }
-        });
-      }
-
       return deliveryOrder;
+    }, 
+    // KONFIGURASI TIMEOUT: 20 Detik
+    {
+        maxWait: 5000, 
+        timeout: 20000 
     });
 
-    // Revalidate paths
+    // Revalidate semua halaman terkait
     revalidatePath("/dashboard/delivery-orders");
     revalidatePath("/dashboard/sales");
     revalidatePath("/dashboard/customer-debts");
     revalidatePath("/dashboard/products");
+    revalidatePath("/dashboard/stocks"); // Tambahkan ini agar halaman stok update
 
     return {
       success: true,
