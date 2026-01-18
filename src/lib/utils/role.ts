@@ -11,7 +11,7 @@ export const ROLE_HIERARCHY: Record<Role, number> = {
 // ==================== PERMISSION MAPPING ====================
 export const PERMISSIONS = {
   // Dashboard
-  VIEW_DASHBOARD: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
+  VIEW_DASHBOARD: ["SUPER_ADMIN", "ADMIN"] as Role[],
   VIEW_FULL_STATS: ["SUPER_ADMIN", "ADMIN"] as Role[],
 
   // POS
@@ -19,7 +19,7 @@ export const PERMISSIONS = {
   
   // Sales
   VIEW_SALES: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
-  CREATE_SALE: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
+  CREATE_SALE: ["SUPER_ADMIN", "ADMIN"] as Role[],
   CANCEL_SALE: ["SUPER_ADMIN", "ADMIN"] as Role[],
   DELETE_SALE: ["SUPER_ADMIN"] as Role[],
 
@@ -76,7 +76,7 @@ export const PERMISSIONS = {
   EXPORT_REPORTS: ["SUPER_ADMIN", "ADMIN"] as Role[],
 
   // Settings
-  VIEW_SETTINGS: ["SUPER_ADMIN"] as Role[],
+  VIEW_SETTINGS: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
   MANAGE_STORE_SETTINGS: ["SUPER_ADMIN"] as Role[],
   MANAGE_LANDING_PAGE: ["SUPER_ADMIN"] as Role[],
   MANAGE_USERS: ["SUPER_ADMIN"] as Role[],

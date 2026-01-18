@@ -6,6 +6,7 @@ import { getCustomers } from "@/lib/actions/customer.actions";
 import { getProducts } from "@/lib/actions/product.actions";
 import { createSale } from "@/lib/actions/sale.actions";
 import { PaymentMethod } from "@prisma/client";
+import { useToast, Toast } from "@/components/ui/toast";
 
 interface SaleFormModalProps {
     onSuccess: () => void;
@@ -72,6 +73,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
     const [searchProduct, setSearchProduct] = useState("");
     const [showProductDropdown, setShowProductDropdown] = useState(false);
     const [, setIsSearching] = useState(false);
+    const { toast, showToast, hideToast } = useToast();
 
     const loadCustomers = async () => {
         const result = await getCustomers({});
@@ -149,6 +151,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
 
         setSearchProduct("");
         setShowProductDropdown(false);
+        showToast("Produk ditambahkan ke keranjang");
     };
 
     const updateCartItem = (index: number, field: keyof CartItem, value: number) => {
@@ -165,6 +168,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
 
     const removeFromCart = (index: number) => {
         setCart(cart.filter((_, i) => i !== index));
+        showToast("Produk dihapus dari keranjang");
     };
 
     const calculateTotals = () => {
@@ -223,7 +227,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
             });
 
             if (result.success) {
-                setSuccess("Penjualan berhasil dibuat");
+                showToast("Penjualan berhasil dibuat");
                 setTimeout(() => {
                     setIsOpen(false);
                     onSuccess();
@@ -588,6 +592,13 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
                         </form>
                     </div>
                 </div>
+            )}
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={hideToast}
+                />
             )}
         </>
     );

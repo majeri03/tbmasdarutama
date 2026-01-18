@@ -14,7 +14,6 @@ import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { SaleStatus, PaymentMethod } from "@prisma/client";  // ✅ TAMBAH INI
 import { DeleteSaleDialog } from "./_components/DeleteSaleDialog";
-
 interface Sale {
     id: string;
     invoiceNumber: string;
@@ -48,7 +47,6 @@ export default function SalesPage() {
     const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
 
-
     const loadSales = useCallback(async () => {
         setLoading(true);
         setError("");
@@ -60,7 +58,7 @@ export default function SalesPage() {
                 dateFrom: dateFrom ? new Date(dateFrom) : undefined,
                 dateTo: dateTo ? new Date(dateTo) : undefined,
                 page: 1,     // ✅ FIX: ubah dari 0 ke 1
-                limit: 100,  // ✅ FIX: ubah dari 0 ke 100 (atau sesuai kebutuhan)
+                limit: 30,  // ✅ FIX: ubah dari 0 ke 100 (atau sesuai kebutuhan)
             });
 
             if (result.success && result.data) {
@@ -274,7 +272,7 @@ export default function SalesPage() {
                                                 >
                                                     <FileText className="w-4 h-4" />
                                                 </button>
-                                                <DeleteSaleDialog sale={sale} onSuccess={loadSales} /> 
+                                                <DeleteSaleDialog sale={sale} onSuccess={loadSales} />
                                             </div>
                                         </td>
                                     </tr>

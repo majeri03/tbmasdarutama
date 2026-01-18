@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { CartItem, POSCustomer } from "@/types/pos";
 import { PaymentMethod } from "@prisma/client";
-import { createSale } from "@/lib/actions/sale.actions";
+import { createPosTransaction } from "@/lib/actions/pos.actions";
 import { formatCurrency, calculateCart, calculateChange } from "@/lib/utils/pos-helpers";
 import { X, Loader2, CreditCard, Banknote, Wallet } from "lucide-react";
 
@@ -65,7 +65,7 @@ export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuc
         try {
             console.log("🔄 Processing payment..."); // ✅ Add log
             console.log("Items:", items);
-            const result = await createSale({
+            const result = await await createPosTransaction({
                 customerId: customer.id,
                 items: items.map((item) => ({
                     productId: item.productId,
