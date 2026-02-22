@@ -36,7 +36,7 @@ export async function createCustomer(data: CreateCustomerInput) {
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
-    requireMinimumRole(session, "ADMIN");
+    requireMinimumRole(session, "KASIR");
     // Validate input
     const validatedData = createCustomerSchema.parse(data);
 
