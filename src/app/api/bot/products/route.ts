@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+
 export async function GET(request: Request) {
   // Validasi Keamanan
   const clientApiKey = request.headers.get("x-api-key");
@@ -11,24 +12,22 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Menangkap parameter filter kategori dari URL bot
+    // 1. Ubah parameter tangkapan menjadi "search" (bukan category)
     const { searchParams } = new URL(request.url);
-    const categoryFilter = searchParams.get("category");
+    const searchQuery = searchParams.get("search");
 
-    // Kondisi pencarian default (Aktif & Belum dihapus)
+    // 2. Gunakan tipe data Prisma yang Anda buat
     const whereCondition: Prisma.ProductWhereInput = {
       isActive: true,
       deletedAt: null,
     };
 
-    // Jika bot mengirimkan filter kategori, tambahkan pencarian relasi ke tabel Category
-    if (categoryFilter) {
-      whereCondition.category = {
-        name: {
-          equals: categoryFilter,
-          mode: "insensitive" // Mengabaikan huruf besar/kecil (Semen = semen)
-        }
-      };
+    // 3. LOGIKA PENCARIAN GANDA: Nama Produk ATAU Nama Kategori
+    if (searchQuery) {
+      whereCondition.OR = [
+        { name: { contains: searchQuery, mode: "insensitive" } }, 
+        { category: { name: { contains: searchQuery, mode: "insensitive" } } }
+      ];
     }
 
     const products = await prisma.product.findMany({
