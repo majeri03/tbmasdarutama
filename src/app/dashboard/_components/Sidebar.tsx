@@ -32,18 +32,18 @@ const menuGroups = [
   {
     label: "Main",
     items: [
-      { href: "/dashboard", icon: <Home />, label: "Dashboard", permission: "VIEW_DASHBOARD" as const },
+      { href: "/dashboard", icon: <Home />, label: "Dashboard", permission: "VIEW_MENU_DASHBOARD" as const },
     ],
   },
   {
     label: "Inventory",
     items: [
-      { href: "/dashboard/products", icon: <Package />, label: "Produk", permission: "VIEW_PRODUCTS" as const },
+      { href: "/dashboard/products", icon: <Package />, label: "Produk", permission: "VIEW_MENU_PRODUCTS" as const },
       { href: "/dashboard/categories", icon: <Box />, label: "Kategori", permission: "VIEW_CATEGORIES" as const },
       { href: "/dashboard/units", icon: <Layers />, label: "Satuan", permission: "VIEW_UNITS" as const },
       { href: "/dashboard/suppliers", icon: <Truck />, label: "Supplier", permission: "VIEW_SUPPLIERS" as const },
       { href: "/dashboard/customers", icon: <Users />, label: "Customer", permission: "VIEW_CUSTOMERS" as const },
-      { href: "/dashboard/stocks", icon: <ShoppingCart />, label: "Stock", permission: "VIEW_STOCK" as const },
+      { href: "/dashboard/stocks", icon: <ShoppingCart />, label: "Stock", permission: "VIEW_MENU_STOCK" as const },
     ],
   },
   {
@@ -51,7 +51,7 @@ const menuGroups = [
     items: [
       { href: "/dashboard/delivery-orders", icon: <Send />, label: "Pengiriman", permission: "VIEW_DELIVERY_ORDERS" as const, },
       { href: "/dashboard/purchases", icon: <ShoppingBag />, label: "Purchase Orders", permission: "VIEW_PURCHASES" as const },
-      { href: "/dashboard/sales", icon: <DollarSign />, label: "Penjualan", permission: "VIEW_SALES" as const },
+      { href: "/dashboard/sales", icon: <DollarSign />, label: "Penjualan", permission: "VIEW_MENU_SALES" as const },
       { href: "/dashboard/pos", icon: <CreditCard />, label: "Point of Sale", permission: "ACCESS_POS" as const },
     ],
   },
@@ -59,7 +59,7 @@ const menuGroups = [
     label: "Debts & Receivables",
     items: [
       { href: "/dashboard/supplier-debts", icon: <TrendingDown />, label: "Utang Supplier", permission: "VIEW_SUPPLIER_DEBTS" as const },
-      { href: "/dashboard/customer-debts", icon: <TrendingUp />, label: "Piutang Customer", permission: "VIEW_CUSTOMER_DEBTS" as const },
+      { href: "/dashboard/customer-debts", icon: <TrendingUp />, label: "Piutang Customer", permission: "VIEW_MENU_CUSTOMERS_DEBTS" as const },
     ],
   },
   {
@@ -69,7 +69,7 @@ const menuGroups = [
       {
         href: "/dashboard/users", icon: <Shield />, label: "Manajemen Akun", permission: "MANAGE_USERS" as const
       },
-      { href: "/dashboard/settings", icon: <Settings />, label: "Pengaturan", permission: "VIEW_SETTINGS" as const },
+      { href: "/dashboard/settings", icon: <Settings />, label: "Pengaturan", permission: "VIEW_MENU_SETTINGS" as const },
     ],
   },
 ];

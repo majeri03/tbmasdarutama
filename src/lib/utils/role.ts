@@ -81,6 +81,14 @@ export const PERMISSIONS = {
   MANAGE_LANDING_PAGE: ["SUPER_ADMIN"] as Role[],
   MANAGE_USERS: ["SUPER_ADMIN"] as Role[],
 
+
+  // View menu
+  VIEW_MENU_PRODUCTS: ["SUPER_ADMIN", "ADMIN"] as Role[],
+  VIEW_MENU_STOCK: ["SUPER_ADMIN", "ADMIN"] as Role[],
+  VIEW_MENU_SALES: ["SUPER_ADMIN", "ADMIN"] as Role[],
+  VIEW_MENU_SETTINGS: ["SUPER_ADMIN", "ADMIN"] as Role[],
+  VIEW_MENU_DASHBOARD: ["SUPER_ADMIN", "ADMIN"] as Role[],
+  VIEW_MENU_CUSTOMERS_DEBTS: ["SUPER_ADMIN", "ADMIN"] as Role[],
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
