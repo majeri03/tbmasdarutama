@@ -43,7 +43,7 @@ export const PERMISSIONS = {
 
   // Customers
   VIEW_CUSTOMERS: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
-  CREATE_CUSTOMER: ["SUPER_ADMIN", "ADMIN"] as Role[],
+  CREATE_CUSTOMER: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
   EDIT_CUSTOMER: ["SUPER_ADMIN", "ADMIN"] as Role[],
   DELETE_CUSTOMER: ["SUPER_ADMIN", "ADMIN"] as Role[],
 
