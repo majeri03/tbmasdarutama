@@ -3,18 +3,17 @@
 import { useState } from "react";
 import { createCustomer } from "@/lib/actions/customer.actions";
 import { X, Loader2 } from "lucide-react";
-import { useToast } from "@/components/ui/toast";
 import { CustomerType } from "@prisma/client";
 
 interface QuickAddCustomerProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: (customerId: string) => void;
+    showToast: (message: string, type?: "success" | "error" | "info") => void;
 }
 
-export function QuickAddCustomer({ isOpen, onClose, onSuccess }: QuickAddCustomerProps) {
+export function QuickAddCustomer({ isOpen, onClose, onSuccess, showToast }: QuickAddCustomerProps) {
     const [isLoading, setIsLoading] = useState(false);
-    const { showToast } = useToast();
     const [formData, setFormData] = useState<{
         name: string;
         phone: string;

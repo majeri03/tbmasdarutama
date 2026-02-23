@@ -196,8 +196,7 @@ export default function POSPage() {
             }
 
             else {
-                // --- KASUS B: ITEM BELUM ADA (UPDATE BIASA) ---
-                // Tidak ada duplikat, cukup ganti satuan dan harga saja.
+             
 
                 return prevItems.map((item) => {
                     if (item.id === cartId) {
@@ -341,6 +340,7 @@ export default function POSPage() {
                     isOpen={showQuickAddCustomer}
                     onClose={() => setShowQuickAddCustomer(false)}
                     onSuccess={handleQuickAddSuccess}
+                    showToast={showToast}
                 />
 
                 {selectedCustomer && (

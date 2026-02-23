@@ -34,7 +34,7 @@ export function Toast({ message, type = "success", duration = 3000, onClose }: T
 
   return (
     <div
-      className={`fixed top-6 right-6 z-50 glass-card p-4 min-w-[300px] max-w-md animate-slide-up ${styles[type]}`}
+      className={`fixed top-6 right-6 z-[9999] glass-card p-4 min-w-[300px] max-w-md animate-slide-up ${styles[type]}`}
     >
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0">{icons[type]}</div>
