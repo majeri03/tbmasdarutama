@@ -6,7 +6,6 @@ import { getCurrentUser } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { UserFormValues } from "../validations/user.schema";
 import { Prisma, Role } from "@prisma/client";
-// Helper: Security Check
 async function requireSuperAdmin() {
   const user = await getCurrentUser();
   if (!user || user.role !== "SUPER_ADMIN") {
@@ -17,10 +16,10 @@ async function requireSuperAdmin() {
   return user;
 }
 
-// 1. GET ALL USERS
+// GET ALL USERS
 export async function getUsers() {
   try {
-    await requireSuperAdmin(); // Proteksi level data
+    await requireSuperAdmin();
 
     const users = await prisma.user.findMany({
       orderBy: { createdAt: "desc" },
@@ -33,25 +32,22 @@ export async function getUsers() {
         address: true,
         isActive: true,
         createdAt: true,
-        // Password TIDAK kita ambil demi keamanan
       },
     });
 
     return { success: true, data: users };
   } catch (error) {
-    // Cek apakah error adalah instance dari Error javascript
     const message =
       error instanceof Error ? error.message : "Terjadi kesalahan";
     return { success: false, error: message };
   }
 }
 
-// 2. CREATE USER
+// CREATE USER
 export async function createUser(data: UserFormValues) {
   try {
     await requireSuperAdmin();
 
-    // Cek duplikat email
     const existing = await prisma.user.findUnique({
       where: { email: data.email },
     });
@@ -82,18 +78,16 @@ export async function createUser(data: UserFormValues) {
     revalidatePath("/dashboard/users");
     return { success: true, message: "User berhasil dibuat" };
   } catch (error) {
-    // Cek apakah error adalah instance dari Error javascript
     const message = error instanceof Error ? error.message : "Terjadi kesalahan";
     return { success: false, error: message };
 }
 }
 
-// 3. UPDATE USER
+// UPDATE USER
 export async function updateUser(id: string, data: UserFormValues) {
   try {
     await requireSuperAdmin();
 
-    // Cek apakah email bentrok dengan user lain
     const existing = await prisma.user.findFirst({
       where: {
         email: data.email,
@@ -112,7 +106,6 @@ export async function updateUser(id: string, data: UserFormValues) {
       isActive: data.isActive,
     };
 
-    // Hanya update password jika input tidak kosong
     if (data.password && data.password.trim() !== "") {
       if (data.password.length < 6)
         return { success: false, error: "Password minimal 6 karakter" };
@@ -127,13 +120,12 @@ export async function updateUser(id: string, data: UserFormValues) {
     revalidatePath("/dashboard/users");
     return { success: true, message: "User berhasil diperbarui" };
   } catch (error) {
-    // Cek apakah error adalah instance dari Error javascript
     const message = error instanceof Error ? error.message : "Terjadi kesalahan";
     return { success: false, error: message };
 }
 }
 
-// 4. DELETE USER
+// DELETE USER
 export async function deleteUser(id: string) {
   try {
     const currentUser = await requireSuperAdmin();
@@ -147,11 +139,9 @@ export async function deleteUser(id: string) {
     revalidatePath("/dashboard/users");
     return { success: true, message: "User berhasil dihapus" };
 
-  } catch (error) { // <--- HAPUS ': any', biarkan default (unknown)
+  } catch (error) {
     console.error("Delete User Error:", error);
 
-    // Cara aman mengambil pesan error dari tipe 'unknown'
-    // Cek apakah ini object Error, jika ya ambil .message, jika tidak ubah jadi string
     const errorMessage = error instanceof Error ? error.message : String(error);
 
     if (

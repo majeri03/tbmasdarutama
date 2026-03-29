@@ -72,7 +72,7 @@ export const paymentValidationSchema = z
     (data) => {
       // Jika CREDIT, customer tidak boleh "Customer Umum"
       if (data.paymentMethod === "CREDIT") {
-        return data.customerId !== "customer-umum-id"; // Nanti diganti dengan ID real
+        return data.customerId !== "customer-umum-id";
       }
       return true;
     },

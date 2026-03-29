@@ -73,7 +73,7 @@ function numberToWords(num: number): string {
     return "Angka terlalu besar";
 }
 
-// --- FUNGSI BARU: GENERATE HTML SAJA ---
+// --- GENERATE HTML ---
 export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSetting | null): string => {
     const storeName = storeSetting?.name || "PT. TB MASDAR UTAMA";
     const storeAddress = storeSetting?.address || "Alamat belum diatur";
@@ -235,7 +235,6 @@ export const printInvoice = (sale: InvoiceData, storeSetting: StoreSetting) => {
 
     const htmlContent = generateInvoiceHtml(sale, storeSetting);
     
-    // Tambahkan script: onafterprint akan mentrigger window.close()
     const htmlWithScript = htmlContent.replace('</body>', `
         <script>
             window.onload = function() {
