@@ -12,20 +12,18 @@ export async function GET(request: Request) {
   }
 
   try {
-    // 1. Ubah parameter tangkapan menjadi "search" (bukan category)
     const { searchParams } = new URL(request.url);
     const searchQuery = searchParams.get("search");
 
-    // 2. Gunakan tipe data Prisma yang Anda buat
     const whereCondition: Prisma.ProductWhereInput = {
       isActive: true,
       deletedAt: null,
     };
 
-    // 3. LOGIKA PENCARIAN GANDA: Nama Produk ATAU Nama Kategori
+    // Pencarian ganda: Nama Produk ATAU Nama Kategori
     if (searchQuery) {
       whereCondition.OR = [
-        { name: { contains: searchQuery, mode: "insensitive" } }, 
+        { name: { contains: searchQuery, mode: "insensitive" } },
         { category: { name: { contains: searchQuery, mode: "insensitive" } } }
       ];
     }
@@ -33,22 +31,31 @@ export async function GET(request: Request) {
     const products = await prisma.product.findMany({
       where: whereCondition,
       select: {
+        id: true,      // productId — dibutuhkan AI untuk siapkan_orderan_otomatis
         code: true,
         name: true,
+        currentStock: true,
         productUnits: {
           where: { isPrimary: true },
-          select: { sellPrice: true, unit: { select: { name: true } } },
+          select: {
+            id: true,        // unitId — dibutuhkan AI untuk siapkan_orderan_otomatis
+            sellPrice: true,
+            unit: { select: { name: true } },
+          },
         },
       },
-      orderBy: { name: 'asc' },
+      orderBy: { name: "asc" },
     });
 
     const formattedProducts = products.map((product) => {
-      const primaryUnit = product.productUnits[0]; 
+      const primaryUnit = product.productUnits[0];
       return {
+        id: product.id,               // productId
         kode: product.code,
         nama: product.name,
+        stok: product.currentStock,
         satuan: primaryUnit?.unit?.name || "-",
+        unitId: primaryUnit?.id || null, // unitId
         harga: primaryUnit?.sellPrice ? Number(primaryUnit.sellPrice) : 0,
       };
     });
