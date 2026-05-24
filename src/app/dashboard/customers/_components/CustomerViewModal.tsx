@@ -43,6 +43,7 @@ export function CustomerViewModal({
 
   const getCustomerTypeLabel = (type: CustomerType) => {
     const types = {
+      [CustomerType.UMUM]: { label: "Umum", color: "gray" },
       [CustomerType.REGULER]: { label: "Reguler", color: "blue" },
       [CustomerType.GROSIR]: { label: "Grosir", color: "green" },
       [CustomerType.PROYEK]: { label: "Proyek", color: "purple" },
