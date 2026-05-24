@@ -923,24 +923,72 @@ export async function deleteSale(id: string, passwordInput?: string) {
       return { success: false, error: "Penjualan tidak ditemukan" };
     }
 
-    if (sale.status !== SaleStatus.PENDING) {
+    if (sale.status === SaleStatus.CANCELLED) {
       return {
         success: false,
-        error: "Hanya penjualan PENDING yang bisa dihapus",
+        error: "Penjualan sudah dibatalkan sebelumnya!",
       };
     }
 
-    // Delete sale (cascade will delete saleItems)
-    await prisma.sale.delete({ where: { id } });
+    // Soft delete (Tutup Buku): update status to CANCELLED and restore stock/debt
+    await prisma.$transaction(async (tx) => {
+      // 1. Update sale status to CANCELLED
+      await tx.sale.update({
+        where: { id },
+        data: {
+          status: SaleStatus.CANCELLED,
+          notes: `${sale.notes || ""}\n[DIHAPUS] Dihapus oleh Admin via Konfirmasi Password.`.trim(),
+        },
+      });
+
+      // 2. Restore stock for each item
+      for (const item of sale.saleItems) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            currentStock: {
+              increment: item.quantity,
+            },
+          },
+        });
+
+        // 3. Create stock movement log
+        await tx.stockMovement.create({
+          data: {
+            productId: item.productId,
+            type: "IN",
+            quantity: item.quantity,
+            notes: `Pembatalan/Penghapusan Transaksi ${sale.invoiceNumber}`,
+            referenceType: "Sale Cancellation",
+            referenceId: sale.id,
+            createdById: session.user.id,
+          },
+        });
+      }
+
+      // 4. Update customer debt if credit
+      if (sale.paymentMethod === PaymentMethod.CREDIT) {
+        await tx.customerDebt.updateMany({
+          where: {
+            saleId: sale.id,
+          },
+          data: {
+            remainingDebt: 0,
+            status: "PAID", // Mark as settled/reverted
+            notes: `[CANCELLED/DIHAPUS] Transaksi dihapus`,
+          },
+        });
+      }
+    });
 
     revalidatePath("/dashboard/sales");
 
     return {
       success: true,
-      message: `Penjualan ${sale.invoiceNumber} berhasil dihapus`,
+      message: `Penjualan ${sale.invoiceNumber} berhasil dibatalkan (Tutup Buku)`,
     };
   } catch (error) {
     console.error("Delete sale error:", error);
-    return { success: false, error: "Gagal menghapus penjualan" };
+    return { success: false, error: "Gagal memproses penghapusan penjualan" };
   }
 }

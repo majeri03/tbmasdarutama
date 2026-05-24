@@ -28,8 +28,8 @@ export function DeleteSaleDialog({ sale, onSuccess }: DeleteSaleDialogProps) {
   };
 
   const handleDelete = async () => {
-    if (sale.status !== "PENDING") {
-      setError("Hanya penjualan PENDING yang bisa dihapus!");
+    if (sale.status === "CANCELLED") {
+      setError("Transaksi ini sudah dibatalkan!");
       return;
     }
 
@@ -43,17 +43,17 @@ export function DeleteSaleDialog({ sale, onSuccess }: DeleteSaleDialogProps) {
     try {
       const result = await deleteSale(sale.id, password);
       if (result.success) {
-        setSuccess(result.message || "Penjualan berhasil dihapus");
+        setSuccess(result.message || "Penjualan berhasil dibatalkan (Tutup Buku)");
         setPassword("");
         setTimeout(() => {
           setIsOpen(false);
           onSuccess();
         }, 1000);
       } else {
-        setError(result.error || "Gagal menghapus penjualan");
+        setError(result.error || "Gagal memproses penghapusan penjualan");
       }
     } catch {
-      setError("Gagal menghapus penjualan");
+      setError("Gagal memproses penghapusan penjualan");
     } finally {
       setLoading(false);
     }
@@ -65,7 +65,7 @@ export function DeleteSaleDialog({ sale, onSuccess }: DeleteSaleDialogProps) {
         onClick={() => setIsOpen(true)}
         className="btn-icon-danger"
         title="Hapus"
-        disabled={sale.status !== "PENDING"}
+        disabled={sale.status === "CANCELLED"}
       >
         <Trash2 className="w-4 h-4" />
       </button>
@@ -76,7 +76,7 @@ export function DeleteSaleDialog({ sale, onSuccess }: DeleteSaleDialogProps) {
             <div className="modal-header bg-gradient-to-r from-red-500 to-red-600">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <Trash2 className="w-5 h-5" />
-                Hapus Penjualan
+                Hapus Penjualan (Tutup Buku)
               </h2>
               <button
                 onClick={handleClose}
@@ -102,14 +102,14 @@ export function DeleteSaleDialog({ sale, onSuccess }: DeleteSaleDialogProps) {
                 <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
                   <Trash2 className="w-6 h-6 text-red-600" />
                 </div>
-                <p className="text-gray-700 text-sm mb-1">
-                  Apakah Anda yakin ingin menghapus penjualan ini?
+                <p className="text-gray-700 text-sm mb-1 font-semibold">
+                  Apakah Anda yakin ingin menghapus/membatalkan penjualan ini?
                 </p>
-                <p className="text-xs text-gray-500">
-                  Invoice: <span className="font-semibold">{sale.invoiceNumber}</span>
+                <p className="text-xs text-gray-500 mb-2">
+                  Invoice: <span className="font-semibold text-blue-600">{sale.invoiceNumber}</span>
                 </p>
-                <p className="text-xs text-red-600 mt-1">
-                  Tindakan ini tidak dapat dibatalkan!
+                <p className="text-xs text-red-600 bg-red-50 border border-red-100 p-2.5 rounded-lg mt-1 text-left leading-relaxed">
+                  <strong>Pemberitahuan Tutup Buku:</strong> Transaksi tidak dihapus secara fisik dari database, melainkan ditandai sebagai <strong>DIBATALKAN</strong> (pencatatan lengkap diarsip). Stok barang akan otomatis dikembalikan ke gudang dan sisa piutang akan dibatalkan.
                 </p>
               </div>
 

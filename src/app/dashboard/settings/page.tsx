@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Store, Lock, Globe } from "lucide-react";
+import { Store, Lock, Globe, User, ShieldAlert } from "lucide-react";
 import StoreSettingsTab from "./_components/StoreSettingsTab";
 import PasswordSettingsTab from "./_components/PasswordSettingsTab";
 import LandingPageTab from "./_components/LandingPageTab";
 import ProfileSettingsTab from "./_components/ProfileSettingsTab";
-import { User } from "lucide-react";
+import DataManagementTab from "./_components/DataManagementTab";
 
-type TabType = "profile" | "store" | "password" | "landing";
+type TabType = "profile" | "store" | "password" | "landing" | "data";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<TabType>("profile");
@@ -18,6 +18,7 @@ export default function SettingsPage() {
     { id: "store" as TabType, label: "Info Toko", icon: Store },
     { id: "password" as TabType, label: "Ganti Password", icon: Lock },
     { id: "landing" as TabType, label: "Landing Page", icon: Globe },
+    { id: "data" as TabType, label: "Manajemen Data", icon: ShieldAlert },
   ];
 
   return (
@@ -54,6 +55,7 @@ export default function SettingsPage() {
         {activeTab === "store" && <StoreSettingsTab />}
         {activeTab === "password" && <PasswordSettingsTab />}
         {activeTab === "landing" && <LandingPageTab />}
+        {activeTab === "data" && <DataManagementTab />}
       </div>
     </div>
   );
