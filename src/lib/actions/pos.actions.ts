@@ -230,8 +230,26 @@ export async function createPosTransaction(data: CreateSaleInput) {
     const productIds = validated.items.map((i) => i.productId);
     const products = await prisma.product.findMany({
         where: { id: { in: productIds } },
-        select: { id: true, currentStock: true, name: true }
+        select: {
+            id: true,
+            currentStock: true,
+            name: true,
+            productUnits: {
+                select: {
+                    id: true,
+                    unitId: true,
+                },
+            },
+        }
     });
+
+    // Build a map of ProductUnit.id to Unit.id
+    const productUnitToUnitMap = new Map<string, string>();
+    for (const product of products) {
+        for (const pu of product.productUnits) {
+            productUnitToUnitMap.set(pu.id, pu.unitId);
+        }
+    }
     
     for (const item of validated.items) {
         const product = products.find(p => p.id === item.productId);
@@ -275,14 +293,20 @@ export async function createPosTransaction(data: CreateSaleInput) {
                     : SaleStatus.COMPLETED,
                 notes: "POS Transaction",
                 saleItems: {
-                    create: validated.items.map(item => ({
-                        productId: item.productId,
-                        unitId: item.productUnitId,
-                        quantity: item.quantity,
-                        unitPrice: item.unitPrice,
-                        discount: item.discount,
-                        subtotal: item.subtotal
-                    }))
+                    create: validated.items.map(item => {
+                        const unitId = productUnitToUnitMap.get(item.productUnitId);
+                        if (!unitId) {
+                            throw new Error(`Master Satuan tidak ditemukan untuk productUnitId: ${item.productUnitId}`);
+                        }
+                        return {
+                            productId: item.productId,
+                            unitId: unitId, // resolved to Unit.id
+                            quantity: item.quantity,
+                            unitPrice: item.unitPrice,
+                            discount: item.discount,
+                            subtotal: item.subtotal
+                        };
+                    })
                 }
             },
             include: {
@@ -320,6 +344,12 @@ export async function createPosTransaction(data: CreateSaleInput) {
 
         // 3. Handle Debt (Jika Kredit)
         if (validated.paymentMethod === PaymentMethod.CREDIT) {
+             const debtStatus = validated.paidAmount >= validated.grandTotal
+                 ? "PAID"
+                 : validated.paidAmount > 0
+                     ? "PARTIAL"
+                     : "UNPAID";
+
              await tx.customerDebt.create({
                  data: {
                      debtNumber: `DEBT-${Date.now()}`,
@@ -329,7 +359,7 @@ export async function createPosTransaction(data: CreateSaleInput) {
                      paidAmount: validated.paidAmount,
                      remainingDebt: validated.grandTotal - validated.paidAmount,
                      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-                     status: "UNPAID",
+                     status: debtStatus,
                      notes: "POS Credit"
                  }
              });

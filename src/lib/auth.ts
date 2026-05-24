@@ -26,6 +26,7 @@ declare module "@auth/core/jwt" {
   }
 }
 export const authConfig: NextAuthConfig = {
+  trustHost: true,
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -69,6 +70,19 @@ export const authConfig: NextAuthConfig = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+      } else if (token.id && !token.role) {
+        // Fallback: Jika token.role kosong (misal karena session lama), ambil dari database
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { role: true },
+          });
+          if (dbUser) {
+            token.role = dbUser.role;
+          }
+        } catch (error) {
+          console.error("Error fetching user role in jwt callback:", error);
+        }
       }
       return token;
     },

@@ -5,13 +5,16 @@ import { Store, Lock, Globe } from "lucide-react";
 import StoreSettingsTab from "./_components/StoreSettingsTab";
 import PasswordSettingsTab from "./_components/PasswordSettingsTab";
 import LandingPageTab from "./_components/LandingPageTab";
+import ProfileSettingsTab from "./_components/ProfileSettingsTab";
+import { User } from "lucide-react";
 
-type TabType = "store" | "password" | "landing";
+type TabType = "profile" | "store" | "password" | "landing";
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<TabType>("store");
+  const [activeTab, setActiveTab] = useState<TabType>("profile");
 
   const tabs = [
+    { id: "profile" as TabType, label: "Profil Akun", icon: User },
     { id: "store" as TabType, label: "Info Toko", icon: Store },
     { id: "password" as TabType, label: "Ganti Password", icon: Lock },
     { id: "landing" as TabType, label: "Landing Page", icon: Globe },
@@ -47,6 +50,7 @@ export default function SettingsPage() {
 
       {/* Tab Content */}
       <div className="glass-card p-6">
+        {activeTab === "profile" && <ProfileSettingsTab />}
         {activeTab === "store" && <StoreSettingsTab />}
         {activeTab === "password" && <PasswordSettingsTab />}
         {activeTab === "landing" && <LandingPageTab />}

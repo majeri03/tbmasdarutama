@@ -13,19 +13,28 @@ import { auth } from "../auth";
 import { requireMinimumRole, requirePermission } from "@/lib/utils/role";
 
 //    GENERATE PRODUCT CODE   
-async function generateProductCode(): Promise<string> {
-  const lastProduct = await prisma.product.findFirst({
-    orderBy: { code: "desc" },
+async function generateProductCode(tx: Prisma.TransactionClient = prisma): Promise<string> {
+  const prdProducts = await tx.product.findMany({
+    where: {
+      code: {
+        startsWith: "PRD-",
+      },
+    },
     select: { code: true },
   });
 
-  if (!lastProduct) {
-    return "PRD-00001";
+  let maxNumber = 0;
+  for (const p of prdProducts) {
+    const parts = p.code.split("-");
+    if (parts.length === 2) {
+      const num = parseInt(parts[1], 10);
+      if (!isNaN(num) && num > maxNumber) {
+        maxNumber = num;
+      }
+    }
   }
 
-  const lastNumber = parseInt(lastProduct.code.split("-")[1]);
-  const nextNumber = lastNumber + 1;
-
+  const nextNumber = maxNumber + 1;
   return `PRD-${nextNumber.toString().padStart(5, "0")}`;
 }
 
@@ -107,10 +116,11 @@ export async function createProduct(data: CreateProductInput) {
       }
     }
 
-    const code = await generateProductCode();
-
     // Create product with units and images in transaction
     const product = await prisma.$transaction(async (tx) => {
+      // 0. Generate unique product code inside transaction
+      const code = await generateProductCode(tx);
+
       // 1. Create product
       const newProduct = await tx.product.create({
         data: {
@@ -175,10 +185,26 @@ export async function createProduct(data: CreateProductInput) {
   } catch (error) {
     console.error("[CREATE_PRODUCT_ERROR]", error);
 
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const targets = (error.meta?.target as string[]) || [];
+      if (targets.includes("barcode")) {
+        return {
+          success: false,
+          error: "Barcode sudah digunakan produk lain!",
+        };
+      }
+      if (targets.includes("code")) {
+        return {
+          success: false,
+          error: "Kode produk sudah digunakan!",
+        };
+      }
+    }
+
     if (error instanceof Error && error.message.includes("Unique constraint")) {
       return {
         success: false,
-        error: "Barcode sudah digunakan produk lain!",
+        error: "Data unik (seperti kode atau barcode) sudah digunakan produk lain!",
       };
     }
 
@@ -520,6 +546,23 @@ export async function updateProduct(id: string, data: UpdateProductInput) {
     };
   } catch (error) {
     console.error("[UPDATE_PRODUCT_ERROR]", error);
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const targets = (error.meta?.target as string[]) || [];
+      if (targets.includes("barcode")) {
+        return {
+          success: false,
+          error: "Barcode sudah digunakan produk lain!",
+        };
+      }
+      if (targets.includes("code")) {
+        return {
+          success: false,
+          error: "Kode produk sudah digunakan!",
+        };
+      }
+    }
+
     return {
       success: false,
       error: "Gagal memperbarui produk. Silakan coba lagi.",

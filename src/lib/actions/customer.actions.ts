@@ -73,6 +73,7 @@ export async function createCustomer(data: CreateCustomerInput) {
 
     return {
       success: true,
+      data: customer,
       message: `Customer "${customer.name}" (${customer.code}) berhasil ditambahkan!`,
     };
   } catch (error) {

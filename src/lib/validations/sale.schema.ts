@@ -52,13 +52,14 @@ export const saleFilterSchema = z.object({
   cashierId: z.string().optional(),
   paymentMethod: z.nativeEnum(PaymentMethod).optional(),
   status: z.nativeEnum(SaleStatus).optional(),
-  dateFrom: z.date().optional(),
-  dateTo: z.date().optional(),
+  dateFrom: z.coerce.date().optional(),
+  dateTo: z.coerce.date().optional(),
   page: z.number().int().positive().default(1),
   limit: z.number().int().positive().default(10),
+  sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
 });
 
-export type SaleFilterInput = z.infer<typeof saleFilterSchema>;
+export type SaleFilterInput = z.input<typeof saleFilterSchema>;
 
 // ==================== PAYMENT VALIDATION SCHEMA ====================
 export const paymentValidationSchema = z

@@ -11,7 +11,7 @@ export const deliveryItemSchema = z.object({
 export const createDeliveryOrderSchema = z.object({
   customerId: z.string().min(1, "Customer is required"),
   saleId: z.string().optional(),
-  deliveryDate: z.date({
+  deliveryDate: z.coerce.date({
     required_error: "Delivery date is required",
   }),
   driver: z.string().optional(),
@@ -24,7 +24,7 @@ export const updateDeliveryStatusSchema = z.object({
   id: z.string().min(1, "Delivery order ID is required"),
   status: z.nativeEnum(DeliveryStatus),
   receivedBy: z.string().optional(),
-  receivedDate: z.date().optional(),
+  receivedDate: z.coerce.date().optional(),
 });
 
 export type CreateDeliveryOrderInput = z.infer<typeof createDeliveryOrderSchema>;

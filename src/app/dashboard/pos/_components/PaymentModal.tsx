@@ -69,7 +69,7 @@ export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuc
                 customerId: customer.id,
                 items: items.map((item) => ({
                     productId: item.productId,
-                    productUnitId: item.unitId,
+                    productUnitId: item.productUnitId,
                     quantity: item.quantity,
                     unitPrice: item.unitPrice,
                     discount: item.discount,

@@ -21,6 +21,7 @@ function serializePrismaData<T>(data: T): T {
 export type DateRangeFilter = {
   dateFrom?: Date;
   dateTo?: Date;
+  period?: 'daily' | 'weekly' | 'monthly';
 };
 
 export type ReportFilters = DateRangeFilter & {
@@ -158,7 +159,26 @@ export async function getFinancialReport(filters: DateRangeFilter) {
       return { success: false, error: "Unauthorized" };
     }
     requirePermission(session, "VIEW_REPORTS");
-    const { dateFrom, dateTo } = filters;
+
+    let dateFrom = filters.dateFrom;
+    let dateTo = filters.dateTo;
+    const period = filters.period;
+
+    if (period) {
+      const now = new Date();
+      dateTo = endOfDay(now);
+
+      if (period === 'daily') {
+        dateFrom = startOfDay(now);
+      } else if (period === 'weekly') {
+        const sevenDaysAgo = new Date(now);
+        sevenDaysAgo.setDate(now.getDate() - 6);
+        dateFrom = startOfDay(sevenDaysAgo);
+      } else if (period === 'monthly') {
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        dateFrom = startOfDay(startOfMonth);
+      }
+    }
 
     const sales = await prisma.sale.findMany({
       where: {
@@ -193,8 +213,18 @@ export async function getFinancialReport(filters: DateRangeFilter) {
       },
     });
 
+    const customerDebts = await prisma.customerDebt.findMany({
+      where: {
+        AND: [
+          dateFrom ? { createdAt: { gte: startOfDay(dateFrom) } } : {},
+          dateTo ? { createdAt: { lte: endOfDay(dateTo) } } : {},
+        ],
+      },
+    });
+
     const serializedSales = serializePrismaData(sales);
     const serializedPurchases = serializePrismaData(purchases);
+    const serializedCustomerDebts = serializePrismaData(customerDebts);
 
     const totalRevenue = serializedSales.reduce((sum: number, sale: any) => sum + Number(sale.grandTotal), 0);
     const totalDiscount = serializedSales.reduce((sum: number, sale: any) => sum + Number(sale.discount), 0);
@@ -208,6 +238,7 @@ export async function getFinancialReport(filters: DateRangeFilter) {
     }, 0);
 
     const totalPurchases = serializedPurchases.reduce((sum: number, purchase: any) => sum + Number(purchase.grandTotal), 0);
+    const totalCustomerDebt = serializedCustomerDebts.reduce((sum: number, debt: any) => sum + Number(debt.remainingDebt), 0);
 
     const grossProfit = totalRevenue - totalCOGS;
     const grossProfitMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
@@ -223,6 +254,7 @@ export async function getFinancialReport(filters: DateRangeFilter) {
       netProfit: grossProfit,
       transactionCount: serializedSales.length,
       purchaseCount: serializedPurchases.length,
+      totalCustomerDebt,
     };
 
     return {

@@ -43,6 +43,7 @@ interface CartItem {
     productId: string;
     productCode: string;
     productName: string;
+    productUnitId: string;
     unitId: string;
     unitName: string;
     quantity: number;
@@ -139,6 +140,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
                 productId: product.id,
                 productCode: product.code,
                 productName: product.name,
+                productUnitId: unit.id,
                 unitId: unitId,
                 unitName: unit.unit.symbol || unit.unit.name,
                 quantity: 1,
@@ -210,7 +212,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
                 customerId,
                 items: cart.map((item) => ({
                     productId: item.productId,
-                    productUnitId: item.unitId,  // ✅ FIX: ganti ke productUnitId
+                    productUnitId: item.productUnitId,  // ✅ FIX: ganti ke productUnitId
                     quantity: item.quantity,
                     unitPrice: item.unitPrice,
                     discount: item.discount,

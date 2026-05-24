@@ -16,7 +16,7 @@ export type PurchaseItemInput = z.infer<typeof purchaseItemSchema>;
 // ==================== CREATE PURCHASE SCHEMA ====================
 export const createPurchaseSchema = z.object({
   supplierId: z.string().min(1, "Supplier harus dipilih"),
-  purchaseDate: z.date().default(() => new Date()),
+  purchaseDate: z.coerce.date().default(() => new Date()),
   items: z.array(purchaseItemSchema).min(1, "Minimal 1 produk harus ditambahkan"),
   discount: z.number().min(0).default(0),
   tax: z.number().min(0).default(0),
@@ -31,7 +31,7 @@ export type CreatePurchaseInput = z.infer<typeof createPurchaseSchema>;
 export const updatePurchaseSchema = z.object({
   id: z.string().min(1),
   supplierId: z.string().min(1, "Supplier harus dipilih"),
-  purchaseDate: z.date(),
+  purchaseDate: z.coerce.date(),
   items: z.array(purchaseItemSchema).min(1, "Minimal 1 produk harus ditambahkan"),
   discount: z.number().min(0).default(0),
   tax: z.number().min(0).default(0),
@@ -45,7 +45,7 @@ export type UpdatePurchaseInput = z.infer<typeof updatePurchaseSchema>;
 // ==================== RECEIVE PURCHASE SCHEMA ====================
 export const receivePurchaseSchema = z.object({
   id: z.string().min(1),
-  receivedDate: z.date().default(() => new Date()),
+  receivedDate: z.coerce.date().default(() => new Date()),
   notes: z.string().optional(),
 });
 
@@ -56,8 +56,8 @@ export const filterPurchaseSchema = z.object({
   search: z.string().optional(),
   supplierId: z.string().optional(),
   status: z.enum(["PENDING", "RECEIVED", "PARTIAL", "CANCELLED"]).optional(),
-  dateFrom: z.date().optional(),
-  dateTo: z.date().optional(),
+  dateFrom: z.coerce.date().optional(),
+  dateTo: z.coerce.date().optional(),
   page: z.number().min(1).default(1),
   limit: z.number().min(1).max(100).default(10),
 });

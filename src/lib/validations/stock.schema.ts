@@ -26,8 +26,8 @@ export const stockFilterSchema = z.object({
   categoryId: z.string().optional(),
   supplierId: z.string().optional(),
   movementType: z.nativeEnum(MovementType).optional(),
-  dateFrom: z.date().optional(),
-  dateTo: z.date().optional(),
+  dateFrom: z.coerce.date().optional(),
+  dateTo: z.coerce.date().optional(),
   page: z.number().int().positive().default(1),
   limit: z.number().int().positive().default(10),
 });

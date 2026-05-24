@@ -75,15 +75,15 @@ export default async function DashboardPage() {
               </div>
               <div className="flex items-center gap-1 text-green-600 text-sm font-semibold">
                 <ArrowUpRight className="w-4 h-4" />
-                <span>{stats?.sales.growth ?? 0}%</span>
+                <span>{stats?.sales?.growth ?? 0}%</span>
               </div>
             </div>
             <h3 className="text-gray-600 text-sm font-semibold mb-1">Total Penjualan</h3>
             <p className="text-3xl font-bold text-gray-900 mb-1">
-              Rp {stats?.sales.total ? (stats.sales.total / 1000000).toFixed(1) : '0'}M
+              Rp {stats?.sales?.total ? (stats.sales.total / 1000000).toFixed(1) : '0'}M
             </p>
             <p className="text-gray-500 text-xs">
-              {stats?.sales.growth ?? 0}% dari bulan lalu
+              {stats?.sales?.growth ?? 0}% dari bulan lalu
             </p>
           </div>
 
@@ -98,15 +98,15 @@ export default async function DashboardPage() {
               </div>
               <div className="flex items-center gap-1 text-green-600 text-sm font-semibold">
                 <ArrowUpRight className="w-4 h-4" />
-                <span>{stats?.products.growth ?? 0}%</span>
+                <span>{stats?.products?.growth ?? 0}%</span>
               </div>
             </div>
             <h3 className="text-gray-600 text-sm font-semibold mb-1">Total Produk</h3>
             <p className="text-3xl font-bold text-gray-900 mb-1">
-              {stats?.products.total.toLocaleString('id-ID') ?? '0'}
+              {stats?.products?.total.toLocaleString('id-ID') ?? '0'}
             </p>
             <p className="text-gray-500 text-xs">
-              +{stats?.products.newThisMonth ?? 0} produk baru
+              +{stats?.products?.newThisMonth ?? 0} produk baru
             </p>
           </div>
 
@@ -121,15 +121,15 @@ export default async function DashboardPage() {
               </div>
               <div className="flex items-center gap-1 text-green-600 text-sm font-semibold">
                 <ArrowUpRight className="w-4 h-4" />
-                <span>{stats?.customers.growth ?? 0}%</span>
+                <span>{stats?.customers?.growth ?? 0}%</span>
               </div>
             </div>
             <h3 className="text-gray-600 text-sm font-semibold mb-1">Total Customer</h3>
             <p className="text-3xl font-bold text-gray-900 mb-1">
-              {stats?.customers.total.toLocaleString('id-ID') ?? '0'}
+              {stats?.customers?.total.toLocaleString('id-ID') ?? '0'}
             </p>
             <p className="text-gray-500 text-xs">
-              +{stats?.customers.newThisMonth ?? 0} customer baru
+              +{stats?.customers?.newThisMonth ?? 0} customer baru
             </p>
           </div>
 
@@ -142,22 +142,22 @@ export default async function DashboardPage() {
               }}>
                 <DollarSign className="w-6 h-6 text-red-600" />
               </div>
-              <div className={`flex items-center gap-1 text-sm font-semibold ${(stats?.debt.change ?? 0) < 0 ? 'text-green-600' : 'text-red-600'
+              <div className={`flex items-center gap-1 text-sm font-semibold ${(stats?.debt?.change ?? 0) < 0 ? 'text-green-600' : 'text-red-600'
                 }`}>
-                {(stats?.debt.change ?? 0) < 0 ? (
+                {(stats?.debt?.change ?? 0) < 0 ? (
                   <ArrowDownRight className="w-4 h-4" />
                 ) : (
                   <ArrowUpRight className="w-4 h-4" />
                 )}
-                <span>{Math.abs(stats?.debt.change ?? 0)}%</span>
+                <span>{Math.abs(stats?.debt?.change ?? 0)}%</span>
               </div>
             </div>
             <h3 className="text-gray-600 text-sm font-semibold mb-1">Utang Customer</h3>
             <p className="text-3xl font-bold text-gray-900 mb-1">
-              Rp {stats?.debt.total ? (stats.debt.total / 1000000).toFixed(1) : '0'}M
+              Rp {stats?.debt?.total ? (stats.debt.total / 1000000).toFixed(1) : '0'}M
             </p>
             <p className="text-gray-500 text-xs">
-              {stats?.debt.change ?? 0}% dari bulan lalu
+              {stats?.debt?.change ?? 0}% dari bulan lalu
             </p>
           </div>
         </div>

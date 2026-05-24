@@ -85,9 +85,14 @@ export default function Sidebar({
 }) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [storeLogo, setStoreLogo] = useState<string | null>(null);
   const [storeName, setStoreName] = useState("TB Masdar Utama"); // Default name
+
+  // Debugging log client-side to trace sidebar visibility issues
+  useEffect(() => {
+    console.log("[Sidebar] Client Session Status:", status, "Session Data:", session);
+  }, [session, status]);
 
   // 3. TAMBAHKAN USE EFFECT UNTUK FETCH SETTING
   useEffect(() => {
@@ -155,30 +160,52 @@ export default function Sidebar({
       </div>
       {/* Menu Groups */}
       <nav className="flex-1 overflow-y-auto px-2 pb-6 relative z-10 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-        {filteredMenuGroups.map((group) => (
-          <div key={group.label} className="mb-4">
-            <div className="px-3 py-1 text-xs font-bold text-gray-500 uppercase tracking-wider select-none">
-              {group.label}
-            </div>
-            <div className="space-y-1">
-              {group.items.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`sidebar-link ${pathname === item.href ? "active" : ""
-                    }`}
-                  onClick={() => {
-                    setDrawerOpen(false);
-                    onClose?.();
-                  }}
-                >
-                  <span className="w-5 h-5">{item.icon}</span>
-                  <span>{item.label}</span>
-                </Link>
-              ))}
-            </div>
+        {status === "loading" ? (
+          <div className="space-y-6 animate-pulse px-3 mt-4">
+            {[1, 2, 3].map((g) => (
+              <div key={g} className="space-y-3">
+                <div className="h-3 w-16 bg-gray-200/50 rounded" />
+                <div className="space-y-2">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="flex items-center gap-3 h-10 px-3 rounded-lg bg-gray-100/30" />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        ) : filteredMenuGroups.length === 0 ? (
+          <div className="px-4 py-8 text-center text-xs text-gray-500 bg-red-50/10 rounded-xl border border-red-500/10 m-2">
+            Tidak ada akses menu.<br/>Coba <button className="underline text-blue-600 font-bold hover:text-blue-700" onClick={async () => {
+              const { logout } = await import("@/lib/actions/auth.actions");
+              await logout();
+            }}>Logout</button> dan login kembali.
+          </div>
+        ) : (
+          filteredMenuGroups.map((group) => (
+            <div key={group.label} className="mb-4">
+              <div className="px-3 py-1 text-xs font-bold text-gray-500 uppercase tracking-wider select-none">
+                {group.label}
+              </div>
+              <div className="space-y-1">
+                {group.items.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`sidebar-link ${pathname === item.href ? "active" : ""
+                      }`}
+                    onClick={() => {
+                      setDrawerOpen(false);
+                      onClose?.();
+                    }}
+                  >
+                    <span className="w-5 h-5">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ))
+        )}
       </nav>
       {/* Logout Button */}
       <div className="px-4 pb-4 relative z-10">

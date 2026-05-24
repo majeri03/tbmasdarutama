@@ -206,6 +206,7 @@ export default function POSPage() {
                         return {
                             ...item,
                             unitId: newUnitId, // Update ID Satuan
+                            productUnitId: selectedUnit ? selectedUnit.id : item.productUnitId, // Update ProductUnit ID
                             unitName: selectedUnit ? selectedUnit.unitName : item.unitName, // Update Nama
                             unitPrice: newPrice, // Update Harga Baru
                             originalPrice: newPrice, // Reset harga asli

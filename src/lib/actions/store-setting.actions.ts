@@ -7,14 +7,17 @@ import { revalidatePath } from "next/cache";
 import { requirePermission } from "../utils/role";
 
 export async function getStoreSetting() {
-  const session = await auth();
-  requirePermission(session, "VIEW_SETTINGS");
   try {
+    const session = await auth();
+    requirePermission(session, "VIEW_SETTINGS");
     const setting = await prisma.storeSetting.findFirst();
     return { success: true, data: setting };
   } catch (error) {
     console.error("[GET_STORE_SETTING_ERROR]", error);
-    return { success: false, error: "Gagal mengambil data toko" };
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Gagal mengambil data toko" 
+    };
   }
 }
 

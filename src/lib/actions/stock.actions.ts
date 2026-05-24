@@ -74,6 +74,17 @@ export async function getStockMovements(filters?: {
               name: true,
               barcode: true,
               currentStock: true,
+              productUnits: {
+                select: {
+                  id: true,
+                  isPrimary: true,
+                  unit: {
+                    select: {
+                      name: true,
+                    },
+                  },
+                },
+              },
             },
           },
         },

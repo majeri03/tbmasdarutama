@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 import {
   createSaleSchema,
   saleFilterSchema,
@@ -86,11 +87,30 @@ export async function createSale(data: CreateSaleInput) {
     const productIds = validated.items.map((i) => i.productId);
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
-      select: { id: true, currentStock: true, name: true, code: true },
+      select: {
+        id: true,
+        currentStock: true,
+        name: true,
+        code: true,
+        productUnits: {
+          select: {
+            id: true,
+            unitId: true,
+          },
+        },
+      },
     });
 
     // Buat Map untuk pencarian cepat
     const productMap = new Map(products.map((p) => [p.id, p]));
+
+    // Build a map of ProductUnit.id to Unit.id
+    const productUnitToUnitMap = new Map<string, string>();
+    for (const product of products) {
+      for (const pu of product.productUnits) {
+        productUnitToUnitMap.set(pu.id, pu.unitId);
+      }
+    }
 
     for (const item of validated.items) {
       const product = productMap.get(item.productId);
@@ -109,14 +129,20 @@ export async function createSale(data: CreateSaleInput) {
     }
 
     // --- 3. Persiapkan Data Item untuk Disimpan Sekaligus ---
-    const saleItemsData = validated.items.map((item) => ({
-      productId: item.productId,
-      unitId: item.productUnitId, // ✅ Tetap menjaga fix Anda (unitId)
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      discount: item.discount,
-      subtotal: item.subtotal,
-    }));
+    const saleItemsData = validated.items.map((item) => {
+      const unitId = productUnitToUnitMap.get(item.productUnitId);
+      if (!unitId) {
+        throw new Error(`Master Satuan tidak ditemukan untuk productUnitId: ${item.productUnitId}`);
+      }
+      return {
+        productId: item.productId,
+        unitId: unitId, // resolved to Unit.id
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        discount: item.discount,
+        subtotal: item.subtotal,
+      };
+    });
 
     // Generate Invoice Number (Di luar transaksi jika tidak butuh lock ketat, sesuai kode asli)
     const invoiceNumber = await generateInvoiceNumber();
@@ -188,6 +214,11 @@ export async function createSale(data: CreateSaleInput) {
         // C. Create Customer Debt (Jika Credit)
         if (validated.paymentMethod === PaymentMethod.CREDIT) {
           const debtNumber = await generateDebtNumber(tx); // Asumsi fungsi ini butuh tx
+          const debtStatus = validated.paidAmount >= validated.grandTotal
+            ? "PAID"
+            : validated.paidAmount > 0
+              ? "PARTIAL"
+              : "UNPAID";
 
           await tx.customerDebt.create({
             data: {
@@ -198,7 +229,7 @@ export async function createSale(data: CreateSaleInput) {
               paidAmount: validated.paidAmount,
               remainingDebt: validated.grandTotal - validated.paidAmount,
               dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 Hari
-              status: validated.paidAmount >= validated.grandTotal ? "PAID" : "UNPAID",
+              status: debtStatus,
               notes: `Utang dari penjualan ${invoiceNumber}`,
             },
           });
@@ -263,6 +294,7 @@ export async function getSales(params?: SaleFilterInput) {
       dateTo,
       page,
       limit,
+      sortOrder,
     } = validated;
 
     const skip = (page - 1) * limit;
@@ -291,7 +323,7 @@ export async function getSales(params?: SaleFilterInput) {
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: sortOrder || "desc" },
         include: {
           customer: {
             select: {
@@ -857,10 +889,30 @@ export async function getTodaySalesStats() {
   }
 }
 // ==================== DELETE SALE ====================
-export async function deleteSale(id: string) {
+export async function deleteSale(id: string, passwordInput?: string) {
   try {
     const session = await auth();
+    if (!session?.user?.id) {
+      return { success: false, error: "Unauthorized" };
+    }
     requirePermission(session, "DELETE_SALE");
+
+    if (!passwordInput) {
+      return { success: false, error: "Password konfirmasi wajib diisi!" };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+    });
+
+    if (!user) {
+      return { success: false, error: "User tidak ditemukan" };
+    }
+
+    const isPasswordCorrect = await bcrypt.compare(passwordInput, user.password);
+    if (!isPasswordCorrect) {
+      return { success: false, error: "Password konfirmasi salah!" };
+    }
 
     const sale = await prisma.sale.findUnique({
       where: { id },

@@ -16,8 +16,16 @@ interface DeleteSaleDialogProps {
 export function DeleteSaleDialog({ sale, onSuccess }: DeleteSaleDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setPassword("");
+    setError("");
+    setSuccess("");
+  };
 
   const handleDelete = async () => {
     if (sale.status !== "PENDING") {
@@ -25,12 +33,18 @@ export function DeleteSaleDialog({ sale, onSuccess }: DeleteSaleDialogProps) {
       return;
     }
 
+    if (!password) {
+      setError("Password konfirmasi wajib diisi!");
+      return;
+    }
+
     setLoading(true);
     setError("");
     try {
-      const result = await deleteSale(sale.id);
+      const result = await deleteSale(sale.id, password);
       if (result.success) {
         setSuccess(result.message || "Penjualan berhasil dihapus");
+        setPassword("");
         setTimeout(() => {
           setIsOpen(false);
           onSuccess();
@@ -65,7 +79,7 @@ export function DeleteSaleDialog({ sale, onSuccess }: DeleteSaleDialogProps) {
                 Hapus Penjualan
               </h2>
               <button
-                onClick={() => setIsOpen(false)}
+                onClick={handleClose}
                 className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
               >
                 <X className="w-5 h-5" />
@@ -84,34 +98,49 @@ export function DeleteSaleDialog({ sale, onSuccess }: DeleteSaleDialogProps) {
                 </div>
               )}
               
-              <div className="text-center py-4">
-                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Trash2 className="w-8 h-8 text-red-600" />
+              <div className="text-center py-2">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Trash2 className="w-6 h-6 text-red-600" />
                 </div>
-                <p className="text-gray-700 mb-2">
+                <p className="text-gray-700 text-sm mb-1">
                   Apakah Anda yakin ingin menghapus penjualan ini?
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-xs text-gray-500">
                   Invoice: <span className="font-semibold">{sale.invoiceNumber}</span>
                 </p>
-                <p className="text-xs text-red-600 mt-2">
+                <p className="text-xs text-red-600 mt-1">
                   Tindakan ini tidak dapat dibatalkan!
                 </p>
+              </div>
+
+              {/* Password Confirmation field */}
+              <div className="mt-4 text-left border-t pt-4">
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
+                  Konfirmasi Password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Masukkan password akun Anda"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm"
+                  required
+                />
               </div>
             </div>
 
             <div className="modal-footer">
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
-                className="btn-secondary"
+                onClick={handleClose}
+                className="btn-secondary text-sm"
                 disabled={loading}
               >
                 Batal
               </button>
               <button
                 onClick={handleDelete}
-                className="btn-danger"
+                className="btn-danger text-sm"
                 disabled={loading}
               >
                 {loading ? (

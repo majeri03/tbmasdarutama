@@ -7,7 +7,7 @@ export const addSupplierPaymentSchema = z.object({
   paymentMethod: z.nativeEnum(PaymentMethod, {
     required_error: "Payment method is required",
   }),
-  paymentDate: z.date({
+  paymentDate: z.coerce.date({
     required_error: "Payment date is required",
   }),
   notes: z.string().optional(),

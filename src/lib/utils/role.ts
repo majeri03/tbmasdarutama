@@ -19,7 +19,7 @@ export const PERMISSIONS = {
   
   // Sales
   VIEW_SALES: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
-  CREATE_SALE: ["SUPER_ADMIN", "ADMIN"] as Role[],
+  CREATE_SALE: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
   CANCEL_SALE: ["SUPER_ADMIN", "ADMIN"] as Role[],
   DELETE_SALE: ["SUPER_ADMIN"] as Role[],
 
@@ -66,9 +66,9 @@ export const PERMISSIONS = {
   DELETE_DELIVERY_ORDER: ["SUPER_ADMIN"] as Role[],
 
   // Categories & Units
-  VIEW_CATEGORIES: ["SUPER_ADMIN", "ADMIN"] as Role[],
+  VIEW_CATEGORIES: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
   MANAGE_CATEGORIES: ["SUPER_ADMIN", "ADMIN"] as Role[],
-  VIEW_UNITS: ["SUPER_ADMIN", "ADMIN"] as Role[],
+  VIEW_UNITS: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
   MANAGE_UNITS: ["SUPER_ADMIN", "ADMIN"] as Role[],
 
   // Reports
@@ -98,35 +98,30 @@ export type Permission = keyof typeof PERMISSIONS;
 /**
  * Check if user has specific role
  */
-export function hasRole(session: Session | null, role: Role): boolean {
-  if (!session?.user?.role) return false;
-  return session.user.role === role;
+export function hasRole(session: any, role: Role): boolean {
+  if (!session) return false;
+  const userRole = (session.user?.role || session.data?.user?.role as string || "").toUpperCase();
+  return userRole === (role as string).toUpperCase();
 }
 
-/**
- * Check if user has role with minimum level
- */
-export function hasMinimumRole(session: Session | null, minimumRole: Role): boolean {
-  if (!session?.user?.role) return false;
-  const userRole = session.user.role as Role;
-  return ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[minimumRole];
+export function hasMinimumRole(session: any, minimumRole: Role): boolean {
+  if (!session) return false;
+  const userRole = (session.user?.role || session.data?.user?.role as string || "").toUpperCase() as Role;
+  const targetRole = (minimumRole as string).toUpperCase() as Role;
+  return (ROLE_HIERARCHY[userRole] || 0) >= (ROLE_HIERARCHY[targetRole] || 0);
 }
 
-/**
- * Check if user has specific permission
- */
-export function hasPermission(session: Session | null, permission: Permission): boolean {
-  if (!session?.user?.role) return false;
-  const userRole = session.user.role as Role;
-  return PERMISSIONS[permission].includes(userRole);
+export function hasPermission(session: any, permission: Permission): boolean {
+  if (!session) return false;
+  const userRole = (session.user?.role || session.data?.user?.role as string || "").toUpperCase() as Role;
+  const allowedRoles = PERMISSIONS[permission] as readonly Role[];
+  return allowedRoles.includes(userRole);
 }
 
-/**
- * Get user role or null
- */
-export function getUserRole(session: Session | null): Role | null {
-  if (!session?.user?.role) return null;
-  return session.user.role as Role;
+export function getUserRole(session: any): Role | null {
+  if (!session) return null;
+  const userRole = (session.user?.role || session.data?.user?.role as string || "").toUpperCase();
+  return userRole ? (userRole as Role) : null;
 }
 
 /**

@@ -2,6 +2,51 @@ import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
 export default auth((req) => {
+  // 1. CORS Configuration for API Routes (Mobile / Cross-Origin compatibility)
+  if (req.nextUrl.pathname.startsWith("/api")) {
+    const origin = req.headers.get("origin") || "";
+    
+    // Handle preflight OPTIONS request
+    if (req.method === "OPTIONS") {
+      const response = new NextResponse(null, { status: 200 });
+      response.headers.set("Access-Control-Allow-Credentials", "true");
+      response.headers.set("Access-Control-Allow-Origin", origin || "*");
+      response.headers.set("Access-Control-Allow-Methods", "GET,DELETE,PATCH,POST,PUT,OPTIONS");
+      response.headers.set("Access-Control-Allow-Headers", "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Cookie, Authorization");
+      response.headers.set("Access-Control-Expose-Headers", "Set-Cookie");
+      return response;
+    }
+
+    // Map Authorization Bearer to Cookie for API routes
+    const requestHeaders = new Headers(req.headers);
+    const authHeader = requestHeaders.get("authorization");
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.substring(7);
+      const cookiePrefix = req.nextUrl.protocol === "https:" ? "__Secure-" : "";
+      const cookieName = `${cookiePrefix}authjs.session-token`;
+      const existingCookie = requestHeaders.get("Cookie") || "";
+      if (existingCookie) {
+        requestHeaders.set("Cookie", `${cookieName}=${token}; ${existingCookie}`);
+      } else {
+        requestHeaders.set("Cookie", `${cookieName}=${token}`);
+      }
+    }
+
+    const response = NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      }
+    });
+    
+    response.headers.set("Access-Control-Allow-Credentials", "true");
+    response.headers.set("Access-Control-Allow-Origin", origin || "*");
+    response.headers.set("Access-Control-Allow-Methods", "GET,DELETE,PATCH,POST,PUT,OPTIONS");
+    response.headers.set("Access-Control-Allow-Headers", "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Cookie, Authorization");
+    response.headers.set("Access-Control-Expose-Headers", "Set-Cookie");
+
+    return response;
+  }
+
   const isLoggedIn = !!req.auth;
   const path = req.nextUrl.pathname;
 
@@ -19,5 +64,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login"],
+  matcher: ["/dashboard/:path*", "/login", "/api/:path*"],
 };
