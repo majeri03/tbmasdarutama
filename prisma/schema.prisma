@@ -28,6 +28,7 @@ model User {
   deliveryOrders  DeliveryOrder[]
   stockMovements     StockMovement[] 
   passwordResetTokens PasswordResetToken[]
+  waOrdersConfirmed   WaOrder[]
   
   @@map("users")
 }
@@ -491,6 +492,44 @@ enum DeliveryStatus {
   IN_TRANSIT
   DELIVERED
   CANCELLED
+}
+
+// ==================== WHATSAPP ORDERS ====================
+model WaOrder {
+  id              String        @id @default(cuid())
+  rawMessage      String        @db.Text       // Pesan asli dari WA
+  senderPhone     String                        // No HP pengirim
+  senderName      String                        // Nama pengirim di WA
+  groupName       String?                       // Nama grup WA
+  parsedItems     Json?                         // Hasil parse: [{productName, qty, unit}]
+  customerName    String?                       // Nama customer yang dideteksi
+  notes           String?       @db.Text
+  status          WaOrderStatus @default(PENDING)
+  rejectedReason  String?
+
+  // Link ke sistem setelah dikonfirmasi
+  deliveryOrderId String?
+  saleId          String?
+
+  receivedAt      DateTime      @default(now())
+  confirmedAt     DateTime?
+  confirmedById   String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  confirmedBy     User?         @relation(fields: [confirmedById], references: [id])
+
+  @@index([status])
+  @@index([receivedAt])
+  @@map("wa_orders")
+}
+
+enum WaOrderStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  PARTIAL // Dikonfirmasi sebagian
 }
 
 // ==================== SETTINGS MODULE ====================
