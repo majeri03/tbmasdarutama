@@ -140,6 +140,8 @@ model Product {
   @@index([categoryId])
   @@index([supplierId])
   @@index([deletedAt])
+  @@index([name])
+  @@index([code])
   @@map("products")
 }
 
@@ -187,7 +189,7 @@ model Customer {
   address     String?
   city        String?
   province    String?
-  type        CustomerType @default(REGULER)
+  type        CustomerType @default(UMUM)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -197,10 +199,13 @@ model Customer {
   customerDebts CustomerDebt[]
   deliveryOrders  DeliveryOrder[]
 
+  @@index([name])
+  @@index([phone])
   @@map("customers")
 }
 
 enum CustomerType {
+  UMUM
   REGULER
   GROSIR
   PROYEK
@@ -232,6 +237,9 @@ model Sale {
   customerDebts CustomerDebt[]
   deliveryOrder   DeliveryOrder?
 
+  @@index([invoiceNumber])
+  @@index([saleDate])
+  @@index([customerId])
   @@map("sales")
 }
 

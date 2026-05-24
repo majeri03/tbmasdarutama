@@ -124,7 +124,7 @@ export async function confirmWaOrder(
         const lastVal = parseInt(parts[2]);
         if (!isNaN(lastVal)) invNum = lastVal + 1;
       }
-      const invoiceNumber = `INV-${dateStr}-${String(invNum).padStart(4, "0")}`;
+      const invoiceNumber = `INV-${dateStr}-${String(invNum).padStart(3, "0")}`;
 
       // Kalkulasi grand total
       let grandTotal = 0;
@@ -166,8 +166,17 @@ export async function confirmWaOrder(
       });
 
       // Buat Hutang Customer
-      const debtCount = await tx.customerDebt.count();
-      const debtNumber = `DEBT-CUST-${String(debtCount + 1).padStart(5, "0")}`;
+      const lastDebt = await tx.customerDebt.findFirst({
+        where: { debtNumber: { startsWith: "DEBT-CUST-" } },
+        orderBy: { debtNumber: "desc" },
+      });
+      let debtNum = 1;
+      if (lastDebt) {
+        const parts = lastDebt.debtNumber.split("-");
+        const lastVal = parseInt(parts[2]);
+        if (!isNaN(lastVal)) debtNum = lastVal + 1;
+      }
+      const debtNumber = `DEBT-CUST-${String(debtNum).padStart(3, "0")}`;
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 30);
       await tx.customerDebt.create({

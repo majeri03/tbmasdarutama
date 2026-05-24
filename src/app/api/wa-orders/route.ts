@@ -13,6 +13,20 @@ export async function GET(request: NextRequest) {
 
     const where = status ? { status } : {};
 
+    // Auto-delete CONFIRMED/REJECTED orders older than 7 days
+    try {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      await prisma.waOrder.deleteMany({
+        where: {
+          status: { in: ['CONFIRMED', 'REJECTED'] },
+          createdAt: { lt: sevenDaysAgo }
+        }
+      });
+    } catch (e) {
+      console.error('[WA-ORDERS AUTO-CLEANUP]', e);
+    }
+
     const [orders, total] = await Promise.all([
       prisma.waOrder.findMany({
         where,
