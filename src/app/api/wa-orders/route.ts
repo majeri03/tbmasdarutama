@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import { WaOrderStatus } from '@prisma/client';
 
 // GET /api/wa-orders - List semua orderan WA

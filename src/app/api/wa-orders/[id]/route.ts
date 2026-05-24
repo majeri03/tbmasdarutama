@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import prisma from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 
 // GET /api/wa-orders/[id] - Detail satu orderan
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -24,7 +23,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 // PATCH /api/wa-orders/[id] - Update status (REJECT / edit parsedItems)
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }

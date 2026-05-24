@@ -76,6 +76,7 @@ export async function confirmWaOrder(
     driver?: string;
     vehicle?: string;
     notes?: string;
+    createDeliveryOrder?: boolean; // NEW: Optional Surat Jalan
     items: Array<{
       productId: string;
       unitId: string;
@@ -92,20 +93,23 @@ export async function confirmWaOrder(
     if (!waOrder) return { success: false, error: "Orderan WA tidak ditemukan" };
     if (waOrder.status !== "PENDING") return { success: false, error: "Orderan sudah diproses" };
 
-    // Generate DO Number
+    // Generate DO Number (Hanya jika createDeliveryOrder = true)
+    let doNumber: string | undefined;
     const today = new Date();
-    const prefix = `DO/${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}`;
-    const lastDO = await prisma.deliveryOrder.findFirst({
-      where: { doNumber: { startsWith: prefix } },
-      orderBy: { doNumber: "desc" },
-    });
-    let nextNum = 1;
-    if (lastDO) {
-      const parts = lastDO.doNumber.split("/");
-      const lastVal = parseInt(parts[parts.length - 1]);
-      if (!isNaN(lastVal)) nextNum = lastVal + 1;
+    if (data.createDeliveryOrder !== false) {
+      const prefix = `DO/${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}`;
+      const lastDO = await prisma.deliveryOrder.findFirst({
+        where: { doNumber: { startsWith: prefix } },
+        orderBy: { doNumber: "desc" },
+      });
+      let nextNum = 1;
+      if (lastDO) {
+        const parts = lastDO.doNumber.split("/");
+        const lastVal = parseInt(parts[parts.length - 1]);
+        if (!isNaN(lastVal)) nextNum = lastVal + 1;
+      }
+      doNumber = `${prefix}/${String(nextNum).padStart(4, "0")}`;
     }
-    const doNumber = `${prefix}/${String(nextNum).padStart(4, "0")}`;
 
     const result = await prisma.$transaction(async (tx) => {
       // Generate Invoice Number
@@ -180,28 +184,31 @@ export async function confirmWaOrder(
         },
       });
 
-      // Buat Delivery Order
-      const deliveryOrder = await tx.deliveryOrder.create({
-        data: {
-          doNumber,
-          customerId: data.customerId,
-          saleId: newSale.id,
-          deliveryDate: data.deliveryDate,
-          driver: data.driver,
-          vehicle: data.vehicle,
-          notes: data.notes || waOrder.rawMessage,
-          status: "PENDING",
-          createdById: session.user.id,
-          deliveryItems: {
-            create: data.items.map((item) => ({
-              productId: item.productId,
-              unitId: item.unitId,
-              quantity: item.quantity,
-              notes: item.notes,
-            })),
+      // Buat Delivery Order (Jika diminta)
+      let deliveryOrder = null;
+      if (data.createDeliveryOrder !== false && doNumber) {
+        deliveryOrder = await tx.deliveryOrder.create({
+          data: {
+            doNumber,
+            customerId: data.customerId,
+            saleId: newSale.id,
+            deliveryDate: data.deliveryDate,
+            driver: data.driver,
+            vehicle: data.vehicle,
+            notes: data.notes || waOrder.rawMessage,
+            status: "PENDING",
+            createdById: session.user.id,
+            deliveryItems: {
+              create: data.items.map((item) => ({
+                productId: item.productId,
+                unitId: item.unitId,
+                quantity: item.quantity,
+                notes: item.notes,
+              })),
+            },
           },
-        },
-      });
+        });
+      }
 
       // Update WA Order jadi CONFIRMED
       await tx.waOrder.update({
@@ -210,7 +217,7 @@ export async function confirmWaOrder(
           status: "CONFIRMED",
           confirmedById: session.user.id,
           confirmedAt: new Date(),
-          deliveryOrderId: deliveryOrder.id,
+          deliveryOrderId: deliveryOrder?.id,
           saleId: newSale.id,
         },
       });
@@ -225,7 +232,9 @@ export async function confirmWaOrder(
 
     return {
       success: true,
-      message: `Orderan dikonfirmasi! Surat Jalan ${result.deliveryOrder.doNumber} berhasil dibuat.`,
+      message: result.deliveryOrder 
+        ? `Orderan dikonfirmasi! Surat Jalan ${result.deliveryOrder.doNumber} berhasil dibuat.`
+        : `Orderan dikonfirmasi! Transaksi POS ${result.invoiceNumber} berhasil dibuat.`,
       data: result,
     };
   } catch (error) {

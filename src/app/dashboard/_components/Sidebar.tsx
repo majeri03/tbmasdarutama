@@ -77,7 +77,6 @@ const menuGroups = [
   },
 ];
 
-import { useState } from "react";
 
 export default function Sidebar({
   open,
