@@ -10,8 +10,28 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const skip = (page - 1) * limit;
+    
+    const search = searchParams.get('search');
+    const dateFrom = searchParams.get('dateFrom');
+    const dateTo = searchParams.get('dateTo');
 
-    const where = status ? { status } : {};
+    const where: any = status ? { status } : {};
+
+    if (search) {
+      where.OR = [
+        { senderName: { contains: search, mode: "insensitive" } },
+        { customerName: { contains: search, mode: "insensitive" } },
+        { senderPhone: { contains: search } },
+        { rawMessage: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    if (dateFrom || dateTo) {
+      where.receivedAt = {
+        ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
+        ...(dateTo ? { lte: new Date(dateTo + "T23:59:59.999Z") } : {}),
+      };
+    }
 
     // Auto-delete CONFIRMED/REJECTED orders older than 7 days
     try {
