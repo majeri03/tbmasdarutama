@@ -16,12 +16,35 @@ export interface ParsedOrderItem {
 }
 
 // ==================== GET ALL WA ORDERS ====================
-export async function getWaOrders(status?: WaOrderStatus) {
+export async function getWaOrders(
+  status?: WaOrderStatus,
+  opts?: { search?: string; dateFrom?: string; dateTo?: string; limit?: number }
+) {
   try {
-    const where = status ? { status } : {};
+    const { search, dateFrom, dateTo, limit = 100 } = opts || {};
+
+    const where: Record<string, unknown> = status ? { status } : {};
+
+    if (search) {
+      where.OR = [
+        { senderName: { contains: search, mode: "insensitive" } },
+        { customerName: { contains: search, mode: "insensitive" } },
+        { senderPhone: { contains: search } },
+        { rawMessage: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    if (dateFrom || dateTo) {
+      where.receivedAt = {
+        ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
+        ...(dateTo ? { lte: new Date(dateTo + "T23:59:59.999Z") } : {}),
+      };
+    }
+
     const orders = await prisma.waOrder.findMany({
       where,
       orderBy: { receivedAt: "desc" },
+      take: limit,
       include: {
         confirmedBy: { select: { id: true, name: true } },
       },

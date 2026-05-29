@@ -145,6 +145,8 @@ export async function POST(request: Request) {
     const today = new Date();
     const invNo = `INV-WA-${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}-${Math.floor(Math.random()*10000).toString().padStart(4, '0')}`;
 
+    // ==================== BUAT SALE (COMPLETED, belum lunas) ====================
+    // COMPLETED = transaksi dikonfirmasi; paidAmount=0 = belum dibayar/lunas
     const sale = await prisma.sale.create({
       data: {
         invoiceNumber: invNo,
@@ -152,10 +154,10 @@ export async function POST(request: Request) {
         cashierId,
         totalAmount,
         grandTotal: totalAmount,
-        paymentMethod: "CASH",
-        paidAmount: 0,
+        paymentMethod: "CREDIT",   // CREDIT = pembayaran nanti / piutang
+        paidAmount: 0,             // Belum lunas
         changeAmount: 0,
-        status: "PENDING",
+        status: "COMPLETED",       // COMPLETED = transaksi sudah confirmed
         notes: notes || rawMessage,
         saleItems: {
           create: saleItemsData,
@@ -173,14 +175,70 @@ export async function POST(request: Request) {
       }
     });
 
+    // ==================== BUAT HUTANG CUSTOMER (jika ada customerId) ====================
+    if (customerId && totalAmount > 0) {
+      try {
+        const lastDebt = await prisma.customerDebt.findFirst({
+          where: { debtNumber: { startsWith: "DEBT-WA-" } },
+          orderBy: { debtNumber: "desc" },
+          select: { debtNumber: true },
+        });
+        let debtNum = 1;
+        if (lastDebt?.debtNumber) {
+          const parts = lastDebt.debtNumber.split("-");
+          const lastVal = parseInt(parts[parts.length - 1] || "0");
+          if (!isNaN(lastVal)) debtNum = lastVal + 1;
+        }
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + 30); // jatuh tempo 30 hari
+        await prisma.customerDebt.create({
+          data: {
+            debtNumber: `DEBT-WA-${String(debtNum).padStart(4, "0")}`,
+            saleId: sale.id,
+            customerId,
+            totalDebt: totalAmount,
+            paidAmount: 0,
+            remainingDebt: totalAmount,
+            status: "UNPAID",
+            dueDate,
+            notes: `[BOT-YA] Piutang dari order WA - ${senderName}`,
+          },
+        });
+      } catch (debtErr) {
+        console.error("[BOT] Gagal buat hutang customer:", debtErr);
+        // Jangan gagalkan sale karena gagal buat hutang
+      }
+    }
+
     // Generate HTML (Tanpa Puppeteer di Vercel, kita lempar HTML ke Bot)
     let htmlString = null;
     try {
       const store = await getStoreSettings();
-      // Generate menggunakan layout INVOICE_BESAR
       htmlString = generateInvoiceHtml(sale, store, { layoutType: 'INVOICE_BESAR' });
     } catch (e) {
       console.error("[BOT] Error generating HTML:", e);
+    }
+
+    // ==================== AUDIT TRAIL: Catat di wa_orders (CONFIRMED) ====================
+    // WaOrder CONFIRMED = dikonfirmasi langsung via bot (reply YA)
+    const confirmedViaBot = new Date().toISOString();
+    try {
+      await prisma.waOrder.create({
+        data: {
+          rawMessage,
+          senderPhone,
+          senderName,
+          groupName: "WA Bot AI",
+          parsedItems: Array.isArray(parsedItems) ? parsedItems : [],
+          customerName: resolvedCustomerName || null,
+          notes: `[BOT-YA: ${confirmedViaBot}] Dikonfirmasi langsung via WA. Invoice: ${sale.invoiceNumber}. Status: BELUM LUNAS. ${notes || ""}`.trim(),
+          status: "CONFIRMED",  // Dikonfirmasi langsung via bot, tidak perlu admin review
+          confirmedAt: new Date(),
+          saleId: sale.id,
+        },
+      });
+    } catch (auditErr) {
+      console.error("[BOT] Gagal catat wa_order audit:", auditErr);
     }
 
     return NextResponse.json({
@@ -188,6 +246,7 @@ export async function POST(request: Request) {
       message: "Pesanan berhasil dikonfirmasi dan disimpan",
       data: {
         saleId: sale.id,
+        saleStatus: sale.status,
         invoiceNumber: sale.invoiceNumber,
         grandTotal: sale.grandTotal,
         customerName: resolvedCustomerName,

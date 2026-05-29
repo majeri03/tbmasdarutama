@@ -18,10 +18,14 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status") as WaOrderStatus | null;
-    const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 20);
+    const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 30);
+    const includeAll = searchParams.get("includeAll") === "true";
+
+    // Jika includeAll=true atau tidak ada filter status, tampilkan semua (untuk audit)
+    const whereClause = (includeAll || !status) ? {} : { status: status as WaOrderStatus };
 
     const orders = await prisma.waOrder.findMany({
-      where: status ? { status } : {},
+      where: whereClause,
       select: {
         id: true,
         rawMessage: true,
@@ -46,19 +50,21 @@ export async function GET(request: Request) {
       telp: o.senderPhone,
       customer: o.customerName || "-",
       pesan: o.rawMessage.length > 150 ? o.rawMessage.substring(0, 150) + "..." : o.rawMessage,
-      items: o.parsedItems, // Sudah terstruktur dari AI
+      items: o.parsedItems,
       status: o.status,
       catatan: o.notes,
       diterima: o.receivedAt,
       dikonfirmasi: o.confirmedAt,
-      oleh: o.confirmedBy?.name || null,
+      oleh: o.confirmedBy?.name || (o.groupName === "WA Bot AI" ? "Bot (AI)" : null),
     }));
 
     const pendingCount = await prisma.waOrder.count({ where: { status: "PENDING" } });
+    const totalCount = await prisma.waOrder.count({ where: whereClause });
 
     return NextResponse.json({
       status: "success",
       pendingCount,
+      totalCount,
       count: formatted.length,
       data: formatted,
     });
