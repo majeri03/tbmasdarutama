@@ -88,7 +88,7 @@ export async function POST(request: Request) {
 
     // ==================== AUTO-CREATE SALE ====================
     // Find admin user for cashierId
-    let cashierId = "";
+    let cashierId: string | null = null;
     const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } }) || await prisma.user.findFirst();
     if (admin) cashierId = admin.id;
 
@@ -107,12 +107,19 @@ export async function POST(request: Request) {
         if (!product) continue;
 
         let unitPrice = item.price || 0;
+        
         if (!unitId && product.productUnits.length > 0) {
            unitId = product.productUnits.find((u) => u.isPrimary)?.unitId || product.productUnits[0].unitId;
            if (!unitPrice) unitPrice = Number(product.productUnits[0].sellPrice);
         } else if (!unitPrice && product.productUnits.length > 0) {
            const pu = product.productUnits.find(u => u.unitId === unitId);
            if (pu) unitPrice = Number(pu.sellPrice);
+        }
+
+        // Fallback jika unitId masih kosong
+        if (!unitId) {
+          const defaultUnit = await prisma.unit.findFirst();
+          if (defaultUnit) unitId = defaultUnit.id;
         }
         
         const qty = item.quantity || 1;
@@ -136,13 +143,13 @@ export async function POST(request: Request) {
       data: {
         invoiceNumber: invNo,
         customerId,
-        cashierId,
+        cashierId: cashierId || undefined,
         totalAmount,
         grandTotal: totalAmount,
         paymentMethod: "CASH",
         paidAmount: 0,
         changeAmount: 0,
-        status: "PENDING",
+        status: "CONFIRMED",
         notes: notes || rawMessage,
         saleItems: {
           create: saleItemsData,
@@ -197,6 +204,8 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error("[BOT] Error create order confirm:", error);
-    return NextResponse.json({ status: "error", message: "Gagal membuat orderan confirm" }, { status: 500 });
+    return NextResponse.json({ status: 'error', message: 'Gagal membuat orderan confirm: ' + (error instanceof Error ? error.message : String(error)) }, { status: 500 });
   }
 }
+
+
