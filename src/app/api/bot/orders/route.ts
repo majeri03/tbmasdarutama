@@ -92,11 +92,14 @@ export async function POST(request: Request) {
     let customerId: string | null = null;
     let isNewCustomer = false;
 
-    // Nama customer valid jika minimal 2 karakter
-    const isValidName = resolvedCustomerName && resolvedCustomerName.trim().length >= 2;
+    // Bersihkan karakter non-alphanumeric dasar, biarkan spasi
+    const cleanNameStr = resolvedCustomerName ? resolvedCustomerName.replace(/[^a-zA-Z0-9\s]/g, "").trim() : "";
+    
+    // Nama customer valid jika minimal 2 karakter setelah dibersihkan
+    const isValidName = cleanNameStr.length >= 2;
 
     if (isValidName) {
-      const cleanName = resolvedCustomerName.trim();
+      const cleanName = cleanNameStr;
       const cleanPhone = senderPhone ? String(senderPhone).replace(/[^0-9+]/g, "") : null;
 
       // Cari existing customer (by name atau phone)
