@@ -26,6 +26,7 @@
     "@react-pdf/renderer": "^4.3.2",
     "bcryptjs": "^3.0.3",
     "date-fns": "^4.3.0",
+    "expo-server-sdk": "^6.1.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.7",

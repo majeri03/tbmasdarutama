@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { WaOrderStatus } from "@prisma/client";
+import { sendPushNotificationToAdmins } from "@/lib/notifications";
 
 function authCheck(request: Request) {
   const clientApiKey = request.headers.get("x-api-key") || request.headers.get("x-bot-api-key");
@@ -89,12 +90,16 @@ export async function POST(request: Request) {
     // ==================== AUTO-CREATE / FIND CUSTOMER ====================
     let resolvedCustomerName = customerName || senderName;
     let customerId: string | null = null;
+    let isNewCustomer = false;
 
-    if (resolvedCustomerName && resolvedCustomerName.trim().length >= 2) {
+    // Nama customer valid jika minimal 2 karakter
+    const isValidName = resolvedCustomerName && resolvedCustomerName.trim().length >= 2;
+
+    if (isValidName) {
       const cleanName = resolvedCustomerName.trim();
       const cleanPhone = senderPhone ? String(senderPhone).replace(/[^0-9+]/g, "") : null;
 
-      // Cari existing customer
+      // Cari existing customer (by name atau phone)
       const existing = await prisma.customer.findFirst({
         where: {
           isActive: true,
@@ -130,7 +135,7 @@ export async function POST(request: Request) {
             code: newCode,
             name: cleanName,
             phone: cleanPhone || null,
-            address: null,
+            address: null, // alamat opsional
             type: "UMUM",
             isActive: true,
           },
@@ -139,11 +144,28 @@ export async function POST(request: Request) {
 
         customerId = newCustomer.id;
         resolvedCustomerName = newCustomer.name;
+        isNewCustomer = true;
         console.log(`[BOT] ✅ Auto-created customer: ${newCustomer.name} (${newCustomer.code})`);
+      }
+    } else {
+      // Nama tidak valid → fallback ke customer "Umum"
+      const umumCustomer = await prisma.customer.findFirst({
+        where: {
+          isActive: true,
+          OR: [
+            { name: { equals: "umum", mode: "insensitive" } },
+            { type: "UMUM", name: { contains: "umum", mode: "insensitive" } },
+          ],
+        },
+        select: { id: true, name: true },
+      });
+
+      if (umumCustomer) {
+        customerId = umumCustomer.id;
+        resolvedCustomerName = umumCustomer.name;
       }
     }
 
-    // ==================== SIMPAN ORDER ====================
     const order = await prisma.waOrder.create({
       data: {
         rawMessage,
@@ -157,6 +179,13 @@ export async function POST(request: Request) {
       },
     });
 
+    // Send push notification in background (don't await so API is fast)
+    sendPushNotificationToAdmins(
+      "Ada Pesanan WhatsApp Baru!",
+      `Dari ${senderName}: ${rawMessage.length > 50 ? rawMessage.substring(0, 50) + '...' : rawMessage}`,
+      { type: 'wa-order', id: order.id }
+    ).catch(console.error);
+
     return NextResponse.json({
       status: "success",
       message: "Orderan berhasil dicatat",
@@ -164,7 +193,8 @@ export async function POST(request: Request) {
         id: order.id,
         status: order.status,
         customerId,
-        customerName: resolvedCustomerName,
+        customerName: resolvedCustomerName || "Pelanggan Umum",
+        isNewCustomer,
         itemCount: Array.isArray(parsedItems) ? parsedItems.length : 0,
       },
     }, { status: 201 });

@@ -16,6 +16,7 @@ model User {
   role          Role      @default(KASIR)
   phone         String?
   address       String?
+  expoPushToken String?   // NEW: Untuk Push Notification
   isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
