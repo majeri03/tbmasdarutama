@@ -18,11 +18,29 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status") as WaOrderStatus | null;
-    const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 30);
+    const limit = Math.min(parseInt(searchParams.get("limit") || "100"), 100);
     const includeAll = searchParams.get("includeAll") === "true";
+    const search = searchParams.get("search");
+    const dateFrom = searchParams.get("dateFrom");
+    const dateTo = searchParams.get("dateTo");
 
-    // Jika includeAll=true atau tidak ada filter status, tampilkan semua (untuk audit)
-    const whereClause = (includeAll || !status) ? {} : { status: status as WaOrderStatus };
+    const whereClause: any = (includeAll || !status) ? {} : { status: status as WaOrderStatus };
+
+    if (search) {
+      whereClause.OR = [
+        { senderName: { contains: search, mode: "insensitive" } },
+        { customerName: { contains: search, mode: "insensitive" } },
+        { senderPhone: { contains: search } },
+        { rawMessage: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    if (dateFrom || dateTo) {
+      whereClause.receivedAt = {
+        ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
+        ...(dateTo ? { lte: new Date(dateTo + "T23:59:59.999Z") } : {}),
+      };
+    }
 
     const orders = await prisma.waOrder.findMany({
       where: whereClause,

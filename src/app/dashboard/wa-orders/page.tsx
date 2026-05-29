@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useTransition } from "react";
+import { useEffect, useState, useCallback, useTransition, Fragment } from "react";
 import {
   MessageSquare, CheckCircle, XCircle, Clock, RefreshCw,
   Search, Calendar, Filter, AlertCircle, Bot, ChevronDown,
@@ -248,9 +248,8 @@ export default function WaOrdersPage() {
                 const parsedItems = Array.isArray(order.parsedItems) ? order.parsedItems as Array<{productName?: string; quantity?: number; unit?: string}> : [];
 
                 return (
-                  <>
+                  <Fragment key={order.id}>
                     <tr
-                      key={order.id}
                       className={`hover:bg-gray-50 transition-colors ${order.status === "PENDING" ? "bg-amber-50/30" : ""}`}
                     >
                       {/* Waktu */}
@@ -420,7 +419,7 @@ export default function WaOrdersPage() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 );
               })}
             </tbody>
