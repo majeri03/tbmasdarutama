@@ -45,6 +45,11 @@ export interface StoreSetting {
     bankHolder?: string | null;
 }
 
+export interface CustomLayout {
+    layoutType?: string;
+    paperSize?: string;
+}
+
 // Helper: Terbilang
 function numberToWords(num: number): string {
     const ones = ["", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan"];
@@ -73,53 +78,124 @@ function numberToWords(num: number): string {
     return "Angka terlalu besar";
 }
 
-// --- FUNGSI BARU: GENERATE HTML SAJA ---
-export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSetting | null): string => {
-    const storeName = storeSetting?.name || "PT. TB MASDAR UTAMA";
-    const storeAddress = storeSetting?.address || "Alamat belum diatur";
-    const storePhone = storeSetting?.phone ? `Phone: ${storeSetting.phone}` : "";
+export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSetting | null, customLayout?: CustomLayout): string => {
+    const storeName = storeSetting?.name || "TB MASDAR UTAMA";
+    const storeAddress = storeSetting?.address || "-";
+    const storePhone = storeSetting?.phone ? `${storeSetting.phone}` : "-";
+    const dateStr = format(new Date(sale.saleDate), "dd/MM/yyyy HH:mm");
     
-    const storeLogo = storeSetting?.logoUrl 
-        ? `<img src="${storeSetting.logoUrl}" alt="Logo" style="width: 50px; height: 50px; object-fit: contain; margin-right: 10px;" />` 
-        : "";
+    const layoutType = customLayout?.layoutType || "STRUK_KECIL";
+    const paperSize = customLayout?.paperSize || "58mm"; // only for STRUK_KECIL
 
-    const bankInfo = storeSetting?.bankName 
-        ? `
-            <p class="font-bold">TRANSFER VIA</p>
-            <p>${storeSetting.bankName}</p>
-            <p>A/C: ${storeSetting.bankAccount || "-"}</p>
-            <p>A/N: ${storeSetting.bankHolder || "-"}</p>
-          `
-        : `<p class="italic text-gray-500">Informasi bank belum diatur</p>`;
-
-    const itemsHtml = sale.saleItems.map((item, index) => {
-        const unitPrice = item.unitPrice;
-        const quantity = item.quantity;
-        const discount = item.discount;
-        const subtotal = item.subtotal;
+    // STRUK KECIL (THERMAL)
+    if (layoutType === "STRUK_KECIL") {
+        let widthCss = "48mm";
+        let fontSize = "11px";
+        if (paperSize === "80mm") { widthCss = "72mm"; fontSize = "12px"; }
+        else if (paperSize !== "58mm") { widthCss = `calc(${paperSize} - 10mm)`; fontSize = "12px"; }
         
-        const grossAmount = unitPrice * quantity;
-        const discountPercent = discount > 0 
-            ? ((discount / grossAmount) * 100).toFixed(0) + "%" 
-            : "0";
-        
-        const productName = item.product.name;
-        const productCode = item.product.code;
-        const unitName = item.unit.symbol || item.unit.name;
+        const itemsHtml = sale.saleItems.map(item => `
+            <div style="margin-bottom: 6px;">
+                <div style="font-weight: bold;">${item.product.name}</div>
+                <div style="display: flex; justify-content: space-between;">
+                    <div>${item.quantity} ${item.unit.symbol || item.unit.name} x ${formatCurrency(item.unitPrice).replace('Rp ','')}</div>
+                    <div style="font-weight: bold;">${formatCurrency(item.subtotal).replace('Rp ','')}</div>
+                </div>
+                ${item.discount > 0 ? `<div style="text-align: right; font-size: 0.9em; color: #444;">Disc: -${formatCurrency(item.discount).replace('Rp ','')}</div>` : ''}
+            </div>
+        `).join("");
 
         return `
+            <html>
+                <head>
+                    <title>Struk - ${sale.invoiceNumber}</title>
+                    <style>
+                        @page { margin: 0; size: ${paperSize} auto; }
+                        body { 
+                            font-family: 'Courier New', Courier, monospace; 
+                            font-size: ${fontSize}; 
+                            color: #000; 
+                            margin: 0; 
+                            padding: 4mm;
+                            width: ${widthCss};
+                            background: white;
+                        }
+                        .center { text-align: center; }
+                        .bold { font-weight: bold; }
+                        .divider { border-top: 1px dashed #000; margin: 6px 0; }
+                        .row { display: flex; justify-content: space-between; margin-bottom: 2px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="center bold" style="font-size: 1.2em;">${storeName}</div>
+                    <div class="center" style="margin-bottom: 4px;">${storeAddress}</div>
+                    <div class="center">Telp: ${storePhone}</div>
+                    
+                    <div class="divider"></div>
+                    
+                    <div class="row"><span>No</span><span>${sale.invoiceNumber}</span></div>
+                    <div class="row"><span>Tgl</span><span>${dateStr}</span></div>
+                    <div class="row"><span>Kasir</span><span>${sale.cashier?.name || '-'}</span></div>
+                    ${sale.customer ? `<div class="row"><span class="bold">Plgn</span><span class="bold">${sale.customer.name}</span></div>` : ''}
+                    
+                    <div class="divider"></div>
+                    <div class="bold" style="margin-bottom: 4px;">DAFTAR BARANG</div>
+                    ${itemsHtml}
+                    
+                    <div class="divider"></div>
+                    <div class="row"><span>Subtotal</span><span>${formatCurrency(sale.totalAmount).replace('Rp ','')}</span></div>
+                    ${sale.discount > 0 ? `<div class="row"><span>Diskon</span><span>-${formatCurrency(sale.discount).replace('Rp ','')}</span></div>` : ''}
+                    ${sale.tax > 0 ? `<div class="row"><span>Pajak</span><span>${formatCurrency(sale.tax).replace('Rp ','')}</span></div>` : ''}
+                    <div class="row bold" style="font-size: 1.1em; margin-top: 4px;">
+                        <span>TOTAL</span><span>${formatCurrency(sale.grandTotal).replace('Rp ','')}</span>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="row"><span>Bayar (${sale.paymentMethod})</span><span>${formatCurrency(sale.paidAmount).replace('Rp ','')}</span></div>
+                    <div class="row bold"><span>Kembali</span><span>${formatCurrency(sale.changeAmount).replace('Rp ','')}</span></div>
+                    
+                    <div class="divider"></div>
+                    <div class="center bold" style="margin-top: 8px;">TERIMA KASIH</div>
+                    <div class="center" style="font-size: 0.9em;">Barang yang sudah dibeli tidak dapat dikembalikan</div>
+                </body>
+            </html>
+        `;
+    }
+
+    // A4 LAYOUTS (INVOICE_BESAR, FAKTUR_NCR, SURAT_JALAN)
+    let docTitle = "INVOICE";
+    let showPrices = true;
+    let showDiscountAndNet = true;
+
+    if (layoutType === "SURAT_JALAN") {
+        docTitle = "SURAT JALAN";
+        showPrices = false;
+        showDiscountAndNet = false;
+    } else if (layoutType === "FAKTUR_NCR") {
+        docTitle = "FAKTUR";
+    }
+
+    const itemsHtmlA4 = sale.saleItems.map((item, index) => {
+        const gross = item.quantity * item.unitPrice;
+        const discPercent = item.discount > 0 ? ((item.discount / gross) * 100).toFixed(0) + '%' : '0%';
+        return `
             <tr>
-                <td class="text-center">${index + 1}</td>
+                <td style="text-align:center;">${index + 1}</td>
                 <td>
-                    <span class="font-semibold">${productName}</span><br/>
-                    <span class="text-[8px] text-gray-600">${productCode}</span>
+                    <b>${item.product.name}</b><br/>
+                    <span style="font-size:10px; color:#555;">${item.product.code}</span>
                 </td>
-                <td class="text-center">${quantity} ${unitName}</td>
-                <td class="text-right">${formatCurrency(unitPrice).replace("Rp ", "")}</td>
-                <td class="text-right">${formatCurrency(grossAmount).replace("Rp ", "")}</td>
-                <td class="text-center">${discountPercent}</td>
-                <td class="text-right">${formatCurrency(discount).replace("Rp ", "")}</td>
-                <td class="text-right font-semibold">${formatCurrency(subtotal).replace("Rp ", "")}</td>
+                <td style="text-align:center;">${item.quantity} ${item.unit.symbol || item.unit.name}</td>
+                ${showPrices ? `
+                <td style="text-align:right;">${formatCurrency(item.unitPrice).replace("Rp ","")}</td>
+                <td style="text-align:right;">${formatCurrency(gross).replace("Rp ","")}</td>
+                ` : ''}
+                ${showDiscountAndNet ? `
+                <td style="text-align:center;">${discPercent}</td>
+                <td style="text-align:right;">${item.discount > 0 ? formatCurrency(item.discount).replace("Rp ","") : '-'}</td>
+                <td style="text-align:right; font-weight:bold;">${formatCurrency(item.subtotal).replace("Rp ","")}</td>
+                ` : showPrices ? `
+                <td style="text-align:right; font-weight:bold;">${formatCurrency(item.subtotal).replace("Rp ","")}</td>
+                ` : ''}
             </tr>
         `;
     }).join("");
@@ -127,125 +203,130 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
     return `
         <html>
             <head>
-                <title>Invoice - ${sale.invoiceNumber}</title>
-                <script src="https://cdn.tailwindcss.com"></script>
+                <title>${docTitle} - ${sale.invoiceNumber}</title>
                 <style>
-                    @page { size: A4 portrait; margin: 10mm; }
-                    body { background: white; -webkit-print-color-adjust: exact; font-family: Arial, sans-serif; font-size: 12px; }
-                    table { border-collapse: collapse; width: 100%; }
-                    th, td { border: 1px solid black; padding: 4px 8px; }
-                    .no-border td { border: none; }
-                    .text-xs { font-size: 10px; }
-                    .text-xxs { font-size: 9px; }
+                    @page { size: A4 portrait; margin: 15mm; }
+                    body { font-family: Arial, sans-serif; font-size: 12px; color: #000; -webkit-print-color-adjust: exact; margin: 0; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+                    th, td { border: 1px solid #000; padding: 6px; }
+                    th { background: #f0f0f0; }
+                    .no-border td, .no-border th { border: none !important; padding: 2px !important; background: transparent !important;}
+                    .flex-between { display: flex; justify-content: space-between; align-items: flex-start; }
+                    .header-box { border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
+                    .title { font-size: 24px; font-weight: bold; margin: 0; }
                 </style>
             </head>
-            <body class="p-8">
-                <div class="border-2 border-black p-4 mb-4">
-                    <div class="flex justify-between items-start">
-                        <div class="flex items-start">
-                            ${storeLogo}
-                            <div>
-                                <h1 class="text-base font-bold uppercase mb-1">${storeName}</h1>
-                                <p class="text-xs max-w-[250px]">${storeAddress}</p>
-                                <p class="text-xs">${storePhone}</p>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <h2 class="text-xl font-bold mb-2">INVOICE</h2>
-                            <table class="text-xs ml-auto w-auto border-none">
-                                <tr class="border-none"><td class="border-none py-0 text-left pr-2">Number</td><td class="border-none py-0 text-left">: ${sale.invoiceNumber}</td></tr>
-                                <tr class="border-none"><td class="border-none py-0 text-left pr-2">Date</td><td class="border-none py-0 text-left">: ${format(new Date(sale.saleDate), "dd/MM/yyyy")}</td></tr>
-                                <tr class="border-none"><td class="border-none py-0 text-left pr-2">Payment</td><td class="border-none py-0 text-left">: ${sale.paymentMethod}</td></tr>
-                                <tr class="border-none"><td class="border-none py-0 text-left pr-2">Cashier</td><td class="border-none py-0 text-left">: ${sale.cashier?.name || "-"}</td></tr>
-                            </table>
-                        </div>
+            <body>
+                <div class="flex-between header-box">
+                    <div>
+                        <h1 style="margin:0; font-size:20px;">${storeName}</h1>
+                        <p style="margin:4px 0 0 0;">${storeAddress}</p>
+                        <p style="margin:2px 0 0 0;">Phone: ${storePhone}</p>
                     </div>
-                </div>
-
-                <div class="mb-4 border border-black">
-                    <div class="bg-gray-100 px-2 py-1 border-b border-black">
-                        <p class="text-xs font-bold">Customer Info</p>
-                    </div>
-                    <div class="px-2 py-2">
-                        <p class="text-xs font-bold">${sale.customer?.name || "Umum"}</p>
-                        <p class="text-xxs">Phone: ${sale.customer?.phone || "-"}</p>
-                        <p class="text-xxs">Address: ${sale.customer?.address || "-"}</p>
-                    </div>
-                </div>
-
-                <table class="mb-4 text-xs">
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="w-8">No</th>
-                            <th class="text-left">Description</th>
-                            <th class="w-20">Qty</th>
-                            <th class="w-24 text-right">Price</th>
-                            <th class="w-24 text-right">Gross</th>
-                            <th class="w-10 text-center">%</th>
-                            <th class="w-20 text-right">Disc</th>
-                            <th class="w-24 text-right">Net</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${itemsHtml}
-                    </tbody>
-                </table>
-
-                <div class="flex gap-4">
-                    <div class="flex-1 border border-black p-3 flex flex-col justify-between">
-                        <div>
-                            <p class="text-xxs mb-1"><strong>Terbilang:</strong> ${numberToWords(Math.floor(sale.grandTotal))} Rupiah</p>
-                            <div class="mt-2 pt-2 border-t border-gray-300 text-xxs">
-                                ${bankInfo}
-                            </div>
-                        </div>
-                        <div class="mt-4 text-center">
-                            <p class="text-xxs font-bold underline">${sale.cashier?.name || "Admin"}</p>
-                            <p class="text-[8px]">Authorized Signature</p>
-                        </div>
-                    </div>
-
-                    <div class="w-64 border border-black">
-                        <table class="w-full text-xs border-none">
-                            <tr><td class="border-b border-black py-1">Gross Total</td><td class="border-b border-black py-1 text-right font-semibold">${formatCurrency(sale.totalAmount).replace("Rp ", "")}</td></tr>
-                            <tr><td class="border-b border-black py-1">Discount</td><td class="border-b border-black py-1 text-right text-red-600">(${formatCurrency(sale.discount).replace("Rp ", "")})</td></tr>
-                            <tr><td class="border-b border-black py-1">Tax</td><td class="border-b border-black py-1 text-right">${formatCurrency(sale.tax).replace("Rp ", "")}</td></tr>
-                            <tr class="bg-gray-100"><td class="border-b border-black py-1 font-bold">Grand Total</td><td class="border-b border-black py-1 text-right font-bold text-sm">${formatCurrency(sale.grandTotal).replace("Rp ", "")}</td></tr>
-                            <tr><td class="border-b border-black py-1">Paid</td><td class="border-b border-black py-1 text-right">${formatCurrency(sale.paidAmount).replace("Rp ", "")}</td></tr>
-                            <tr><td class="py-1">Change</td><td class="py-1 text-right">${formatCurrency(sale.changeAmount).replace("Rp ", "")}</td></tr>
+                    <div style="text-align:right;">
+                        <h2 class="title">${docTitle}</h2>
+                        <table class="no-border" style="margin-top:10px; width:auto; margin-left:auto;">
+                            <tr><td>Number</td><td>: <b>${layoutType === 'SURAT_JALAN' ? 'DO-' : ''}${sale.invoiceNumber}</b></td></tr>
+                            <tr><td>Date</td><td>: ${dateStr}</td></tr>
+                            ${layoutType !== 'SURAT_JALAN' ? `<tr><td>Payment</td><td>: ${sale.paymentMethod}</td></tr>` : ''}
+                            <tr><td>Cashier</td><td>: ${sale.cashier?.name || '-'}</td></tr>
                         </table>
                     </div>
                 </div>
 
-                <div class="mt-4 text-center text-xxs border-t-2 border-black pt-1">
-                    <p class="font-bold">BARANG YANG SUDAH DIBELI TIDAK DAPAT DITUKAR/DIKEMBALIKAN KECUALI ADA PERJANJIAN.</p>
+                <div style="border: 1px solid #000; padding: 10px; margin-bottom: 20px; width: 50%;">
+                    <strong style="border-bottom:1px solid #000; display:block; margin-bottom:5px;">CUSTOMER INFO</strong>
+                    <table class="no-border">
+                        <tr><td style="width:60px;">Name</td><td>: <b>${sale.customer?.name || 'Umum'}</b></td></tr>
+                        <tr><td>Phone</td><td>: ${sale.customer?.phone || '-'}</td></tr>
+                        <tr><td>Address</td><td>: ${sale.customer?.address || '-'}</td></tr>
+                    </table>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 5%;">No</th>
+                            <th style="width: ${showPrices ? '35%' : '75%'}; text-align:left;">Description</th>
+                            <th style="width: 10%;">Qty</th>
+                            ${showPrices ? `
+                            <th style="width: 12%; text-align:right;">Price</th>
+                            <th style="width: 12%; text-align:right;">Gross</th>
+                            ` : ''}
+                            ${showDiscountAndNet ? `
+                            <th style="width: 5%;">%</th>
+                            <th style="width: 10%; text-align:right;">Disc</th>
+                            <th style="width: 11%; text-align:right;">Net</th>
+                            ` : showPrices ? `
+                            <th style="width: 12%; text-align:right;">Net</th>
+                            ` : ''}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsHtmlA4}
+                    </tbody>
+                </table>
+
+                <div class="flex-between">
+                    <div style="width: 60%;">
+                        ${showPrices ? `
+                        <div style="border:1px solid #000; padding:10px; margin-bottom:10px;">
+                            <b>Terbilang:</b> <br/><i>${numberToWords(Math.floor(sale.grandTotal))} Rupiah</i>
+                        </div>
+                        ` : ''}
+                        
+                        <div style="display:flex; justify-content:space-between; margin-top: 30px; text-align:center;">
+                            <div style="width:30%;">
+                                <p>Penerima,</p>
+                                <br/><br/><br/>
+                                <p style="border-top:1px solid #000; display:inline-block; width:80%;">(${sale.customer?.name || 'Customer'})</p>
+                            </div>
+                            <div style="width:30%;">
+                                <p>Hormat Kami,</p>
+                                <br/><br/><br/>
+                                <p style="border-top:1px solid #000; display:inline-block; width:80%;">(${sale.cashier?.name || 'Admin'})</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${showPrices ? `
+                    <div style="width: 35%;">
+                        <table style="border:1px solid #000;">
+                            <tr><td style="border:none; padding:4px 8px;">Gross Total</td><td style="border:none; padding:4px 8px; text-align:right;">${formatCurrency(sale.totalAmount).replace("Rp ","")}</td></tr>
+                            <tr><td style="border:none; padding:4px 8px;">Discount</td><td style="border:none; padding:4px 8px; text-align:right; color:red;">(${formatCurrency(sale.discount).replace("Rp ","")})</td></tr>
+                            <tr><td style="border:none; padding:4px 8px;">Tax</td><td style="border:none; padding:4px 8px; text-align:right;">${formatCurrency(sale.tax).replace("Rp ","")}</td></tr>
+                            <tr style="border-top:1px solid #000;"><td style="border:none; padding:4px 8px;"><b>Grand Total</b></td><td style="border:none; padding:4px 8px; text-align:right;"><b>${formatCurrency(sale.grandTotal).replace("Rp ","")}</b></td></tr>
+                            <tr><td style="border:none; padding:4px 8px;">Paid</td><td style="border:none; padding:4px 8px; text-align:right;">${formatCurrency(sale.paidAmount).replace("Rp ","")}</td></tr>
+                            <tr><td style="border:none; padding:4px 8px;">Change</td><td style="border:none; padding:4px 8px; text-align:right;">${formatCurrency(sale.changeAmount).replace("Rp ","")}</td></tr>
+                        </table>
+                    </div>
+                    ` : ''}
+                </div>
+                
+                <div style="text-align:center; margin-top:40px; font-size:10px; border-top:2px solid #000; padding-top:10px;">
+                    <b>BARANG YANG SUDAH DIBELI TIDAK DAPAT DITUKAR/DIKEMBALIKAN KECUALI ADA PERJANJIAN.</b>
                 </div>
             </body>
         </html>
     `;
 };
 
-// --- UPDATE FUNGSI PRINT: PAKAI HTML DARI ATAS ---
-export const printInvoice = (sale: InvoiceData, storeSetting: StoreSetting) => {
+export const printInvoice = (sale: InvoiceData, storeSetting: StoreSetting, customLayout?: CustomLayout) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
         alert("Pop-up diblokir. Izinkan pop-up untuk mencetak invoice.");
         return;
     }
 
-    const htmlContent = generateInvoiceHtml(sale, storeSetting);
+    const htmlContent = generateInvoiceHtml(sale, storeSetting, customLayout);
     
-    // Tambahkan script: onafterprint akan mentrigger window.close()
     const htmlWithScript = htmlContent.replace('</body>', `
         <script>
             window.onload = function() {
-                // Beri jeda sedikit agar style ter-load sempurna
                 setTimeout(() => {
                     window.print();
-                }, 1000);
+                }, 500);
             };
-
-            // Event listener ini berjalan setelah dialog print ditutup (baik print atau cancel)
             window.onafterprint = function() {
                 window.close();
             };

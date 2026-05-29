@@ -31,6 +31,8 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
     // State data menggunakan tipe dari utils
     const [saleData, setSaleData] = useState<InvoiceData | null>(null);
     const [storeSetting, setStoreSetting] = useState<StoreSetting | null>(null);
+    const [selectedLayout, setSelectedLayout] = useState<string>("STRUK_KECIL");
+    const [paperSize, setPaperSize] = useState<string>("58mm");
     
     const { showToast } = useToast();
     
@@ -45,7 +47,7 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
             setHtmlContent("");
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isOpen, saleId]);
+    }, [isOpen, saleId, selectedLayout, paperSize]);
 
     const loadInvoiceData = async () => {
         setIsLoading(true);
@@ -68,8 +70,9 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                 }
 
                 // Generate HTML string menggunakan fungsi dari utils
-                // Ini memastikan tampilan sama persis dengan modul lain
-                const html = generateInvoiceHtml(sale, setting);
+                // Menyertakan layout yang dipilih
+                const customLayout = { layoutType: selectedLayout, paperSize: paperSize };
+                const html = generateInvoiceHtml(sale, setting, customLayout);
                 setHtmlContent(html);
             } else {
                 showToast(saleResult.error || "Gagal memuat invoice", "error");
@@ -82,11 +85,10 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
         }
     };
 
-    // Fungsi Print: Menggunakan fungsi shared dari utils
     const handlePrint = () => {
         if (saleData) {
-            // Jika setting belum terload, kirim object kosong
-            printInvoice(saleData, storeSetting || {} as StoreSetting);
+            const customLayout = { layoutType: selectedLayout, paperSize: paperSize };
+            printInvoice(saleData, storeSetting || {} as StoreSetting, customLayout);
         }
     };
 
@@ -142,12 +144,36 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                         <h2 className="text-lg font-semibold text-gray-900">Invoice Preview</h2>
                         <p className="text-sm text-gray-500">#{invoiceNumber}</p>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
+                    <div className="flex items-center gap-4">
+                        <select 
+                            value={selectedLayout} 
+                            onChange={(e) => setSelectedLayout(e.target.value)}
+                            className="px-3 py-1.5 border border-gray-300 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="STRUK_KECIL">Struk Thermal</option>
+                            <option value="INVOICE_BESAR">Invoice A4</option>
+                            <option value="SURAT_JALAN">Surat Jalan</option>
+                            <option value="FAKTUR_NCR">Faktur NCR</option>
+                        </select>
+                        {selectedLayout === "STRUK_KECIL" && (
+                            <div className="flex items-center gap-2">
+                                <label className="text-xs text-gray-500 font-medium">Ukuran Kertas:</label>
+                                <input 
+                                    type="text"
+                                    value={paperSize} 
+                                    onChange={(e) => setPaperSize(e.target.value)}
+                                    placeholder="Contoh: 58mm"
+                                    className="px-2 py-1.5 border border-gray-300 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 w-24"
+                                />
+                            </div>
+                        )}
+                        <button
+                            onClick={onClose}
+                            className="text-gray-400 hover:text-gray-600 p-1"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Preview Area (Menggunakan Iframe) */}

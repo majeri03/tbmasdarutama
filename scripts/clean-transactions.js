@@ -1,5 +1,14 @@
 const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
+const readline = require('readline');
+
 const prisma = new PrismaClient();
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+const question = (query) => new Promise((resolve) => rl.question(query, resolve));
 
 async function main() {
   console.log('====================================================');
@@ -8,6 +17,32 @@ async function main() {
   console.log('PERINGATAN: Semua data penjualan, pembelian, utang piutang,');
   console.log('kas, surat jalan, dan riwayat stok akan dihapus PERMANEN.');
   console.log('Data master (Produk, Satuan, Pelanggan, Supplier, User) tetap aman.\n');
+
+  const email = await question('Masukkan Email SUPER_ADMIN: ');
+  const password = await question('Masukkan Password: ');
+  
+  const user = await prisma.user.findUnique({ where: { email } });
+  
+  if (!user || user.role !== 'SUPER_ADMIN') {
+    console.error('❌ Akses ditolak! Email tidak ditemukan atau bukan SUPER_ADMIN.');
+    rl.close();
+    process.exit(1);
+  }
+  
+  const isValid = await bcrypt.compare(password, user.password);
+  if (!isValid) {
+    console.error('❌ Akses ditolak! Password salah.');
+    rl.close();
+    process.exit(1);
+  }
+  
+  const confirm = await question('Apakah Anda YAKIN ingin menghapus semua data transaksi? (Ketik "YAKIN" untuk lanjut): ');
+  
+  if (confirm !== 'YAKIN') {
+    console.log('Proses dibatalkan.');
+    rl.close();
+    process.exit(0);
+  }
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -74,6 +109,7 @@ async function main() {
     console.error('\nERROR: Gagal membersihkan data transaksi:', error);
   } finally {
     await prisma.$disconnect();
+    rl.close();
   }
 }
 
