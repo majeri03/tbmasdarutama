@@ -155,7 +155,7 @@ export async function POST(request: Request) {
         paymentMethod: "CASH",
         paidAmount: 0,
         changeAmount: 0,
-        status: "COMPLETED",
+        status: "PENDING",
         notes: notes || rawMessage,
         saleItems: {
           create: saleItemsData,

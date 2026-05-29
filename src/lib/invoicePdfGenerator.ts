@@ -47,23 +47,22 @@ export const getTerbilangRupiah = (num: number): string => {
   }
 };
 
-export const generateInvoiceHtml = (sale: any, store: any, layout?: any) => {
-  if (!layout) {
-    layout = {
-      layoutType: 'INVOICE_BESAR',
-      fontSizeScale: 1.0,
-      showHeader: true,
-      showCustomerInfo: true,
-      showPaymentInfo: true,
-      showSignature: true,
-      showFooter: true,
-      showLogo: true,
-      bankName: store.bankName || 'BCA',
-      bankAccount: store.bankAccount || '1234567890',
-      bankHolder: store.bankHolder || 'TB Masdar Utama',
-      footerTerms: 'Barang yang sudah dibeli tidak dapat ditukar atau dikembalikan.',
-    };
-  }
+export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) => {
+  const layout = {
+    layoutType: 'INVOICE_BESAR',
+    fontSizeScale: 1.0,
+    showHeader: true,
+    showCustomerInfo: true,
+    showPaymentInfo: true,
+    showSignature: true,
+    showFooter: true,
+    showLogo: true,
+    bankName: store.bankName || 'BCA',
+    bankAccount: store.bankAccount || '1234567890',
+    bankHolder: store.bankHolder || 'TB Masdar Utama',
+    footerTerms: 'Barang yang sudah dibeli tidak dapat ditukar atau dikembalikan.',
+    ...(customLayout || {})
+  };
 
   const scale = layout.fontSizeScale || 1.0;
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
