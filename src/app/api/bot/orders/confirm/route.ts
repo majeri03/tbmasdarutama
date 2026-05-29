@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import puppeteer from "puppeteer";
 import { generateInvoiceHtml, getStoreSettings } from "@/lib/invoicePdfGenerator";
 
 function authCheck(request: Request) {
@@ -174,25 +173,14 @@ export async function POST(request: Request) {
       }
     });
 
-    // Generate PDF using Puppeteer
-    let pdfBase64 = null;
+    // Generate HTML (Tanpa Puppeteer di Vercel, kita lempar HTML ke Bot)
+    let htmlString = null;
     try {
       const store = await getStoreSettings();
-      // Generate using NCR layout by default for simple printing, or INVOICE_BESAR
-      const html = generateInvoiceHtml(sale, store, { layoutType: 'INVOICE_BESAR' });
-      
-      const browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--single-process'],
-      });
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: 'domcontentloaded' });
-      const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
-      await browser.close();
-      
-      pdfBase64 = Buffer.from(pdfBuffer).toString('base64');
+      // Generate menggunakan layout INVOICE_BESAR
+      htmlString = generateInvoiceHtml(sale, store, { layoutType: 'INVOICE_BESAR' });
     } catch (e) {
-      console.error("[BOT] Error generating PDF:", e);
+      console.error("[BOT] Error generating HTML:", e);
     }
 
     return NextResponse.json({
@@ -205,7 +193,7 @@ export async function POST(request: Request) {
         customerName: resolvedCustomerName,
         isNewCustomer,
         itemCount: saleItemsData.length,
-        pdfBase64,
+        htmlString,
       },
     }, { status: 201 });
 
