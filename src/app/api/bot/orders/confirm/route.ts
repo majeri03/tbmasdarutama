@@ -88,9 +88,11 @@ export async function POST(request: Request) {
 
     // ==================== AUTO-CREATE SALE ====================
     // Find admin user for cashierId
-    let cashierId: string | null = null;
     const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } }) || await prisma.user.findFirst();
-    if (admin) cashierId = admin.id;
+    if (!admin) {
+      return NextResponse.json({ status: "error", message: "Tidak ada user/admin di database untuk menjadi kasir." }, { status: 500 });
+    }
+    const cashierId = admin.id;
 
     // Hitung total
     let totalAmount = 0;
@@ -143,7 +145,7 @@ export async function POST(request: Request) {
       data: {
         invoiceNumber: invNo,
         customerId,
-        cashierId: cashierId || undefined,
+        cashierId,
         totalAmount,
         grandTotal: totalAmount,
         paymentMethod: "CASH",
