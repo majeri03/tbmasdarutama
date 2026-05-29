@@ -72,13 +72,13 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                 const customLayout = { 
                     layoutType: setting?.invoiceLayoutType || "STRUK_KECIL", 
                     paperSize: setting?.invoicePaperSize || "58mm",
-                    showHeader: setting?.invoiceShowHeader,
-                    showLogo: setting?.invoiceShowLogo,
-                    showCustomerInfo: setting?.invoiceShowCustomerInfo,
-                    showPaymentInfo: setting?.invoiceShowPaymentInfo,
-                    showSignature: setting?.invoiceShowSignature,
-                    showFooter: setting?.invoiceShowFooter,
-                    footerTerms: setting?.invoiceFooterTerms
+                    showHeader: setting?.invoiceShowHeader ?? undefined,
+                    showLogo: setting?.invoiceShowLogo ?? undefined,
+                    showCustomerInfo: setting?.invoiceShowCustomerInfo ?? undefined,
+                    showPaymentInfo: setting?.invoiceShowPaymentInfo ?? undefined,
+                    showSignature: setting?.invoiceShowSignature ?? undefined,
+                    showFooter: setting?.invoiceShowFooter ?? undefined,
+                    footerTerms: setting?.invoiceFooterTerms ?? undefined
                 };
                 const html = generateInvoiceHtml(sale, setting, customLayout);
                 setHtmlContent(html);
@@ -98,13 +98,13 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
             const customLayout = { 
                 layoutType: storeSetting?.invoiceLayoutType || "STRUK_KECIL", 
                 paperSize: storeSetting?.invoicePaperSize || "58mm",
-                showHeader: storeSetting?.invoiceShowHeader,
-                showLogo: storeSetting?.invoiceShowLogo,
-                showCustomerInfo: storeSetting?.invoiceShowCustomerInfo,
-                showPaymentInfo: storeSetting?.invoiceShowPaymentInfo,
-                showSignature: storeSetting?.invoiceShowSignature,
-                showFooter: storeSetting?.invoiceShowFooter,
-                footerTerms: storeSetting?.invoiceFooterTerms
+                showHeader: storeSetting?.invoiceShowHeader ?? undefined,
+                showLogo: storeSetting?.invoiceShowLogo ?? undefined,
+                showCustomerInfo: storeSetting?.invoiceShowCustomerInfo ?? undefined,
+                showPaymentInfo: storeSetting?.invoiceShowPaymentInfo ?? undefined,
+                showSignature: storeSetting?.invoiceShowSignature ?? undefined,
+                showFooter: storeSetting?.invoiceShowFooter ?? undefined,
+                footerTerms: storeSetting?.invoiceFooterTerms ?? undefined
             };
             printInvoice(saleData, storeSetting || {} as StoreSetting, customLayout);
         }

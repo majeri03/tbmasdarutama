@@ -107,7 +107,7 @@ export async function POST(request: Request) {
         const product = await prisma.product.findUnique({ where: { id: productId }, include: { productUnits: true }});
         if (!product) continue;
 
-        // Cek apakah unitId yang diberikan benar-benar valid (ada di dalam productUnits)
+        // Cek apakah unitId valid
         if (unitId && !product.productUnits.some(u => u.unitId === unitId)) {
           unitId = null;
         }
@@ -115,17 +115,33 @@ export async function POST(request: Request) {
         let unitPrice = item.price || 0;
         
         if (!unitId && product.productUnits.length > 0) {
-           unitId = product.productUnits.find((u) => u.isPrimary)?.unitId || product.productUnits[0].unitId;
+           const primary = product.productUnits.find((u) => u.isPrimary);
+           unitId = primary ? primary.unitId : product.productUnits[0].unitId;
            if (!unitPrice) unitPrice = Number(product.productUnits[0].sellPrice);
         } else if (!unitPrice && product.productUnits.length > 0) {
            const pu = product.productUnits.find(u => u.unitId === unitId);
            if (pu) unitPrice = Number(pu.sellPrice);
         }
 
-        // Fallback jika unitId masih kosong
+        // Fallback jika unitId masih kosong (misal produk tidak punya satuan sama sekali)
         if (!unitId) {
           const defaultUnit = await prisma.unit.findFirst();
-          if (defaultUnit) unitId = defaultUnit.id;
+          if (defaultUnit) {
+            unitId = defaultUnit.id;
+          } else {
+            // Jika sama sekali tidak ada unit di database, buat unit default
+            const newUnit = await prisma.unit.create({
+              data: { name: 'Pcs', symbol: 'pcs' }
+            });
+            unitId = newUnit.id;
+          }
+        }
+
+        // Verifikasi terakhir, pastikan unitId benar-benar ada di tabel Unit
+        const unitExists = await prisma.unit.findUnique({ where: { id: unitId } });
+        if (!unitExists) {
+          console.warn(`[BOT] Unit ID ${unitId} tidak valid, skip item ini.`);
+          continue; // Skip the item instead of crashing the transaction
         }
         
         const qty = item.quantity || 1;

@@ -40,9 +40,21 @@ export interface StoreSetting {
     address?: string | null;
     phone?: string | null;
     logoUrl?: string | null;
+    tagline?: string | null;
     bankName?: string | null;
     bankAccount?: string | null;
     bankHolder?: string | null;
+    // Invoice layout settings (synced from StoreSetting DB)
+    invoiceLayoutType?: string | null;
+    invoicePaperSize?: string | null;
+    invoiceDocumentPaperSize?: string | null;
+    invoiceShowHeader?: boolean | null;
+    invoiceShowLogo?: boolean | null;
+    invoiceShowCustomerInfo?: boolean | null;
+    invoiceShowPaymentInfo?: boolean | null;
+    invoiceShowSignature?: boolean | null;
+    invoiceShowFooter?: boolean | null;
+    invoiceFooterTerms?: string | null;
 }
 
 export interface CustomLayout {
@@ -224,13 +236,23 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
         `;
     }).join("");
 
+    let pageConfig = "@page { size: A4 portrait; margin: 15mm; }";
+    let bodyWidth = "";
+    if (paperSize && paperSize.trim() !== "" && paperSize.toLowerCase() !== "a4") {
+        if (paperSize.toLowerCase() === "a5" || paperSize.toLowerCase() === "letter") {
+             pageConfig = `@page { size: ${paperSize} portrait; margin: 15mm; }`;
+        } else {
+             bodyWidth = `max-width: ${paperSize}; margin-left: auto; margin-right: auto;`;
+        }
+    }
+
     return `
         <html>
             <head>
                 <title>${docTitle} - ${sale.invoiceNumber}</title>
                 <style>
-                    @page { size: A4 portrait; margin: 15mm; }
-                    body { font-family: Arial, sans-serif; font-size: 12px; color: #000; -webkit-print-color-adjust: exact; margin: 0; }
+                    ${pageConfig}
+                    body { font-family: Arial, sans-serif; font-size: 12px; color: #000; -webkit-print-color-adjust: exact; margin: 0; ${bodyWidth} }
                     table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
                     th, td { border: 1px solid #000; padding: 6px; }
                     th { background: #f0f0f0; }

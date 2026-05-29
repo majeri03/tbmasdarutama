@@ -72,3 +72,88 @@ export async function GET(request: Request) {
     return NextResponse.json({ status: "error", message: "Gagal mengambil data produk" }, { status: 500 });
   }
 }
+
+export async function POST(request: Request) {
+  const clientApiKey = request.headers.get("x-api-key");
+  const serverApiKey = process.env.BOT_API_KEY;
+
+  if (!clientApiKey || clientApiKey !== serverApiKey) {
+    return NextResponse.json({ status: "error", message: "Akses Ditolak" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const { name, categoryName, unitName, price } = body;
+
+    if (!name || !unitName || !price) {
+      return NextResponse.json({ status: "error", message: "name, unitName, dan price wajib diisi" }, { status: 400 });
+    }
+
+    // 1. Cari atau buat Kategori
+    let category = null;
+    if (categoryName) {
+      category = await prisma.category.findFirst({ where: { name: { equals: categoryName, mode: "insensitive" } } });
+      if (!category) {
+        category = await prisma.category.create({ data: { name: categoryName } });
+      }
+    } else {
+      category = await prisma.category.findFirst();
+    }
+
+    if (!category) {
+      return NextResponse.json({ status: "error", message: "Tidak ada kategori yang tersedia" }, { status: 500 });
+    }
+
+    // 2. Cari atau buat Unit
+    let unit = await prisma.unit.findFirst({ where: { name: { equals: unitName, mode: "insensitive" } } });
+    if (!unit) {
+      unit = await prisma.unit.create({ data: { name: unitName, symbol: unitName.substring(0, 3).toLowerCase() } });
+    }
+
+    // 3. Buat Produk
+    // Cari kode unik
+    const lastProduct = await prisma.product.findFirst({
+      where: { code: { startsWith: "P-WA-" } },
+      orderBy: { createdAt: "desc" }
+    });
+    let nextNum = 1;
+    if (lastProduct) {
+      const parts = lastProduct.code.split("-");
+      const lastVal = parseInt(parts[parts.length - 1] || "0");
+      if (!isNaN(lastVal)) nextNum = lastVal + 1;
+    }
+    const newCode = `P-WA-${String(nextNum).padStart(4, "0")}`;
+
+    const newProduct = await prisma.product.create({
+      data: {
+        code: newCode,
+        name: name,
+        categoryId: category.id,
+        currentStock: 0,
+        minStock: 0,
+        productUnits: {
+          create: [{
+            unitId: unit.id,
+            buyPrice: Number(price), // Default buy = sell
+            sellPrice: Number(price),
+            isPrimary: true
+          }]
+        }
+      }
+    });
+
+    return NextResponse.json({
+      status: "success",
+      message: `Produk ${name} berhasil ditambahkan!`,
+      data: {
+        id: newProduct.id,
+        kode: newProduct.code,
+        nama: newProduct.name
+      }
+    });
+
+  } catch (error) {
+    console.error("Error creating product:", error);
+    return NextResponse.json({ status: "error", message: "Gagal membuat produk" }, { status: 500 });
+  }
+}

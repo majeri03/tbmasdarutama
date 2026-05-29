@@ -565,6 +565,7 @@ model StoreSetting {
   // Invoice Global Settings
   invoiceLayoutType       String   @default("STRUK_KECIL") // STRUK_KECIL, INVOICE_BESAR, SURAT_JALAN, FAKTUR_NCR
   invoicePaperSize        String   @default("58mm")
+  invoiceDocumentPaperSize String? @default("A4")
   invoiceShowHeader       Boolean  @default(true)
   invoiceShowLogo         Boolean  @default(true)
   invoiceShowCustomerInfo Boolean  @default(true)

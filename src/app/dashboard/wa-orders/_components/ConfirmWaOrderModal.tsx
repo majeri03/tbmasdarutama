@@ -47,6 +47,7 @@ export default function ConfirmWaOrderModal({
   const [driver, setDriver] = useState("");
   const [vehicle, setVehicle] = useState("");
   const [notes, setNotes] = useState("");
+  const [createDeliveryOrder, setCreateDeliveryOrder] = useState(true);
   const [items, setItems] = useState<OrderItem[]>([{ productId: "", productName: "", unitId: "", unitName: "", quantity: 1, notes: "" }]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -114,6 +115,7 @@ export default function ConfirmWaOrderModal({
     const res = await confirmWaOrder(order.id, {
       customerId: selectedCustomerId,
       deliveryDate: new Date(deliveryDate),
+      createDeliveryOrder,
       driver: driver || undefined,
       vehicle: vehicle || undefined,
       notes: notes || undefined,
@@ -231,6 +233,17 @@ export default function ConfirmWaOrderModal({
             />
           </div>
 
+          <div className="flex items-center justify-between bg-blue-50 border border-blue-100 p-3 rounded-lg">
+            <div>
+              <p className="text-sm font-medium text-blue-800">Buat Surat Jalan?</p>
+              <p className="text-xs text-blue-600">Jika dimatikan, pesanan hanya masuk transaksi POS.</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" className="sr-only peer" checked={createDeliveryOrder} onChange={(e) => setCreateDeliveryOrder(e.target.checked)} />
+              <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+            </label>
+          </div>
+
           {/* Items */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -344,7 +357,7 @@ export default function ConfirmWaOrderModal({
               {loading ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> Memproses...</>
               ) : (
-                <><CheckCircle className="w-4 h-4" /> Konfirmasi & Buat Surat Jalan</>
+                <><CheckCircle className="w-4 h-4" /> {createDeliveryOrder ? "Konfirmasi & Buat Surat Jalan" : "Konfirmasi & Buat Transaksi POS"}</>
               )}
             </button>
           </div>

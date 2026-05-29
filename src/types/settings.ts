@@ -19,6 +19,7 @@ export interface StoreSetting {
   bankHolder?: string | null;
   invoiceLayoutType: string;
   invoicePaperSize: string;
+  invoiceDocumentPaperSize: string | null;
   invoiceShowHeader: boolean;
   invoiceShowLogo: boolean;
   invoiceShowCustomerInfo: boolean;
@@ -72,6 +73,7 @@ export interface StoreSettingFormData {
   bankHolder?: string;
   invoiceLayoutType?: string;
   invoicePaperSize?: string;
+  invoiceDocumentPaperSize?: string;
   invoiceShowHeader?: boolean;
   invoiceShowLogo?: boolean;
   invoiceShowCustomerInfo?: boolean;

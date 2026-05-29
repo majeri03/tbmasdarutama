@@ -13,6 +13,7 @@ export default function InvoiceSettingsTab() {
         name: "",
         invoiceLayoutType: "STRUK_KECIL",
         invoicePaperSize: "58mm",
+        invoiceDocumentPaperSize: "A4",
         invoiceShowHeader: true,
         invoiceShowLogo: true,
         invoiceShowCustomerInfo: true,
@@ -104,19 +105,32 @@ export default function InvoiceSettingsTab() {
                         </select>
                     </div>
 
-                    {formData.invoiceLayoutType === "STRUK_KECIL" && (
-                        <div>
-                            <label className="label">Ukuran Kertas (Lebar)</label>
-                            <input
-                                type="text"
-                                name="invoicePaperSize"
-                                value={formData.invoicePaperSize || "58mm"}
-                                onChange={handleChange}
-                                className="glass-input"
-                                placeholder="Contoh: 58mm, 80mm, 100mm"
-                            />
-                        </div>
-                    )}
+                    <div>
+                        <label className="label">
+                            Lebar Thermal POS (Struk Kecil)
+                        </label>
+                        <input
+                            type="text"
+                            name="invoicePaperSize"
+                            value={formData.invoicePaperSize || "58mm"}
+                            onChange={handleChange}
+                            className="glass-input"
+                            placeholder="Contoh: 58mm, 80mm"
+                        />
+                    </div>
+                    <div>
+                        <label className="label">
+                            Ukuran Kertas Dokumen (Invoice/NCR/DO)
+                        </label>
+                        <input
+                            type="text"
+                            name="invoiceDocumentPaperSize"
+                            value={formData.invoiceDocumentPaperSize || "A4"}
+                            onChange={handleChange}
+                            className="glass-input"
+                            placeholder="Contoh: A4, A5, Letter"
+                        />
+                    </div>
                 </div>
             </div>
 
