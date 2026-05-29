@@ -38,7 +38,8 @@ export async function GET(request: Request) {
         productUnits: {
           where: { isPrimary: true },
           select: {
-            id: true,        // unitId — dibutuhkan AI untuk siapkan_orderan_otomatis
+            id: true,        // unitId - dibutuhkan AI untuk siapkan_orderan_otomatis
+            unitId: true,
             sellPrice: true,
             unit: { select: { name: true } },
           },
@@ -55,7 +56,7 @@ export async function GET(request: Request) {
         nama: product.name,
         stok: product.currentStock,
         satuan: primaryUnit?.unit?.name || "-",
-        unitId: primaryUnit?.id || null, // unitId
+        unitId: primaryUnit?.unitId || null, // unitId
         harga: primaryUnit?.sellPrice ? Number(primaryUnit.sellPrice) : 0,
       };
     });

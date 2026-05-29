@@ -108,6 +108,11 @@ export async function POST(request: Request) {
         const product = await prisma.product.findUnique({ where: { id: productId }, include: { productUnits: true }});
         if (!product) continue;
 
+        // Cek apakah unitId yang diberikan benar-benar valid (ada di dalam productUnits)
+        if (unitId && !product.productUnits.some(u => u.unitId === unitId)) {
+          unitId = null;
+        }
+
         let unitPrice = item.price || 0;
         
         if (!unitId && product.productUnits.length > 0) {
