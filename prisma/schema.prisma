@@ -561,6 +561,18 @@ model StoreSetting {
   bankName    String?
   bankAccount String?
   bankHolder  String?
+  
+  // Invoice Global Settings
+  invoiceLayoutType       String   @default("STRUK_KECIL") // STRUK_KECIL, INVOICE_BESAR, SURAT_JALAN, FAKTUR_NCR
+  invoicePaperSize        String   @default("58mm")
+  invoiceShowHeader       Boolean  @default(true)
+  invoiceShowLogo         Boolean  @default(true)
+  invoiceShowCustomerInfo Boolean  @default(true)
+  invoiceShowPaymentInfo  Boolean  @default(true)
+  invoiceShowSignature    Boolean  @default(true)
+  invoiceShowFooter       Boolean  @default(true)
+  invoiceFooterTerms      String?  @default("BARANG YANG SUDAH DIBELI TIDAK DAPAT DITUKAR/DIKEMBALIKAN KECUALI ADA PERJANJIAN.")
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   

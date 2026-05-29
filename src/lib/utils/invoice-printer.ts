@@ -48,6 +48,13 @@ export interface StoreSetting {
 export interface CustomLayout {
     layoutType?: string;
     paperSize?: string;
+    showHeader?: boolean;
+    showLogo?: boolean;
+    showCustomerInfo?: boolean;
+    showPaymentInfo?: boolean;
+    showSignature?: boolean;
+    showFooter?: boolean;
+    footerTerms?: string;
 }
 
 // Helper: Terbilang
@@ -85,7 +92,18 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
     const dateStr = format(new Date(sale.saleDate), "dd/MM/yyyy HH:mm");
     
     const layoutType = customLayout?.layoutType || "STRUK_KECIL";
-    const paperSize = customLayout?.paperSize || "58mm"; // only for STRUK_KECIL
+    const paperSize = customLayout?.paperSize || "58mm";
+    const showHeader = customLayout?.showHeader ?? true;
+    const showLogo = customLayout?.showLogo ?? true;
+    const showCustomerInfo = customLayout?.showCustomerInfo ?? true;
+    const showPaymentInfo = customLayout?.showPaymentInfo ?? true;
+    const showSignature = customLayout?.showSignature ?? true;
+    const showFooter = customLayout?.showFooter ?? true;
+    const footerTerms = customLayout?.footerTerms ?? "BARANG YANG SUDAH DIBELI TIDAK DAPAT DITUKAR/DIKEMBALIKAN KECUALI ADA PERJANJIAN.";
+    
+    const logoUrl = storeSetting?.logoUrl ? (storeSetting.logoUrl.startsWith('http') ? storeSetting.logoUrl : `http://localhost:3000${storeSetting.logoUrl}`) : null;
+    const logoImg = showLogo && logoUrl ? `<img src="${logoUrl}" style="width: 44px; height: 44px; object-fit: contain; margin-right: 10px; border-radius: 4px;" />` : 
+                    showLogo ? `<div style="width: 36px; height: 36px; background-color: #DC2626; display: flex; align-items: center; justify-content: center; margin-right: 10px; color: white; font-weight: bold;">MU</div>` : '';
 
     // STRUK KECIL (THERMAL)
     if (layoutType === "STRUK_KECIL") {
@@ -127,16 +145,20 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                     </style>
                 </head>
                 <body>
-                    <div class="center bold" style="font-size: 1.2em;">${storeName}</div>
-                    <div class="center" style="margin-bottom: 4px;">${storeAddress}</div>
-                    <div class="center">Telp: ${storePhone}</div>
-                    
+                    ${showHeader ? `
+                    <div style="display:flex; justify-content:center; align-items:center; flex-direction:column; margin-bottom: 4px;">
+                        ${logoImg}
+                        <div class="center bold" style="font-size: 1.2em; margin-top: 4px;">${storeName}</div>
+                        <div class="center">${storeAddress}</div>
+                        <div class="center">Telp: ${storePhone}</div>
+                    </div>
                     <div class="divider"></div>
+                    ` : ''}
                     
                     <div class="row"><span>No</span><span>${sale.invoiceNumber}</span></div>
                     <div class="row"><span>Tgl</span><span>${dateStr}</span></div>
                     <div class="row"><span>Kasir</span><span>${sale.cashier?.name || '-'}</span></div>
-                    ${sale.customer ? `<div class="row"><span class="bold">Plgn</span><span class="bold">${sale.customer.name}</span></div>` : ''}
+                    ${showCustomerInfo && sale.customer ? `<div class="row"><span class="bold">Plgn</span><span class="bold">${sale.customer.name}</span></div>` : ''}
                     
                     <div class="divider"></div>
                     <div class="bold" style="margin-bottom: 4px;">DAFTAR BARANG</div>
@@ -153,9 +175,11 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                     <div class="row"><span>Bayar (${sale.paymentMethod})</span><span>${formatCurrency(sale.paidAmount).replace('Rp ','')}</span></div>
                     <div class="row bold"><span>Kembali</span><span>${formatCurrency(sale.changeAmount).replace('Rp ','')}</span></div>
                     
+                    ${showFooter ? `
                     <div class="divider"></div>
                     <div class="center bold" style="margin-top: 8px;">TERIMA KASIH</div>
-                    <div class="center" style="font-size: 0.9em;">Barang yang sudah dibeli tidak dapat dikembalikan</div>
+                    <div class="center" style="font-size: 0.9em;">${footerTerms}</div>
+                    ` : ''}
                 </body>
             </html>
         `;
@@ -217,11 +241,15 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                 </style>
             </head>
             <body>
+                ${showHeader ? `
                 <div class="flex-between header-box">
-                    <div>
-                        <h1 style="margin:0; font-size:20px;">${storeName}</h1>
-                        <p style="margin:4px 0 0 0;">${storeAddress}</p>
-                        <p style="margin:2px 0 0 0;">Phone: ${storePhone}</p>
+                    <div style="display:flex; align-items:center;">
+                        ${logoImg}
+                        <div>
+                            <h1 style="margin:0; font-size:20px;">${storeName}</h1>
+                            <p style="margin:4px 0 0 0;">${storeAddress}</p>
+                            <p style="margin:2px 0 0 0;">Phone: ${storePhone}</p>
+                        </div>
                     </div>
                     <div style="text-align:right;">
                         <h2 class="title">${docTitle}</h2>
@@ -233,7 +261,9 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                         </table>
                     </div>
                 </div>
+                ` : ''}
 
+                ${showCustomerInfo ? `
                 <div style="border: 1px solid #000; padding: 10px; margin-bottom: 20px; width: 50%;">
                     <strong style="border-bottom:1px solid #000; display:block; margin-bottom:5px;">CUSTOMER INFO</strong>
                     <table class="no-border">
@@ -242,6 +272,7 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                         <tr><td>Address</td><td>: ${sale.customer?.address || '-'}</td></tr>
                     </table>
                 </div>
+                ` : ''}
 
                 <table>
                     <thead>
@@ -275,6 +306,14 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                         </div>
                         ` : ''}
                         
+                        ${showPaymentInfo && showPrices && sale.paymentMethod === 'TRANSFER' && storeSetting?.bankName ? `
+                        <div style="border:1px solid #000; padding:10px; margin-bottom:10px; display:inline-block;">
+                            <b>TRANSFER:</b> ${storeSetting.bankName} - ${storeSetting.bankAccount}<br/>
+                            a/n ${storeSetting.bankHolder}
+                        </div>
+                        ` : ''}
+                        
+                        ${showSignature ? `
                         <div style="display:flex; justify-content:space-between; margin-top: 30px; text-align:center;">
                             <div style="width:30%;">
                                 <p>Penerima,</p>
@@ -287,6 +326,7 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                                 <p style="border-top:1px solid #000; display:inline-block; width:80%;">(${sale.cashier?.name || 'Admin'})</p>
                             </div>
                         </div>
+                        ` : ''}
                     </div>
                     
                     ${showPrices ? `
@@ -303,9 +343,11 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                     ` : ''}
                 </div>
                 
+                ${showFooter ? `
                 <div style="text-align:center; margin-top:40px; font-size:10px; border-top:2px solid #000; padding-top:10px;">
-                    <b>BARANG YANG SUDAH DIBELI TIDAK DAPAT DITUKAR/DIKEMBALIKAN KECUALI ADA PERJANJIAN.</b>
+                    <b>${footerTerms}</b>
                 </div>
+                ` : ''}
             </body>
         </html>
     `;

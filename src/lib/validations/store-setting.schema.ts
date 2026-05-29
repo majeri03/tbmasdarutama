@@ -18,6 +18,15 @@ export const storeSettingSchema = z.object({
   bankName: z.string().optional(),
   bankAccount: z.string().optional(),
   bankHolder: z.string().optional(),
+  invoiceLayoutType: z.string().optional(),
+  invoicePaperSize: z.string().optional(),
+  invoiceShowHeader: z.boolean().optional(),
+  invoiceShowLogo: z.boolean().optional(),
+  invoiceShowCustomerInfo: z.boolean().optional(),
+  invoiceShowPaymentInfo: z.boolean().optional(),
+  invoiceShowSignature: z.boolean().optional(),
+  invoiceShowFooter: z.boolean().optional(),
+  invoiceFooterTerms: z.string().optional(),
 });
 
 export type StoreSettingFormValues = z.infer<typeof storeSettingSchema>;

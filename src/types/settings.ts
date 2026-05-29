@@ -17,6 +17,15 @@ export interface StoreSetting {
   bankName?: string | null;
   bankAccount?: string | null;
   bankHolder?: string | null;
+  invoiceLayoutType: string;
+  invoicePaperSize: string;
+  invoiceShowHeader: boolean;
+  invoiceShowLogo: boolean;
+  invoiceShowCustomerInfo: boolean;
+  invoiceShowPaymentInfo: boolean;
+  invoiceShowSignature: boolean;
+  invoiceShowFooter: boolean;
+  invoiceFooterTerms?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -61,4 +70,13 @@ export interface StoreSettingFormData {
   bankName?: string;
   bankAccount?: string;
   bankHolder?: string;
+  invoiceLayoutType?: string;
+  invoicePaperSize?: string;
+  invoiceShowHeader?: boolean;
+  invoiceShowLogo?: boolean;
+  invoiceShowCustomerInfo?: boolean;
+  invoiceShowPaymentInfo?: boolean;
+  invoiceShowSignature?: boolean;
+  invoiceShowFooter?: boolean;
+  invoiceFooterTerms?: string;
 }

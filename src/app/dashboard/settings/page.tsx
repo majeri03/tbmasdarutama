@@ -7,8 +7,9 @@ import PasswordSettingsTab from "./_components/PasswordSettingsTab";
 import LandingPageTab from "./_components/LandingPageTab";
 import ProfileSettingsTab from "./_components/ProfileSettingsTab";
 import DataManagementTab from "./_components/DataManagementTab";
+import InvoiceSettingsTab from "./_components/InvoiceSettingsTab";
 
-type TabType = "profile" | "store" | "password" | "landing" | "data";
+type TabType = "profile" | "store" | "invoice" | "password" | "landing" | "data";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<TabType>("profile");
@@ -16,6 +17,7 @@ export default function SettingsPage() {
   const tabs = [
     { id: "profile" as TabType, label: "Profil Akun", icon: User },
     { id: "store" as TabType, label: "Info Toko", icon: Store },
+    { id: "invoice" as TabType, label: "Pengaturan Invoice", icon: Store },
     { id: "password" as TabType, label: "Ganti Password", icon: Lock },
     { id: "landing" as TabType, label: "Landing Page", icon: Globe },
     { id: "data" as TabType, label: "Manajemen Data", icon: ShieldAlert },
@@ -53,6 +55,7 @@ export default function SettingsPage() {
       <div className="glass-card p-6">
         {activeTab === "profile" && <ProfileSettingsTab />}
         {activeTab === "store" && <StoreSettingsTab />}
+        {activeTab === "invoice" && <InvoiceSettingsTab />}
         {activeTab === "password" && <PasswordSettingsTab />}
         {activeTab === "landing" && <LandingPageTab />}
         {activeTab === "data" && <DataManagementTab />}

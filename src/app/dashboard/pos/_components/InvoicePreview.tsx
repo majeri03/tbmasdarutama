@@ -31,8 +31,6 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
     // State data menggunakan tipe dari utils
     const [saleData, setSaleData] = useState<InvoiceData | null>(null);
     const [storeSetting, setStoreSetting] = useState<StoreSetting | null>(null);
-    const [selectedLayout, setSelectedLayout] = useState<string>("STRUK_KECIL");
-    const [paperSize, setPaperSize] = useState<string>("58mm");
     
     const { showToast } = useToast();
     
@@ -47,7 +45,7 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
             setHtmlContent("");
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isOpen, saleId, selectedLayout, paperSize]);
+    }, [isOpen, saleId]);
 
     const loadInvoiceData = async () => {
         setIsLoading(true);
@@ -70,8 +68,18 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                 }
 
                 // Generate HTML string menggunakan fungsi dari utils
-                // Menyertakan layout yang dipilih
-                const customLayout = { layoutType: selectedLayout, paperSize: paperSize };
+                // Menyertakan layout yang dipilih dari global settings
+                const customLayout = { 
+                    layoutType: setting?.invoiceLayoutType || "STRUK_KECIL", 
+                    paperSize: setting?.invoicePaperSize || "58mm",
+                    showHeader: setting?.invoiceShowHeader,
+                    showLogo: setting?.invoiceShowLogo,
+                    showCustomerInfo: setting?.invoiceShowCustomerInfo,
+                    showPaymentInfo: setting?.invoiceShowPaymentInfo,
+                    showSignature: setting?.invoiceShowSignature,
+                    showFooter: setting?.invoiceShowFooter,
+                    footerTerms: setting?.invoiceFooterTerms
+                };
                 const html = generateInvoiceHtml(sale, setting, customLayout);
                 setHtmlContent(html);
             } else {
@@ -87,7 +95,17 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
 
     const handlePrint = () => {
         if (saleData) {
-            const customLayout = { layoutType: selectedLayout, paperSize: paperSize };
+            const customLayout = { 
+                layoutType: storeSetting?.invoiceLayoutType || "STRUK_KECIL", 
+                paperSize: storeSetting?.invoicePaperSize || "58mm",
+                showHeader: storeSetting?.invoiceShowHeader,
+                showLogo: storeSetting?.invoiceShowLogo,
+                showCustomerInfo: storeSetting?.invoiceShowCustomerInfo,
+                showPaymentInfo: storeSetting?.invoiceShowPaymentInfo,
+                showSignature: storeSetting?.invoiceShowSignature,
+                showFooter: storeSetting?.invoiceShowFooter,
+                footerTerms: storeSetting?.invoiceFooterTerms
+            };
             printInvoice(saleData, storeSetting || {} as StoreSetting, customLayout);
         }
     };
@@ -145,28 +163,6 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                         <p className="text-sm text-gray-500">#{invoiceNumber}</p>
                     </div>
                     <div className="flex items-center gap-4">
-                        <select 
-                            value={selectedLayout} 
-                            onChange={(e) => setSelectedLayout(e.target.value)}
-                            className="px-3 py-1.5 border border-gray-300 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="STRUK_KECIL">Struk Thermal</option>
-                            <option value="INVOICE_BESAR">Invoice A4</option>
-                            <option value="SURAT_JALAN">Surat Jalan</option>
-                            <option value="FAKTUR_NCR">Faktur NCR</option>
-                        </select>
-                        {selectedLayout === "STRUK_KECIL" && (
-                            <div className="flex items-center gap-2">
-                                <label className="text-xs text-gray-500 font-medium">Ukuran Kertas:</label>
-                                <input 
-                                    type="text"
-                                    value={paperSize} 
-                                    onChange={(e) => setPaperSize(e.target.value)}
-                                    placeholder="Contoh: 58mm"
-                                    className="px-2 py-1.5 border border-gray-300 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 w-24"
-                                />
-                            </div>
-                        )}
                         <button
                             onClick={onClose}
                             className="text-gray-400 hover:text-gray-600 p-1"
