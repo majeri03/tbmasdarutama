@@ -157,3 +157,65 @@ export async function POST(request: Request) {
     return NextResponse.json({ status: "error", message: "Gagal membuat produk" }, { status: 500 });
   }
 }
+
+export async function PUT(request: Request) {
+  const clientApiKey = request.headers.get("x-api-key");
+  const serverApiKey = process.env.BOT_API_KEY;
+
+  if (!clientApiKey || clientApiKey !== serverApiKey) {
+    return NextResponse.json({ status: "error", message: "Akses Ditolak" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const { productId, code, name, price } = body; // bisa edit berdasarkan ID, kode, atau kecocokan nama
+
+    if (!price) {
+      return NextResponse.json({ status: "error", message: "Harga baru (price) wajib diisi" }, { status: 400 });
+    }
+
+    let product = null;
+
+    if (productId) {
+      product = await prisma.product.findUnique({ where: { id: productId }, include: { productUnits: { where: { isPrimary: true } } } });
+    } else if (code) {
+      product = await prisma.product.findUnique({ where: { code }, include: { productUnits: { where: { isPrimary: true } } } });
+    } else if (name) {
+      // Cari berdasar nama
+      product = await prisma.product.findFirst({
+        where: { name: { contains: name, mode: "insensitive" }, isActive: true },
+        include: { productUnits: { where: { isPrimary: true } } },
+        orderBy: { name: "asc" }
+      });
+    }
+
+    if (!product) {
+      return NextResponse.json({ status: "error", message: "Produk tidak ditemukan" }, { status: 404 });
+    }
+
+    const primaryUnit = product.productUnits[0];
+    if (!primaryUnit) {
+      return NextResponse.json({ status: "error", message: "Produk tidak memiliki satuan utama" }, { status: 400 });
+    }
+
+    // Update harga di satuan utama
+    await prisma.productUnit.update({
+      where: { id: primaryUnit.id },
+      data: { sellPrice: Number(price) }
+    });
+
+    return NextResponse.json({
+      status: "success",
+      message: `Harga ${product.name} berhasil diubah menjadi Rp ${Number(price).toLocaleString('id-ID')}`,
+      data: {
+        id: product.id,
+        nama: product.name,
+        hargaBaru: price
+      }
+    });
+
+  } catch (error) {
+    console.error("Error updating product price:", error);
+    return NextResponse.json({ status: "error", message: "Gagal mengubah harga produk" }, { status: 500 });
+  }
+}
