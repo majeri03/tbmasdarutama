@@ -12,13 +12,13 @@ import {
 } from "@/lib/validations/delivery-order.schema";
 import { requirePermission } from "../utils/role";
 //    GENERATE DO NUMBER   
-async function generateDONumber(): Promise<string> {
+async function generateDONumber(tx: Prisma.TransactionClient): Promise<string> {
   const today = new Date();
   const year = today.getFullYear();
   const month = String(today.getMonth() + 1).padStart(2, "0");
   const prefix = `DO/${year}${month}`;
 
-  const lastDO = await prisma.deliveryOrder.findFirst({
+  const lastDO = await tx.deliveryOrder.findFirst({
     where: { doNumber: { startsWith: prefix } },
     orderBy: { doNumber: "desc" },
   });
@@ -423,7 +423,7 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
     // =========================================================
     const result = await prisma.$transaction(async (tx) => {
       // A. Generate Nomor Surat Jalan
-      const doNumber = await generateDONumber();
+      const doNumber = await generateDONumber(tx);
       
       // B. Logic Invoice Otomatis (Jika DO dibuat manual tanpa POS)
       let createdSaleId = validated.saleId; 
