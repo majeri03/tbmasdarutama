@@ -149,10 +149,17 @@ export async function confirmWaOrder(
       }
       const invoiceNumber = `INV-${dateStr}-${String(invNum).padStart(3, "0")}`;
 
-      // Kalkulasi grand total
+      // Kalkulasi grand total & cek stok
       let grandTotal = 0;
       const saleItemsData = [];
       for (const item of data.items) {
+        // Cek Stok
+        const product = await tx.product.findUnique({ where: { id: item.productId } });
+        if (!product) throw new Error(`Produk tidak ditemukan`);
+        if (Number(product.currentStock) < item.quantity) {
+          throw new Error(`Stok ${product.name} tidak mencukupi untuk diproses. Sisa: ${product.currentStock}`);
+        }
+
         const pu = await tx.productUnit.findFirst({
           where: { productId: item.productId, unitId: item.unitId },
         });

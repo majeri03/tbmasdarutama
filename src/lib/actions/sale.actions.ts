@@ -381,6 +381,10 @@ export async function updateSale(saleId: string, data: CreateSaleInput) {
         }
 
         // B. Update Sale & Create new Sale Items
+        if (validated.paymentMethod !== PaymentMethod.CREDIT && validated.paidAmount < validated.grandTotal) {
+           throw new Error("Untuk pembayaran tunai/transfer, jumlah bayar tidak boleh kurang dari total.");
+        }
+
         const status = validated.paymentMethod === PaymentMethod.CREDIT
             ? (validated.paidAmount >= validated.grandTotal ? SaleStatus.COMPLETED : SaleStatus.PENDING)
             : SaleStatus.COMPLETED;
