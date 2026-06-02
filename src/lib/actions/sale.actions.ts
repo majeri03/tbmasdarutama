@@ -271,6 +271,241 @@ export async function createSale(data: CreateSaleInput) {
   }
 }
 
+// ==================== UPDATE SALE (EDIT TRANSAKSI) ====================
+export async function updateSale(saleId: string, data: CreateSaleInput) {
+  try {
+    const session = await auth();
+    requirePermission(session, "CREATE_SALE");
+
+    if (!session?.user?.id) {
+      return { success: false, error: "Unauthorized. Please login first." };
+    }
+
+    const cashier = await prisma.user.findUnique({
+      where: { email: session.user.email || "" },
+      select: { id: true, name: true, role: true, email: true },
+    });
+
+    if (!cashier) return { success: false, error: "User tidak ditemukan" };
+
+    const validated = createSaleSchema.parse(data);
+
+    // 1. Get existing sale with all relations
+    const existingSale = await prisma.sale.findUnique({
+      where: { id: saleId },
+      include: {
+        saleItems: true,
+        deliveryOrder: {
+            include: { deliveryItems: true }
+        },
+        customerDebts: true
+      }
+    });
+
+    if (!existingSale) return { success: false, error: "Transaksi tidak ditemukan" };
+    if (existingSale.status === "CANCELLED" || existingSale.status === "RETURN") {
+        return { success: false, error: "Tidak dapat mengubah transaksi yang dibatalkan/return" };
+    }
+
+    // Reject if delivery order is IN_TRANSIT or DELIVERED
+    if (existingSale.deliveryOrder && (existingSale.deliveryOrder.status === "IN_TRANSIT" || existingSale.deliveryOrder.status === "DELIVERED")) {
+        return { success: false, error: "Tidak dapat mengubah transaksi karena Surat Jalan sudah di jalan (IN_TRANSIT) atau Selesai." };
+    }
+
+    // 2. Resolve Products & Units
+    const productIds = validated.items.map((i) => i.productId);
+    const oldProductIds = existingSale.saleItems.map(i => i.productId);
+    const allProductIds = Array.from(new Set([...productIds, ...oldProductIds]));
+
+    const products = await prisma.product.findMany({
+      where: { id: { in: allProductIds } },
+      select: {
+        id: true,
+        currentStock: true,
+        name: true,
+        code: true,
+        productUnits: {
+          select: { id: true, unitId: true },
+        },
+      },
+    });
+
+    const productMap = new Map(products.map((p) => [p.id, p]));
+    const productUnitToUnitMap = new Map<string, string>();
+    for (const product of products) {
+      for (const pu of product.productUnits) {
+        productUnitToUnitMap.set(pu.id, pu.unitId);
+      }
+    }
+
+    // Calculate diff for stock
+    const stockDiff = new Map<string, number>(); 
+    for (const oldItem of existingSale.saleItems) {
+        stockDiff.set(oldItem.productId, (stockDiff.get(oldItem.productId) || 0) - oldItem.quantity);
+    }
+    for (const newItem of validated.items) {
+        stockDiff.set(newItem.productId, (stockDiff.get(newItem.productId) || 0) + newItem.quantity);
+    }
+
+    // Verify stock availability
+    for (const [pId, diffQty] of stockDiff.entries()) {
+        if (diffQty > 0) {
+            const product = productMap.get(pId);
+            if (!product) return { success: false, error: `Produk tidak ditemukan` };
+            if (Number(product.currentStock) < diffQty) {
+                return { success: false, error: `Stock ${product.name} tidak mencukupi untuk penambahan.` };
+            }
+        }
+    }
+
+    // 3. Prepare new Sale Items
+    const saleItemsData = validated.items.map((item) => {
+      const unitId = productUnitToUnitMap.get(item.productUnitId);
+      if (!unitId) throw new Error(`Master Satuan tidak ditemukan`);
+      return {
+        productId: item.productId,
+        unitId: unitId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        discount: item.discount,
+        subtotal: item.subtotal,
+      };
+    });
+
+    // 4. TRANSACTION
+    const updatedSale = await prisma.$transaction(async (tx) => {
+        // A. Delete old Sale Items & Delivery Items
+        await tx.saleItem.deleteMany({ where: { saleId } });
+        if (existingSale.deliveryOrder) {
+            await tx.deliveryItem.deleteMany({ where: { deliveryOrderId: existingSale.deliveryOrder.id } });
+        }
+
+        // B. Update Sale & Create new Sale Items
+        const status = validated.paymentMethod === PaymentMethod.CREDIT
+            ? (validated.paidAmount >= validated.grandTotal ? SaleStatus.COMPLETED : SaleStatus.PENDING)
+            : SaleStatus.COMPLETED;
+
+        const sale = await tx.sale.update({
+            where: { id: saleId },
+            data: {
+                customerId: validated.customerId,
+                totalAmount: validated.totalAmount,
+                discount: validated.discount,
+                tax: validated.tax,
+                grandTotal: validated.grandTotal,
+                paymentMethod: validated.paymentMethod,
+                paidAmount: validated.paidAmount,
+                changeAmount: validated.changeAmount,
+                status,
+                notes: validated.notes || existingSale.notes,
+                saleItems: { create: saleItemsData }
+            }
+        });
+
+        // C. Update Delivery Order Items if exists
+        if (existingSale.deliveryOrder) {
+            const deliveryItemsData = validated.items.map((item) => {
+                const unitId = productUnitToUnitMap.get(item.productUnitId)!;
+                return {
+                    productId: item.productId,
+                    unitId: unitId,
+                    quantity: item.quantity,
+                };
+            });
+            await tx.deliveryOrder.update({
+                where: { id: existingSale.deliveryOrder.id },
+                data: {
+                    customerId: validated.customerId,
+                    deliveryItems: { create: deliveryItemsData }
+                }
+            });
+        }
+
+        // D. Stock update & StockMovement Log
+        for (const [pId, diffQty] of stockDiff.entries()) {
+            if (diffQty !== 0) {
+                await tx.product.update({
+                    where: { id: pId },
+                    data: { currentStock: { decrement: diffQty } } 
+                });
+
+                await tx.stockMovement.create({
+                    data: {
+                        productId: pId,
+                        type: diffQty > 0 ? "OUT" : "IN",
+                        quantity: Math.abs(diffQty),
+                        notes: `Edit Penjualan ${existingSale.invoiceNumber}`,
+                        referenceType: "Sale Edit",
+                        referenceId: saleId,
+                        createdById: session.user.id,
+                    }
+                });
+            }
+        }
+
+        // E. Update Customer Debt
+        if (validated.paymentMethod === PaymentMethod.CREDIT) {
+            const remainingDebt = validated.grandTotal - validated.paidAmount;
+            const debtStatus = remainingDebt <= 0 ? "PAID" : (validated.paidAmount > 0 ? "PARTIAL" : "UNPAID");
+            
+            if (existingSale.customerDebts && existingSale.customerDebts.length > 0) {
+                await tx.customerDebt.update({
+                    where: { id: existingSale.customerDebts[0].id },
+                    data: {
+                        customerId: validated.customerId,
+                        totalDebt: validated.grandTotal,
+                        paidAmount: validated.paidAmount,
+                        remainingDebt,
+                        status: debtStatus,
+                    }
+                });
+            } else {
+                const debtNumber = await generateDebtNumber(tx);
+                await tx.customerDebt.create({
+                    data: {
+                        debtNumber,
+                        saleId: sale.id,
+                        customerId: validated.customerId,
+                        totalDebt: validated.grandTotal,
+                        paidAmount: validated.paidAmount,
+                        remainingDebt,
+                        status: debtStatus,
+                        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                        notes: `Utang dari edit penjualan ${existingSale.invoiceNumber}`
+                    }
+                });
+            }
+        } else {
+            if (existingSale.customerDebts && existingSale.customerDebts.length > 0) {
+                 await tx.customerDebt.update({
+                    where: { id: existingSale.customerDebts[0].id },
+                    data: {
+                        status: "PAID",
+                        remainingDebt: 0,
+                        notes: `[LUNAS KARENA EDIT METODE PEMBAYARAN KE ${validated.paymentMethod}]`
+                    }
+                });
+            }
+        }
+
+        return sale;
+    }, { maxWait: 10000, timeout: 30000 });
+
+    revalidatePath("/dashboard/pos");
+    revalidatePath("/dashboard/sales");
+
+    return {
+      success: true,
+      data: updatedSale,
+      message: `Transaksi ${existingSale.invoiceNumber} berhasil diedit`,
+    };
+
+  } catch (error) {
+    console.error("Update sale error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Gagal mengedit transaksi" };
+  }
+}
+
 // ==================== GET SALES ====================
 export async function getSales(params?: SaleFilterInput) {
   try {

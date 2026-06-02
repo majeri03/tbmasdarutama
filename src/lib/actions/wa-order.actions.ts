@@ -188,6 +188,25 @@ export async function confirmWaOrder(
         },
       });
 
+      // Potong stok & catat StockMovement untuk setiap item
+      for (const item of data.items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { currentStock: { decrement: item.quantity } },
+        });
+        await tx.stockMovement.create({
+          data: {
+            productId: item.productId,
+            type: "OUT",
+            quantity: item.quantity,
+            notes: `Konfirmasi Order WA - ${invoiceNumber}`,
+            referenceType: "WaOrder",
+            referenceId: newSale.id,
+            createdById: session.user.id,
+          },
+        });
+      }
+
       // Buat Hutang Customer
       const lastDebt = await tx.customerDebt.findFirst({
         where: { debtNumber: { startsWith: "DEBT-CUST-" } },
@@ -272,5 +291,48 @@ export async function confirmWaOrder(
   } catch (error) {
     console.error("[confirmWaOrder]", error);
     return { success: false, error: error instanceof Error ? error.message : "Gagal konfirmasi orderan" };
+  }
+}
+
+// ==================== CREATE MANUAL ORDER ====================
+export async function createManualOrder(
+  data: {
+    customerId: string;
+    deliveryDate: Date;
+    driver?: string;
+    vehicle?: string;
+    notes?: string;
+    createDeliveryOrder?: boolean;
+    items: Array<{
+      productId: string;
+      unitId: string;
+      quantity: number;
+      notes?: string;
+    }>;
+  }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user) return { success: false, error: "Unauthorized" };
+
+    const customer = await prisma.customer.findUnique({ where: { id: data.customerId } });
+    if (!customer) return { success: false, error: "Pelanggan tidak ditemukan" };
+
+    // Buat orderan manual sebagai placeholder di tabel WA Order
+    const manualOrder = await prisma.waOrder.create({
+      data: {
+        rawMessage: "ORDER MANUAL (Dibuat oleh kasir)",
+        senderPhone: customer.phone || "-",
+        senderName: customer.name,
+        customerName: customer.name,
+        status: "PENDING",
+      }
+    });
+
+    // Langsung konfirmasi
+    return await confirmWaOrder(manualOrder.id, data);
+  } catch (error) {
+    console.error("[createManualOrder]", error);
+    return { success: false, error: error instanceof Error ? error.message : "Gagal membuat orderan manual" };
   }
 }
