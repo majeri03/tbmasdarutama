@@ -9,8 +9,12 @@ export default auth((req) => {
     // Handle preflight OPTIONS request
     if (req.method === "OPTIONS") {
       const response = new NextResponse(null, { status: 200 });
-      response.headers.set("Access-Control-Allow-Credentials", "true");
-      response.headers.set("Access-Control-Allow-Origin", origin || "*");
+      // Gunakan origin jika whitelist (sementara allow semua tapi hindari credentials & wildcard combo)
+      const allowedOrigins = [process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000", "https://masdarutama.tech"];
+      const isAllowed = allowedOrigins.includes(origin);
+      
+      response.headers.set("Access-Control-Allow-Credentials", isAllowed ? "true" : "false");
+      response.headers.set("Access-Control-Allow-Origin", isAllowed ? origin : allowedOrigins[0]);
       response.headers.set("Access-Control-Allow-Methods", "GET,DELETE,PATCH,POST,PUT,OPTIONS");
       response.headers.set("Access-Control-Allow-Headers", "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Cookie, Authorization");
       response.headers.set("Access-Control-Expose-Headers", "Set-Cookie");
@@ -38,8 +42,11 @@ export default auth((req) => {
       }
     });
     
-    response.headers.set("Access-Control-Allow-Credentials", "true");
-    response.headers.set("Access-Control-Allow-Origin", origin || "*");
+    const allowedOrigins = [process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000", "https://masdarutama.tech"];
+    const isAllowed = allowedOrigins.includes(origin);
+
+    response.headers.set("Access-Control-Allow-Credentials", isAllowed ? "true" : "false");
+    response.headers.set("Access-Control-Allow-Origin", isAllowed ? origin : allowedOrigins[0]);
     response.headers.set("Access-Control-Allow-Methods", "GET,DELETE,PATCH,POST,PUT,OPTIONS");
     response.headers.set("Access-Control-Allow-Headers", "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Cookie, Authorization");
     response.headers.set("Access-Control-Expose-Headers", "Set-Cookie");

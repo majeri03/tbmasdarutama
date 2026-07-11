@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
+import Link from "next/link";
 import { ProductStats } from "./ProductStats";
 import { ProductTable } from "./ProductTable";
 import { ProductFormModal } from "./ProductFormModal";
@@ -207,10 +208,16 @@ export function ProductsClient({
             Kelola semua produk, stok, dan harga
           </p>
         </div>
-        <button onClick={handleCreate} className="btn-primary">
-          <Plus className="w-5 h-5" />
-          <span>Tambah Produk</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <Link href="/dashboard/products/bulk-import" className="btn-secondary">
+            <Upload className="w-5 h-5" />
+            <span>Import Massal</span>
+          </Link>
+          <button onClick={handleCreate} className="btn-primary">
+            <Plus className="w-5 h-5" />
+            <span>Tambah Produk</span>
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

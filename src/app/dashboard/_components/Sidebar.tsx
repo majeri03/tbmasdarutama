@@ -23,13 +23,11 @@ import {
   DollarSign,
   BarChart3,
   Shield,
-  MessageSquare,
 } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { useSession } from "next-auth/react";
 import { hasPermission } from "@/lib/utils/role";
-import { getWaOrderPendingCount } from "@/lib/actions/wa-order.actions";
 const menuGroups = [
   {
     label: "Main",
@@ -51,7 +49,6 @@ const menuGroups = [
   {
     label: "Transactions",
     items: [
-      { href: "/dashboard/wa-orders", icon: <MessageSquare />, label: "Orderan WA", permission: "VIEW_DELIVERY_ORDERS" as const },
       { href: "/dashboard/delivery-orders", icon: <Send />, label: "Pengiriman", permission: "VIEW_DELIVERY_ORDERS" as const, },
       { href: "/dashboard/purchases", icon: <ShoppingBag />, label: "Purchase Orders", permission: "VIEW_PURCHASES" as const },
       { href: "/dashboard/sales", icon: <DollarSign />, label: "Penjualan", permission: "VIEW_MENU_SALES" as const },
@@ -90,7 +87,6 @@ export default function Sidebar({
   const { data: session, status } = useSession();
   const [storeLogo, setStoreLogo] = useState<string | null>(null);
   const [storeName, setStoreName] = useState("TB Masdar Utama");
-  const [waPendingCount, setWaPendingCount] = useState(0);
 
   // Debugging log client-side to trace sidebar visibility issues
   useEffect(() => {
@@ -110,16 +106,6 @@ export default function Sidebar({
       }
     };
     fetchSettings();
-
-    // Fetch WA pending count
-    const fetchWaCount = async () => {
-      const res = await getWaOrderPendingCount();
-      if (res.success) setWaPendingCount(res.count);
-    };
-    fetchWaCount();
-    // Refresh setiap 30 detik
-    const interval = setInterval(fetchWaCount, 30000);
-    return () => clearInterval(interval);
   }, []);
   const filteredMenuGroups = menuGroups.map(group => ({
     ...group,
@@ -212,11 +198,6 @@ export default function Sidebar({
                   >
                     <span className="w-5 h-5">{item.icon}</span>
                     <span>{item.label}</span>
-                    {item.href === "/dashboard/wa-orders" && waPendingCount > 0 && (
-                      <span className="ml-auto bg-green-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
-                        {waPendingCount > 99 ? "99+" : waPendingCount}
-                      </span>
-                    )}
                   </Link>
                 ))}
               </div>
