@@ -3,14 +3,19 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import * as admin from "firebase-admin";
 
-// ── Inisialisasi Firebase Admin SDK (sekali saja) ─────────
-if (!admin.apps.length) {
-  const serviceAccount = JSON.parse(
-    process.env.FIREBASE_SERVICE_ACCOUNT_JSON ?? "{}"
-  );
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
+// ── Inisialisasi Firebase Admin SDK (hanya jika env var tersedia) ──
+let firebaseReady = false;
+try {
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (raw && raw !== "{}") {
+    const serviceAccount = JSON.parse(raw);
+    if (!admin.apps.length) {
+      admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    }
+    firebaseReady = true;
+  }
+} catch (e) {
+  console.warn("[FCM] Firebase Admin SDK tidak dikonfigurasi — notifikasi push dinonaktifkan:", e);
 }
 
 // ── Helper kirim notifikasi ke token tunggal ─────────────
@@ -25,6 +30,7 @@ export async function sendToToken({
   body: string;
   data?: Record<string, string>;
 }) {
+  if (!firebaseReady) return;
   try {
     await admin.messaging().send({
       token,
@@ -56,6 +62,7 @@ export async function sendToTopic({
   body: string;
   data?: Record<string, string>;
 }) {
+  if (!firebaseReady) return;
   try {
     await admin.messaging().send({
       topic,
