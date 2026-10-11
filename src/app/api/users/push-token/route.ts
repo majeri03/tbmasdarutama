@@ -5,7 +5,9 @@ import prisma from '@/lib/prisma';
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session?.user?.id) {
+    const userId = session?.user?.id;
+    const userEmail = session?.user?.email;
+    if (!userId && !userEmail) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
@@ -15,8 +17,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: 'Token is required' }, { status: 400 });
     }
 
-    await prisma.user.update({
-      where: { id: session.user.id },
+    await prisma.user.updateMany({
+      where: {
+        OR: [
+          ...(userId ? [{ id: userId }] : []),
+          ...(userEmail ? [{ email: userEmail }] : []),
+        ],
+      },
       data: { expoPushToken: token },
     });
 

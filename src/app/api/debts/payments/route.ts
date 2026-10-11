@@ -10,6 +10,7 @@ import {
 import { addCustomerDebtPayment } from "@/lib/actions/customer-debt.actions";
 import { addSupplierDebtPayment } from "@/lib/actions/supplier-debt.actions";
 import { hasMinimumRole } from "@/lib/utils/role";
+import { Notif } from "@/app/api/mobile/fcm/route";
 
 /**
  * POST /api/debts/payments
@@ -62,6 +63,18 @@ export async function POST(request: NextRequest) {
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal mencatat pembayaran.", 400);
+    }
+
+    // Kirim notifikasi FCM saat cicilan/pelunasan berhasil (customer)
+    if (type === "customer" && result.data) {
+      const data = result.data as { customerName?: string; customerId?: string; amount?: number };
+      if (data.customerName && data.customerId) {
+        Notif.paymentReceived(
+          data.customerId,
+          data.customerName,
+          paymentData.amount
+        ).catch(console.error);
+      }
     }
 
     return successResponse(result.data, result.message, 201);
