@@ -103,17 +103,21 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
     const storePhone = storeSetting?.phone ? `${storeSetting.phone}` : "-";
     const dateStr = format(new Date(sale.saleDate), "dd/MM/yyyy HH:mm");
     
-    const layoutType = customLayout?.layoutType || "STRUK_KECIL";
-    const paperSize = customLayout?.paperSize || "58mm";
-    const showHeader = customLayout?.showHeader ?? true;
-    const showLogo = customLayout?.showLogo ?? true;
-    const showCustomerInfo = customLayout?.showCustomerInfo ?? true;
-    const showPaymentInfo = customLayout?.showPaymentInfo ?? true;
-    const showSignature = customLayout?.showSignature ?? true;
-    const showFooter = customLayout?.showFooter ?? true;
-    const footerTerms = customLayout?.footerTerms ?? "BARANG YANG SUDAH DIBELI TIDAK DAPAT DITUKAR/DIKEMBALIKAN KECUALI ADA PERJANJIAN.";
+    const layoutType = customLayout?.layoutType || storeSetting?.invoiceLayoutType || "STRUK_KECIL";
+    const isThermal = layoutType === "STRUK_KECIL";
+    const defaultDocSize = storeSetting?.invoiceDocumentPaperSize || "A4";
+    const defaultThermalSize = storeSetting?.invoicePaperSize || "58mm";
+    const paperSize = customLayout?.paperSize || (isThermal ? defaultThermalSize : defaultDocSize);
     
-    const logoUrl = storeSetting?.logoUrl ? (storeSetting.logoUrl.startsWith('http') ? storeSetting.logoUrl : `http://localhost:3000${storeSetting.logoUrl}`) : null;
+    const showHeader = customLayout?.showHeader ?? storeSetting?.invoiceShowHeader ?? true;
+    const showLogo = customLayout?.showLogo ?? storeSetting?.invoiceShowLogo ?? true;
+    const showCustomerInfo = customLayout?.showCustomerInfo ?? storeSetting?.invoiceShowCustomerInfo ?? true;
+    const showPaymentInfo = customLayout?.showPaymentInfo ?? storeSetting?.invoiceShowPaymentInfo ?? true;
+    const showSignature = customLayout?.showSignature ?? storeSetting?.invoiceShowSignature ?? true;
+    const showFooter = customLayout?.showFooter ?? storeSetting?.invoiceShowFooter ?? true;
+    const footerTerms = customLayout?.footerTerms ?? storeSetting?.invoiceFooterTerms ?? "BARANG YANG SUDAH DIBELI TIDAK DAPAT DITUKAR/DIKEMBALIKAN KECUALI ADA PERJANJIAN.";
+    
+    const logoUrl = storeSetting?.logoUrl ? (storeSetting.logoUrl.startsWith('http') ? storeSetting.logoUrl : `${storeSetting.logoUrl}`) : null;
     const logoImg = showLogo && logoUrl ? `<img src="${logoUrl}" style="width: 44px; height: 44px; object-fit: contain; margin-right: 10px; border-radius: 4px;" />` : 
                     showLogo ? `<div style="width: 36px; height: 36px; background-color: #DC2626; display: flex; align-items: center; justify-content: center; margin-right: 10px; color: white; font-weight: bold;">MU</div>` : '';
 
@@ -236,14 +240,20 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
         `;
     }).join("");
 
-    let pageConfig = "@page { size: A4 portrait; margin: 15mm; }";
-    let bodyWidth = "";
-    if (paperSize && paperSize.trim() !== "" && paperSize.toLowerCase() !== "a4") {
-        if (paperSize.toLowerCase() === "a5" || paperSize.toLowerCase() === "letter") {
-             pageConfig = `@page { size: ${paperSize} portrait; margin: 15mm; }`;
-        } else {
-             bodyWidth = `max-width: ${paperSize}; margin-left: auto; margin-right: auto;`;
-        }
+    let pageConfig = "@page { size: A4 portrait; margin: 12mm; }";
+    let bodyWidth = "max-width: 210mm;";
+    const pLower = (paperSize || "A4").toLowerCase().trim();
+    if (pLower === "a5") {
+        pageConfig = "@page { size: A5 portrait; margin: 10mm; }";
+        bodyWidth = "max-width: 148mm;";
+    } else if (pLower === "f4" || pLower === "hvs") {
+        pageConfig = "@page { size: 215mm 330mm; margin: 12mm; }";
+        bodyWidth = "max-width: 215mm;";
+    } else if (pLower === "letter") {
+        pageConfig = "@page { size: letter portrait; margin: 12mm; }";
+        bodyWidth = "max-width: 216mm;";
+    } else if (pLower !== "a4") {
+        bodyWidth = `max-width: ${paperSize};`;
     }
 
     return `
@@ -252,10 +262,21 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                 <title>${docTitle} - ${sale.invoiceNumber}</title>
                 <style>
                     ${pageConfig}
-                    body { font-family: Arial, sans-serif; font-size: 12px; color: #000; -webkit-print-color-adjust: exact; margin: 0; ${bodyWidth} }
+                    body {
+                        font-family: Arial, Helvetica, sans-serif;
+                        font-size: 12px;
+                        color: #000;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                        margin: 0 auto;
+                        padding: 12mm 15mm;
+                        background: #ffffff;
+                        box-sizing: border-box;
+                        ${bodyWidth}
+                    }
                     table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-                    th, td { border: 1px solid #000; padding: 6px; }
-                    th { background: #f0f0f0; }
+                    th, td { border: 1px solid #000; padding: 6px 8px; }
+                    th { background: #f3f4f6; }
                     .no-border td, .no-border th { border: none !important; padding: 2px !important; background: transparent !important;}
                     .flex-between { display: flex; justify-content: space-between; align-items: flex-start; }
                     .header-box { border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }

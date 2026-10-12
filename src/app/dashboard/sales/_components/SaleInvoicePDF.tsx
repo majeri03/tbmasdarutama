@@ -22,6 +22,7 @@ export function SaleInvoicePDF({ isOpen, onClose, saleId }: SaleInvoicePDFProps)
   const [htmlContent, setHtmlContent] = useState<string>("");
   const [saleData, setSaleData] = useState<InvoiceData | null>(null);
   const [storeSetting, setStoreSetting] = useState<StoreSetting | null>(null);
+  const [activeLayout, setActiveLayout] = useState<string>("SURAT_JALAN");
   const [error, setError] = useState("");
   
   // Ref untuk iframe
@@ -57,7 +58,10 @@ export function SaleInvoicePDF({ isOpen, onClose, saleId }: SaleInvoicePDFProps)
             setStoreSetting(setting);
         }
 
-        const html = generateInvoiceHtml(sale, setting);
+        const initialLayout = setting?.invoiceLayoutType || "SURAT_JALAN";
+        setActiveLayout(initialLayout);
+
+        const html = generateInvoiceHtml(sale, setting, { layoutType: initialLayout });
         setHtmlContent(html);
       } else {
         setError(saleResult.error || "Gagal memuat invoice");
@@ -69,9 +73,17 @@ export function SaleInvoicePDF({ isOpen, onClose, saleId }: SaleInvoicePDFProps)
     }
   };
 
+  const handleLayoutChange = (newLayout: string) => {
+    setActiveLayout(newLayout);
+    if (saleData) {
+      const html = generateInvoiceHtml(saleData, storeSetting, { layoutType: newLayout });
+      setHtmlContent(html);
+    }
+  };
+
   const handlePrint = () => {
     if (saleData) {
-      printInvoice(saleData, storeSetting || {} as StoreSetting);
+      printInvoice(saleData, storeSetting || {} as StoreSetting, { layoutType: activeLayout });
     }
   };
 
@@ -93,18 +105,21 @@ export function SaleInvoicePDF({ isOpen, onClose, saleId }: SaleInvoicePDFProps)
       });
 
       const imgData = canvas.toDataURL("image/png");
+      const isThermal = activeLayout === "STRUK_KECIL";
+
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
-        format: "a4",
+        format: isThermal ? [80, 250] : "a4",
       });
 
-      const pdfWidth = 210;
+      const pdfWidth = isThermal ? 80 : 210;
       const imgWidth = pdfWidth; 
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
       pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
-      pdf.save(`Invoice-${saleData.invoiceNumber}.pdf`);
+      const prefix = activeLayout === "SURAT_JALAN" ? "SuratJalan" : activeLayout === "FAKTUR_NCR" ? "Faktur" : "Invoice";
+      pdf.save(`${prefix}-${saleData.invoiceNumber}.pdf`);
 
     } catch (err) {
       console.error("Gagal membuat PDF:", err);
@@ -120,14 +135,63 @@ export function SaleInvoicePDF({ isOpen, onClose, saleId }: SaleInvoicePDFProps)
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 print:hidden">
       <div className="glass-card w-full max-w-4xl h-[90vh] flex flex-col bg-white rounded-lg shadow-xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border-b border-gray-200 bg-white gap-3">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Invoice Preview</h2>
             <p className="text-sm text-gray-500">
               {saleData ? `#${saleData.invoiceNumber}` : "Loading..."}
             </p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+
+          {/* Format Selector Pills */}
+          <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-lg overflow-x-auto">
+            <button
+              type="button"
+              onClick={() => handleLayoutChange("SURAT_JALAN")}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap ${
+                activeLayout === "SURAT_JALAN"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              Surat Jalan
+            </button>
+            <button
+              type="button"
+              onClick={() => handleLayoutChange("INVOICE_BESAR")}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap ${
+                activeLayout === "INVOICE_BESAR"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              Invoice Besar (A4)
+            </button>
+            <button
+              type="button"
+              onClick={() => handleLayoutChange("FAKTUR_NCR")}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap ${
+                activeLayout === "FAKTUR_NCR"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              Faktur NCR
+            </button>
+            <button
+              type="button"
+              onClick={() => handleLayoutChange("STRUK_KECIL")}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap ${
+                activeLayout === "STRUK_KECIL"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              Struk (58mm)
+            </button>
+          </div>
+
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 self-end sm:self-center">
             <X className="w-5 h-5" />
           </button>
         </div>

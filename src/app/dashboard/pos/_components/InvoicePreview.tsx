@@ -31,6 +31,7 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
     // State data menggunakan tipe dari utils
     const [saleData, setSaleData] = useState<InvoiceData | null>(null);
     const [storeSetting, setStoreSetting] = useState<StoreSetting | null>(null);
+    const [activeLayout, setActiveLayout] = useState<string>("SURAT_JALAN");
     
     const { showToast } = useToast();
     
@@ -67,20 +68,10 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                     setStoreSetting(setting);
                 }
 
-                // Generate HTML string menggunakan fungsi dari utils
-                // Menyertakan layout yang dipilih dari global settings
-                const customLayout = { 
-                    layoutType: setting?.invoiceLayoutType || "STRUK_KECIL", 
-                    paperSize: setting?.invoicePaperSize || "58mm",
-                    showHeader: setting?.invoiceShowHeader ?? undefined,
-                    showLogo: setting?.invoiceShowLogo ?? undefined,
-                    showCustomerInfo: setting?.invoiceShowCustomerInfo ?? undefined,
-                    showPaymentInfo: setting?.invoiceShowPaymentInfo ?? undefined,
-                    showSignature: setting?.invoiceShowSignature ?? undefined,
-                    showFooter: setting?.invoiceShowFooter ?? undefined,
-                    footerTerms: setting?.invoiceFooterTerms ?? undefined
-                };
-                const html = generateInvoiceHtml(sale, setting, customLayout);
+                const initialLayout = setting?.invoiceLayoutType || "SURAT_JALAN";
+                setActiveLayout(initialLayout);
+
+                const html = generateInvoiceHtml(sale, setting, { layoutType: initialLayout });
                 setHtmlContent(html);
             } else {
                 showToast(saleResult.error || "Gagal memuat invoice", "error");
@@ -93,20 +84,17 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
         }
     };
 
+    const handleLayoutChange = (newLayout: string) => {
+        setActiveLayout(newLayout);
+        if (saleData) {
+            const html = generateInvoiceHtml(saleData, storeSetting, { layoutType: newLayout });
+            setHtmlContent(html);
+        }
+    };
+
     const handlePrint = () => {
         if (saleData) {
-            const customLayout = { 
-                layoutType: storeSetting?.invoiceLayoutType || "STRUK_KECIL", 
-                paperSize: storeSetting?.invoicePaperSize || "58mm",
-                showHeader: storeSetting?.invoiceShowHeader ?? undefined,
-                showLogo: storeSetting?.invoiceShowLogo ?? undefined,
-                showCustomerInfo: storeSetting?.invoiceShowCustomerInfo ?? undefined,
-                showPaymentInfo: storeSetting?.invoiceShowPaymentInfo ?? undefined,
-                showSignature: storeSetting?.invoiceShowSignature ?? undefined,
-                showFooter: storeSetting?.invoiceShowFooter ?? undefined,
-                footerTerms: storeSetting?.invoiceFooterTerms ?? undefined
-            };
-            printInvoice(saleData, storeSetting || {} as StoreSetting, customLayout);
+            printInvoice(saleData, storeSetting || {} as StoreSetting, { layoutType: activeLayout });
         }
     };
 
@@ -120,7 +108,6 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
             const iframeBody = iframeRef.current.contentDocument.body;
 
             // Gunakan html2canvas untuk 'memotret' isi iframe
-            // Kita gunakan scale 2 atau 3 agar hasil PDF tajam
             const canvas = await html2canvas(iframeBody, {
                 scale: 2, 
                 useCORS: true, 
@@ -129,18 +116,20 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
             });
 
             const imgData = canvas.toDataURL("image/png");
+            const isThermal = activeLayout === "STRUK_KECIL";
+
             const pdf = new jsPDF({
                 orientation: "portrait",
                 unit: "mm",
-                format: "a4",
+                format: isThermal ? [80, 250] : "a4",
             });
 
-            const pdfWidth = 210;
-            // Hitung tinggi berdasarkan rasio gambar
+            const pdfWidth = isThermal ? 80 : 210;
             const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
             pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, imgHeight);
-            pdf.save(`Invoice-${saleData.invoiceNumber}.pdf`);
+            const prefix = activeLayout === "SURAT_JALAN" ? "SuratJalan" : activeLayout === "FAKTUR_NCR" ? "Faktur" : "Invoice";
+            pdf.save(`${prefix}-${saleData.invoiceNumber}.pdf`);
             
             showToast("PDF berhasil didownload!", "success");
         } catch (err) {
@@ -157,12 +146,61 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 print:hidden">
             <div className="glass-card w-full max-w-4xl h-[90vh] flex flex-col bg-white rounded-lg shadow-xl overflow-hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border-b border-gray-200 bg-white gap-3">
                     <div>
                         <h2 className="text-lg font-semibold text-gray-900">Invoice Preview</h2>
                         <p className="text-sm text-gray-500">#{invoiceNumber}</p>
                     </div>
-                    <div className="flex items-center gap-4">
+
+                    {/* Format Selector Pills */}
+                    <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-lg overflow-x-auto">
+                        <button
+                            type="button"
+                            onClick={() => handleLayoutChange("SURAT_JALAN")}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap ${
+                                activeLayout === "SURAT_JALAN"
+                                    ? "bg-blue-600 text-white shadow-sm"
+                                    : "text-gray-600 hover:text-gray-900"
+                            }`}
+                        >
+                            Surat Jalan
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleLayoutChange("INVOICE_BESAR")}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap ${
+                                activeLayout === "INVOICE_BESAR"
+                                    ? "bg-blue-600 text-white shadow-sm"
+                                    : "text-gray-600 hover:text-gray-900"
+                            }`}
+                        >
+                            Invoice Besar (A4)
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleLayoutChange("FAKTUR_NCR")}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap ${
+                                activeLayout === "FAKTUR_NCR"
+                                    ? "bg-blue-600 text-white shadow-sm"
+                                    : "text-gray-600 hover:text-gray-900"
+                            }`}
+                        >
+                            Faktur NCR
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleLayoutChange("STRUK_KECIL")}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap ${
+                                activeLayout === "STRUK_KECIL"
+                                    ? "bg-blue-600 text-white shadow-sm"
+                                    : "text-gray-600 hover:text-gray-900"
+                            }`}
+                        >
+                            Struk (58mm)
+                        </button>
+                    </div>
+
+                    <div className="flex items-center gap-4 self-end sm:self-center">
                         <button
                             onClick={onClose}
                             className="text-gray-400 hover:text-gray-600 p-1"
