@@ -1,6 +1,12 @@
 import crypto from "crypto";
 
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || "masdarutama-secret-key-2024-super-secret";
+// MOBILE_JWT_SECRET dipisah dari NEXTAUTH_SECRET agar konsisten di Vercel.
+// Set di Vercel: Settings → Environment Variables → MOBILE_JWT_SECRET
+// Harus SAMA persis antara lokal .env dan Vercel env vars.
+const JWT_SECRET =
+  process.env.MOBILE_JWT_SECRET ||
+  process.env.NEXTAUTH_SECRET ||
+  "masdarutama-secret-key-2024-super-secret";
 
 export type TokenPayload = {
   id: string;

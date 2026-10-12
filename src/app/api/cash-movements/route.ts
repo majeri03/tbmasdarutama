@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuthenticatedUser } from "@/lib/utils/api";
 import { db } from "@/lib/db";
 import { CashType } from "@prisma/client";
 
@@ -8,7 +8,7 @@ import { CashType } from "@prisma/client";
  * Daftar arus kas dengan filter tanggal dan agregasi
  */
 export async function GET(req: NextRequest) {
-  const session = await auth();
+  const session = await getAuthenticatedUser();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
  * Catat kas masuk / keluar manual
  */
 export async function POST(req: NextRequest) {
-  const session = await auth();
+  const session = await getAuthenticatedUser();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

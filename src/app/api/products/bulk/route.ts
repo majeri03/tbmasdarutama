@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser, unauthorizedResponse, errorResponse } from "@/lib/utils/api";
 import { createProduct } from "@/lib/actions/product.actions";
 import { hasPermission } from "@/lib/utils/role";
-import { auth } from "@/lib/auth";
 
 interface BulkProductItem {
   name: string;

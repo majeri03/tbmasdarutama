@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuthenticatedUser } from "@/lib/utils/api";
 import { db } from "@/lib/db";
 import { SaleStatus } from "@prisma/client";
 
@@ -9,7 +9,7 @@ import { SaleStatus } from "@prisma/client";
  * Tidak membutuhkan param apapun — berdasarkan hari ini
  */
 export async function GET(req: NextRequest) {
-  const session = await auth();
+  const session = await getAuthenticatedUser();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

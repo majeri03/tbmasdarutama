@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getAuthenticatedUser } from '@/lib/utils/api';
 import prisma from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getAuthenticatedUser();
     const userId = session?.user?.id;
     const userEmail = session?.user?.email;
     if (!userId && !userEmail) {

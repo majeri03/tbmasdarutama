@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuthenticatedUser } from "@/lib/utils/api";
 
 // ✅ Only need Worker URL
 const WORKER_URL = process.env.CLOUDFLARE_WORKER_URL;
@@ -10,7 +10,7 @@ if (!WORKER_URL) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
+    const session = await getAuthenticatedUser();
 
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

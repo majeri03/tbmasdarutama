@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuthenticatedUser } from "@/lib/utils/api";
 import { db } from "@/lib/db";
 
 /**
@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
  * Endpoint ini aman karena memerlukan login
  */
 export async function GET(req: NextRequest) {
-  const session = await auth();
+  const session = await getAuthenticatedUser();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

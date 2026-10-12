@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getAuthenticatedUser } from "@/lib/utils/api";
 import { db } from "@/lib/db";
 import * as admin from "firebase-admin";
 
@@ -167,7 +167,7 @@ export const Notif = {
 
 // ── POST /api/mobile/fcm — Kirim notif manual dari panel ──
 export async function POST(req: NextRequest) {
-  const session = await auth();
+  const session = await getAuthenticatedUser();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
