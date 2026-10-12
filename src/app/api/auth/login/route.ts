@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { signIn } from "@/lib/auth";
+import { signMobileToken } from "@/lib/utils/jwt";
 import { errorResponse, validationErrorResponse } from "@/lib/utils/api";
-import { cookies } from "next/headers";
 
 /**
  * POST /api/auth/login
@@ -57,51 +56,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. Trigger NextAuth signIn untuk mendapatkan session token/cookie
-    // NextAuth v5 akan mengatur Set-Cookie header secara otomatis
-    try {
-      await signIn("credentials", {
-        email: user.email,
-        password,
-        redirect: false,
-      });
-    } catch (authError: unknown) {
-      // NextAuth v5 signIn throws NEXT_REDIRECT on success (expected behavior)
-      // We catch and handle it — the cookie is already set
-      const error = authError as { digest?: string; message?: string };
-      if (error?.digest?.includes("NEXT_REDIRECT")) {
-        // This is actually a success — NextAuth sets the cookie before redirecting
-        const cookieStore = await cookies();
-        const token = cookieStore.get("authjs.session-token")?.value || cookieStore.get("__Secure-authjs.session-token")?.value;
-        const cookieName = cookieStore.get("authjs.session-token") ? "authjs.session-token" : "__Secure-authjs.session-token";
+    // 5. Generate mobile token yang terverifikasi
+    const sessionToken = signMobileToken({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    });
 
-        return NextResponse.json(
-          {
-            success: true,
-            message: "Login berhasil.",
-            data: {
-              user: {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                role: user.role,
-              },
-              sessionToken: token || null,
-              cookieName: cookieName,
-            },
-          },
-          { status: 200 }
-        );
-      }
-      throw authError;
-    }
+    const cookieName = "authjs.session-token";
 
-    // 6. Return user data (cookie sudah di-set oleh NextAuth)
-    const cookieStore = await cookies();
-    const token = cookieStore.get("authjs.session-token")?.value || cookieStore.get("__Secure-authjs.session-token")?.value;
-    const cookieName = cookieStore.get("authjs.session-token") ? "authjs.session-token" : "__Secure-authjs.session-token";
-
-    return NextResponse.json(
+    // 6. Return response dengan session token dan Set-Cookie
+    const response = NextResponse.json(
       {
         success: true,
         message: "Login berhasil.",
@@ -112,12 +78,22 @@ export async function POST(request: NextRequest) {
             name: user.name,
             role: user.role,
           },
-          sessionToken: token || null,
-          cookieName: cookieName,
+          sessionToken,
+          cookieName,
         },
       },
       { status: 200 }
     );
+
+    response.cookies.set(cookieName, sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 30 * 24 * 60 * 60, // 30 hari
+    });
+
+    return response;
   } catch (error) {
     console.error("[API_AUTH_LOGIN_ERROR]", error);
     return errorResponse("Terjadi kesalahan server saat login.");

@@ -1,15 +1,14 @@
-import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { unauthorizedResponse } from "@/lib/utils/api";
+import { getAuthenticatedUser, unauthorizedResponse } from "@/lib/utils/api";
 
 /**
  * GET /api/auth/session
  * Verifikasi status login perangkat mobile.
- * Digunakan Expo untuk cek apakah token/cookie masih valid.
+ * Digunakan Flutter/Expo untuk cek apakah token/cookie masih valid.
  */
 export async function GET() {
   try {
-    const session = await auth();
+    const session = await getAuthenticatedUser();
 
     if (!session?.user?.id) {
       return unauthorizedResponse("Sesi tidak valid. Silakan login ulang.");

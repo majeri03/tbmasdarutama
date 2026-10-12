@@ -33,13 +33,46 @@ export async function updateStoreSetting(formData: unknown) {
     let result;
 
     if (existing) {
+      // Hanya update field yang disertakan, agar tab Invoice dan tab Toko tidak saling menimpa
+      const updateData: Record<string, any> = {};
+      for (const [key, val] of Object.entries(validated)) {
+        if (val !== undefined) {
+          if (val === "" && key !== "name") {
+            updateData[key] = null;
+          } else if (val !== "") {
+            updateData[key] = val;
+          }
+        }
+      }
+
       result = await prisma.storeSetting.update({
         where: { id: existing.id },
-        data: validated,
+        data: updateData,
       });
     } else {
+      const createData: any = {
+        name: validated.name || "TB Masdar Utama",
+        tagline: validated.tagline || "Distributor Bahan Bangunan Terpercaya",
+        phone: validated.phone || "6285398346677",
+        address: validated.address || "Jl. Poros Maros - Pangkep, Maccini Baji, Kec. Lau, Kabupaten Maros, Sulawesi Selatan",
+        invoiceLayoutType: validated.invoiceLayoutType || "STRUK_KECIL",
+        invoicePaperSize: validated.invoicePaperSize || "58mm",
+        invoiceDocumentPaperSize: validated.invoiceDocumentPaperSize || "A4",
+        invoiceShowHeader: validated.invoiceShowHeader ?? true,
+        invoiceShowLogo: validated.invoiceShowLogo ?? true,
+        invoiceShowCustomerInfo: validated.invoiceShowCustomerInfo ?? true,
+        invoiceShowPaymentInfo: validated.invoiceShowPaymentInfo ?? true,
+        invoiceShowSignature: validated.invoiceShowSignature ?? true,
+        invoiceShowFooter: validated.invoiceShowFooter ?? true,
+        invoiceFooterTerms: validated.invoiceFooterTerms || "BARANG YANG SUDAH DIBELI TIDAK DAPAT DITUKAR/DIKEMBALIKAN KECUALI ADA PERJANJIAN.",
+      };
+      for (const [k, v] of Object.entries(validated)) {
+        if (v !== undefined && v !== null && v !== "") {
+          createData[k] = v;
+        }
+      }
       result = await prisma.storeSetting.create({
-        data: validated,
+        data: createData,
       });
     }
 

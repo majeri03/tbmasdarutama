@@ -1,28 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getAuthenticatedUser } from '@/lib/utils/api';
 import prisma from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session) {
+    const session = await getAuthenticatedUser();
+    if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    const [waOrdersPending, deliveriesPending] = await Promise.all([
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const [waOrdersPending, deliveriesPending, overdueDebts, todayOrders] = await Promise.all([
       prisma.waOrder.count({
         where: { status: 'PENDING' }
       }),
       prisma.deliveryOrder.count({
         where: { status: 'PENDING' }
+      }),
+      prisma.customerDebt.count({
+        where: {
+          status: { in: ['UNPAID', 'PARTIAL', 'OVERDUE'] },
+          dueDate: { lt: new Date() }
+        }
+      }),
+      prisma.sale.count({
+        where: { createdAt: { gte: todayStart } }
       })
     ]);
+
+    const totalUnread = waOrdersPending + deliveriesPending + overdueDebts;
 
     return NextResponse.json({
       success: true,
       data: {
+        total: totalUnread,
         waOrders: waOrdersPending,
         deliveries: deliveriesPending,
+        overdueDebts,
+        todayOrders
       }
     });
   } catch (error) {

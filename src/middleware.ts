@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
-export default auth((req) => {
+export default auth((req: any) => {
   // 1. CORS Configuration for API Routes (Mobile / Cross-Origin compatibility)
   if (req.nextUrl.pathname.startsWith("/api")) {
     const origin = req.headers.get("origin") || "";

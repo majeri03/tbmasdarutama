@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { hasMinimumRole, hasPermission, type Permission } from "@/lib/utils/role";
 import { Role } from "@prisma/client";
+import { verifyMobileToken } from "@/lib/utils/jwt";
 
 // ==================== STANDARD API RESPONSE ====================
 export type ApiResponse<T = unknown> = {
@@ -65,9 +67,50 @@ export function validationErrorResponse(message: string) {
  * Returns null if not authenticated.
  */
 export async function getAuthenticatedUser() {
-  const session = await auth();
-  if (!session?.user?.id) return null;
-  return session;
+  // 1. Coba dari NextAuth session cookie (Web dashboard)
+  try {
+    const session = await auth();
+    if (session?.user?.id) return session;
+  } catch {
+    // Sesi NextAuth tidak aktif
+  }
+
+  // 2. Coba dari Authorization header atau Cookie (Mobile App)
+  try {
+    const reqHeaders = await headers();
+    let token: string | null = null;
+
+    const authHeader = reqHeaders.get("authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      token = authHeader.substring(7).trim();
+    }
+
+    if (!token) {
+      const cookieHeader = reqHeaders.get("cookie");
+      if (cookieHeader) {
+        const match = cookieHeader.match(/(?:__Secure-)?authjs\.session-token=([^;]+)/);
+        if (match) token = match[1];
+      }
+    }
+
+    if (token) {
+      const payload = verifyMobileToken(token);
+      if (payload) {
+        return {
+          user: {
+            id: payload.id,
+            email: payload.email,
+            name: payload.name,
+            role: payload.role as Role,
+          },
+        };
+      }
+    }
+  } catch (err) {
+    console.error("[GET_AUTH_USER_HEADER_CHECK_ERROR]", err);
+  }
+
+  return null;
 }
 
 /**
