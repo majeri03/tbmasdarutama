@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       customerId: params.customerId,
       supplierId: params.supplierId,
       status: params.status,
-    });
+    }, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal mengambil laporan utang piutang.", 400);

@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       dateTo: searchParams.get("dateTo") ? new Date(searchParams.get("dateTo")!) : undefined,
       page: params.page,
       limit: params.limit,
-    });
+    }, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal mengambil data stok.", 400);

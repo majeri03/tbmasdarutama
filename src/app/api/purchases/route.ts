@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       status: params.status as PurchaseStatus | undefined,
       dateFrom: params.dateFrom,
       dateTo: params.dateTo,
-    });
+    }, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal mengambil data purchase.", 400);

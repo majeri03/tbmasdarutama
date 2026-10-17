@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       search: params.search,
       page: params.page,
       limit: params.limit,
-    });
+    }, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal mengambil data satuan.", 400);

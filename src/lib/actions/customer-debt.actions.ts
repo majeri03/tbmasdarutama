@@ -14,9 +14,9 @@ export async function getAllCustomerDebts(filters?: {
   status?: DebtStatus;
   dateFrom?: Date;
   dateTo?: Date;
-}) {
-  const session = await auth();
-requirePermission(session, "VIEW_CUSTOMER_DEBTS");
+}, externalSession?: unknown) {
+  const session = (externalSession as any) || (await auth());
+  requirePermission(session, "VIEW_CUSTOMER_DEBTS");
   try {
     const where: Prisma.CustomerDebtWhereInput = {};
 
@@ -168,9 +168,9 @@ requirePermission(session, "VIEW_CUSTOMER_DEBTS");
 }
 
 //GET CUSTOMER DEBT BY ID
-export async function getCustomerDebtById(id: string) {
-  const session = await auth();
-requirePermission(session, "VIEW_CUSTOMER_DEBTS");
+export async function getCustomerDebtById(id: string, externalSession?: unknown) {
+  const session = (externalSession as any) || (await auth());
+  requirePermission(session, "VIEW_CUSTOMER_DEBTS");
   try {
     const debt = await prisma.customerDebt.findUnique({
       where: { id },

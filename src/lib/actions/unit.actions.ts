@@ -64,13 +64,16 @@ export async function createUnit(data: UnitFormData) {
 }
 
 // ==================== GET ALL UNITS ====================
-export async function getUnits(params?: {
-  search?: string;
-  page?: number;
-  limit?: number;
-}) {
-  const session = await auth();
-  requireMinimumRole(session, "ADMIN"); // SUPER_ADMIN & ADMIN
+export async function getUnits(
+  params?: {
+    search?: string;
+    page?: number;
+    limit?: number;
+  },
+  externalSession?: unknown
+) {
+  const session = (externalSession as any) || (await auth());
+  requirePermission(session, "VIEW_UNITS");
   try {
     const { search = "", page = 1, limit = 10 } = params || {};
     const skip = (page - 1) * limit;
@@ -284,9 +287,9 @@ export async function deleteUnit(id: string) {
 }
 
 // ==================== GET UNITS FOR SELECT ====================
-export async function getUnitsForSelect() {
-  const session = await auth();
-  requireMinimumRole(session, "ADMIN");
+export async function getUnitsForSelect(externalSession?: unknown) {
+  const session = (externalSession as any) || (await auth());
+  requirePermission(session, "VIEW_UNITS");
   try {
     const units = await prisma.unit.findMany({
       select: {

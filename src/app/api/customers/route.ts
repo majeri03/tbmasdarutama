@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     if (params.isActive === true) statusFilter = "ACTIVE";
     else if (params.isActive === false) statusFilter = "INACTIVE";
 
-    const result = await getCustomers({ status: statusFilter });
+    const result = await getCustomers({ status: statusFilter }, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal mengambil data customer.", 400);

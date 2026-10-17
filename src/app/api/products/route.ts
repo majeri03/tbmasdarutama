@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       supplierId: params.supplierId,
       isActive: params.isActive !== undefined ? params.isActive : null,
       lowStock: params.lowStock,
-    });
+    }, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal mengambil data produk.", 400);

@@ -28,7 +28,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     if (!hasPermission(session, "VIEW_PRODUCTS")) return forbiddenResponse();
 
     const { id } = await context.params;
-    const result = await getProductById(id);
+    const result = await getProductById(id, session);
 
     if (!result.success) {
       return notFoundResponse("Produk");

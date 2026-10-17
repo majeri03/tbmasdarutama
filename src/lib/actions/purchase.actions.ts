@@ -162,16 +162,19 @@ export async function createPurchase(input: CreatePurchaseInput) {
 }
 
 //    GET ALL PURCHASES   
-export async function getAllPurchases(filters?: {
-  search?: string;
-  supplierId?: string;
-  status?: PurchaseStatus;
-  dateFrom?: Date;
-  dateTo?: Date;
-  page?: number;
-  limit?: number;
-}) {
-  const session = await auth();
+export async function getAllPurchases(
+  filters?: {
+    search?: string;
+    supplierId?: string;
+    status?: PurchaseStatus;
+    dateFrom?: Date;
+    dateTo?: Date;
+    page?: number;
+    limit?: number;
+  },
+  externalSession?: unknown
+) {
+  const session = (externalSession as any) || (await auth());
   requirePermission(session, "VIEW_PURCHASES");
   try {
     const page = filters?.page || 1;
@@ -287,8 +290,8 @@ export async function getAllPurchases(filters?: {
 }
 
 //    GET PURCHASE BY ID   
-export async function getPurchaseById(id: string) {
-  const session = await auth();
+export async function getPurchaseById(id: string, externalSession?: unknown) {
+  const session = (externalSession as any) || (await auth());
   requirePermission(session, "VIEW_PURCHASES");
   try {
     const purchase = await prisma.purchase.findUnique({

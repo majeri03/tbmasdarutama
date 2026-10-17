@@ -265,9 +265,9 @@ export async function toggleCustomerStatus(id: string) {
   }
 }
 //   GET ALL CUSTOMERS  
-export async function getCustomers(filters?: { status?: "ACTIVE" | "INACTIVE" }) {
-  const session = await auth();
-requireMinimumRole(session, "KASIR"); // All roles can view
+export async function getCustomers(filters?: { status?: "ACTIVE" | "INACTIVE" }, externalSession?: unknown) {
+  const session = (externalSession as any) || (await auth());
+  requireMinimumRole(session, "KASIR"); // All roles can view
   try {
     const where: Prisma.CustomerWhereInput = {};
 

@@ -105,14 +105,17 @@ requireMinimumRole(session, "ADMIN");
 }
 
 // ==================== GET ALL SUPPLIERS ====================
-export async function getSuppliers(params?: {
-  search?: string;
-  page?: number;
-  limit?: number;
-  isActive?: boolean | null;
-}) {
-  const session = await auth();
-requireMinimumRole(session, "ADMIN");
+export async function getSuppliers(
+  params?: {
+    search?: string;
+    page?: number;
+    limit?: number;
+    isActive?: boolean | null;
+  },
+  externalSession?: unknown
+) {
+  const session = (externalSession as any) || (await auth());
+  requirePermission(session, "VIEW_SUPPLIERS");
   try {
     const { search = "", page = 1, limit = 10, isActive = null } = params || {};
     const skip = (page - 1) * limit;
@@ -391,9 +394,9 @@ requireMinimumRole(session, "ADMIN");
 }
 
 // ==================== GET SUPPLIERS FOR SELECT ====================
-export async function getSuppliersForSelect() {
-  const session = await auth();
-requireMinimumRole(session, "ADMIN");
+export async function getSuppliersForSelect(externalSession?: unknown) {
+  const session = (externalSession as any) || (await auth());
+  requirePermission(session, "VIEW_SUPPLIERS");
   try {
     const suppliers = await prisma.supplier.findMany({
       where: { isActive: true },

@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       dateFrom: params.dateFrom,
       dateTo: params.dateTo,
       sortOrder: params.sortOrder as "asc" | "desc" | undefined,
-    });
+    }, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal mengambil data penjualan.", 400);

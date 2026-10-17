@@ -24,7 +24,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     if (!hasPermission(session, "VIEW_SALES")) return forbiddenResponse();
 
     const { id } = await context.params;
-    const result = await getSaleById(id);
+    const result = await getSaleById(id, session);
 
     if (!result.success) {
       return notFoundResponse("Invoice penjualan");

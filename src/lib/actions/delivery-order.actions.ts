@@ -38,9 +38,9 @@ export async function getAllDeliveryOrders(filters?: {
   status?: DeliveryStatus;
   dateFrom?: Date;
   dateTo?: Date;
-}) {
-  const session = await auth();
-requirePermission(session, "VIEW_DELIVERY_ORDERS");
+}, externalSession?: unknown) {
+  const session = (externalSession as any) || (await auth());
+  requirePermission(session, "VIEW_DELIVERY_ORDERS");
   try {
     const where: Prisma.DeliveryOrderWhereInput = {};
 
@@ -179,9 +179,9 @@ requirePermission(session, "VIEW_DELIVERY_ORDERS");
 }
 
 //    GET DELIVERY ORDER BY ID   
-export async function getDeliveryOrderById(id: string) {
-  const session = await auth();
-requirePermission(session, "VIEW_DELIVERY_ORDERS");
+export async function getDeliveryOrderById(id: string, externalSession?: unknown) {
+  const session = (externalSession as any) || (await auth());
+  requirePermission(session, "VIEW_DELIVERY_ORDERS");
   try {
     const deliveryOrder = await prisma.deliveryOrder.findUnique({
       where: { id },

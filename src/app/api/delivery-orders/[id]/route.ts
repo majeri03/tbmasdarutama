@@ -28,7 +28,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     if (!hasPermission(session, "VIEW_DELIVERY_ORDERS")) return forbiddenResponse();
 
     const { id } = await context.params;
-    const result = await getDeliveryOrderById(id);
+    const result = await getDeliveryOrderById(id, session);
 
     if (!result.success) {
       return notFoundResponse("Surat Jalan");

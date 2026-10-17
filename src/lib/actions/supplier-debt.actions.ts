@@ -17,8 +17,8 @@ export async function getAllSupplierDebts(filters?: {
   status?: DebtStatus;
   dateFrom?: Date;
   dateTo?: Date;
-}) {
-  const session = await auth();
+}, externalSession?: unknown) {
+  const session = (externalSession as any) || (await auth());
   requirePermission(session, "VIEW_SUPPLIER_DEBTS");
   try {
     const where: Prisma.SupplierDebtWhereInput = {};
@@ -181,8 +181,8 @@ export async function getSupplierDebtStatistics() {
 }
 
 // ==================== GET SUPPLIER DEBT BY ID ====================
-export async function getSupplierDebtById(id: string) {
-  const session = await auth();
+export async function getSupplierDebtById(id: string, externalSession?: unknown) {
+  const session = (externalSession as any) || (await auth());
   requirePermission(session, "VIEW_SUPPLIER_DEBTS");
   try {
     const debt = await prisma.supplierDebt.findUnique({

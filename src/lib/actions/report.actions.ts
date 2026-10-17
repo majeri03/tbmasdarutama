@@ -33,9 +33,9 @@ export type ReportFilters = DateRangeFilter & {
 };
 
 // ==================== LAPORAN PENJUALAN ====================
-export async function getSalesReport(filters: ReportFilters) {
+export async function getSalesReport(filters: ReportFilters, externalSession?: unknown) {
   try {
-    const session = await auth();
+    const session = (externalSession as any) || (await auth());
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
@@ -90,9 +90,9 @@ export async function getSalesReport(filters: ReportFilters) {
 }
 
 // ==================== LAPORAN INVENTORY/STOCK ====================
-export async function getInventoryReport(filters: ReportFilters) {
+export async function getInventoryReport(filters: ReportFilters, externalSession?: unknown) {
   try {
-    const session = await auth();
+    const session = (externalSession as any) || (await auth());
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
@@ -152,9 +152,9 @@ export async function getInventoryReport(filters: ReportFilters) {
 }
 
 // ==================== LAPORAN KEUANGAN ====================
-export async function getFinancialReport(filters: DateRangeFilter) {
+export async function getFinancialReport(filters: DateRangeFilter, externalSession?: unknown) {
   try {
-    const session = await auth();
+    const session = (externalSession as any) || (await auth());
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
@@ -268,9 +268,9 @@ export async function getFinancialReport(filters: DateRangeFilter) {
 }
 
 // ==================== LAPORAN UTANG PIUTANG ====================
-export async function getDebtsReport(filters: ReportFilters) {
+export async function getDebtsReport(filters: ReportFilters, externalSession?: unknown) {
   try {
-    const session = await auth();
+    const session = (externalSession as any) || (await auth());
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
@@ -344,9 +344,9 @@ export async function getDebtsReport(filters: ReportFilters) {
 }
 
 // ==================== LAPORAN PEMBELIAN ====================
-export async function getPurchasesReport(filters: ReportFilters) {
+export async function getPurchasesReport(filters: ReportFilters, externalSession?: unknown) {
   try {
-    const session = await auth();
+    const session = (externalSession as any) || (await auth());
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }

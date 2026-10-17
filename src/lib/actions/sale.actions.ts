@@ -511,9 +511,9 @@ export async function updateSale(saleId: string, data: CreateSaleInput) {
 }
 
 // ==================== GET SALES ====================
-export async function getSales(params?: SaleFilterInput) {
+export async function getSales(params?: SaleFilterInput, externalSession?: unknown) {
   try {
-    const session = await auth();
+    const session = (externalSession as any) || (await auth());
     if (!session?.user) {
       return {
         success: false,
@@ -854,9 +854,9 @@ export async function getSalesStatistics(dateFrom?: Date, dateTo?: Date) {
   }
 }
 // Get sale by ID for invoice preview
-export async function getSaleById(saleId: string) {
-  const session = await auth();
-requirePermission(session, "VIEW_SALES");
+export async function getSaleById(saleId: string, externalSession?: unknown) {
+  const session = (externalSession as any) || (await auth());
+  requirePermission(session, "VIEW_SALES");
   try {
     const sale = await prisma.sale.findUnique({
       where: { id: saleId },

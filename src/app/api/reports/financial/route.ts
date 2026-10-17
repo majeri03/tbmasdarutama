@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       dateFrom: params.dateFrom,
       dateTo: params.dateTo,
       period: period || undefined,
-    });
+    }, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal mengambil laporan keuangan.", 400);

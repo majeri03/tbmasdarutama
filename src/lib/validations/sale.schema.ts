@@ -54,8 +54,8 @@ export const saleFilterSchema = z.object({
   status: z.nativeEnum(SaleStatus).optional(),
   dateFrom: z.coerce.date().optional(),
   dateTo: z.coerce.date().optional(),
-  page: z.number().int().positive().default(1),
-  limit: z.number().int().positive().default(10),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().default(10),
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
 });
 

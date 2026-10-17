@@ -11,16 +11,19 @@ import { auth } from "@/lib/auth";
 import { requireMinimumRole, requirePermission } from "../utils/role";
 
 // ==================== GET STOCK MOVEMENTS ====================
-export async function getStockMovements(filters?: {
-  search?: string;
-  productId?: string;
-  movementType?: MovementType;
-  dateFrom?: Date;
-  dateTo?: Date;
-  page?: number;
-  limit?: number;
-}) {
-  const session = await auth();
+export async function getStockMovements(
+  filters?: {
+    search?: string;
+    productId?: string;
+    movementType?: MovementType;
+    dateFrom?: Date;
+    dateTo?: Date;
+    page?: number;
+    limit?: number;
+  },
+  externalSession?: unknown
+) {
+  const session = (externalSession as any) || (await auth());
   requireMinimumRole(session, "KASIR"); // All roles can view
   try {
     const page = filters?.page || 1;

@@ -68,14 +68,17 @@ requireMinimumRole(session, "ADMIN");
 }
 
 //GET ALL CATEGORIES
-export async function getCategories(params?: {
-  search?: string;
-  page?: number;
-  limit?: number;
-  includeSubCategories?: boolean;
-}) {
-  const session = await auth();
-requireMinimumRole(session, "ADMIN");
+export async function getCategories(
+  params?: {
+    search?: string;
+    page?: number;
+    limit?: number;
+    includeSubCategories?: boolean;
+  },
+  externalSession?: unknown
+) {
+  const session = (externalSession as any) || (await auth());
+  requirePermission(session, "VIEW_CATEGORIES");
   try {
     const { 
       search = "", 
@@ -488,9 +491,9 @@ requireMinimumRole(session, "ADMIN");
 }
 
 //GET CATEGORIES FOR SELECT
-export async function getCategoriesForSelect() {
-  const session = await auth();
-requireMinimumRole(session, "ADMIN");
+export async function getCategoriesForSelect(externalSession?: unknown) {
+  const session = (externalSession as any) || (await auth());
+  requirePermission(session, "VIEW_CATEGORIES");
   try {
     const categories = await prisma.category.findMany({
       select: {

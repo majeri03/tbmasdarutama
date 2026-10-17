@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     const result = await getInventoryReport({
       categoryId: params.categoryId,
       supplierId: params.supplierId,
-    });
+    }, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal mengambil laporan inventaris.", 400);

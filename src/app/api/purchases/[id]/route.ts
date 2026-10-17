@@ -24,7 +24,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     if (!hasMinimumRole(session, "ADMIN")) return forbiddenResponse();
 
     const { id } = await context.params;
-    const result = await getPurchaseById(id);
+    const result = await getPurchaseById(id, session);
 
     if (!result.success) {
       return notFoundResponse("Purchase Order");

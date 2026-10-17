@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       page: params.page,
       limit: params.limit,
       isActive: params.isActive !== undefined ? params.isActive : null,
-    });
+    }, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal mengambil data supplier.", 400);

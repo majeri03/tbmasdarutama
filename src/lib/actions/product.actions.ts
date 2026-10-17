@@ -216,16 +216,19 @@ export async function createProduct(data: CreateProductInput) {
 }
 
 //    GET ALL PRODUCTS   
-export async function getProducts(params?: {
-  search?: string;
-  page?: number;
-  limit?: number;
-  categoryId?: string;
-  supplierId?: string;
-  isActive?: boolean | null;
-  lowStock?: boolean;
-}) {
-  const session = await auth();
+export async function getProducts(
+  params?: {
+    search?: string;
+    page?: number;
+    limit?: number;
+    categoryId?: string;
+    supplierId?: string;
+    isActive?: boolean | null;
+    lowStock?: boolean;
+  },
+  externalSession?: unknown
+) {
+  const session = (externalSession as any) || (await auth());
   requirePermission(session, "VIEW_PRODUCTS");
   try {
     const {
@@ -364,8 +367,8 @@ export async function getProducts(params?: {
 }
 
 //    GET PRODUCT BY ID   
-export async function getProductById(id: string) {
-  const session = await auth();
+export async function getProductById(id: string, externalSession?: unknown) {
+  const session = (externalSession as any) || (await auth());
   requirePermission(session, "VIEW_PRODUCTS");
   try {
     const product = await prisma.product.findUnique({

@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       page: params.page,
       limit: params.limit,
       includeSubCategories: params.includeSubCategories,
-    });
+    }, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal mengambil data kategori.", 400);
