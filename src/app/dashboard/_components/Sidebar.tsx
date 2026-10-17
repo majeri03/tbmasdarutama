@@ -43,16 +43,16 @@ const menuGroups = [
       { href: "/dashboard/units", icon: <Layers />, label: "Satuan", permission: "VIEW_UNITS" as const },
       { href: "/dashboard/suppliers", icon: <Truck />, label: "Supplier", permission: "VIEW_SUPPLIERS" as const },
       { href: "/dashboard/customers", icon: <Users />, label: "Customer", permission: "VIEW_CUSTOMERS" as const },
-      { href: "/dashboard/stocks", icon: <ShoppingCart />, label: "Stock", permission: "VIEW_MENU_STOCK" as const },
+      { href: "/dashboard/stocks", icon: <ShoppingCart />, label: "Stock", permission: "VIEW_MENU_STOCK" as const, pageKey: "stock_opname" },
     ],
   },
   {
     label: "Transactions",
     items: [
       { href: "/dashboard/delivery-orders", icon: <Send />, label: "Pengiriman", permission: "VIEW_DELIVERY_ORDERS" as const, },
-      { href: "/dashboard/purchases", icon: <ShoppingBag />, label: "Purchase Orders", permission: "VIEW_PURCHASES" as const },
+      { href: "/dashboard/purchases", icon: <ShoppingBag />, label: "Purchase Orders", permission: "VIEW_PURCHASES" as const, pageKey: "po" },
       { href: "/dashboard/sales", icon: <DollarSign />, label: "Penjualan", permission: "VIEW_MENU_SALES" as const },
-      { href: "/dashboard/pos", icon: <CreditCard />, label: "Point of Sale", permission: "ACCESS_POS" as const },
+      { href: "/dashboard/pos", icon: <CreditCard />, label: "Point of Sale", permission: "ACCESS_POS" as const, pageKey: "pos" },
     ],
   },
   {
@@ -65,11 +65,10 @@ const menuGroups = [
   {
     label: "Others",
     items: [
-      { href: "/dashboard/reports", icon: <BarChart3 />, label: "Laporan", permission: "VIEW_REPORTS" as const },
-      {
-        href: "/dashboard/users", icon: <Shield />, label: "Manajemen Akun", permission: "MANAGE_USERS" as const
-      },
-      { href: "/dashboard/settings", icon: <Settings />, label: "Pengaturan", permission: "VIEW_MENU_SETTINGS" as const },
+      { href: "/dashboard/reports", icon: <BarChart3 />, label: "Laporan", permission: "VIEW_REPORTS" as const, pageKey: "reports_settings" },
+      { href: "/dashboard/users", icon: <Shield />, label: "Manajemen Akun", permission: "MANAGE_USERS" as const },
+      { href: "/dashboard/page-access", icon: <Shield />, label: "Akses Halaman", role: "SUPER_ADMIN" as const },
+      { href: "/dashboard/settings", icon: <Settings />, label: "Pengaturan", permission: "VIEW_MENU_SETTINGS" as const, pageKey: "reports_settings" },
     ],
   },
 ];
@@ -107,12 +106,36 @@ export default function Sidebar({
     };
     fetchSettings();
   }, []);
+  const [allowedPages, setAllowedPages] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetch("/api/page-access")
+        .then((r) => r.json())
+        .then((res) => {
+          if (res.success && res.data?.allowedPages) {
+            setAllowedPages(res.data.allowedPages);
+          }
+        })
+        .catch((err) => console.error("Error loading page access:", err));
+    }
+  }, [status]);
+
   const filteredMenuGroups = menuGroups.map(group => ({
     ...group,
     items: group.items.filter(item => {
-      // If no permission specified, show to all
+      // 1. Filter by target role specifically (e.g. SUPER_ADMIN menu)
+      if ('role' in item && item.role) {
+        return session?.user?.role === item.role;
+      }
+      // 2. Filter by SUPERADMIN-managed Page Access Visibility
+      if ('pageKey' in item && item.pageKey) {
+        if (!allowedPages.includes(item.pageKey)) {
+          return false;
+        }
+      }
+      // 3. Fallback to normal permission logic
       if (!item.permission) return true;
-      // Check if user has permission
       return hasPermission(session, item.permission);
     })
   })).filter(group => group.items.length > 0);

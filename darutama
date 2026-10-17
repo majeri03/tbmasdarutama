@@ -1,0 +1,30 @@
+[33me48f1e5[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m fix: support externalSession in getCategories, getUnits, getSuppliers for seamless mobile API authorization
+[33ma276c9a[m fix: use z.coerce for page and limit in saleFilterSchema to prevent 400 bad request on numeric string query params
+[33m0e11947[m security: strict secure CORS whitelist for production and local flutter debugging
+[33mb27f760[m feat: update brand logo to new official vector emblem
+[33m581054e[m fix(api): use getAuthenticatedUser for mobile auth & support MOBILE_JWT_SECRET
+[33m0275c57[m fix(invoice): synchronize store setting layout and paper size in sale and pos invoice preview
+[33mee6d6b7[m feat: synchronize mobile auth, driver GPS tracking, invoice api, and store settings
+[33m90ddf85[m fix(fcm): normalize private_key newlines in firebase admin
+[33m6736ef0[m fix: Firebase graceful fallback — tidak crash jika FIREBASE_SERVICE_ACCOUNT_JSON belum ada
+[33mabf815c[m feat: tambah mobile API (dashboard, FCM, kas, update-check) + firebase-admin + fix TS errors
+[33mb574ff8[m edited version final
+[33m86fad93[m edited
+[33mca83857[m edited
+[33m69ff6e9[m edited
+[33meb4196b[m revised
+[33md57473e[m revised
+[33mb544948[m revised
+[33mdae0680[m revised
+[33mc5e84fd[m revised
+[33m6ac30bb[m revised2
+[33m2dd0ae5[m revised1
+[33m2131dd6[m revised
+[33m17a169c[m delete puperter
+[33m56a8315[m delete puperter
+[33m6c03990[m revised2
+[33ma7ad56c[m revised1
+[33m69d0d0d[m revised
+[33m9c64a87[m revised
+[33m0d368d6[m edited
+[33m0d2bd00[m revisi

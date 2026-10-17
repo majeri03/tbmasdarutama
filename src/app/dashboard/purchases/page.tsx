@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import { PurchasesClient } from "./_components/PurchasesClient";
+import PageGuard from "@/components/PageGuard";
 
 export const metadata: Metadata = {
   title: "Purchase Orders | TB Masdar Utama",
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function PurchasesPage() {
-  return <PurchasesClient />;
+  return (
+    <PageGuard pageKey="po">
+      <PurchasesClient />
+    </PageGuard>
+  );
 }

@@ -73,7 +73,12 @@ export async function POST(request: NextRequest) {
 
     // Trigger FCM notifikasi ke Admin/Owner secara realtime
     try {
-      const saleData = result.data as any;
+      interface SaleWithCustomer {
+        id: string;
+        customer?: { name?: string } | null;
+        grandTotal: number | string;
+      }
+      const saleData = result.data as unknown as SaleWithCustomer;
       const custName = saleData?.customer?.name || "Pelanggan";
       const grandTotal = Number(saleData?.grandTotal || 0);
       const saleId = saleData?.id || "";

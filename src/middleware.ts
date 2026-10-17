@@ -1,17 +1,31 @@
 import { auth } from "@/lib/auth";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import type { Session } from "next-auth";
 
-export default auth((req: any) => {
+const getAllowedOrigins = () => {
+  const origins = [
+    "https://masdarutama.tech",
+    "capacitor://localhost",
+    "http://localhost"
+  ];
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    origins.push(process.env.NEXT_PUBLIC_APP_URL);
+  } else if (process.env.NODE_ENV === "development") {
+    origins.push("http://localhost:3000");
+  }
+  return origins;
+};
+
+export default auth((req: NextRequest & { auth: Session | null }) => {
   // 1. CORS Configuration for API Routes (Mobile / Cross-Origin compatibility)
   if (req.nextUrl.pathname.startsWith("/api")) {
     const origin = req.headers.get("origin") || "";
+    const allowedOrigins = getAllowedOrigins();
+    const isAllowed = allowedOrigins.includes(origin);
     
     // Handle preflight OPTIONS request
     if (req.method === "OPTIONS") {
       const response = new NextResponse(null, { status: 200 });
-      // Gunakan origin jika whitelist (sementara allow semua tapi hindari credentials & wildcard combo)
-      const allowedOrigins = [process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000", "https://masdarutama.tech"];
-      const isAllowed = allowedOrigins.includes(origin);
       
       response.headers.set("Access-Control-Allow-Credentials", isAllowed ? "true" : "false");
       response.headers.set("Access-Control-Allow-Origin", isAllowed ? origin : allowedOrigins[0]);
@@ -41,9 +55,6 @@ export default auth((req: any) => {
         headers: requestHeaders,
       }
     });
-    
-    const allowedOrigins = [process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000", "https://masdarutama.tech"];
-    const isAllowed = allowedOrigins.includes(origin);
 
     response.headers.set("Access-Control-Allow-Credentials", isAllowed ? "true" : "false");
     response.headers.set("Access-Control-Allow-Origin", isAllowed ? origin : allowedOrigins[0]);

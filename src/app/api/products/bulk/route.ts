@@ -86,8 +86,9 @@ export async function POST(request: NextRequest) {
         } else {
           results.push({ success: false, name: product.name, error: result.error });
         }
-      } catch (err: any) {
-        results.push({ success: false, name: product.name, error: err.message || "Gagal menyimpan" });
+      } catch (err) {
+        const error = err as Error;
+        results.push({ success: false, name: product.name, error: error.message || "Gagal menyimpan" });
       }
     }
 
@@ -100,7 +101,8 @@ export async function POST(request: NextRequest) {
       results,
       summary: { total: products.length, success: successCount, failed: failCount },
     });
-  } catch (error: any) {
+  } catch (err) {
+    const error = err as Error;
     console.error("[BULK_PRODUCT_ERROR]", error);
     return errorResponse(error.message || "Terjadi kesalahan server", 500);
   }

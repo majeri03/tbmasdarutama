@@ -34,7 +34,7 @@ export async function updateStoreSetting(formData: unknown) {
 
     if (existing) {
       // Hanya update field yang disertakan, agar tab Invoice dan tab Toko tidak saling menimpa
-      const updateData: Record<string, any> = {};
+      const updateData: Record<string, unknown> = {};
       for (const [key, val] of Object.entries(validated)) {
         if (val !== undefined) {
           if (val === "" && key !== "name") {
@@ -47,10 +47,10 @@ export async function updateStoreSetting(formData: unknown) {
 
       result = await prisma.storeSetting.update({
         where: { id: existing.id },
-        data: updateData,
+        data: updateData as { [key: string]: string | boolean | null },
       });
     } else {
-      const createData: any = {
+      const createData: Record<string, unknown> = {
         name: validated.name || "TB Masdar Utama",
         tagline: validated.tagline || "Distributor Bahan Bangunan Terpercaya",
         phone: validated.phone || "6285398346677",
@@ -72,7 +72,7 @@ export async function updateStoreSetting(formData: unknown) {
         }
       }
       result = await prisma.storeSetting.create({
-        data: createData,
+        data: createData as { [key: string]: string | boolean },
       });
     }
 

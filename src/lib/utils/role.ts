@@ -95,30 +95,44 @@ export type Permission = keyof typeof PERMISSIONS;
 
 // ==================== HELPER FUNCTIONS ====================
 
+export interface AuthSession {
+  user?: {
+    id?: string;
+    email?: string;
+    name?: string;
+    role?: string;
+  };
+  data?: {
+    user?: {
+      role?: string;
+    };
+  };
+}
+
 /**
  * Check if user has specific role
  */
-export function hasRole(session: any, role: Role): boolean {
+export function hasRole(session: AuthSession | null | undefined, role: Role): boolean {
   if (!session) return false;
   const userRole = (session.user?.role || session.data?.user?.role as string || "").toUpperCase();
   return userRole === (role as string).toUpperCase();
 }
 
-export function hasMinimumRole(session: any, minimumRole: Role): boolean {
+export function hasMinimumRole(session: AuthSession | null | undefined, minimumRole: Role): boolean {
   if (!session) return false;
   const userRole = (session.user?.role || session.data?.user?.role as string || "").toUpperCase() as Role;
   const targetRole = (minimumRole as string).toUpperCase() as Role;
   return (ROLE_HIERARCHY[userRole] || 0) >= (ROLE_HIERARCHY[targetRole] || 0);
 }
 
-export function hasPermission(session: any, permission: Permission): boolean {
+export function hasPermission(session: AuthSession | null | undefined, permission: Permission): boolean {
   if (!session) return false;
   const userRole = (session.user?.role || session.data?.user?.role as string || "").toUpperCase() as Role;
   const allowedRoles = PERMISSIONS[permission] as readonly Role[];
   return allowedRoles.includes(userRole);
 }
 
-export function getUserRole(session: any): Role | null {
+export function getUserRole(session: AuthSession | null | undefined): Role | null {
   if (!session) return null;
   const userRole = (session.user?.role || session.data?.user?.role as string || "").toUpperCase();
   return userRole ? (userRole as Role) : null;

@@ -3,7 +3,7 @@ import prisma from './prisma';
 
 const expo = new Expo();
 
-export async function sendPushNotificationToAdmins(title: string, body: string, data?: any) {
+export async function sendPushNotificationToAdmins(title: string, body: string, data?: Record<string, unknown>) {
   try {
     // Cari semua admin/kasir yang punya expoPushToken
     const users = await prisma.user.findMany({

@@ -22,7 +22,24 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     const sale = saleResult.data;
-    const store: any = await getStoreSettings();
+
+    interface StoreSettings {
+      name: string;
+      phone: string;
+      address: string;
+      tagline: string;
+      logoUrl?: string | null;
+      invoiceLayoutType?: string | null;
+      invoiceShowHeader?: boolean | null;
+      invoiceShowLogo?: boolean | null;
+      invoiceShowCustomerInfo?: boolean | null;
+      invoiceShowPaymentInfo?: boolean | null;
+      invoiceShowSignature?: boolean | null;
+      invoiceShowFooter?: boolean | null;
+      invoiceFooterTerms?: string | null;
+    }
+
+    const store = await getStoreSettings() as unknown as StoreSettings;
 
     const url = new URL(request.url);
     const format = url.searchParams.get("format"); // "html" | "json"

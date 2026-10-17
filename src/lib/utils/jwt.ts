@@ -3,10 +3,20 @@ import crypto from "crypto";
 // MOBILE_JWT_SECRET dipisah dari NEXTAUTH_SECRET agar konsisten di Vercel.
 // Set di Vercel: Settings → Environment Variables → MOBILE_JWT_SECRET
 // Harus SAMA persis antara lokal .env dan Vercel env vars.
-const JWT_SECRET =
-  process.env.MOBILE_JWT_SECRET ||
-  process.env.NEXTAUTH_SECRET ||
-  "masdarutama-secret-key-2024-super-secret";
+const getJwtSecret = (): string => {
+  const secret = process.env.MOBILE_JWT_SECRET || process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("CRITICAL ERROR: MOBILE_JWT_SECRET atau NEXTAUTH_SECRET wajib dikonfigurasi di production!");
+    }
+    // Hanya untuk kenyamanan development lokal jika lupa set env, namun tetap diberi peringatan
+    console.warn("WARNING: MOBILE_JWT_SECRET / NEXTAUTH_SECRET belum dikonfigurasi. Menggunakan fallback lokal sementara.");
+    return "temp-dev-only-secret-do-not-use-in-production-123456789";
+  }
+  return secret;
+};
+
+const JWT_SECRET = getJwtSecret();
 
 export type TokenPayload = {
   id: string;

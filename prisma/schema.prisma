@@ -622,3 +622,17 @@ model PasswordResetToken {
   @@index([userId])
   @@map("password_reset_tokens")
 }
+
+
+// ==================== PAGE ACCESS MATRIX ====================
+model PageAccess {
+  id        String   @id @default(cuid())
+  pageKey   String   // "pos", "reports_settings", "po", "invoice_layout", "stock_opname"
+  role      Role     // SUPER_ADMIN, ADMIN, KASIR
+  enabled   Boolean  @default(false)
+  updatedBy String?
+  updatedAt DateTime @updatedAt @default(now())
+
+  @@unique([pageKey, role])
+  @@map("page_access")
+}

@@ -24,6 +24,8 @@ interface StockPageProps {
     };
 }
 
+import PageGuard from "@/components/PageGuard";
+
 export default async function StockPage({ searchParams }: StockPageProps) {
     const params = await searchParams;
     // Check authentication
@@ -95,22 +97,24 @@ export default async function StockPage({ searchParams }: StockPageProps) {
     const lowStockProducts = lowStockResult.success ? lowStockResult.data : [];
 
     return (
-        <StockClient
-            initialMovements={movementsResult.data || []}
-            initialTotal={movementsResult.pagination?.total || 0}
-            initialPage={page}
-            initialLimit={limit}
-            statistics={statsResult.data || {
-                totalProducts: 0,
-                totalBuyValue: 0,
-                totalSellValue: 0,
-                lowStockCount: 0,
-                movementsToday: 0,
-                stockInMonth: 0,
-                stockOutMonth: 0,
-            }}
-            products={products}
-            lowStockProducts={lowStockProducts || []}
-        />
+        <PageGuard pageKey="stock_opname">
+            <StockClient
+                initialMovements={movementsResult.data || []}
+                initialTotal={movementsResult.pagination?.total || 0}
+                initialPage={page}
+                initialLimit={limit}
+                statistics={statsResult.data || {
+                    totalProducts: 0,
+                    totalBuyValue: 0,
+                    totalSellValue: 0,
+                    lowStockCount: 0,
+                    movementsToday: 0,
+                    stockInMonth: 0,
+                    stockOutMonth: 0,
+                }}
+                products={products}
+                lowStockProducts={lowStockProducts || []}
+            />
+        </PageGuard>
     );
 }

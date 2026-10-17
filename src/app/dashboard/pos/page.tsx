@@ -15,6 +15,7 @@ import { getPOSProducts, getProductByBarcode, getPOSCustomers } from "@/lib/acti
 import { validateStock, getCustomerDiscount } from "@/lib/utils/pos-helpers";
 import { Toast, useToast } from "@/components/ui/toast";
 import { X } from "lucide-react";
+import PageGuard from "@/components/PageGuard";
 export default function POSPage() {
     // States
     const [products, setProducts] = useState<POSProduct[]>([]);
@@ -281,7 +282,7 @@ export default function POSPage() {
         };
 
         return (
-            <>
+            <PageGuard pageKey="pos">
                 <POSLayout
                     cartItemsCount={cartItems.length}
                     customer={
@@ -422,6 +423,6 @@ export default function POSPage() {
                         onClose={hideToast}
                     />
                 )}
-            </>
+            </PageGuard>
         );
     }

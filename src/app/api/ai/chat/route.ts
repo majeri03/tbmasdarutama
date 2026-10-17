@@ -11,7 +11,12 @@ const getApiKeys = () => {
 };
 
 // Deteksi kompleksitas dari pesan terakhir
-const detectTaskComplexity = (messages: any[]): "simple" | "complex" => {
+interface ChatMessage {
+  role: string;
+  content?: string | null;
+}
+
+const detectTaskComplexity = (messages: ChatMessage[]): "simple" | "complex" => {
   if (messages.length > 6) return "complex";
   
   const lastUserMsg = [...messages].reverse().find((m) => m.role === "user")?.content || "";
@@ -97,7 +102,8 @@ export async function POST(request: NextRequest) {
 
         const data = await response.json();
         return NextResponse.json({ success: true, data });
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as Error;
         if (!error.message.startsWith("Groq API Error:")) {
           console.warn(`[AI Chat] Network error on key ${currentKeyIndex}: ${error.message}. Rotating...`);
           currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
@@ -109,7 +115,8 @@ export async function POST(request: NextRequest) {
     }
 
     return errorResponse(`Semua ${apiKeys.length} API Key Groq gagal. Error: ${lastError?.message}`, 500);
-  } catch (error: any) {
+  } catch (err) {
+    const error = err as Error;
     console.error("[API_AI_CHAT_ERROR]", error);
     return errorResponse(error.message || "Terjadi kesalahan server saat memproses AI.");
   }

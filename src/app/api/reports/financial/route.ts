@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const params = parseSearchParams(searchParams);
-    const period = searchParams.get("period") as any;
+    const period = searchParams.get("period") as "daily" | "weekly" | "monthly" | null;
 
     const result = await getFinancialReport({
       dateFrom: params.dateFrom,
