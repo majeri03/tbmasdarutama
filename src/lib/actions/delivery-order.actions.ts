@@ -10,7 +10,7 @@ import {
   UpdateDeliveryStatusInput,
   CreateDeliveryOrderInput,
 } from "@/lib/validations/delivery-order.schema";
-import { requirePermission } from "../utils/role";
+import { requirePermission, type AuthSession } from "../utils/role";
 //    GENERATE DO NUMBER   
 async function generateDONumber(tx: Prisma.TransactionClient): Promise<string> {
   const today = new Date();
@@ -38,8 +38,8 @@ export async function getAllDeliveryOrders(filters?: {
   status?: DeliveryStatus;
   dateFrom?: Date;
   dateTo?: Date;
-}, externalSession?: unknown) {
-  const session = (externalSession as any) || (await auth());
+}, externalSession?: AuthSession | null) {
+  const session = externalSession || (await auth());
   requirePermission(session, "VIEW_DELIVERY_ORDERS");
   try {
     const where: Prisma.DeliveryOrderWhereInput = {};
@@ -179,8 +179,8 @@ requirePermission(session, "VIEW_DELIVERY_ORDERS");
 }
 
 //    GET DELIVERY ORDER BY ID   
-export async function getDeliveryOrderById(id: string, externalSession?: unknown) {
-  const session = (externalSession as any) || (await auth());
+export async function getDeliveryOrderById(id: string, externalSession?: AuthSession | null) {
+  const session = externalSession || (await auth());
   requirePermission(session, "VIEW_DELIVERY_ORDERS");
   try {
     const deliveryOrder = await prisma.deliveryOrder.findUnique({

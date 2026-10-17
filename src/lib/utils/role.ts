@@ -141,28 +141,28 @@ export function getUserRole(session: AuthSession | null | undefined): Role | nul
 /**
  * Check if user is Super Admin
  */
-export function isSuperAdmin(session: Session | null): boolean {
+export function isSuperAdmin(session: Session | AuthSession | null | undefined): boolean {
   return hasRole(session, "SUPER_ADMIN");
 }
 
 /**
  * Check if user is Admin or higher
  */
-export function isAdmin(session: Session | null): boolean {
+export function isAdmin(session: Session | AuthSession | null | undefined): boolean {
   return hasMinimumRole(session, "ADMIN");
 }
 
 /**
  * Check if user is authenticated
  */
-export function isAuthenticated(session: Session | null): boolean {
+export function isAuthenticated(session: Session | AuthSession | null | undefined): boolean {
   return !!session?.user;
 }
 
 /**
  * Require specific role (throw error if not authorized)
  */
-export function requireRole(session: Session | null, role: Role): void {
+export function requireRole(session: Session | AuthSession | null | undefined, role: Role): void {
   if (!hasRole(session, role)) {
     throw new Error(`Unauthorized. Required role: ${role}`);
   }
@@ -171,7 +171,7 @@ export function requireRole(session: Session | null, role: Role): void {
 /**
  * Require minimum role (throw error if not authorized)
  */
-export function requireMinimumRole(session: Session | null, minimumRole: Role): void {
+export function requireMinimumRole(session: Session | AuthSession | null | undefined, minimumRole: Role): void {
   if (!hasMinimumRole(session, minimumRole)) {
     throw new Error(`Unauthorized. Minimum required role: ${minimumRole}`);
   }
@@ -180,7 +180,7 @@ export function requireMinimumRole(session: Session | null, minimumRole: Role): 
 /**
  * Require specific permission (throw error if not authorized)
  */
-export function requirePermission(session: Session | null, permission: Permission): void {
+export function requirePermission(session: Session | AuthSession | null | undefined, permission: Permission): void {
   if (!hasPermission(session, permission)) {
     throw new Error(`Unauthorized. Required permission: ${permission}`);
   }
@@ -189,7 +189,7 @@ export function requirePermission(session: Session | null, permission: Permissio
 /**
  * Require authentication (throw error if not logged in)
  */
-export function requireAuth(session: Session | null): void {
+export function requireAuth(session: Session | AuthSession | null | undefined): void {
   if (!isAuthenticated(session)) {
     throw new Error("Unauthorized. Please login.");
   }

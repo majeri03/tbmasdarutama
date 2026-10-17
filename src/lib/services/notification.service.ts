@@ -1,6 +1,6 @@
 import { Expo, ExpoPushMessage, ExpoPushTicket } from 'expo-server-sdk';
 import prisma from '@/lib/prisma';
-import { NotificationType, Role } from '@prisma/client';
+import { NotificationType, Prisma, Role } from '@prisma/client';
 
 const expo = new Expo();
 
@@ -27,7 +27,7 @@ export class NotificationService {
           body: options.body,
           type: options.type,
           screen: options.screen ?? null,
-          params: (options.params as any) ?? undefined,
+          params: (options.params as Prisma.InputJsonValue) ?? undefined,
           isRead: false,
         },
       });
@@ -91,7 +91,8 @@ export class NotificationService {
           for (let i = 0; i < tickets.length; i++) {
             const ticket = tickets[i];
             if (ticket.status === 'error' && ticket.details?.error === 'DeviceNotRegistered') {
-              const deadToken = (chunk[i] as any).to;
+              const msg = chunk[i];
+              const deadToken = typeof msg.to === 'string' ? msg.to : (Array.isArray(msg.to) ? msg.to[0] : null);
               if (deadToken && typeof deadToken === 'string') {
                 await prisma.deviceToken.deleteMany({ where: { token: deadToken } }).catch(() => {});
                 await prisma.user.updateMany({ where: { expoPushToken: deadToken }, data: { expoPushToken: null } }).catch(() => {});

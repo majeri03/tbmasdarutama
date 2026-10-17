@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/utils/api";
-import { db } from "@/lib/db";
 import * as admin from "firebase-admin";
 
 // ── Inisialisasi Firebase Admin SDK (hanya jika env var tersedia) ──

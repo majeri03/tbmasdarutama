@@ -1,13 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/utils/api";
-import { db } from "@/lib/db";
 
 /**
  * GET /api/mobile/update-check
  * Cek versi terbaru APK untuk in-app update
  * Endpoint ini aman karena memerlukan login
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
   const session = await getAuthenticatedUser();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

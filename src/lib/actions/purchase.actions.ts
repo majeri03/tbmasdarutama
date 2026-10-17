@@ -12,7 +12,7 @@ import {
   type ReceivePurchaseInput,
 } from "@/lib/validations/purchase.schema";
 import { Prisma, PurchaseStatus, MovementType } from "@prisma/client";
-import { requirePermission } from "../utils/role";
+import { requirePermission, type AuthSession } from "../utils/role";
 
 //    GENERATE PO NUMBER   
 async function generatePONumber(): Promise<string> {
@@ -172,9 +172,9 @@ export async function getAllPurchases(
     page?: number;
     limit?: number;
   },
-  externalSession?: unknown
+  externalSession?: AuthSession | null
 ) {
-  const session = (externalSession as any) || (await auth());
+  const session = externalSession || (await auth());
   requirePermission(session, "VIEW_PURCHASES");
   try {
     const page = filters?.page || 1;
@@ -290,8 +290,8 @@ export async function getAllPurchases(
 }
 
 //    GET PURCHASE BY ID   
-export async function getPurchaseById(id: string, externalSession?: unknown) {
-  const session = (externalSession as any) || (await auth());
+export async function getPurchaseById(id: string, externalSession?: AuthSession | null) {
+  const session = externalSession || (await auth());
   requirePermission(session, "VIEW_PURCHASES");
   try {
     const purchase = await prisma.purchase.findUnique({

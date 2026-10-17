@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { requireMinimumRole } from "@/lib/utils/role";
+import { requireMinimumRole, requirePermission, type AuthSession } from "@/lib/utils/role";
 import { auth } from "@/lib/auth";
 // ==================== SCHEMAS ====================
 const categoryServerSchema = z.object({
@@ -75,9 +75,9 @@ export async function getCategories(
     limit?: number;
     includeSubCategories?: boolean;
   },
-  externalSession?: unknown
+  externalSession?: AuthSession | null
 ) {
-  const session = (externalSession as any) || (await auth());
+  const session = externalSession || (await auth());
   requirePermission(session, "VIEW_CATEGORIES");
   try {
     const { 
@@ -491,8 +491,8 @@ requireMinimumRole(session, "ADMIN");
 }
 
 //GET CATEGORIES FOR SELECT
-export async function getCategoriesForSelect(externalSession?: unknown) {
-  const session = (externalSession as any) || (await auth());
+export async function getCategoriesForSelect(externalSession?: AuthSession | null) {
+  const session = externalSession || (await auth());
   requirePermission(session, "VIEW_CATEGORIES");
   try {
     const categories = await prisma.category.findMany({

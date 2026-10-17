@@ -8,7 +8,7 @@ import {
 } from "@/lib/validations/stock.schema";
 import { MovementType, Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
-import { requireMinimumRole, requirePermission } from "../utils/role";
+import { requireMinimumRole, requirePermission, type AuthSession } from "../utils/role";
 
 // ==================== GET STOCK MOVEMENTS ====================
 export async function getStockMovements(
@@ -21,9 +21,9 @@ export async function getStockMovements(
     page?: number;
     limit?: number;
   },
-  externalSession?: unknown
+  externalSession?: AuthSession | null
 ) {
-  const session = (externalSession as any) || (await auth());
+  const session = externalSession || (await auth());
   requireMinimumRole(session, "KASIR"); // All roles can view
   try {
     const page = filters?.page || 1;

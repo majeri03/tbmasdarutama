@@ -10,7 +10,7 @@ import {
   type UpdateCustomerInput,
 } from "@/lib/validations/customer.schema";
 import { Prisma } from "@prisma/client";
-import { requireMinimumRole } from "../utils/role";
+import { requireMinimumRole, type AuthSession } from "../utils/role";
 
 //GENERATE CUSTOMER CODE
 async function generateCustomerCode(): Promise<string> {
@@ -265,8 +265,8 @@ export async function toggleCustomerStatus(id: string) {
   }
 }
 //   GET ALL CUSTOMERS  
-export async function getCustomers(filters?: { status?: "ACTIVE" | "INACTIVE" }, externalSession?: unknown) {
-  const session = (externalSession as any) || (await auth());
+export async function getCustomers(filters?: { status?: "ACTIVE" | "INACTIVE" }, externalSession?: AuthSession | null) {
+  const session = externalSession || (await auth());
   requireMinimumRole(session, "KASIR"); // All roles can view
   try {
     const where: Prisma.CustomerWhereInput = {};

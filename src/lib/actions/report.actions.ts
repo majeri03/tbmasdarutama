@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { startOfDay, endOfDay } from "date-fns";
 import { SaleStatus, DebtStatus, PurchaseStatus } from "@prisma/client";
-import { requirePermission } from "../utils/role";
+import { requirePermission, type AuthSession } from "../utils/role";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -33,9 +33,9 @@ export type ReportFilters = DateRangeFilter & {
 };
 
 // ==================== LAPORAN PENJUALAN ====================
-export async function getSalesReport(filters: ReportFilters, externalSession?: unknown) {
+export async function getSalesReport(filters: ReportFilters, externalSession?: AuthSession | null) {
   try {
-    const session = (externalSession as any) || (await auth());
+    const session = externalSession || (await auth());
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
@@ -90,9 +90,9 @@ export async function getSalesReport(filters: ReportFilters, externalSession?: u
 }
 
 // ==================== LAPORAN INVENTORY/STOCK ====================
-export async function getInventoryReport(filters: ReportFilters, externalSession?: unknown) {
+export async function getInventoryReport(filters: ReportFilters, externalSession?: AuthSession | null) {
   try {
-    const session = (externalSession as any) || (await auth());
+    const session = externalSession || (await auth());
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
@@ -152,9 +152,9 @@ export async function getInventoryReport(filters: ReportFilters, externalSession
 }
 
 // ==================== LAPORAN KEUANGAN ====================
-export async function getFinancialReport(filters: DateRangeFilter, externalSession?: unknown) {
+export async function getFinancialReport(filters: DateRangeFilter, externalSession?: AuthSession | null) {
   try {
-    const session = (externalSession as any) || (await auth());
+    const session = externalSession || (await auth());
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
@@ -268,9 +268,9 @@ export async function getFinancialReport(filters: DateRangeFilter, externalSessi
 }
 
 // ==================== LAPORAN UTANG PIUTANG ====================
-export async function getDebtsReport(filters: ReportFilters, externalSession?: unknown) {
+export async function getDebtsReport(filters: ReportFilters, externalSession?: AuthSession | null) {
   try {
-    const session = (externalSession as any) || (await auth());
+    const session = externalSession || (await auth());
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
@@ -344,9 +344,9 @@ export async function getDebtsReport(filters: ReportFilters, externalSession?: u
 }
 
 // ==================== LAPORAN PEMBELIAN ====================
-export async function getPurchasesReport(filters: ReportFilters, externalSession?: unknown) {
+export async function getPurchasesReport(filters: ReportFilters, externalSession?: AuthSession | null) {
   try {
-    const session = (externalSession as any) || (await auth());
+    const session = externalSession || (await auth());
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }

@@ -8,7 +8,7 @@ import {
   addSupplierPaymentSchema,
   AddSupplierPaymentInput,
 } from "@/lib/validations/supplier-debt.schema";
-import { requireMinimumRole, requirePermission } from "../utils/role";
+import { requireMinimumRole, requirePermission, type AuthSession } from "../utils/role";
 
 // ==================== GET ALL SUPPLIER DEBTS ====================
 export async function getAllSupplierDebts(filters?: {
@@ -17,8 +17,8 @@ export async function getAllSupplierDebts(filters?: {
   status?: DebtStatus;
   dateFrom?: Date;
   dateTo?: Date;
-}, externalSession?: unknown) {
-  const session = (externalSession as any) || (await auth());
+}, externalSession?: AuthSession | null) {
+  const session = externalSession || (await auth());
   requirePermission(session, "VIEW_SUPPLIER_DEBTS");
   try {
     const where: Prisma.SupplierDebtWhereInput = {};
@@ -181,8 +181,8 @@ export async function getSupplierDebtStatistics() {
 }
 
 // ==================== GET SUPPLIER DEBT BY ID ====================
-export async function getSupplierDebtById(id: string, externalSession?: unknown) {
-  const session = (externalSession as any) || (await auth());
+export async function getSupplierDebtById(id: string, externalSession?: AuthSession | null) {
+  const session = externalSession || (await auth());
   requirePermission(session, "VIEW_SUPPLIER_DEBTS");
   try {
     const debt = await prisma.supplierDebt.findUnique({

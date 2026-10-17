@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { getPageAccessMatrix } from "@/lib/actions/page-access.actions";
 import { redirect } from "next/navigation";
-import PageAccessClient from "./_components/PageAccessClient";
+import PageAccessClient, { Rule } from "./_components/PageAccessClient";
 
 export const metadata: Metadata = {
   title: "Kelola Akses Halaman | Dashboard",
@@ -17,7 +17,7 @@ export default async function PageAccessPage() {
   }
 
   const result = await getPageAccessMatrix();
-  const matrix = result.success && result.data ? result.data : [];
+  const matrix: Rule[] = result.success && result.data ? (result.data as Rule[]) : [];
 
   return (
     <div className="p-6 space-y-6">
@@ -28,7 +28,7 @@ export default async function PageAccessPage() {
         </div>
       </div>
 
-      <PageAccessClient initialMatrix={matrix as any} />
+      <PageAccessClient initialMatrix={matrix} />
     </div>
   );
 }

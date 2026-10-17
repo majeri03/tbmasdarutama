@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { requireMinimumRole } from "@/lib/utils/role";
+import { requireMinimumRole, requirePermission, type AuthSession } from "@/lib/utils/role";
 import { auth } from "@/lib/auth";
 // ==================== SCHEMAS ====================
 const supplierServerSchema = z.object({
@@ -112,9 +112,9 @@ export async function getSuppliers(
     limit?: number;
     isActive?: boolean | null;
   },
-  externalSession?: unknown
+  externalSession?: AuthSession | null
 ) {
-  const session = (externalSession as any) || (await auth());
+  const session = externalSession || (await auth());
   requirePermission(session, "VIEW_SUPPLIERS");
   try {
     const { search = "", page = 1, limit = 10, isActive = null } = params || {};
@@ -394,8 +394,8 @@ requireMinimumRole(session, "ADMIN");
 }
 
 // ==================== GET SUPPLIERS FOR SELECT ====================
-export async function getSuppliersForSelect(externalSession?: unknown) {
-  const session = (externalSession as any) || (await auth());
+export async function getSuppliersForSelect(externalSession?: AuthSession | null) {
+  const session = externalSession || (await auth());
   requirePermission(session, "VIEW_SUPPLIERS");
   try {
     const suppliers = await prisma.supplier.findMany({

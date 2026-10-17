@@ -10,7 +10,7 @@ import {
   type UpdateProductInput,
 } from "@/lib/validations/product.schema";
 import { auth } from "../auth";
-import { requireMinimumRole, requirePermission } from "@/lib/utils/role";
+import { requireMinimumRole, requirePermission, type AuthSession } from "@/lib/utils/role";
 
 //    GENERATE PRODUCT CODE   
 async function generateProductCode(tx: Prisma.TransactionClient = prisma): Promise<string> {
@@ -226,9 +226,9 @@ export async function getProducts(
     isActive?: boolean | null;
     lowStock?: boolean;
   },
-  externalSession?: unknown
+  externalSession?: AuthSession | null
 ) {
-  const session = (externalSession as any) || (await auth());
+  const session = externalSession || (await auth());
   requirePermission(session, "VIEW_PRODUCTS");
   try {
     const {
@@ -367,8 +367,8 @@ export async function getProducts(
 }
 
 //    GET PRODUCT BY ID   
-export async function getProductById(id: string, externalSession?: unknown) {
-  const session = (externalSession as any) || (await auth());
+export async function getProductById(id: string, externalSession?: AuthSession | null) {
+  const session = externalSession || (await auth());
   requirePermission(session, "VIEW_PRODUCTS");
   try {
     const product = await prisma.product.findUnique({

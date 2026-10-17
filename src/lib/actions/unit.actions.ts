@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { requireMinimumRole } from "@/lib/utils/role";
+import { requireMinimumRole, requirePermission, type AuthSession } from "@/lib/utils/role";
 import { auth } from "@/lib/auth";
 // Schema untuk validasi di server
 const unitServerSchema = z.object({
@@ -70,9 +70,9 @@ export async function getUnits(
     page?: number;
     limit?: number;
   },
-  externalSession?: unknown
+  externalSession?: AuthSession | null
 ) {
-  const session = (externalSession as any) || (await auth());
+  const session = externalSession || (await auth());
   requirePermission(session, "VIEW_UNITS");
   try {
     const { search = "", page = 1, limit = 10 } = params || {};
@@ -287,8 +287,8 @@ export async function deleteUnit(id: string) {
 }
 
 // ==================== GET UNITS FOR SELECT ====================
-export async function getUnitsForSelect(externalSession?: unknown) {
-  const session = (externalSession as any) || (await auth());
+export async function getUnitsForSelect(externalSession?: AuthSession | null) {
+  const session = externalSession || (await auth());
   requirePermission(session, "VIEW_UNITS");
   try {
     const units = await prisma.unit.findMany({

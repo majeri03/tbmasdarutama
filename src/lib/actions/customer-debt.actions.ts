@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { DebtStatus, Prisma } from "@prisma/client";
 import { addPaymentSchema, AddPaymentInput } from "@/lib/validations/customer-debt.schema";
-import { requirePermission, requireMinimumRole } from "@/lib/utils/role";
+import { requirePermission, requireMinimumRole, type AuthSession } from "@/lib/utils/role";
 
 //GET ALL CUSTOMER DEBTS
 export async function getAllCustomerDebts(filters?: {
@@ -14,8 +14,8 @@ export async function getAllCustomerDebts(filters?: {
   status?: DebtStatus;
   dateFrom?: Date;
   dateTo?: Date;
-}, externalSession?: unknown) {
-  const session = (externalSession as any) || (await auth());
+}, externalSession?: AuthSession | null) {
+  const session = externalSession || (await auth());
   requirePermission(session, "VIEW_CUSTOMER_DEBTS");
   try {
     const where: Prisma.CustomerDebtWhereInput = {};
@@ -168,8 +168,8 @@ requirePermission(session, "VIEW_CUSTOMER_DEBTS");
 }
 
 //GET CUSTOMER DEBT BY ID
-export async function getCustomerDebtById(id: string, externalSession?: unknown) {
-  const session = (externalSession as any) || (await auth());
+export async function getCustomerDebtById(id: string, externalSession?: AuthSession | null) {
+  const session = externalSession || (await auth());
   requirePermission(session, "VIEW_CUSTOMER_DEBTS");
   try {
     const debt = await prisma.customerDebt.findUnique({

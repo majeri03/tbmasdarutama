@@ -73,7 +73,7 @@ function saveFile(records: DriverVehicleRecord[]) {
  * GET /api/mobile/driver-tracking
  * Mengambil daftar armada terdaftar dan posisi GPS terkini.
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const session = await getAuthenticatedUser();
     if (!session?.user) {

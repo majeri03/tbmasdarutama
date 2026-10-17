@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { getAuthenticatedUser, unauthorizedResponse, successResponse, errorResponse } from "@/lib/utils/api";
 import prisma from "@/lib/prisma";
-import { Role } from "@prisma/client";
+import { Prisma, Role } from "@prisma/client";
 
 /**
  * GET /api/notifications
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const userId = session.user.id;
 
     // Filter notifikasi milik user atau role-nya
-    const whereClause: any = {
+    const whereClause: Prisma.NotificationWhereInput = {
       OR: [
         { userId: userId },
         { role: userRole },

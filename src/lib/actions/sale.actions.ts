@@ -12,7 +12,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { PaymentMethod, SaleStatus, Prisma } from "@prisma/client";
 import { SaleFilters } from "@/types/sale";
-import { requirePermission } from "../utils/role";
+import { requirePermission, type AuthSession } from "../utils/role";
 
 // ==================== GENERATE INVOICE NUMBER ====================
 async function generateInvoiceNumber(): Promise<string> {
@@ -511,9 +511,9 @@ export async function updateSale(saleId: string, data: CreateSaleInput) {
 }
 
 // ==================== GET SALES ====================
-export async function getSales(params?: SaleFilterInput, externalSession?: unknown) {
+export async function getSales(params?: SaleFilterInput, externalSession?: AuthSession | null) {
   try {
-    const session = (externalSession as any) || (await auth());
+    const session = externalSession || (await auth());
     if (!session?.user) {
       return {
         success: false,
@@ -854,8 +854,8 @@ export async function getSalesStatistics(dateFrom?: Date, dateTo?: Date) {
   }
 }
 // Get sale by ID for invoice preview
-export async function getSaleById(saleId: string, externalSession?: unknown) {
-  const session = (externalSession as any) || (await auth());
+export async function getSaleById(saleId: string, externalSession?: AuthSession | null) {
+  const session = externalSession || (await auth());
   requirePermission(session, "VIEW_SALES");
   try {
     const sale = await prisma.sale.findUnique({
