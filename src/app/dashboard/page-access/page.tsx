@@ -23,7 +23,9 @@ export default function PageAccessDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
-  const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
+  const normalizeRole = (role?: string) => (role || "").toUpperCase().replace(/[\s-]+/g, "_");
+  const userRole = normalizeRole(session?.user?.role);
+  const isSuperAdmin = userRole === "SUPER_ADMIN";
   const isForbidden = status === "authenticated" && !isSuperAdmin;
 
   useEffect(() => {

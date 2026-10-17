@@ -126,7 +126,9 @@ export default function Sidebar({
     items: group.items.filter(item => {
       // 1. Filter by target role specifically (e.g. SUPER_ADMIN menu)
       if ('role' in item && item.role) {
-        return session?.user?.role === item.role;
+        const currentRole = (session?.user?.role || "").toUpperCase().replace(/[\s-]+/g, "_");
+        const targetRole = (item.role as string).toUpperCase().replace(/[\s-]+/g, "_");
+        return currentRole === targetRole;
       }
       // 2. Filter by SUPERADMIN-managed Page Access Visibility
       if ('pageKey' in item && item.pageKey) {

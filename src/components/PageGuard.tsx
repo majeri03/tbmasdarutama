@@ -14,7 +14,8 @@ export default function PageGuard({ pageKey, children }: PageGuardProps) {
   const router = useRouter();
   const [allowed, setAllowed] = useState<boolean | null>(null);
 
-  const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
+  const normalizeRole = (role?: string) => (role || "").toUpperCase().replace(/[\s-]+/g, "_");
+  const isSuperAdmin = normalizeRole(session?.user?.role) === "SUPER_ADMIN";
 
   useEffect(() => {
     if (status === "unauthenticated") {

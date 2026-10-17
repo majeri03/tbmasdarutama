@@ -43,7 +43,8 @@ export async function initializePageAccess() {
 export async function getPageAccessMatrix() {
   try {
     const session = await auth();
-    if (!session?.user || session.user.role !== "SUPER_ADMIN") {
+    const role = (session?.user?.role || "").toUpperCase().replace(/[\s-]+/g, "_");
+    if (!session?.user || role !== "SUPER_ADMIN") {
       return { success: false, error: "Unauthorized. Hanya SUPER_ADMIN yang diizinkan." };
     }
 
@@ -66,7 +67,8 @@ export async function getPageAccessMatrix() {
 export async function updatePageAccess(pageKey: string, role: Role, enabled: boolean) {
   try {
     const session = await auth();
-    if (!session?.user || session.user.role !== "SUPER_ADMIN") {
+    const userRole = (session?.user?.role || "").toUpperCase().replace(/[\s-]+/g, "_");
+    if (!session?.user || userRole !== "SUPER_ADMIN") {
       return { success: false, error: "Unauthorized. Hanya SUPER_ADMIN yang diizinkan." };
     }
 
@@ -101,7 +103,8 @@ export async function updatePageAccess(pageKey: string, role: Role, enabled: boo
  */
 export async function getAllowedPagesForRole(role: Role): Promise<string[]> {
   try {
-    if (role === "SUPER_ADMIN") {
+    const normalizedRole = (role as string || "").toUpperCase().replace(/[\s-]+/g, "_");
+    if (normalizedRole === "SUPER_ADMIN") {
       // Superadmin has absolute access to all pages
       return PAGE_KEYS.map((p) => p.key);
     }

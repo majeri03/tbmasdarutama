@@ -15,7 +15,7 @@ export async function GET() {
       return unauthorizedResponse();
     }
 
-    const role = session.user.role as Role;
+    const role = (session.user.role || "").toUpperCase().replace(/[\s-]+/g, "_") as Role;
     const allowedPages = await getAllowedPagesForRole(role);
 
     if (role === "SUPER_ADMIN") {
@@ -44,7 +44,7 @@ export async function PUT(request: NextRequest) {
       return unauthorizedResponse();
     }
 
-    if (session.user.role !== "SUPER_ADMIN") {
+    if ((session.user.role || "").toUpperCase().replace(/[\s-]+/g, "_") !== "SUPER_ADMIN") {
       return forbiddenResponse("Hanya SUPER_ADMIN yang diizinkan mengubah konfigurasi ini.");
     }
 
