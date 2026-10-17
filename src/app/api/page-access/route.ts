@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getAuthenticatedUser, unauthorizedResponse, forbiddenResponse, successResponse, errorResponse } from "@/lib/utils/api";
 import { getPageAccessMatrix, updatePageAccess, getAllowedPagesForRole } from "@/lib/actions/page-access.actions";
 import { Role } from "@prisma/client";

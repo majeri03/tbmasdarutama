@@ -23,13 +23,13 @@ export default function PageAccessDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
+  const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
+  const isForbidden = status === "authenticated" && !isSuperAdmin;
+
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/login");
-    } else if (status === "authenticated" && session?.user?.role !== "SUPER_ADMIN") {
-      setError("Akses Ditolak. Khusus SUPER_ADMIN.");
-      setLoading(false);
-    } else if (status === "authenticated" && session?.user?.role === "SUPER_ADMIN") {
+      router.replace("/login");
+    } else if (status === "authenticated" && isSuperAdmin) {
       fetch("/api/page-access")
         .then((r) => r.json())
         .then((res) => {
@@ -39,7 +39,7 @@ export default function PageAccessDashboard() {
         .catch(() => setError("Kesalahan jaringan."))
         .finally(() => setLoading(false));
     }
-  }, [status, session, router]);
+  }, [status, isSuperAdmin, router]);
 
   const toggle = async (pageKey: string, role: Role, curr: boolean) => {
     setError(null);
@@ -69,13 +69,16 @@ export default function PageAccessDashboard() {
     }
   };
 
-  if (loading) return <div className="p-10 text-center">Memuat...</div>;
-  if (error && session?.user?.role !== "SUPER_ADMIN") {
+  if (status === "loading" || (isSuperAdmin && loading)) {
+    return <div className="p-10 text-center">Memuat...</div>;
+  }
+
+  if (isForbidden) {
     return (
       <div className="max-w-md mx-auto mt-10 p-6 bg-red-50 text-center rounded-xl border">
         <h2 className="text-xl font-bold text-red-600 mb-2">🚫 Akses Ditolak</h2>
-        <p className="text-gray-700">{error}</p>
-        <button onClick={() => router.push("/dashboard")} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded">Dashboard</button>
+        <p className="text-gray-700">Akses Ditolak. Khusus SUPER_ADMIN.</p>
+        <button onClick={() => router.replace("/dashboard")} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded">Dashboard</button>
       </div>
     );
   }
@@ -135,3 +138,4 @@ export default function PageAccessDashboard() {
     </div>
   );
 }
+

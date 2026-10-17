@@ -14,28 +14,29 @@ export default function PageGuard({ pageKey, children }: PageGuardProps) {
   const router = useRouter();
   const [allowed, setAllowed] = useState<boolean | null>(null);
 
+  const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
+
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/login");
-    } else if (status === "authenticated") {
-      if (session?.user?.role === "SUPER_ADMIN") {
-        setAllowed(true);
-      } else {
-        fetch("/api/page-access")
-          .then((r) => r.json())
-          .then((res) => {
-            if (res.success && res.data?.allowedPages) {
-              setAllowed(res.data.allowedPages.includes(pageKey));
-            } else {
-              setAllowed(false);
-            }
-          })
-          .catch(() => setAllowed(false));
-      }
+      router.replace("/login");
+    } else if (status === "authenticated" && !isSuperAdmin) {
+      fetch("/api/page-access")
+        .then((r) => r.json())
+        .then((res) => {
+          if (res.success && res.data?.allowedPages) {
+            setAllowed(res.data.allowedPages.includes(pageKey));
+          } else {
+            setAllowed(false);
+          }
+        })
+        .catch(() => setAllowed(false));
     }
-  }, [status, session, pageKey, router]);
+  }, [status, isSuperAdmin, pageKey, router]);
 
-  if (allowed === null) {
+  // Derived effective permission
+  const isEffectiveAllowed = isSuperAdmin ? true : allowed;
+
+  if (status === "loading" || (!isSuperAdmin && isEffectiveAllowed === null)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
@@ -44,7 +45,7 @@ export default function PageGuard({ pageKey, children }: PageGuardProps) {
     );
   }
 
-  if (!allowed) {
+  if (!isEffectiveAllowed) {
     return (
       <div className="max-w-md mx-auto mt-16 p-8 bg-white border border-gray-150 rounded-2xl text-center shadow-lg">
         <div className="text-5xl mb-4">🚫</div>
@@ -53,7 +54,7 @@ export default function PageGuard({ pageKey, children }: PageGuardProps) {
           Akses ke halaman ini belum dibuka oleh Superadmin untuk Peran Anda saat ini.
         </p>
         <button
-          onClick={() => router.push("/dashboard")}
+          onClick={() => router.replace("/dashboard")}
           className="mt-6 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition shadow"
         >
           Kembali ke Beranda
@@ -64,3 +65,4 @@ export default function PageGuard({ pageKey, children }: PageGuardProps) {
 
   return <>{children}</>;
 }
+

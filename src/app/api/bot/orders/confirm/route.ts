@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { generateInvoiceHtml, getStoreSettings } from "@/lib/invoicePdfGenerator";
+import { z } from "zod";
+
+const orderItemSchema = z.object({
+  productId: z.string().min(1),
+  unitId: z.string().optional().nullable(),
+  quantity: z.coerce.number().positive().default(1),
+  price: z.coerce.number().nonnegative().optional().default(0),
+  discount: z.coerce.number().nonnegative().optional().default(0),
+});
 
 function authCheck(request: Request) {
   const clientApiKey = request.headers.get("x-api-key") || request.headers.get("x-bot-api-key");
@@ -106,11 +115,13 @@ export async function POST(request: Request) {
     const saleItemsData: OrderConfirmSaleItem[] = [];
     
     if (Array.isArray(parsedItems)) {
-      for (const item of parsedItems) {
-        const productId = item.productId as string;
-        let unitId = item.unitId as string | null;
-        
-        if (!productId) continue;
+      for (const rawItem of parsedItems) {
+        const parsed = orderItemSchema.safeParse(rawItem);
+        if (!parsed.success) continue;
+
+        const item = parsed.data;
+        const productId = item.productId;
+        let unitId = item.unitId || null;
         
         const product = await prisma.product.findUnique({ where: { id: productId }, include: { productUnits: true }});
         if (!product) continue;
@@ -152,8 +163,10 @@ export async function POST(request: Request) {
           continue; // Skip the item instead of crashing the transaction
         }
         
-        const qty = item.quantity || 1;
-        const subtotal = qty * unitPrice;
+        const qty = item.quantity;
+        const discount = item.discount;
+        const grossSubtotal = qty * unitPrice;
+        const subtotal = Math.max(0, grossSubtotal - discount);
         totalAmount += subtotal;
 
         saleItemsData.push({
@@ -161,6 +174,7 @@ export async function POST(request: Request) {
           unitId,
           quantity: qty,
           unitPrice,
+          discount,
           subtotal,
         });
       }
