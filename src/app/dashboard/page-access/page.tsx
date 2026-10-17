@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { PAGE_KEYS } from "@/lib/actions/page-access.actions";
+import { PAGE_KEYS } from "@/lib/constants/page-access";
 import { Role } from "@prisma/client";
 
 interface Rule {
