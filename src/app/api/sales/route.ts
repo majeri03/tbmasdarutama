@@ -71,25 +71,27 @@ export async function POST(request: NextRequest) {
       return errorResponse(result.error || "Gagal menyimpan transaksi.", 400);
     }
 
-    // Trigger FCM notifikasi ke Admin/Owner secara realtime
+    // Trigger Notifikasi ke Admin/Owner secara realtime
     try {
       interface SaleWithCustomer {
         id: string;
+        invoiceNumber?: string;
         customer?: { name?: string } | null;
         grandTotal: number | string;
       }
       const saleData = result.data as unknown as SaleWithCustomer;
       const custName = saleData?.customer?.name || "Pelanggan";
+      const invoiceNo = saleData?.invoiceNumber || "INV";
       const grandTotal = Number(saleData?.grandTotal || 0);
       const saleId = saleData?.id || "";
       if (saleId) {
-        const { Notif } = await import("@/app/api/mobile/fcm/route");
-        Notif.newOrder(saleId, custName, grandTotal).catch((e) =>
-          console.error("[FCM] Error notifying new order:", e)
+        const { NotificationService } = await import("@/lib/services/notification.service");
+        NotificationService.onNewOrder(saleId, invoiceNo, custName, grandTotal).catch((e) =>
+          console.error("[Notif] Error notifying new order:", e)
         );
       }
     } catch (e) {
-      console.error("[FCM] Order notification dispatch error:", e);
+      console.error("[Notif] Order notification dispatch error:", e);
     }
 
     return successResponse(result.data, result.message, 201);

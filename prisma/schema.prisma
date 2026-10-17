@@ -30,6 +30,8 @@ model User {
   stockMovements     StockMovement[] 
   passwordResetTokens PasswordResetToken[]
   waOrdersConfirmed   WaOrder[]
+  deviceTokens        DeviceToken[]
+  notifications       Notification[]
   
   @@map("users")
 }
@@ -636,3 +638,51 @@ model PageAccess {
   @@unique([pageKey, role])
   @@map("page_access")
 }
+
+
+// ==================== DEVICE TOKENS (MULTI-DEVICE PUSH) ====================
+model DeviceToken {
+  id         String   @id @default(cuid())
+  userId     String
+  token      String   @unique
+  platform   String   @default("android") // android, ios, web
+  deviceName String?
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("device_tokens")
+}
+
+// ==================== NOTIFICATIONS (PERSISTENT IN-APP HISTORY) ====================
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String?          // null = broadcast ke role
+  role      Role?            // SUPER_ADMIN, ADMIN, KASIR
+  title     String
+  body      String           @db.Text
+  type      NotificationType
+  screen    String?          // e.g. "POS", "Delivery", "Debt", "Purchase"
+  params    Json?            // e.g. { saleId: "xxx", doId: "yyy" }
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([role, isRead])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  NEW_ORDER
+  ORDER_STATUS
+  PAYMENT_RECEIVED
+  DELIVERY_UPDATE
+  DEBT_DUE
+  LOW_STOCK
+  SYSTEM_ALERT
+}
+

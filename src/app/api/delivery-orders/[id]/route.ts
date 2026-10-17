@@ -64,10 +64,10 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       return errorResponse(result.error || "Gagal memperbarui status pengiriman.", 400);
     }
 
-    // Kirim notifikasi FCM saat status berubah
+    // Kirim notifikasi saat status berubah
     const { status, doNumber } = result.data as { status: string; doNumber: string };
-    // Ambil token sopir jika ada (async fire-and-forget)
-    Notif.deliveryUpdate(id, doNumber, status).catch(console.error);
+    const { NotificationService } = await import("@/lib/services/notification.service");
+    NotificationService.onDeliveryUpdate(id, doNumber, status).catch(console.error);
 
     return successResponse(result.data, result.message);
   } catch (error) {

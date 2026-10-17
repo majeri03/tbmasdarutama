@@ -65,12 +65,12 @@ export async function POST(request: NextRequest) {
       return errorResponse(result.error || "Gagal mencatat pembayaran.", 400);
     }
 
-    // Kirim notifikasi FCM saat cicilan/pelunasan berhasil (customer)
+    // Kirim notifikasi saat cicilan/pelunasan berhasil (customer)
     if (type === "customer" && result.data) {
       const data = result.data as { customerName?: string; customerId?: string; amount?: number };
-      if (data.customerName && data.customerId) {
-        Notif.paymentReceived(
-          data.customerId,
+      if (data.customerName) {
+        const { NotificationService } = await import("@/lib/services/notification.service");
+        NotificationService.onPaymentReceived(
           data.customerName,
           paymentData.amount
         ).catch(console.error);
