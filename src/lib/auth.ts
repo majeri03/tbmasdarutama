@@ -104,7 +104,77 @@ export const authConfig: NextAuthConfig = {
   secret: process.env.NEXTAUTH_SECRET,
 };
 
-export const { handlers, signIn, signOut, auth } = NextAuth(authConfig);
+const nextAuthInstance = NextAuth(authConfig);
+export const { handlers, signIn, signOut } = nextAuthInstance;
+
+/**
+ * Enhanced auth() helper:
+ * 1. Supports NextAuth middleware when called with a callback: auth((req) => ...)
+ * 2. In Server Components, Server Actions, and Route Handlers:
+ *    - First checks standard NextAuth web session
+ *    - If null, checks Authorization Bearer header or authjs.session-token cookie
+ *      and validates mobile JWT token via verifyMobileToken()
+ */
+export const auth: typeof nextAuthInstance.auth = ((...args: any[]) => {
+  // If called as middleware wrapper (function argument)
+  if (typeof args[0] === "function") {
+    return (nextAuthInstance.auth as any)(...args);
+  }
+
+  // If called directly: await auth()
+  return (async () => {
+    try {
+      const session = await (nextAuthInstance.auth as any)();
+      if (session?.user?.id) {
+        if (session.user.role) {
+          session.user.role = session.user.role.toUpperCase();
+        }
+        return session;
+      }
+    } catch {
+      // Standard NextAuth failed or not present
+    }
+
+    try {
+      const { headers } = await import("next/headers");
+      const reqHeaders = await headers();
+      let token: string | null = null;
+
+      const authHeader = reqHeaders.get("authorization");
+      if (authHeader?.startsWith("Bearer ")) {
+        token = authHeader.substring(7).trim();
+      }
+
+      if (!token) {
+        const cookieHeader = reqHeaders.get("cookie");
+        if (cookieHeader) {
+          const match = cookieHeader.match(/(?:__Secure-)?authjs\.session-token=([^;]+)/);
+          if (match) token = match[1];
+        }
+      }
+
+      if (token) {
+        const { verifyMobileToken } = await import("@/lib/utils/jwt");
+        const payload = verifyMobileToken(token);
+        if (payload) {
+          return {
+            user: {
+              id: payload.id,
+              email: payload.email,
+              name: payload.name,
+              role: (payload.role || "KASIR").toUpperCase(),
+            },
+            expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          } as any;
+        }
+      }
+    } catch {
+      // headers() context not available or error occurred
+    }
+
+    return null;
+  })();
+}) as any;
 
 export const getCurrentUser = async () => {
   const session = await auth();

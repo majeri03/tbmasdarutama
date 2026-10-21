@@ -686,3 +686,24 @@ enum NotificationType {
   SYSTEM_ALERT
 }
 
+// ==================== FLEET / ARMADA TRACKING ====================
+model FleetVehicle {
+  id             String    @id @default(cuid())
+  plateNumber    String    @unique // Contoh: DD 8234 XY
+  vehicleType    String    @default("PICKUP") // TRUCK, PICKUP, MOTOR, VAN, OTHER
+  brand          String?   // Mitsubishi, Isuzu, Toyota, Suzuki, Honda
+  year           Int?
+  driverName     String    // Nama sopir
+  driverPhone    String?   // No telepon sopir
+  status         String    @default("ACTIVE") // ACTIVE, IDLE, MAINTENANCE, OFF
+  latitude       Float?
+  longitude      Float?
+  address        String?
+  lastLocationAt DateTime?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("fleet_vehicles")
+}
+
