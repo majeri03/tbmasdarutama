@@ -1231,3 +1231,49 @@ export async function deleteSale(id: string, passwordInput?: string) {
     return { success: false, error: "Gagal memproses penghapusan penjualan" };
   }
 }
+
+/**
+ * Update Bukti Transfer / Pembayaran atau Catatan Transaksi
+ */
+export async function updateSaleProof(saleId: string, proofUrl: string | null, customNotes?: string) {
+  try {
+    const session = await auth();
+    requirePermission(session, "VIEW_SALES");
+
+    const sale = await prisma.sale.findUnique({
+      where: { id: saleId },
+      select: { id: true, notes: true, invoiceNumber: true },
+    });
+
+    if (!sale) {
+      return { success: false, error: "Transaksi tidak ditemukan" };
+    }
+
+    let existingNotes = sale.notes || "";
+    // Hapus tag bukti lama jika ada
+    existingNotes = existingNotes.replace(/\[BUKTI_TF\]:\s*[^\s\]\n]+/g, "").trim();
+
+    if (customNotes !== undefined) {
+      existingNotes = customNotes.trim();
+    }
+
+    const newNotes = proofUrl ? `${existingNotes} [BUKTI_TF]: ${proofUrl}`.trim() : existingNotes;
+
+    const updated = await prisma.sale.update({
+      where: { id: saleId },
+      data: { notes: newNotes },
+    });
+
+    revalidatePath("/dashboard/sales");
+
+    return {
+      success: true,
+      data: updated,
+      message: "Bukti pembayaran berhasil diperbarui",
+    };
+  } catch (error) {
+    console.error("[UPDATE_SALE_PROOF_ERROR]", error);
+    return { success: false, error: "Gagal memperbarui bukti pembayaran" };
+  }
+}
+

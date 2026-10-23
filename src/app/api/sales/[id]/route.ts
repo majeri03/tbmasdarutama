@@ -63,3 +63,33 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     return errorResponse("Terjadi kesalahan internal server.");
   }
 }
+
+/**
+ * PATCH /api/sales/[id]
+ * Update bukti transfer/pembayaran atau catatan pada transaksi penjualan.
+ * Role: KASIR+ (VIEW_SALES)
+ */
+export async function PATCH(request: NextRequest, context: RouteContext) {
+  try {
+    const session = await getAuthenticatedUser();
+    if (!session) return unauthorizedResponse();
+    if (!hasPermission(session, "VIEW_SALES")) return forbiddenResponse();
+
+    const { id } = await context.params;
+    const body = await request.json();
+    const { proofUrl, notes } = body;
+
+    const { updateSaleProof } = await import("@/lib/actions/sale.actions");
+    const result = await updateSaleProof(id, proofUrl, notes);
+
+    if (!result.success) {
+      return errorResponse(result.error || "Gagal memperbarui bukti pembayaran", 400);
+    }
+
+    return successResponse(result.data, result.message);
+  } catch (error) {
+    console.error("[API_SALE_PATCH_ERROR]", error);
+    return errorResponse("Terjadi kesalahan internal server.");
+  }
+}
+
