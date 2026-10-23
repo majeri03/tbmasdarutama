@@ -629,6 +629,7 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
         status: validated.status,
         receivedBy: validated.receivedBy,
         receivedDate: validated.receivedDate,
+        ...(validated.notes ? { notes: validated.notes } : {}),
       },
       include: {
         customer: true,

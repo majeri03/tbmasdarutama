@@ -40,11 +40,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate unique filename
+    // Generate unique filename with optional custom folder (e.g., proofs_delivery, proofs_payment, products)
+    const folder = (formData.get("folder") as string) || "products";
+    const cleanFolder = folder.replace(/[^a-zA-Z0-9_-]/g, "") || "products";
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 15);
     const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const filename = `products/${timestamp}-${randomString}.${extension}`;
+    const filename = `${cleanFolder}/${timestamp}-${randomString}.${extension}`;
 
     // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
@@ -70,13 +72,62 @@ export async function POST(request: NextRequest) {
     // ✅ Worker returns full URL with /files/ endpoint
     return NextResponse.json({
       success: true,
-      url: result.url, // https://worker.dev/files/products/xxx.jpg
+      url: result.url, // https://worker.dev/files/folder/xxx.jpg
       filename: filename,
     });
   } catch (error) {
     console.error("[UPLOAD_API_ERROR]", error);
     return NextResponse.json(
       { error: "Gagal mengupload gambar" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getAuthenticatedUser();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    let filename = searchParams.get("filename");
+
+    if (!filename) {
+      const body = await request.json().catch(() => ({}));
+      filename = body?.filename;
+    }
+
+    if (!filename) {
+      return NextResponse.json(
+        { error: "Parameter 'filename' wajib diisi" },
+        { status: 400 }
+      );
+    }
+
+    // Call Cloudflare Worker delete endpoint
+    if (WORKER_URL) {
+      try {
+        await fetch(`${WORKER_URL}/delete`, {
+          method: "DELETE",
+          headers: {
+            "X-Filename": filename,
+          },
+        });
+      } catch (err) {
+        console.warn("[WORKER_DELETE_WARN] Could not delete from worker:", err);
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `File ${filename} berhasil dihapus dari Cloudflare R2`,
+    });
+  } catch (error) {
+    console.error("[DELETE_API_ERROR]", error);
+    return NextResponse.json(
+      { error: "Gagal menghapus gambar" },
       { status: 500 }
     );
   }

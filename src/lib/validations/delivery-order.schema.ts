@@ -25,6 +25,7 @@ export const updateDeliveryStatusSchema = z.object({
   status: z.nativeEnum(DeliveryStatus),
   receivedBy: z.string().optional(),
   receivedDate: z.coerce.date().optional(),
+  notes: z.string().optional(),
 });
 
 export type CreateDeliveryOrderInput = z.infer<typeof createDeliveryOrderSchema>;
