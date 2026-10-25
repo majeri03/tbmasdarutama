@@ -20,7 +20,7 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions) {
         pass: process.env.EMAIL_PASSWORD,
       },
       tls: {
-        rejectUnauthorized: false,
+        rejectUnauthorized: process.env.NODE_ENV === "production",
       },
     });
 

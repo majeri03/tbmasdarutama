@@ -36,10 +36,9 @@ export default function LandingAbout({ content }: Props) {
         <div className="grid lg:grid-cols-2 gap-12 items-center mb-16">
           {/* Text Content */}
           <div className="glass-card p-8 animate-slide-up animation-delay-200">
-            <div 
-              className="prose prose-lg max-w-none text-gray-700 leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: content.replace(/\n/g, '<br />') }}
-            />
+            <div className="prose prose-lg max-w-none text-gray-700 leading-relaxed whitespace-pre-line">
+              {content}
+            </div>
           </div>
 
           {/* Stats Grid */}
