@@ -13,6 +13,7 @@ import {
   UpdateDeliveryOrderInput,
 } from "@/lib/validations/delivery-order.schema";
 import { requirePermission, type AuthSession } from "../utils/role";
+import { NotifEvent } from "../utils/notify";
 
 // Helper untuk mengekstrak Bukti Pengiriman dari field proofImage atau tag di notes
 function resolveProofImage(
@@ -535,7 +536,10 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
     revalidatePath("/dashboard/sales");
     revalidatePath("/dashboard/customer-debts");
     revalidatePath("/dashboard/products");
-    revalidatePath("/dashboard/stocks"); // Tambahkan ini agar halaman stok update
+    revalidatePath("/dashboard/stocks");
+
+    // Kirim notifikasi ke admin bahwa DO baru telah dibuat
+    NotifEvent.doCreated(result.doNumber, result.customer?.name || "Pelanggan").catch(() => {});
 
     return {
       success: true,
@@ -764,6 +768,13 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
       }
     }
     revalidatePath("/dashboard/delivery-orders");
+
+    // Kirim notifikasi perubahan status DO
+    NotifEvent.doStatusChanged(
+      updated.doNumber,
+      validated.status,
+      updated.createdById ?? undefined
+    ).catch(() => {});
 
     return {
       success: true,

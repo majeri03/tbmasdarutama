@@ -44,3 +44,37 @@ export async function POST(request: NextRequest) {
     return errorResponse("Gagal mendaftarkan token perangkat");
   }
 }
+
+/**
+ * DELETE /api/notifications/register-token
+ * Menghapus token perangkat saat logout sehingga tidak menerima push setelah keluar.
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getAuthenticatedUser();
+    if (!session?.user?.id) return unauthorizedResponse();
+
+    const body = await request.json().catch(() => ({}));
+    const { token } = body;
+
+    if (!token || typeof token !== "string") {
+      return errorResponse("Token wajib diisi", 400);
+    }
+
+    // Hanya hapus jika token milik user yang sedang logout (keamanan)
+    await prisma.deviceToken.deleteMany({
+      where: { token, userId: session.user.id },
+    });
+
+    // Bersihkan juga dari User.expoPushToken jika sama
+    await prisma.user.updateMany({
+      where: { id: session.user.id, expoPushToken: token },
+      data: { expoPushToken: null },
+    }).catch(() => {});
+
+    return successResponse({}, "Token perangkat berhasil dihapus");
+  } catch (error) {
+    console.error("[DELETE_DEVICE_TOKEN_ERROR]", error);
+    return errorResponse("Gagal menghapus token perangkat");
+  }
+}
