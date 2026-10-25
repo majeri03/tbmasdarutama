@@ -10,6 +10,7 @@ import { DeliveryOrderTable } from "./DeliveryOrderTable";
 import { DeliveryOrderFormModal } from "./DeliveryOrderFormModal";
 import { DeliveryOrderDetailModal } from "./DeliveryOrderDetailModal";
 import { ReceiveDeliveryModal } from "./ReceiveDeliveryModal";
+import { EditDeliveryOrderModal } from "./EditDeliveryOrderModal";
 import { DeleteDeliveryDialog } from "./DeleteDeliveryDialog";
 import { printDeliveryOrder } from "@/lib/utils/delivery-order-generator";
 import { useToast, Toast } from "@/components/ui/toast";
@@ -33,6 +34,7 @@ export function DeliveryOrderClient() {
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState<DeliveryOrderData | null>(null);
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -115,6 +117,11 @@ export function DeliveryOrderClient() {
     const handleUpdateStatus = (order: DeliveryOrderData) => {
         setSelectedOrder(order);
         setIsReceiveModalOpen(true);
+    };
+
+    const handleEdit = (order: DeliveryOrderData) => {
+        setSelectedOrder(order);
+        setIsEditModalOpen(true);
     };
 
     const handleDelete = (order: DeliveryOrderData) => {
@@ -248,6 +255,7 @@ export function DeliveryOrderClient() {
                 deliveryOrders={filteredOrders}
                 onView={handleView}
                 onUpdateStatus={handleUpdateStatus}
+                onEdit={handleEdit}
                 onDelete={handleDelete}
                 onPrint={handlePrint}
             />
@@ -272,6 +280,16 @@ export function DeliveryOrderClient() {
                 isOpen={isReceiveModalOpen}
                 onClose={() => {
                     setIsReceiveModalOpen(false);
+                    setSelectedOrder(null);
+                }}
+                onSuccess={handleSuccess}
+                deliveryOrder={selectedOrder}
+            />
+
+            <EditDeliveryOrderModal
+                isOpen={isEditModalOpen}
+                onClose={() => {
+                    setIsEditModalOpen(false);
                     setSelectedOrder(null);
                 }}
                 onSuccess={handleSuccess}

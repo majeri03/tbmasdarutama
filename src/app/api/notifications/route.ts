@@ -25,7 +25,8 @@ export async function GET(request: NextRequest) {
       OR: [
         { userId: userId },
         { role: userRole },
-        ...(userRole === "SUPER_ADMIN" || userRole === "ADMIN" ? [{ role: "ADMIN" as Role }, { role: null }] : []),
+        { role: null }, // broadcast umum selalu terlihat oleh semua staff
+        ...(userRole === "SUPER_ADMIN" ? [{ role: "ADMIN" as Role }] : []),
       ],
       ...(unreadOnly ? { isRead: false } : {}),
     };

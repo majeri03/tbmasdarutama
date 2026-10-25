@@ -468,6 +468,7 @@ model DeliveryOrder {
   status          DeliveryStatus  @default(PENDING)
   receivedBy      String?
   receivedDate    DateTime?
+  proofImage      String?         // URL Foto Bukti Pengiriman (R2/Cloudflare)
   createdById     String
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt

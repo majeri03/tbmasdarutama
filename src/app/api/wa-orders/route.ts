@@ -111,6 +111,16 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Kirim notifikasi realtime pesanan WA baru ke admin/staff
+    try {
+      const { NotificationService } = await import("@/lib/services/notification.service");
+      NotificationService.onWaOrderReceived(waOrder.id, senderName, senderPhone).catch((err) =>
+        console.error("[Notif] WA order dispatch error:", err)
+      );
+    } catch (e) {
+      console.error("[Notif] Failed importing NotificationService:", e);
+    }
+
     return NextResponse.json({ success: true, data: waOrder }, { status: 201 });
   } catch (error) {
     console.error('[WA-ORDERS POST]', error);

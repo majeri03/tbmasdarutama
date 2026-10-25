@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Truck, Trash2, Printer } from "lucide-react";
+import { Eye, Truck, Trash2, Printer, Pencil, Camera } from "lucide-react";
 import { DeliveryOrderData } from "@/types/delivery-order";
 import { DeliveryStatus } from "@prisma/client";
 import { format } from "date-fns";
@@ -10,6 +10,7 @@ interface DeliveryOrderTableProps {
   deliveryOrders: DeliveryOrderData[];
   onView: (order: DeliveryOrderData) => void;
   onUpdateStatus: (order: DeliveryOrderData) => void;
+  onEdit?: (order: DeliveryOrderData) => void;
   onDelete: (order: DeliveryOrderData) => void;
   onPrint: (order: DeliveryOrderData) => void;
 }
@@ -37,6 +38,7 @@ export function DeliveryOrderTable({
   deliveryOrders,
   onView,
   onUpdateStatus,
+  onEdit,
   onDelete,
   onPrint,
 }: DeliveryOrderTableProps) {
@@ -85,9 +87,22 @@ export function DeliveryOrderTable({
               <tr key={order.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm">
-                    <p className="font-semibold text-gray-900">
-                      {order.doNumber}
-                    </p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="font-semibold text-gray-900">
+                        {order.doNumber}
+                      </p>
+                      {(order.proofImage ||
+                        order.notes?.includes("[BUKTI_KIRIM]") ||
+                        order.notes?.includes("[FOTO_LOKASI]")) && (
+                        <span
+                          className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200"
+                          title="Ada Bukti Foto Pengiriman"
+                        >
+                          <Camera className="w-3 h-3 text-emerald-600" />
+                          Foto Bukti
+                        </span>
+                      )}
+                    </div>
                     {order.sale && (
                       <p className="text-xs text-gray-500">
                         Invoice: {order.sale.invoiceNumber}
@@ -150,6 +165,15 @@ export function DeliveryOrderTable({
                     >
                       <Printer className="w-4 h-4" />
                     </button>
+                    {onEdit && (
+                      <button
+                        onClick={() => onEdit(order)}
+                        className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                        title="Edit Surat Jalan (Admin/Superadmin)"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    )}
                     {order.status !== "DELIVERED" &&
                       order.status !== "CANCELLED" && (
                         <button

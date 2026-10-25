@@ -48,7 +48,9 @@ export class NotificationService {
         });
         if (u?.expoPushToken && !tokens.includes(u.expoPushToken)) tokens.push(u.expoPushToken);
       } else {
-        const targetRoles: Role[] = options.role ? [options.role, 'SUPER_ADMIN'] : ['SUPER_ADMIN', 'ADMIN'];
+        const targetRoles: Role[] = options.role
+          ? (options.role === 'ADMIN' ? ['SUPER_ADMIN', 'ADMIN', 'KASIR'] : [options.role, 'SUPER_ADMIN'])
+          : ['SUPER_ADMIN', 'ADMIN', 'KASIR'];
         const devs = await prisma.deviceToken.findMany({
           where: { user: { role: { in: targetRoles }, isActive: true } },
           select: { token: true },
@@ -81,6 +83,7 @@ export class NotificationService {
         },
         channelId: options.channelId ?? 'default',
         priority: 'high',
+        badge: 1,
       }));
 
       // 4. Batching & pengiriman

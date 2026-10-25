@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, FileText, Printer } from "lucide-react";
+import { X, FileText, Printer, Camera, ExternalLink, ZoomIn, CheckCircle2 } from "lucide-react";
 import { DeliveryStatus } from "@prisma/client";
 import { getDeliveryOrderById } from "@/lib/actions/delivery-order.actions";
 import { printDeliveryOrder } from "@/lib/utils/delivery-order-generator";
@@ -22,6 +22,7 @@ interface DeliveryOrderDetail {
   driver: string | null;
   vehicle: string | null;
   notes: string | null;
+  proofImage?: string | null;
   status: DeliveryStatus;
   receivedBy: string | null;
   receivedDate: Date | null;
@@ -72,6 +73,7 @@ export function DeliveryOrderDetailModal({
 }: DeliveryOrderDetailModalProps) {
   const [deliveryOrder, setDeliveryOrder] = useState<DeliveryOrderDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
 
   useEffect(() => {
     const loadDeliveryOrder = async () => {
@@ -306,13 +308,78 @@ export function DeliveryOrderDetailModal({
               </div>
             )}
 
-            {/* Notes */}
-            {deliveryOrder.notes && (
-              <div className="glass-card p-4">
-                <h3 className="font-semibold text-gray-900 mb-2">Catatan</h3>
-                <p className="text-sm text-gray-600">{deliveryOrder.notes}</p>
-              </div>
-            )}
+            {/* Foto Bukti Pengiriman */}
+            {(() => {
+              const proofUrl =
+                deliveryOrder.proofImage ||
+                (() => {
+                  const m1 = (deliveryOrder.notes || "").match(/\[BUKTI_KIRIM\]:\s*([^\s\]\n]+)/);
+                  if (m1 && m1[1]) return m1[1].trim();
+                  const m2 = (deliveryOrder.notes || "").match(/\[FOTO_LOKASI\]:\s*([^\s\]\n]+)/);
+                  if (m2 && m2[1]) return m2[1].trim();
+                  return null;
+                })();
+
+              if (!proofUrl) return null;
+
+              return (
+                <div className="glass-card p-4 space-y-3 border-l-4 border-l-green-500">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                      <Camera className="w-4 h-4 text-green-600" />
+                      Foto Bukti Pengiriman
+                    </h3>
+                    <span className="inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full bg-green-100 text-green-800 font-medium">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Tervalidasi
+                    </span>
+                  </div>
+
+                  <div className="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center max-h-72">
+                    <img
+                      src={proofUrl}
+                      alt="Bukti Pengiriman"
+                      className="w-full h-auto max-h-72 object-contain rounded-xl cursor-pointer hover:scale-[1.02] transition-transform duration-200"
+                      onClick={() => setZoomImage(proofUrl)}
+                    />
+                    <div className="absolute bottom-2 right-2 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setZoomImage(proofUrl)}
+                        className="px-3 py-1.5 bg-black/70 hover:bg-black text-white text-xs rounded-lg backdrop-blur flex items-center gap-1.5 transition-colors shadow-sm"
+                      >
+                        <ZoomIn className="w-3.5 h-3.5" />
+                        Perbesar
+                      </button>
+                      <a
+                        href={proofUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg flex items-center gap-1.5 transition-colors shadow-sm"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        Buka Tab Baru
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Notes (Cleaned without proof tag) */}
+            {(() => {
+              const cleanNotes = (deliveryOrder.notes || "")
+                .replace(/\[BUKTI_KIRIM\]:\s*[^\s\]\n]+/g, "")
+                .replace(/\[FOTO_LOKASI\]:\s*[^\s\]\n]+/g, "")
+                .trim();
+              if (!cleanNotes) return null;
+              return (
+                <div className="glass-card p-4">
+                  <h3 className="font-semibold text-gray-900 mb-2">Catatan</h3>
+                  <p className="text-sm text-gray-600 whitespace-pre-wrap">{cleanNotes}</p>
+                </div>
+              );
+            })()}
 
             {/* Created By */}
             <div className="text-center text-sm text-gray-500">
@@ -332,6 +399,39 @@ export function DeliveryOrderDetailModal({
           </button>
         </div>
       </div>
+
+      {/* Modal Zoom Foto Bukti */}
+      {zoomImage && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm"
+          onClick={() => setZoomImage(null)}
+        >
+          <div
+            className="relative max-w-4xl max-h-[90vh] bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
+              <span className="font-semibold text-gray-800 text-sm flex items-center gap-2">
+                <Camera className="w-4 h-4 text-green-600" />
+                Bukti Pengiriman — {deliveryOrder?.doNumber}
+              </span>
+              <button
+                onClick={() => setZoomImage(null)}
+                className="p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-2 overflow-auto max-h-[calc(90vh-65px)] flex items-center justify-center bg-black/95">
+              <img
+                src={zoomImage}
+                alt="Foto Bukti Zoom"
+                className="max-h-[80vh] w-auto object-contain rounded-lg shadow-lg"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

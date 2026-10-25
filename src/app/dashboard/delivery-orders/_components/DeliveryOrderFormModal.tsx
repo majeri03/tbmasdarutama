@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Plus, Trash2, Package, Search } from "lucide-react";
+import { X, Plus, Trash2, Package, Search, Camera, Loader2 } from "lucide-react";
 import { createDeliveryOrder } from "@/lib/actions/delivery-order.actions";
 import { getCustomers } from "@/lib/actions/customer.actions";
 import { getProducts } from "@/lib/actions/product.actions";
@@ -65,6 +65,9 @@ export function DeliveryOrderFormModal({
   const [driver, setDriver] = useState("");
   const [vehicle, setVehicle] = useState("");
   const [notes, setNotes] = useState("");
+  const [proofImage, setProofImage] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<DeliveryItem[]>([
     { productId: "", unitId: "", quantity: 1, notes: "" },
   ]);
@@ -194,6 +197,46 @@ export function DeliveryOrderFormModal({
     }, 400); // Tunggu 400ms
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      showToast("File harus berupa gambar (JPG, PNG, WebP)", "error");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("Ukuran foto maksimal 5MB", "error");
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "proofs_delivery");
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.url) {
+        throw new Error(data.error || "Gagal mengupload foto");
+      }
+
+      setProofImage(data.url);
+      showToast("Foto bukti pengiriman berhasil diunggah", "success");
+    } catch (err) {
+      console.error("[Upload Proof Error]", err);
+      showToast(err instanceof Error ? err.message : "Gagal mengunggah foto bukti", "error");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoading) return; // Cegah double click
@@ -223,6 +266,7 @@ export function DeliveryOrderFormModal({
         driver: driver || undefined,
         vehicle: vehicle || undefined,
         notes: notes || undefined,
+        proofImage: proofImage || undefined,
         items: validItems.map((item) => ({
           productId: item.productId,
           unitId: item.unitId,
@@ -253,6 +297,7 @@ export function DeliveryOrderFormModal({
     setDriver("");
     setVehicle("");
     setNotes("");
+    setProofImage("");
     setItems([{ productId: "", unitId: "", quantity: 1, notes: "" }]);
     setSearchProducts([""]);
   };
@@ -475,6 +520,74 @@ export function DeliveryOrderFormModal({
                         rows={3}
                         placeholder="Catatan tambahan untuk pengiriman (opsional)"
                       />
+                    </div>
+
+                    {/* Foto Bukti Pengiriman */}
+                    <div className="mt-6">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Foto Bukti Pengiriman (Opsional)
+                      </label>
+                      <p className="text-xs text-gray-500 mb-2">
+                        Unggah foto bukti muat barang / pengiriman (Maksimal 5MB, format JPG/PNG/WebP)
+                      </p>
+
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleFileUpload}
+                      />
+
+                      {proofImage ? (
+                        <div className="relative inline-block border rounded-xl overflow-hidden shadow-sm bg-gray-50 group">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={proofImage}
+                            alt="Bukti Pengiriman"
+                            className="w-48 h-36 object-cover rounded-xl"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => fileInputRef.current?.click()}
+                              disabled={isUploading}
+                              className="px-2.5 py-1 text-xs bg-white text-gray-800 font-medium rounded shadow hover:bg-gray-100"
+                            >
+                              Ganti
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setProofImage("")}
+                              disabled={isUploading}
+                              className="px-2.5 py-1 text-xs bg-red-600 text-white font-medium rounded shadow hover:bg-red-700"
+                            >
+                              Hapus
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploading}
+                          className="w-full py-4 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-500 hover:bg-blue-50/50 transition-colors flex flex-col items-center justify-center gap-2 text-gray-600 cursor-pointer disabled:opacity-50"
+                        >
+                          {isUploading ? (
+                            <>
+                              <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                              <span className="text-sm font-medium text-blue-600">Mengunggah foto bukti...</span>
+                            </>
+                          ) : (
+                            <>
+                              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                                <Camera className="w-5 h-5" />
+                              </div>
+                              <span className="text-sm font-medium">Klik untuk upload foto bukti pengiriman</span>
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
             </div>
           </div>

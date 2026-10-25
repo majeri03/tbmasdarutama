@@ -12,6 +12,7 @@ export interface DeliveryOrderData {
   status: DeliveryStatus;
   receivedBy: string | null;
   receivedDate: Date | null;
+  proofImage?: string | null;
   createdById: string;
   createdAt: Date;
   updatedAt: Date;

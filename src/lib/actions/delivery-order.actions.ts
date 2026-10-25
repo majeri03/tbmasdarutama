@@ -7,10 +7,27 @@ import { DeliveryStatus, Prisma,  PaymentMethod  } from "@prisma/client";
 import {
   createDeliveryOrderSchema,
   updateDeliveryStatusSchema,
+  updateDeliveryOrderSchema,
   UpdateDeliveryStatusInput,
   CreateDeliveryOrderInput,
+  UpdateDeliveryOrderInput,
 } from "@/lib/validations/delivery-order.schema";
 import { requirePermission, type AuthSession } from "../utils/role";
+
+// Helper untuk mengekstrak Bukti Pengiriman dari field proofImage atau tag di notes
+function resolveProofImage(
+  proofImage?: string | null,
+  notes?: string | null
+): string | null {
+  if (proofImage && proofImage.trim()) return proofImage.trim();
+  if (!notes) return null;
+  const buktiMatch = notes.match(/\[BUKTI_KIRIM\]:\s*([^\s\]\n]+)/);
+  if (buktiMatch && buktiMatch[1]) return buktiMatch[1].trim();
+  const lokasiMatch = notes.match(/\[FOTO_LOKASI\]:\s*([^\s\]\n]+)/);
+  if (lokasiMatch && lokasiMatch[1]) return lokasiMatch[1].trim();
+  return null;
+}
+
 //    GENERATE DO NUMBER   
 async function generateDONumber(tx: Prisma.TransactionClient): Promise<string> {
   const today = new Date();
@@ -117,9 +134,10 @@ export async function getAllDeliveryOrders(filters?: {
       },
     });
 
-    // Serialize Decimal
+    // Serialize Decimal & resolve proofImage
     const serialized = deliveryOrders.map((order) => ({
       ...order,
+      proofImage: resolveProofImage(order.proofImage, order.notes),
       deliveryItems: order.deliveryItems.map((item) => ({
         ...item,
         quantity: Number(item.quantity),
@@ -224,6 +242,7 @@ export async function getDeliveryOrderById(id: string, externalSession?: AuthSes
     // Serialize
     const serialized = {
       ...deliveryOrder,
+      proofImage: resolveProofImage(deliveryOrder.proofImage, deliveryOrder.notes),
       deliveryItems: deliveryOrder.deliveryItems.map((item) => ({
         ...item,
         quantity: Number(item.quantity),
@@ -483,6 +502,7 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
           driver: validated.driver,
           vehicle: validated.vehicle,
           notes: validated.notes,
+          proofImage: validated.proofImage || resolveProofImage(undefined, validated.notes),
           status: "PENDING",
           createdById: session.user.id,
           deliveryItems: {
@@ -630,6 +650,11 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
         receivedBy: validated.receivedBy,
         receivedDate: validated.receivedDate,
         ...(validated.notes ? { notes: validated.notes } : {}),
+        ...(validated.proofImage !== undefined
+          ? { proofImage: validated.proofImage }
+          : validated.notes
+          ? { proofImage: resolveProofImage(undefined, validated.notes) }
+          : {}),
       },
       include: {
         customer: true,
@@ -745,6 +770,7 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
       message: `Delivery status updated to ${validated.status}`,
       data: {
         ...updated,
+        proofImage: resolveProofImage(updated.proofImage, updated.notes),
         deliveryItems: updated.deliveryItems.map((item) => ({
           ...item,
           quantity: Number(item.quantity),
@@ -759,6 +785,99 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
     return { success: false, error: "Failed to update delivery status" };
   }
 }
+
+// ============================================================================
+//         UPDATE DELIVERY ORDER (EDIT SURAT JALAN OLEH ADMIN / SUPERADMIN)
+// ============================================================================
+export async function updateDeliveryOrder(
+  input: UpdateDeliveryOrderInput,
+  externalSession?: AuthSession | null
+) {
+  try {
+    const session = externalSession || (await auth());
+    if (!session?.user) {
+      return { success: false, error: "Unauthorized" };
+    }
+    requirePermission(session, "EDIT_DELIVERY_ORDER");
+    const validated = updateDeliveryOrderSchema.parse(input);
+
+    const existingDO = await prisma.deliveryOrder.findUnique({
+      where: { id: validated.id },
+    });
+    if (!existingDO) {
+      return { success: false, error: "Surat Jalan tidak ditemukan" };
+    }
+
+    // Siapkan data update
+    const updateData: Prisma.DeliveryOrderUpdateInput = {};
+    if (validated.deliveryDate !== undefined && validated.deliveryDate !== null) {
+      updateData.deliveryDate = validated.deliveryDate;
+    }
+    if (validated.driver !== undefined) {
+      updateData.driver = validated.driver;
+    }
+    if (validated.vehicle !== undefined) {
+      updateData.vehicle = validated.vehicle;
+    }
+    if (validated.notes !== undefined) {
+      updateData.notes = validated.notes;
+    }
+    if (validated.proofImage !== undefined) {
+      updateData.proofImage = validated.proofImage;
+    } else if (validated.notes) {
+      const extracted = resolveProofImage(undefined, validated.notes);
+      if (extracted) updateData.proofImage = extracted;
+    }
+    if (validated.status !== undefined) {
+      updateData.status = validated.status;
+    }
+    if (validated.receivedBy !== undefined) {
+      updateData.receivedBy = validated.receivedBy;
+    }
+    if (validated.receivedDate !== undefined) {
+      updateData.receivedDate = validated.receivedDate;
+    }
+
+    const updated = await prisma.deliveryOrder.update({
+      where: { id: validated.id },
+      data: updateData,
+      include: {
+        customer: true,
+        createdBy: {
+          select: { id: true, name: true, email: true },
+        },
+        deliveryItems: {
+          include: {
+            product: true,
+            unit: true,
+          },
+        },
+      },
+    });
+
+    revalidatePath("/dashboard/delivery-orders");
+
+    return {
+      success: true,
+      message: `Surat Jalan ${updated.doNumber} berhasil diperbarui!`,
+      data: {
+        ...updated,
+        proofImage: resolveProofImage(updated.proofImage, updated.notes),
+        deliveryItems: updated.deliveryItems.map((item) => ({
+          ...item,
+          quantity: Number(item.quantity),
+        })),
+      },
+    };
+  } catch (error) {
+    console.error("Error updating delivery order details:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Gagal memperbarui Surat Jalan",
+    };
+  }
+}
+
 
 //    DELETE DELIVERY ORDER   
 export async function deleteDeliveryOrder(id: string) {

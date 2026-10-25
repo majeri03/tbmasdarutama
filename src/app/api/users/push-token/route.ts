@@ -17,15 +17,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: 'Token is required' }, { status: 400 });
     }
 
-    await prisma.user.updateMany({
+    const targetUser = await prisma.user.findFirst({
       where: {
         OR: [
           ...(userId ? [{ id: userId }] : []),
           ...(userEmail ? [{ email: userEmail }] : []),
         ],
       },
-      data: { expoPushToken: token },
+      select: { id: true },
     });
+
+    if (targetUser) {
+      await prisma.deviceToken.upsert({
+        where: { token },
+        update: {
+          userId: targetUser.id,
+          lastSeenAt: new Date(),
+        },
+        create: {
+          userId: targetUser.id,
+          token,
+          platform: "android",
+          lastSeenAt: new Date(),
+        },
+      });
+
+      await prisma.user.update({
+        where: { id: targetUser.id },
+        data: { expoPushToken: token },
+      }).catch(() => {});
+    }
 
     return NextResponse.json({ success: true, message: 'Push token saved successfully' });
   } catch (error) {

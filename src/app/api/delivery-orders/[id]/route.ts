@@ -42,17 +42,37 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
 /**
  * PUT /api/delivery-orders/[id]
- * Update status Surat Jalan (PENDING → IN_TRANSIT → DELIVERED / CANCELLED).
- * Role: ADMIN+ (UPDATE_DELIVERY_STATUS)
+ * Update status atau detail Surat Jalan.
  */
 export async function PUT(request: NextRequest, context: RouteContext) {
   try {
     const session = await getAuthenticatedUser();
     if (!session) return unauthorizedResponse();
-    if (!hasPermission(session, "UPDATE_DELIVERY_STATUS")) return forbiddenResponse();
 
     const { id } = await context.params;
     const body = await request.json();
+
+    // Jika request menyertakan edit detail (driver, vehicle, deliveryDate, proofImage)
+    const isEditDetail =
+      body.driver !== undefined ||
+      body.vehicle !== undefined ||
+      body.deliveryDate !== undefined ||
+      body.isEdit === true;
+
+    if (isEditDetail) {
+      if (!hasPermission(session, "EDIT_DELIVERY_ORDER")) {
+        return forbiddenResponse("Hanya Admin/Superadmin yang dapat mengubah data Surat Jalan.");
+      }
+      const { updateDeliveryOrder } = await import("@/lib/actions/delivery-order.actions");
+      const result = await updateDeliveryOrder({ id, ...body }, session);
+      if (!result.success) {
+        return errorResponse(result.error || "Gagal mengupdate Surat Jalan.", 400);
+      }
+      return successResponse(result.data, result.message);
+    }
+
+    // Default: update status pengiriman
+    if (!hasPermission(session, "UPDATE_DELIVERY_STATUS")) return forbiddenResponse();
 
     const result = await updateDeliveryStatus({
       id,
@@ -71,6 +91,35 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     return successResponse(result.data, result.message);
   } catch (error) {
     console.error("[API_DELIVERY_ORDER_PUT_ERROR]", error);
+    return errorResponse("Terjadi kesalahan internal server.");
+  }
+}
+
+/**
+ * PATCH /api/delivery-orders/[id]
+ * Khusus Edit Surat Jalan (Superadmin/Admin)
+ */
+export async function PATCH(request: NextRequest, context: RouteContext) {
+  try {
+    const session = await getAuthenticatedUser();
+    if (!session) return unauthorizedResponse();
+    if (!hasPermission(session, "EDIT_DELIVERY_ORDER")) {
+      return forbiddenResponse("Hanya Admin/Superadmin yang dapat mengubah Surat Jalan.");
+    }
+
+    const { id } = await context.params;
+    const body = await request.json();
+
+    const { updateDeliveryOrder } = await import("@/lib/actions/delivery-order.actions");
+    const result = await updateDeliveryOrder({ id, ...body }, session);
+
+    if (!result.success) {
+      return errorResponse(result.error || "Gagal memperbarui Surat Jalan.", 400);
+    }
+
+    return successResponse(result.data, result.message);
+  } catch (error) {
+    console.error("[API_DELIVERY_ORDER_PATCH_ERROR]", error);
     return errorResponse("Terjadi kesalahan internal server.");
   }
 }

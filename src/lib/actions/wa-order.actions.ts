@@ -283,6 +283,19 @@ export async function confirmWaOrder(
       return { deliveryOrder, invoiceNumber };
     }, { maxWait: 5000, timeout: 20000 });
 
+    try {
+      const { NotificationService } = await import("@/lib/services/notification.service");
+      if (result.deliveryOrder) {
+        NotificationService.onDeliveryUpdate(
+          result.deliveryOrder.id,
+          result.deliveryOrder.doNumber,
+          "PENDING"
+        ).catch(console.error);
+      }
+    } catch (e) {
+      console.error("[Notif] Error dispatching confirmed WA order:", e);
+    }
+
     revalidatePath("/dashboard/wa-orders");
     revalidatePath("/dashboard/delivery-orders");
     revalidatePath("/dashboard/sales");
