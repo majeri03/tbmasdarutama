@@ -599,6 +599,13 @@ export async function getSales(params?: SaleFilterInput, externalSession?: AuthS
               status: true,
             },
           },
+          deliveryOrder: {
+            select: {
+              id: true,
+              doNumber: true,
+              status: true,
+            },
+          },
         },
       }),
       prisma.sale.count({ where }),
@@ -671,6 +678,15 @@ export async function getSales(params?: SaleFilterInput, externalSession?: AuthS
                   status: sale.customerDebts[0].status,
                 }
               : null,
+
+          // ✅ Delivery Order relation
+          deliveryOrder: sale.deliveryOrder
+            ? {
+                id: sale.deliveryOrder.id,
+                doNumber: sale.deliveryOrder.doNumber,
+                status: sale.deliveryOrder.status,
+              }
+            : null,
         };
 
         return serializedSale;
@@ -715,6 +731,7 @@ export async function cancelSale(id: string, reason: string) {
       where: { id },
       include: {
         saleItems: true, // ✅ FIXED: saleItems
+        deliveryOrder: true,
       },
     });
 
@@ -729,6 +746,13 @@ export async function cancelSale(id: string, reason: string) {
       return {
         success: false,
         error: "Transaksi sudah dibatalkan sebelumnya",
+      };
+    }
+
+    if (sale.deliveryOrder && (sale.deliveryOrder.status === "IN_TRANSIT" || sale.deliveryOrder.status === "DELIVERED")) {
+      return {
+        success: false,
+        error: "Tidak dapat membatalkan transaksi karena Surat Jalan sedang dikirim (IN_TRANSIT) atau sudah terkirim (DELIVERED).",
       };
     }
 
@@ -778,10 +802,22 @@ export async function cancelSale(id: string, reason: string) {
           },
         });
       }
+
+      // ✅ Update Delivery Order status to CANCELLED if exists
+      if (sale.deliveryOrder) {
+        await tx.deliveryOrder.update({
+          where: { id: sale.deliveryOrder.id },
+          data: {
+            status: "CANCELLED",
+            notes: `${sale.deliveryOrder.notes || ""}\n[DIBATALKAN KARENA TRANSAKSI DIBATALKAN: ${reason}]`.trim(),
+          },
+        });
+      }
     });
 
     revalidatePath("/dashboard/pos");
     revalidatePath("/dashboard/sales");
+    revalidatePath("/dashboard/delivery-orders");
 
     return {
       success: true,
@@ -1155,7 +1191,10 @@ export async function deleteSale(id: string, passwordInput?: string) {
 
     const sale = await prisma.sale.findUnique({
       where: { id },
-      include: { saleItems: true },
+      include: {
+        saleItems: true,
+        deliveryOrder: true,
+      },
     });
 
     if (!sale) {
@@ -1166,6 +1205,13 @@ export async function deleteSale(id: string, passwordInput?: string) {
       return {
         success: false,
         error: "Penjualan sudah dibatalkan sebelumnya!",
+      };
+    }
+
+    if (sale.deliveryOrder && (sale.deliveryOrder.status === "IN_TRANSIT" || sale.deliveryOrder.status === "DELIVERED")) {
+      return {
+        success: false,
+        error: "Tidak dapat menghapus transaksi karena Surat Jalan sedang di jalan (IN_TRANSIT) atau sudah DITERIMA.",
       };
     }
 
@@ -1218,9 +1264,21 @@ export async function deleteSale(id: string, passwordInput?: string) {
           },
         });
       }
+
+      // 5. Update Delivery Order status to CANCELLED if exists
+      if (sale.deliveryOrder) {
+        await tx.deliveryOrder.update({
+          where: { id: sale.deliveryOrder.id },
+          data: {
+            status: "CANCELLED",
+            notes: `${sale.deliveryOrder.notes || ""}\n[DIBATALKAN KARENA TRANSAKSI DIHAPUS]`.trim(),
+          },
+        });
+      }
     });
 
     revalidatePath("/dashboard/sales");
+    revalidatePath("/dashboard/delivery-orders");
 
     return {
       success: true,

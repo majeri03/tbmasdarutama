@@ -5,6 +5,8 @@ import { X, Plus, Trash2, Package, Search, Camera, Loader2 } from "lucide-react"
 import { createDeliveryOrder } from "@/lib/actions/delivery-order.actions";
 import { getCustomers } from "@/lib/actions/customer.actions";
 import { getProducts } from "@/lib/actions/product.actions";
+import { getSales } from "@/lib/actions/sale.actions";
+import { getFleetVehicles, FleetVehicleOption } from "@/lib/actions/fleet.actions";
 import { useToast, Toast } from "@/components/ui/toast";
 
 interface DeliveryOrderFormModalProps {
@@ -17,6 +19,38 @@ interface Customer {
   id: string;
   code: string;
   name: string;
+}
+
+interface SaleOption {
+  id: string;
+  invoiceNumber: string;
+  customerId: string | null;
+  saleDate: Date;
+  customer: {
+    code: string;
+    name: string;
+    type: string;
+  } | null;
+  saleItems: Array<{
+    id: string;
+    productId: string;
+    unitId: string;
+    quantity: number;
+    product: {
+      code: string;
+      name: string;
+    };
+    unit: {
+      id: string;
+      name: string;
+      symbol: string | null;
+    };
+  }>;
+  deliveryOrder?: {
+    id: string;
+    doNumber: string;
+    status: string;
+  } | null;
 }
 
 interface Product {
@@ -53,11 +87,14 @@ export function DeliveryOrderFormModal({
   const [isLoading, setIsLoading] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [salesList, setSalesList] = useState<SaleOption[]>([]);
+  const [fleetList, setFleetList] = useState<FleetVehicleOption[]>([]);
   const { toast, showToast, hideToast } = useToast();
   // State untuk teks input pencarian
   const [searchProducts, setSearchProducts] = useState<string[]>([]);
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
 
+  const [selectedSaleId, setSelectedSaleId] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [deliveryDate, setDeliveryDate] = useState(
     new Date().toISOString().split("T")[0]
@@ -72,7 +109,6 @@ export function DeliveryOrderFormModal({
     { productId: "", unitId: "", quantity: 1, notes: "" },
   ]);
 
-
   useEffect(() => {
     if (isOpen) {
       loadData();
@@ -80,25 +116,42 @@ export function DeliveryOrderFormModal({
       // Reset saat tutup modal
       setProducts([]);
       setSearchProducts([]);
+      setSalesList([]);
+      setFleetList([]);
     }
-
   }, [isOpen]);
 
   const loadData = async () => {
     try {
-      const [customersResult] = await Promise.all([
+      const [customersResult, salesResult, fleetResult] = await Promise.all([
         getCustomers({ status: "ACTIVE" }),
-        // Load produk tidak perlu di awal, nanti saat user ngetik saja (Server Search)
+        getSales({ limit: 100, sortOrder: "desc" }),
+        getFleetVehicles(),
       ]);
 
       if (customersResult.success && customersResult.data) {
         setCustomers(customersResult.data);
       }
 
+      if (salesResult.success && salesResult.data) {
+        // Hanya tampilkan penjualan yang aktif/pending dan belum memiliki DO aktif
+        const availableSales = (salesResult.data as any[]).filter((s) => {
+          if (s.status === "CANCELLED" || s.status === "RETURN") return false;
+          // Belum punya DO atau DO-nya sudah CANCELLED
+          if (s.deliveryOrder && s.deliveryOrder.status !== "CANCELLED") return false;
+          return true;
+        });
+        setSalesList(availableSales);
+      }
+
+      if (fleetResult.success && fleetResult.data) {
+        setFleetList(fleetResult.data);
+      }
+
       // Reset form
+      setSelectedSaleId("");
       setSearchProducts([""]);
       setItems([{ productId: "", unitId: "", quantity: 1, notes: "" }]);
-
     } catch (error) {
       console.error("Error loading data:", error);
     }
@@ -237,6 +290,78 @@ export function DeliveryOrderFormModal({
     }
   };
 
+  const handleSaleSelect = (saleId: string) => {
+    setSelectedSaleId(saleId);
+    if (!saleId) return;
+
+    const selectedSale = salesList.find((s) => s.id === saleId);
+    if (!selectedSale) return;
+
+    // 1. Sinkron Customer
+    if (selectedSale.customerId) {
+      setCustomerId(selectedSale.customerId);
+    }
+
+    // 2. Sinkron Items dari Penjualan
+    if (selectedSale.saleItems && selectedSale.saleItems.length > 0) {
+      const newItems: DeliveryItem[] = selectedSale.saleItems.map((si) => ({
+        productId: si.productId,
+        unitId: si.unitId,
+        quantity: Number(si.quantity),
+        notes: `Dari Faktur: ${selectedSale.invoiceNumber}`,
+        productName: si.product?.name,
+        unitName: si.unit?.name,
+        availableUnits: [
+          {
+            id: si.unitId,
+            unitId: si.unitId,
+            unit: {
+              id: si.unit?.id || si.unitId,
+              name: si.unit?.name || "",
+              symbol: si.unit?.symbol || "",
+            },
+          },
+        ],
+      }));
+      setItems(newItems);
+      setSearchProducts(
+        selectedSale.saleItems.map(
+          (si) => `${si.product?.code || ""} - ${si.product?.name || ""}`
+        )
+      );
+    }
+  };
+
+  const handleDriverSelect = (driverName: string) => {
+    setDriver(driverName);
+    // Jika sopir ini terhubung dengan armada di database, otomatis isi kendaraannya
+    if (driverName) {
+      const match = fleetList.find(
+        (f) => f.driverName.toLowerCase().trim() === driverName.toLowerCase().trim()
+      );
+      if (match && match.plateNumber) {
+        const vehicleDesc = match.brand
+          ? `${match.plateNumber} (${match.brand})`
+          : match.plateNumber;
+        setVehicle(vehicleDesc);
+      }
+    }
+  };
+
+  const handleVehicleSelect = (plateVal: string) => {
+    setVehicle(plateVal);
+    // Jika kendaraan dipilih, otomatis isi sopirnya jika tersedia
+    if (plateVal) {
+      const match = fleetList.find((f) => {
+        const desc = f.brand ? `${f.plateNumber} (${f.brand})` : f.plateNumber;
+        return f.plateNumber === plateVal || desc === plateVal;
+      });
+      if (match && match.driverName && !driver) {
+        setDriver(match.driverName);
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoading) return; // Cegah double click
@@ -262,6 +387,7 @@ export function DeliveryOrderFormModal({
 
       const result = await createDeliveryOrder({
         customerId,
+        saleId: selectedSaleId || undefined,
         deliveryDate: new Date(deliveryDate),
         driver: driver || undefined,
         vehicle: vehicle || undefined,
@@ -292,6 +418,7 @@ export function DeliveryOrderFormModal({
   };
 
   const resetForm = () => {
+    setSelectedSaleId("");
     setCustomerId("");
     setDeliveryDate(new Date().toISOString().split("T")[0]);
     setDriver("");
@@ -319,6 +446,46 @@ export function DeliveryOrderFormModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6 flex-1 overflow-y-auto">
+          {/* Section: Pilih Penjualan POS (Otomatis DO) */}
+          <div className="p-4 bg-blue-50/70 border border-blue-200 rounded-xl space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold uppercase tracking-wider text-blue-900">
+                Pilih Dari Transaksi Penjualan (DO Otomatis)
+              </label>
+              {selectedSaleId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedSaleId("");
+                    setItems([{ productId: "", unitId: "", quantity: 1, notes: "" }]);
+                    setSearchProducts([""]);
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-800 underline font-medium"
+                >
+                  Reset / Buat DO Manual
+                </button>
+              )}
+            </div>
+            <select
+              value={selectedSaleId}
+              onChange={(e) => handleSaleSelect(e.target.value)}
+              className="w-full px-3 py-2 bg-white border border-blue-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+            >
+              <option value="">-- Buat DO Manual (Tanpa Transaksi POS) --</option>
+              {salesList.map((sale) => (
+                <option key={sale.id} value={sale.id}>
+                  {sale.invoiceNumber} • {sale.customer?.name || "Pelanggan"} (
+                  {new Date(sale.saleDate).toLocaleDateString("id-ID")})
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-blue-700">
+              {selectedSaleId
+                ? "✓ Data customer dan barang terisi otomatis dari transaksi penjualan yang dipilih."
+                : "💡 Anda juga bisa membuat DO secara manual tanpa memilih penjualan (invoice & hutang otomatis terbuat dan tersinkron)."}
+            </p>
+          </div>
+
           {/* Customer & Date */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-4 rounded-lg border border-gray-100">
             <div>
@@ -353,26 +520,49 @@ export function DeliveryOrderFormModal({
               />
             </div>
 
-            {/* Driver & Vehicle fields (sama seperti kode Anda) */}
+            {/* Driver & Vehicle: Dropdown Database Armada */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Pengemudi</label>
-              <input
-                type="text"
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Pengemudi / Sopir (Fitur Armada)
+              </label>
+              <select
                 value={driver}
-                onChange={(e) => setDriver(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                placeholder="Nama supir"
-              />
+                onChange={(e) => handleDriverSelect(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+              >
+                <option value="">-- Pilih Sopir dari Armada --</option>
+                {Array.from(new Set(fleetList.map((f) => f.driverName).filter(Boolean))).map(
+                  (dName) => {
+                    const match = fleetList.find((f) => f.driverName === dName);
+                    return (
+                      <option key={dName} value={dName}>
+                        {dName} {match ? `(${match.plateNumber}${match.brand ? ` - ${match.brand}` : ""})` : ""}
+                      </option>
+                    );
+                  }
+                )}
+              </select>
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Kendaraan</label>
-              <input
-                type="text"
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Kendaraan / Plat Nomor (Fitur Armada)
+              </label>
+              <select
                 value={vehicle}
-                onChange={(e) => setVehicle(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                placeholder="Plat nomor"
-              />
+                onChange={(e) => handleVehicleSelect(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+              >
+                <option value="">-- Pilih Kendaraan dari Armada --</option>
+                {fleetList.map((f) => {
+                  const desc = f.brand ? `${f.plateNumber} (${f.brand})` : f.plateNumber;
+                  return (
+                    <option key={f.id} value={desc}>
+                      {desc} — Sopir: {f.driverName || "-"}
+                    </option>
+                  );
+                })}
+              </select>
             </div>
           </div>
 

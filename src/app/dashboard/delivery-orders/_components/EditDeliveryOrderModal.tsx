@@ -5,6 +5,7 @@ import { X, CheckCircle, Upload, Camera, Trash2, Loader2, Calendar, User, Truck,
 import { DeliveryOrderData } from "@/types/delivery-order";
 import { DeliveryStatus } from "@prisma/client";
 import { updateDeliveryOrder } from "@/lib/actions/delivery-order.actions";
+import { getFleetVehicles, FleetVehicleOption } from "@/lib/actions/fleet.actions";
 import { useToast } from "@/components/ui/toast";
 
 interface EditDeliveryOrderModalProps {
@@ -22,6 +23,7 @@ export function EditDeliveryOrderModal({
 }: EditDeliveryOrderModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [fleetList, setFleetList] = useState<FleetVehicleOption[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
 
@@ -33,6 +35,16 @@ export function EditDeliveryOrderModal({
   const [receivedDate, setReceivedDate] = useState("");
   const [notes, setNotes] = useState("");
   const [proofImage, setProofImage] = useState<string>("");
+
+  useEffect(() => {
+    if (isOpen) {
+      getFleetVehicles().then((res) => {
+        if (res.success && res.data) {
+          setFleetList(res.data);
+        }
+      });
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (deliveryOrder && isOpen) {
@@ -71,6 +83,34 @@ export function EditDeliveryOrderModal({
       setProofImage(existingProof || "");
     }
   }, [deliveryOrder, isOpen]);
+
+  const handleDriverSelect = (driverName: string) => {
+    setDriver(driverName);
+    if (driverName) {
+      const match = fleetList.find(
+        (f) => f.driverName.toLowerCase().trim() === driverName.toLowerCase().trim()
+      );
+      if (match && match.plateNumber) {
+        const vehicleDesc = match.brand
+          ? `${match.plateNumber} (${match.brand})`
+          : match.plateNumber;
+        setVehicle(vehicleDesc);
+      }
+    }
+  };
+
+  const handleVehicleSelect = (plateVal: string) => {
+    setVehicle(plateVal);
+    if (plateVal) {
+      const match = fleetList.find((f) => {
+        const desc = f.brand ? `${f.plateNumber} (${f.brand})` : f.plateNumber;
+        return f.plateNumber === plateVal || desc === plateVal;
+      });
+      if (match && match.driverName && !driver) {
+        setDriver(match.driverName);
+      }
+    }
+  };
 
   if (!isOpen || !deliveryOrder) return null;
 
@@ -212,36 +252,60 @@ export function EditDeliveryOrderModal({
             </div>
           </div>
 
-          {/* Row 2: Sopir & Kendaraan */}
+          {/* Row 2: Sopir & Kendaraan (Fitur Armada) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                Nama Pengemudi / Sopir
+                Pengemudi / Sopir (Fitur Armada)
               </label>
               <div className="relative">
-                <input
-                  type="text"
+                <select
                   value={driver}
-                  onChange={(e) => setDriver(e.target.value)}
-                  placeholder="Contoh: Pak Budi"
+                  onChange={(e) => handleDriverSelect(e.target.value)}
                   className="input-field pl-10"
-                />
+                >
+                  <option value="">-- Pilih Sopir dari Armada --</option>
+                  {driver && !fleetList.some((f) => f.driverName === driver) && (
+                    <option value={driver}>{driver} (Tersimpan)</option>
+                  )}
+                  {Array.from(new Set(fleetList.map((f) => f.driverName).filter(Boolean))).map(
+                    (dName) => {
+                      const match = fleetList.find((f) => f.driverName === dName);
+                      return (
+                        <option key={dName} value={dName}>
+                          {dName} {match ? `(${match.plateNumber}${match.brand ? ` - ${match.brand}` : ""})` : ""}
+                        </option>
+                      );
+                    }
+                  )}
+                </select>
                 <User className="w-4 h-4 text-gray-400 absolute left-3 top-3.5" />
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                Kendaraan / Plat Nomor
+                Kendaraan / Plat Nomor (Fitur Armada)
               </label>
               <div className="relative">
-                <input
-                  type="text"
+                <select
                   value={vehicle}
-                  onChange={(e) => setVehicle(e.target.value)}
-                  placeholder="Contoh: Truck Isuzu (DD 8234 XY)"
+                  onChange={(e) => handleVehicleSelect(e.target.value)}
                   className="input-field pl-10"
-                />
+                >
+                  <option value="">-- Pilih Kendaraan dari Armada --</option>
+                  {vehicle && !fleetList.some((f) => f.plateNumber === vehicle || `${f.plateNumber} (${f.brand})` === vehicle) && (
+                    <option value={vehicle}>{vehicle} (Tersimpan)</option>
+                  )}
+                  {fleetList.map((f) => {
+                    const desc = f.brand ? `${f.plateNumber} (${f.brand})` : f.plateNumber;
+                    return (
+                      <option key={f.id} value={desc}>
+                        {desc} — Sopir: {f.driverName || "-"}
+                      </option>
+                    );
+                  })}
+                </select>
                 <Truck className="w-4 h-4 text-gray-400 absolute left-3 top-3.5" />
               </div>
             </div>

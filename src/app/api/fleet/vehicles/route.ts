@@ -57,12 +57,12 @@ const INITIAL_VEHICLES = [
  * GET /api/fleet/vehicles
  * Mengambil daftar armada dan posisi terakhirnya.
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const session = await getAuthenticatedUser();
     if (!session) return unauthorizedResponse();
 
-    let count = await prisma.fleetVehicle.count();
+    const count = await prisma.fleetVehicle.count();
     if (count === 0) {
       // Auto seed initial Makassar fleet
       for (const v of INITIAL_VEHICLES) {
