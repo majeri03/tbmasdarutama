@@ -276,24 +276,61 @@ export async function POST(request: NextRequest) {
         ? new Date(Date.now() - Number(olderThanDays) * 24 * 60 * 60 * 1000)
         : null;
 
-      const whereClause: any = {
+      // 1. Bersihkan dari tabel DeliveryPhoto
+      const photosWhere: any = {};
+      if (cutoffDate) photosWhere.createdAt = { lt: cutoffDate };
+
+      const photos = await prisma.deliveryPhoto.findMany({
+        where: photosWhere,
+        select: { id: true, filename: true, url: true },
+      });
+
+      for (const p of photos) {
+        const fileToDelete = p.filename || extractFilenameFromUrl(p.url);
+        if (fileToDelete) await deleteFromWorker(fileToDelete);
+        deletedCount++;
+      }
+
+      await prisma.deliveryPhoto.deleteMany({
+        where: photosWhere,
+      });
+
+      // 2. Bersihkan dari DeliveryOrder.proofImage
+      const doWhere: any = { proofImage: { not: null } };
+      if (cutoffDate) doWhere.createdAt = { lt: cutoffDate };
+
+      const dosWithProof = await prisma.deliveryOrder.findMany({
+        where: doWhere,
+        select: { id: true, proofImage: true },
+      });
+
+      for (const d of dosWithProof) {
+        if (d.proofImage) {
+          const fn = extractFilenameFromUrl(d.proofImage);
+          if (fn) await deleteFromWorker(fn);
+          deletedCount++;
+        }
+      }
+
+      await prisma.deliveryOrder.updateMany({
+        where: doWhere,
+        data: { proofImage: null },
+      });
+
+      // 3. Bersihkan legacy tag [BUKTI_KIRIM] dari notes
+      const notesWhere: any = {
         notes: {
           contains: "[BUKTI_KIRIM]",
         },
       };
+      if (cutoffDate) notesWhere.createdAt = { lt: cutoffDate };
 
-      if (cutoffDate) {
-        whereClause.createdAt = {
-          lt: cutoffDate,
-        };
-      }
-
-      const dos = await prisma.deliveryOrder.findMany({
-        where: whereClause,
+      const dosWithNotes = await prisma.deliveryOrder.findMany({
+        where: notesWhere,
         select: { id: true, notes: true },
       });
 
-      for (const item of dos) {
+      for (const item of dosWithNotes) {
         if (!item.notes) continue;
         const match = item.notes.match(/\[BUKTI_KIRIM\]:\s*([^\s\]\n]+)/);
         if (match && match[1]) {
@@ -302,7 +339,6 @@ export async function POST(request: NextRequest) {
           deletedCount++;
         }
 
-        // Clean the tag from notes
         const cleanedNotes = item.notes
           .replace(/\[BUKTI_KIRIM\]:\s*[^\s\]\n]+/g, "")
           .trim();

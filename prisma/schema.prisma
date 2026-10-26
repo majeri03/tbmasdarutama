@@ -32,6 +32,7 @@ model User {
   waOrdersConfirmed   WaOrder[]
   deviceTokens        DeviceToken[]
   notifications       Notification[]
+  deliveryPhotos      DeliveryPhoto[]
   
   @@map("users")
 }
@@ -478,8 +479,27 @@ model DeliveryOrder {
   sale            Sale?           @relation(fields: [saleId], references: [id])
   createdBy       User            @relation(fields: [createdById], references: [id])
   deliveryItems   DeliveryItem[]
+  deliveryPhotos  DeliveryPhoto[]
   
   @@map("delivery_orders")
+}
+
+model DeliveryPhoto {
+  id              String        @id @default(cuid())
+  deliveryOrderId String
+  url             String        // URL Cloudflare R2
+  filename        String        // Key path di R2 (contoh: proofs_delivery/xxx.jpg)
+  sizeBytes       Int           @default(0) // Ukuran file dalam bytes
+  mimeType        String        @default("image/jpeg")
+  uploadedById    String?
+  createdAt       DateTime      @default(now())
+
+  // Relations
+  deliveryOrder   DeliveryOrder @relation(fields: [deliveryOrderId], references: [id], onDelete: Cascade)
+  uploadedBy      User?         @relation(fields: [uploadedById], references: [id])
+
+  @@index([deliveryOrderId])
+  @@map("delivery_photos")
 }
 
 model DeliveryItem {

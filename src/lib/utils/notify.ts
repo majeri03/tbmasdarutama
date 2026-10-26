@@ -100,29 +100,11 @@ export async function notify(opts: NotifyOptions): Promise<void> {
       console.warn("[NOTIFY] Gagal simpan notifikasi ke DB:", e?.message);
     });
 
-    // 2. Kirim FCM Push ───────────────────────────────────────────────────────
-    const messaging = getMessaging();
-    if (!messaging || !_firebaseReady) return;
-
+    // 2. Kirim Push Notification (FCM / Expo Push) ───────────────────────────
     const fcmData: Record<string, string> = {};
     if (screen) fcmData.screen = screen;
     if (type) fcmData.type = type;
-    if (params) fcmData.params = JSON.stringify(params);
-
-    // Siapkan base message
-    const buildMessage = (token: string) => ({
-      token,
-      notification: { title: title.trim(), body: body.trim() },
-      data: fcmData,
-      android: {
-        priority: "high" as const,
-        notification: {
-          channelId: getChannelId(type),
-          sound: "default",
-          clickAction: "FLUTTER_NOTIFICATION_CLICK",
-        },
-      },
-    });
+    if (params) fcmData.params = typeof params === "string" ? params : JSON.stringify(params);
 
     // Ambil token perangkat
     const tokenFilter = userId
@@ -140,35 +122,87 @@ export async function notify(opts: NotifyOptions): Promise<void> {
 
     if (deviceTokens.length === 0) return;
 
-    // Kirim ke semua token, dan bersihkan token yang tidak valid
+    const messaging = getMessaging();
     const staleTokens: string[] = [];
+    const channelId = getChannelId(type);
 
     await Promise.allSettled(
       deviceTokens.map(async ({ token }) => {
-        try {
-          await messaging!.send(buildMessage(token));
-        } catch (e: any) {
-          const code = e?.errorInfo?.code ?? e?.code ?? "";
-          // Token sudah tidak valid (unregistered / invalid)
-          if (
-            code.includes("registration-token-not-registered") ||
-            code.includes("invalid-argument") ||
-            code.includes("invalid-registration-token")
-          ) {
-            staleTokens.push(token);
-          } else {
-            console.warn(`[FCM] Gagal kirim ke token: ${code}`);
+        const isExpoToken = token.startsWith("ExponentPushToken[") || token.startsWith("ExpoPushToken[");
+
+        if (isExpoToken) {
+          // Kirim via Expo Push API
+          try {
+            const res = await fetch("https://exp.host/--/api/v2/push/send", {
+              method: "POST",
+              headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                to: token,
+                title: title.trim(),
+                body: body.trim(),
+                data: fcmData,
+                sound: "masdar_utama.mp3",
+                channelId: channelId,
+                priority: "high",
+              }),
+            });
+
+            const data = await res.json().catch(() => ({}));
+            if (data?.data?.status === "error") {
+              const errDetail = data?.data?.details?.error;
+              if (errDetail === "DeviceNotRegistered") {
+                staleTokens.push(token);
+              }
+              console.warn(`[PushNotif:Expo] Error untuk token ${token.slice(0, 25)}...: ${data?.data?.message}`);
+            }
+          } catch (e: any) {
+            console.warn("[PushNotif:Expo] Gagal panggil Expo Push:", e?.message);
+          }
+        } else if (messaging && _firebaseReady) {
+          // Kirim via Firebase Admin SDK HTTP v1
+          try {
+            await messaging.send({
+              token,
+              notification: {
+                title: title.trim(),
+                body: body.trim(),
+              },
+              data: fcmData,
+              android: {
+                priority: "high",
+                notification: {
+                  channelId: channelId,
+                  sound: "masdar_utama.mp3",
+                  clickAction: "FLUTTER_NOTIFICATION_CLICK",
+                  defaultVibrateTimings: true,
+                },
+              },
+            });
+          } catch (e: any) {
+            const code = e?.errorInfo?.code ?? e?.code ?? "";
+            if (
+              code.includes("registration-token-not-registered") ||
+              code.includes("invalid-argument") ||
+              code.includes("invalid-registration-token")
+            ) {
+              staleTokens.push(token);
+            } else {
+              console.warn(`[PushNotif:FCM] Gagal kirim ke token ${token.slice(0, 15)}...: ${code}`);
+            }
           }
         }
       })
     );
 
-    // Hapus token tidak valid dari DB
+    // Hapus token tidak valid dari DB secara otomatis
     if (staleTokens.length > 0) {
       await prisma.deviceToken
         .deleteMany({ where: { token: { in: staleTokens } } })
         .catch(() => {});
-      console.log(`[FCM] Dihapus ${staleTokens.length} token tidak valid.`);
+      console.log(`[PushNotif] Dihapus ${staleTokens.length} token tidak valid.`);
     }
   } catch (err) {
     console.error("[NOTIFY] Terjadi error:", err);
@@ -275,5 +309,5 @@ function getChannelId(type?: string): string {
     orders: "orders",
     finance: "finance",
   };
-  return (type && map[type]) || "default";
+  return (type && map[type]) || "masdar_channel_v2";
 }

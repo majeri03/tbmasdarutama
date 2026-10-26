@@ -74,6 +74,8 @@ export async function POST(request: NextRequest) {
       success: true,
       url: result.url, // https://worker.dev/files/folder/xxx.jpg
       filename: filename,
+      sizeBytes: file.size,
+      mimeType: file.type,
     });
   } catch (error) {
     console.error("[UPLOAD_API_ERROR]", error);

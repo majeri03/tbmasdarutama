@@ -14,6 +14,7 @@ import {
 } from "@/lib/validations/delivery-order.schema";
 import { requirePermission, type AuthSession } from "../utils/role";
 import { NotifEvent } from "../utils/notify";
+import { deleteFromR2, extractR2Filename } from "../utils/storage";
 
 // Helper untuk mengekstrak Bukti Pengiriman dari field proofImage atau tag di notes
 function resolveProofImage(
@@ -129,6 +130,9 @@ export async function getAllDeliveryOrders(filters?: {
             invoiceNumber: true,
           },
         },
+        deliveryPhotos: {
+          orderBy: { createdAt: "desc" },
+        },
       },
       orderBy: {
         createdAt: "desc",
@@ -224,6 +228,9 @@ export async function getDeliveryOrderById(id: string, externalSession?: AuthSes
               },
             },
           },
+        },
+        deliveryPhotos: {
+          orderBy: { createdAt: "desc" },
         },
         sale: {
           select: {
@@ -903,6 +910,7 @@ export async function deleteDeliveryOrder(id: string) {
     const deliveryOrder = await prisma.deliveryOrder.findUnique({
       where: { id },
       include: { 
+        deliveryPhotos: true,
         deliveryItems: true,
         sale: {
             include: {
@@ -916,14 +924,23 @@ export async function deleteDeliveryOrder(id: string) {
       return { success: false, error: "Surat jalan tidak ditemukan" };
     }
 
-    // 2. PROTEKSI: Cek Status Pengiriman
+    // 2. Kumpulkan file gambar untuk dihapus dari Cloudflare R2
+    const photosToDelete: string[] = [];
+    if (deliveryOrder.proofImage) photosToDelete.push(deliveryOrder.proofImage);
+    if (deliveryOrder.deliveryPhotos && deliveryOrder.deliveryPhotos.length > 0) {
+      deliveryOrder.deliveryPhotos.forEach((p) => {
+        if (p.filename) photosToDelete.push(p.filename);
+        else if (p.url) photosToDelete.push(p.url);
+      });
+    }
+
+    // 3. PROTEKSI: Cek Status Pengiriman
     // Jika barang sudah sampai (DELIVERED) mungkin tidak boleh dihapus sembarangan
-    // (Opsional, tergantung kebijakan Anda. Jika ingin fleksibel, komentar bagian ini)
     if (deliveryOrder.status === "DELIVERED") {
         return { success: false, error: "Tidak dapat menghapus DO yang sudah status DITERIMA" };
     }
 
-    // 3. PROTEKSI UTAMA: Cek Apakah Sudah Ada Pembayaran?
+    // 4. PROTEKSI UTAMA: Cek Apakah Sudah Ada Pembayaran?
     if (deliveryOrder.sale && deliveryOrder.sale.customerDebts.length > 0) {
         const debt = deliveryOrder.sale.customerDebts[0];
         
@@ -936,13 +953,11 @@ export async function deleteDeliveryOrder(id: string) {
         }
     }
 
-    // 4. EKSEKUSI PENGHAPUSAN BERANTAI (TRANSAKSI)
+    // 5. EKSEKUSI PENGHAPUSAN BERANTAI (TRANSAKSI)
     await prisma.$transaction(async (tx) => {
         
         // A. KEMBALIKAN STOK (RESTORE STOCK)
-        // Karena DO dihapus, barang dianggap batal keluar -> stok balik ke gudang
         for (const item of deliveryOrder.deliveryItems) {
-            // Ambil konversi unit item tersebut
             const pUnit = await tx.productUnit.findFirst({
                 where: { productId: item.productId, unitId: item.unitId }
             });
@@ -957,9 +972,7 @@ export async function deleteDeliveryOrder(id: string) {
                 }
             });
 
-            // 2. Hapus Log StockMovement terkait DO ini (agar kartu stok bersih)
-            // Atau buat log baru type "IN" (Correction). 
-            // Cara paling bersih jika "Delete DO" adalah menghapus history keluarnya.
+            // 2. Hapus Log StockMovement terkait DO ini
             await tx.stockMovement.deleteMany({
                 where: { 
                     referenceId: deliveryOrder.id,
@@ -977,22 +990,32 @@ export async function deleteDeliveryOrder(id: string) {
 
         // C. Hapus Data Penjualan (Sale) & Item Penjualan
         if (deliveryOrder.saleId) {
-            // Hapus SaleItem dulu (biasanya cascade, tapi aman ditulis manual)
             await tx.saleItem.deleteMany({
                 where: { saleId: deliveryOrder.saleId }
             });
             
-            // Hapus Sale Header
             await tx.sale.delete({
                 where: { id: deliveryOrder.saleId }
             });
         }
 
-        // D. Terakhir, Hapus Surat Jalan (DeliveryOrder)
+        // D. Hapus foto dari tabel DeliveryPhoto (cascade juga akan menangani jika schema cascade aktif)
+        await tx.deliveryPhoto.deleteMany({
+            where: { deliveryOrderId: id }
+        });
+
+        // E. Terakhir, Hapus Surat Jalan (DeliveryOrder)
         await tx.deliveryOrder.delete({
             where: { id }
         });
     });
+
+    // 6. Hapus file fisik di Cloudflare R2 secara asinkron tanpa menahan respon
+    if (photosToDelete.length > 0) {
+      Promise.allSettled(photosToDelete.map((file) => deleteFromR2(file))).catch((err) => {
+        console.warn("[R2_CLEANUP_WARN] Gagal menghapus file R2 setelah DO dihapus:", err);
+      });
+    }
 
     // Revalidate semua halaman yang terpengaruh
     revalidatePath("/dashboard/delivery-orders");
@@ -1130,5 +1153,116 @@ export async function cancelDeliveryOrder(id: string) {
   } catch (error: unknown) {
     console.error("Cancel DO Error:", error);
     return { success: false, error: error instanceof Error ? error.message : "Gagal membatalkan transaksi" };
+  }
+}
+
+// ==================== PHOTO MANAGEMENT (ADD / DELETE) ====================
+
+/**
+ * Tambah foto ke DeliveryOrder dengan pelacakan ukuran file & sinkronisasi
+ */
+export async function addDeliveryPhoto(input: {
+  deliveryOrderId: string;
+  url: string;
+  filename: string;
+  sizeBytes?: number;
+  mimeType?: string;
+}) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return { success: false, error: "Unauthorized" };
+    }
+    requirePermission(session, "UPDATE_DELIVERY_STATUS");
+
+    const { deliveryOrderId, url, filename, sizeBytes = 0, mimeType = "image/jpeg" } = input;
+
+    // Batasi maks 5 foto per DO
+    const existingCount = await prisma.deliveryPhoto.count({
+      where: { deliveryOrderId },
+    });
+
+    if (existingCount >= 5) {
+      return { success: false, error: "Batas maksimal 5 foto per Surat Jalan telah tercapai." };
+    }
+
+    const photo = await prisma.deliveryPhoto.create({
+      data: {
+        deliveryOrderId,
+        url,
+        filename,
+        sizeBytes,
+        mimeType,
+        uploadedById: session.user.id,
+      },
+    });
+
+    // Update proofImage di DeliveryOrder sebagai thumbnail utama
+    await prisma.deliveryOrder.update({
+      where: { id: deliveryOrderId },
+      data: { proofImage: url },
+    });
+
+    revalidatePath("/dashboard/delivery-orders");
+
+    return {
+      success: true,
+      data: photo,
+      message: "Foto berhasil ditambahkan",
+    };
+  } catch (error) {
+    console.error("Error adding delivery photo:", error);
+    return { success: false, error: "Gagal menyimpan foto ke database" };
+  }
+}
+
+/**
+ * Hapus foto dari DeliveryOrder (Hapus fisik R2 dan record DB bersamaan)
+ */
+export async function deleteDeliveryPhoto(photoId: string) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return { success: false, error: "Unauthorized" };
+    }
+    requirePermission(session, "UPDATE_DELIVERY_STATUS");
+
+    const photo = await prisma.deliveryPhoto.findUnique({
+      where: { id: photoId },
+    });
+
+    if (!photo) {
+      return { success: false, error: "Foto tidak ditemukan" };
+    }
+
+    // 1. Hapus dari DB
+    await prisma.deliveryPhoto.delete({
+      where: { id: photoId },
+    });
+
+    // 2. Hapus fisik dari Cloudflare R2
+    await deleteFromR2(photo.filename || photo.url);
+
+    // 3. Update proofImage jika foto yang dihapus adalah foto utama
+    const remainingPhotos = await prisma.deliveryPhoto.findMany({
+      where: { deliveryOrderId: photo.deliveryOrderId },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const newProofImage = remainingPhotos.length > 0 ? remainingPhotos[0].url : null;
+    await prisma.deliveryOrder.update({
+      where: { id: photo.deliveryOrderId },
+      data: { proofImage: newProofImage },
+    });
+
+    revalidatePath("/dashboard/delivery-orders");
+
+    return {
+      success: true,
+      message: "Foto berhasil dihapus dari Cloudflare R2 & database.",
+    };
+  } catch (error) {
+    console.error("Error deleting delivery photo:", error);
+    return { success: false, error: "Gagal menghapus foto" };
   }
 }
