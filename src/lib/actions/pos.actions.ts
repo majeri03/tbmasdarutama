@@ -216,7 +216,6 @@ export async function getPOSCustomers(search?: string) {
     };
   }
 }
-// ==================== 4. CREATE POS TRANSACTION (OPTIMIZED & FAST) ====================
 // Fungsi ini dikhususkan untuk POS agar cepat dan return datanya siap untuk Invoice
 export async function createPosTransaction(data: CreateSaleInput) {
   try {

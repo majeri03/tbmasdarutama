@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-// ==================== PRODUCT SCHEMAS ====================
 
 // Product unit schema (untuk nested validation)
 export const productUnitSchema = z.object({

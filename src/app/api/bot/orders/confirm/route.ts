@@ -33,7 +33,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // ==================== AUTO-CREATE / FIND CUSTOMER ====================
     let resolvedCustomerName = customerName || senderName;
     let customerId: string | null = null;
     let isNewCustomer = false;
@@ -94,7 +93,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // ==================== AUTO-CREATE SALE ====================
     // Find admin user for cashierId
     const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } }) || await prisma.user.findFirst();
     if (!admin) {
@@ -183,7 +181,6 @@ export async function POST(request: Request) {
     const today = new Date();
     const invNo = `INV-WA-${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}-${Math.floor(Math.random()*10000).toString().padStart(4, '0')}`;
 
-    // ==================== BUAT SALE (COMPLETED, belum lunas) ====================
     // COMPLETED = transaksi dikonfirmasi; paidAmount=0 = belum dibayar/lunas
     const sale = await prisma.sale.create({
       data: {
@@ -213,7 +210,6 @@ export async function POST(request: Request) {
       }
     });
 
-    // ==================== BUAT HUTANG CUSTOMER (jika ada customerId) ====================
     if (customerId && totalAmount > 0) {
       try {
         const lastDebt = await prisma.customerDebt.findFirst({
@@ -257,7 +253,6 @@ export async function POST(request: Request) {
       console.error("[BOT] Error generating HTML:", e);
     }
 
-    // ==================== AUDIT TRAIL: Catat di wa_orders (CONFIRMED) ====================
     // WaOrder CONFIRMED = dikonfirmasi langsung via bot (reply YA)
     const confirmedViaBot = new Date().toISOString();
     try {

@@ -180,7 +180,6 @@ export default function POSPage() {
             );
 
             if (existingItemIndex !== -1) {
-                // --- KASUS A: ITEM SUDAH ADA (MERGE) ---
                 // Gabungkan quantity item ini ke item yang sudah ada, lalu hapus item ini.
 
                 const updatedItems = [...prevItems];

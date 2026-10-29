@@ -1,14 +1,12 @@
 import { Role } from "@prisma/client";
 import { Session } from "next-auth";
 
-// ==================== ROLE HIERARCHY ====================
 export const ROLE_HIERARCHY: Record<Role, number> = {
   SUPER_ADMIN: 3,
   ADMIN: 2,
   KASIR: 1,
 };
 
-// ==================== PERMISSION MAPPING ====================
 export const PERMISSIONS = {
   // Dashboard
   VIEW_DASHBOARD: ["SUPER_ADMIN", "ADMIN"] as Role[],
@@ -94,7 +92,6 @@ export const PERMISSIONS = {
 
 export type Permission = keyof typeof PERMISSIONS;
 
-// ==================== HELPER FUNCTIONS ====================
 
 export interface AuthSession {
   user?: {

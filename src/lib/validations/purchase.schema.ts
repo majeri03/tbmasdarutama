@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { PaymentMethod } from "@prisma/client";
 
-// ==================== PURCHASE ITEM SCHEMA ====================
 export const purchaseItemSchema = z.object({
   productId: z.string().min(1, "Produk harus dipilih"),
   unitId: z.string().min(1, "Satuan harus dipilih"),
@@ -13,7 +12,6 @@ export const purchaseItemSchema = z.object({
 
 export type PurchaseItemInput = z.infer<typeof purchaseItemSchema>;
 
-// ==================== CREATE PURCHASE SCHEMA ====================
 export const createPurchaseSchema = z.object({
   supplierId: z.string().min(1, "Supplier harus dipilih"),
   purchaseDate: z.coerce.date().default(() => new Date()),
@@ -27,7 +25,6 @@ export const createPurchaseSchema = z.object({
 
 export type CreatePurchaseInput = z.infer<typeof createPurchaseSchema>;
 
-// ==================== UPDATE PURCHASE SCHEMA ====================
 export const updatePurchaseSchema = z.object({
   id: z.string().min(1),
   supplierId: z.string().min(1, "Supplier harus dipilih"),
@@ -42,7 +39,6 @@ export const updatePurchaseSchema = z.object({
 
 export type UpdatePurchaseInput = z.infer<typeof updatePurchaseSchema>;
 
-// ==================== RECEIVE PURCHASE SCHEMA ====================
 export const receivePurchaseSchema = z.object({
   id: z.string().min(1),
   receivedDate: z.coerce.date().default(() => new Date()),
@@ -51,7 +47,6 @@ export const receivePurchaseSchema = z.object({
 
 export type ReceivePurchaseInput = z.infer<typeof receivePurchaseSchema>;
 
-// ==================== FILTER PURCHASE SCHEMA ====================
 export const filterPurchaseSchema = z.object({
   search: z.string().optional(),
   supplierId: z.string().optional(),

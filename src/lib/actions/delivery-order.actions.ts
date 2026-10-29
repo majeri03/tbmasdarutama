@@ -270,8 +270,6 @@ export async function getDeliveryOrderById(id: string, externalSession?: AuthSes
   }
 }
 
-// --- HELPER UNTUK GENERATE NOMOR INVOICE (FIXED) ---
-// --- HELPER UNTUK GENERATE NOMOR INVOICE (FIXED & ROBUST) ---
 async function generateInvoiceNumber(tx: Prisma.TransactionClient) {
   const date = new Date();
   const dateStr = `${date.getFullYear()}${(date.getMonth() + 1)
@@ -307,12 +305,10 @@ async function generateInvoiceNumber(tx: Prisma.TransactionClient) {
   return invoiceNumber;
 }
 
-// --- HELPER: GENERATE DEBT NUMBER ---
 async function generateDebtNumber(tx: Prisma.TransactionClient) {
   const count = await tx.customerDebt.count();
   return `DEBT-CUST-${(count + 1).toString().padStart(5, "0")}`;
 }
-// --- FUNGSI UTAMA CREATE DELIVERY ORDER (FIXED) ---
 
 
 // Pastikan import PaymentMethod ada di paling atas file
@@ -329,9 +325,7 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
     // 1. Validasi Input Zod
     const validated = createDeliveryOrderSchema.parse(input);
 
-    // =========================================================
     // 2. VALIDASI STOK (PENTING: Jangan dihapus)
-    // =========================================================
     for (const item of validated.items) {
       // Kita cek stok saat ini di database
       const product = await prisma.product.findUnique({
@@ -374,9 +368,7 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
       if (existingDO) return { success: false, error: "Transaksi ini sudah dibuatkan Surat Jalan." };
     }
 
-    // =========================================================
     // OPTIMISASI: PERSIAPAN DATA (PRE-CALCULATION)
-    // =========================================================
     
     // A. Ambil info harga & konversi untuk semua item sekaligus
     const productUnits = await prisma.productUnit.findMany({
@@ -445,9 +437,7 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
       });
     }
 
-    // =========================================================
     // 4. DATABASE TRANSACTION (OPTIMIZED)
-    // =========================================================
     const result = await prisma.$transaction(async (tx) => {
       // A. Generate Nomor Surat Jalan
       const doNumber = await generateDONumber(tx);
@@ -591,9 +581,7 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
     if (!deliveryOrder) {
       return { success: false, error: "Delivery order not found" };
     }
-    // ============================================================
     // MODIFIKASI: CEK KHUSUS STATUS CANCELLED
-    // ============================================================
     if (validated.status === "CANCELLED") {
       
       // 2. JALANKAN TRANSAKSI PEMBATALAN
@@ -804,9 +792,7 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
   }
 }
 
-// ============================================================================
 //         UPDATE DELIVERY ORDER (EDIT SURAT JALAN OLEH ADMIN / SUPERADMIN)
-// ============================================================================
 export async function updateDeliveryOrder(
   input: UpdateDeliveryOrderInput,
   externalSession?: AuthSession | null
@@ -1034,9 +1020,7 @@ export async function deleteDeliveryOrder(id: string) {
   }
 }
 
-// ============================================================================
 //                  CANCEL DELIVERY ORDER (BATALKAN TRANSAKSI)
-// ============================================================================
 export async function cancelDeliveryOrder(id: string) {
   try {
     const session = await auth();
@@ -1156,7 +1140,6 @@ export async function cancelDeliveryOrder(id: string) {
   }
 }
 
-// ==================== PHOTO MANAGEMENT (ADD / DELETE) ====================
 
 /**
  * Tambah foto ke DeliveryOrder dengan pelacakan ukuran file & sinkronisasi

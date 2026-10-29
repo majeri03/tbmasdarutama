@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { MovementType } from "@prisma/client";
 
-// ==================== STOCK ADJUSTMENT SCHEMA ====================
 export const stockAdjustmentSchema = z.object({
   productId: z.string().min(1, "Produk wajib dipilih"),
   type: z.nativeEnum(MovementType, {
@@ -20,7 +19,6 @@ export const stockAdjustmentSchema = z.object({
   referenceId: z.string().optional().nullable(),
 });
 
-// ==================== STOCK FILTER SCHEMA ====================
 export const stockFilterSchema = z.object({
   search: z.string().optional(),
   categoryId: z.string().optional(),
@@ -32,6 +30,5 @@ export const stockFilterSchema = z.object({
   limit: z.number().int().positive().default(10),
 });
 
-// ==================== TYPE EXPORTS ====================
 export type StockAdjustmentInput = z.infer<typeof stockAdjustmentSchema>;
 export type StockFilterInput = z.infer<typeof stockFilterSchema>;

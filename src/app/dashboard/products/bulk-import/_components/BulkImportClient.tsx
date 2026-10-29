@@ -80,7 +80,6 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
   const recognitionRef = useRef<any>(null);
   const imageInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
-  // ── Quick Add Kategori & Satuan ──────────────────────────────────────────
   const handleQuickAddCategory = async () => {
     const name = window.prompt("Masukkan nama kategori baru:");
     if (!name?.trim()) return;
@@ -121,7 +120,6 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
     }
   };
 
-  // ── Voice Input (Otomatis + Manual per Cell) ─────────────────────────────
   const [voiceSession, setVoiceSession] = useState<{
     rowId: string;
     field: string;
@@ -321,7 +319,6 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
     );
   };
 
-  // ── Row Operations ───────────────────────────────────────────
   const updateRow = (id: string, field: keyof BulkProductRow, value: any) => {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   };
@@ -344,7 +341,6 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
     });
   };
 
-  // ── Image Upload & Compress ─────────────────────────────────────────────
   const compressImage = (file: File): Promise<File> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -394,7 +390,6 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
     }
   };
 
-  // ── Save All ─────────────────────────────────────────────────
   const handleSaveAll = async () => {
     const validRows = rows.filter((r) => r.name && r.categoryId && r.unitId);
     if (validRows.length === 0) {

@@ -17,7 +17,6 @@ function serializePrismaData<T>(data: T): T {
   ));
 }
 
-// ==================== TYPES ====================
 export type DateRangeFilter = {
   dateFrom?: Date;
   dateTo?: Date;
@@ -32,7 +31,6 @@ export type ReportFilters = DateRangeFilter & {
   status?: string;
 };
 
-// ==================== LAPORAN PENJUALAN ====================
 export async function getSalesReport(filters: ReportFilters, externalSession?: AuthSession | null) {
   try {
     const session = externalSession || (await auth());
@@ -89,7 +87,6 @@ export async function getSalesReport(filters: ReportFilters, externalSession?: A
   }
 }
 
-// ==================== LAPORAN INVENTORY/STOCK ====================
 export async function getInventoryReport(filters: ReportFilters, externalSession?: AuthSession | null) {
   try {
     const session = externalSession || (await auth());
@@ -151,7 +148,6 @@ export async function getInventoryReport(filters: ReportFilters, externalSession
   }
 }
 
-// ==================== LAPORAN KEUANGAN ====================
 export async function getFinancialReport(filters: DateRangeFilter, externalSession?: AuthSession | null) {
   try {
     const session = externalSession || (await auth());
@@ -267,7 +263,6 @@ export async function getFinancialReport(filters: DateRangeFilter, externalSessi
   }
 }
 
-// ==================== LAPORAN UTANG PIUTANG ====================
 export async function getDebtsReport(filters: ReportFilters, externalSession?: AuthSession | null) {
   try {
     const session = externalSession || (await auth());
@@ -343,7 +338,6 @@ export async function getDebtsReport(filters: ReportFilters, externalSession?: A
   }
 }
 
-// ==================== LAPORAN PEMBELIAN ====================
 export async function getPurchasesReport(filters: ReportFilters, externalSession?: AuthSession | null) {
   try {
     const session = externalSession || (await auth());
@@ -402,7 +396,6 @@ export async function getPurchasesReport(filters: ReportFilters, externalSession
   }
 }
 
-// ==================== DAFTAR PRODUK ====================
 export async function getProductListReport(filters: ReportFilters) {
   try {
     const session = await auth();

@@ -675,7 +675,6 @@ export function DeliveryOrderFormModal({
                         min="1"
                         step="1"
                         required
-                        // --- FIX: BLOKIR KOMA/TITIK ---
                         onKeyDown={(e) => {
                           if (["e", "E", "+", "-", ".", ","].includes(e.key)) {
                             e.preventDefault();

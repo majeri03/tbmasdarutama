@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { CustomerType } from "@prisma/client";
 
-// ==================== CREATE CUSTOMER ====================
 export const createCustomerSchema = z.object({
   name: z
     .string()
@@ -38,9 +37,7 @@ export const createCustomerSchema = z.object({
   }),
 });
 
-// ==================== UPDATE CUSTOMER ====================
 export const updateCustomerSchema = createCustomerSchema.partial();
 
-// ==================== TYPE EXPORTS ====================
 export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
 export type UpdateCustomerInput = z.infer<typeof updateCustomerSchema>;

@@ -28,11 +28,9 @@ export default function InvoiceSettingsTab() {
 
     const { toast, showToast, hideToast } = useToast();
 
-    // ── Thermal paper size state ──
     const [thermalMode, setThermalMode] = useState<"preset" | "custom">("preset");
     const [thermalCustomW, setThermalCustomW] = useState("58");
 
-    // ── Document paper size state ──
     const [docMode, setDocMode] = useState<"preset" | "custom">("preset");
     const [docCustomW, setDocCustomW] = useState("210");
     const [docCustomH, setDocCustomH] = useState("297");
@@ -95,7 +93,6 @@ export default function InvoiceSettingsTab() {
         setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     };
 
-    // ── Thermal helpers ──
     const selectThermalPreset = (size: string) => {
         setFormData((prev) => ({ ...prev, invoicePaperSize: size }));
     };
@@ -104,7 +101,6 @@ export default function InvoiceSettingsTab() {
         setFormData((prev) => ({ ...prev, invoicePaperSize: `${w}mm` }));
     };
 
-    // ── Document helpers ──
     const selectDocPreset = (size: string) => {
         setFormData((prev) => ({ ...prev, invoiceDocumentPaperSize: size }));
     };

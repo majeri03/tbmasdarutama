@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-// ==================== CATEGORY SCHEMA ====================
 export const categorySchema = z.object({
   name: z
     .string()
@@ -18,7 +17,6 @@ export const categorySchema = z.object({
 
 export type CategoryFormData = z.infer<typeof categorySchema>;
 
-// ==================== SUB-CATEGORY SCHEMA ====================
 export const subCategorySchema = z.object({
   name: z
     .string()

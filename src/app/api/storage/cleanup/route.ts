@@ -1,41 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/utils/api";
 import prisma from "@/lib/prisma";
+import { deleteFromR2, extractR2Filename } from "@/lib/utils/storage";
 
-const WORKER_URL = process.env.CLOUDFLARE_WORKER_URL;
-
-// Helper to extract Cloudflare R2 filename from URL
-function extractFilenameFromUrl(url: string): string | null {
-  try {
-    const urlObj = new URL(url);
-    // Format biasanya: /files/folder/filename.ext atau /folder/filename.ext
-    const pathname = urlObj.pathname;
-    if (pathname.startsWith("/files/")) {
-      return pathname.replace("/files/", "");
-    }
-    return pathname.startsWith("/") ? pathname.substring(1) : pathname;
-  } catch {
-    // If not a full URL, maybe already a relative path
-    return url.replace(/^.*\/files\//, "");
-  }
-}
-
-// Helper to delete a file from Cloudflare R2 via worker
-async function deleteFromWorker(filename: string): Promise<boolean> {
-  if (!WORKER_URL) return false;
-  try {
-    const res = await fetch(`${WORKER_URL}/delete`, {
-      method: "DELETE",
-      headers: {
-        "X-Filename": filename,
-      },
-    });
-    return res.ok;
-  } catch (err) {
-    console.warn(`[WORKER_DELETE_WARN] Failed to delete ${filename}:`, err);
-    return false;
-  }
-}
+// Alias helper for consistency
+const extractFilenameFromUrl = extractR2Filename;
+const deleteFromWorker = deleteFromR2;
 
 /**
  * GET /api/storage/cleanup
@@ -85,17 +55,24 @@ export async function GET() {
     // 2. Total Semua Gambar Produk
     const totalProductImages = await prisma.productImage.count();
 
-    // 3. Bukti Pengiriman (Delivery Order)
-    const allDeliveryOrders = await prisma.deliveryOrder.findMany({
+    // 3. Bukti Pengiriman (Delivery Order) - Deteksi dari DeliveryPhoto dan proofImage
+    const allDeliveryPhotos = await prisma.deliveryPhoto.findMany({
+      select: {
+        id: true,
+        createdAt: true,
+      },
+    });
+
+    const allDeliveryOrdersWithProof = await prisma.deliveryOrder.findMany({
       where: {
-        notes: {
-          contains: "[BUKTI_KIRIM]",
-        },
+        OR: [
+          { proofImage: { not: null } },
+          { notes: { contains: "[BUKTI_KIRIM]" } },
+        ],
       },
       select: {
         id: true,
         createdAt: true,
-        notes: true,
       },
     });
 
@@ -103,11 +80,16 @@ export async function GET() {
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
 
-    const deliveryProofTotal = allDeliveryOrders.length;
-    const deliveryProofOlder30Days = allDeliveryOrders.filter(
+    // Hitung total bukti unik
+    const deliveryProofTotal = Math.max(allDeliveryPhotos.length, allDeliveryOrdersWithProof.length);
+    const deliveryProofOlder30Days = allDeliveryPhotos.filter(
+      (d: any) => new Date(d.createdAt) < thirtyDaysAgo
+    ).length || allDeliveryOrdersWithProof.filter(
       (d: any) => new Date(d.createdAt) < thirtyDaysAgo
     ).length;
-    const deliveryProofOlder60Days = allDeliveryOrders.filter(
+    const deliveryProofOlder60Days = allDeliveryPhotos.filter(
+      (d: any) => new Date(d.createdAt) < sixtyDaysAgo
+    ).length || allDeliveryOrdersWithProof.filter(
       (d: any) => new Date(d.createdAt) < sixtyDaysAgo
     ).length;
 

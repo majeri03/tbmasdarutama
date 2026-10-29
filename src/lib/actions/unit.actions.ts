@@ -14,7 +14,6 @@ const unitServerSchema = z.object({
 
 export type UnitFormData = z.infer<typeof unitServerSchema>;
 
-// ==================== CREATE UNIT ====================
 export async function createUnit(data: UnitFormData) {
   const session = await auth();
   requireMinimumRole(session, "ADMIN"); // SUPER_ADMIN & ADMIN
@@ -63,7 +62,6 @@ export async function createUnit(data: UnitFormData) {
   }
 }
 
-// ==================== GET ALL UNITS ====================
 export async function getUnits(
   params?: {
     search?: string;
@@ -127,7 +125,6 @@ export async function getUnits(
   }
 }
 
-// ==================== GET UNIT BY ID ====================
 export async function getUnitById(id: string) {
   const session = await auth();
   requireMinimumRole(session, "ADMIN");
@@ -163,7 +160,6 @@ export async function getUnitById(id: string) {
   }
 }
 
-// ==================== UPDATE UNIT ====================
 export async function updateUnit(id: string, data: UnitFormData) {
   const session = await auth();
   requireMinimumRole(session, "ADMIN");
@@ -227,7 +223,6 @@ export async function updateUnit(id: string, data: UnitFormData) {
   }
 }
 
-// ==================== DELETE UNIT ====================
 export async function deleteUnit(id: string) {
   const session = await auth();
   requireMinimumRole(session, "ADMIN");
@@ -286,7 +281,6 @@ export async function deleteUnit(id: string) {
   }
 }
 
-// ==================== GET UNITS FOR SELECT ====================
 export async function getUnitsForSelect(externalSession?: AuthSession | null) {
   const session = externalSession || (await auth());
   requirePermission(session, "VIEW_UNITS");

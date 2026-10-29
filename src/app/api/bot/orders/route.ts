@@ -111,7 +111,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // ==================== AUTO-CREATE / FIND CUSTOMER ====================
     let resolvedCustomerName = customerName || senderName;
     let customerId: string | null = null;
     let isNewCustomer = false;

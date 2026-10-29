@@ -5,7 +5,6 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { WaOrderStatus } from "@prisma/client";
 
-// ==================== TYPES ====================
 export interface ParsedOrderItem {
   productName: string;
   productId?: string;
@@ -15,7 +14,6 @@ export interface ParsedOrderItem {
   notes?: string;
 }
 
-// ==================== GET ALL WA ORDERS ====================
 export async function getWaOrders(
   status?: WaOrderStatus,
   opts?: { search?: string; dateFrom?: string; dateTo?: string; limit?: number }
@@ -56,7 +54,6 @@ export async function getWaOrders(
   }
 }
 
-// ==================== GET PENDING COUNT (untuk badge notif) ====================
 export async function getWaOrderPendingCount() {
   try {
     const count = await prisma.waOrder.count({ where: { status: "PENDING" } });
@@ -66,7 +63,6 @@ export async function getWaOrderPendingCount() {
   }
 }
 
-// ==================== REJECT WA ORDER ====================
 export async function rejectWaOrder(id: string, reason?: string) {
   try {
     const session = await auth();
@@ -90,7 +86,6 @@ export async function rejectWaOrder(id: string, reason?: string) {
   }
 }
 
-// ==================== CONFIRM WA ORDER → BUAT DELIVERY ORDER ====================
 export async function confirmWaOrder(
   id: string,
   data: {
@@ -314,7 +309,6 @@ export async function confirmWaOrder(
   }
 }
 
-// ==================== CREATE MANUAL ORDER ====================
 export async function createManualOrder(
   data: {
     customerId: string;

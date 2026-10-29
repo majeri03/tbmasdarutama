@@ -97,7 +97,6 @@ export default function SuppliersPage() {
     setToast(null);
   };
 
-  // ==================== HANDLERS ====================
   const handleSearch = (searchQuery: string) => {
     setSearch(searchQuery);
     fetchSuppliers(1, searchQuery, statusFilter);

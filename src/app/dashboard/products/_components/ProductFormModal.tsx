@@ -258,7 +258,6 @@ export function ProductFormModal({
     setValidationError(""); // Clear previous error
 
     if (currentStep === "basic") {
-      // Step 1 validation sudah di-handle oleh Zod
       setCurrentStep("units");
     } else if (currentStep === "units") {
       // ✅ Validate units manually

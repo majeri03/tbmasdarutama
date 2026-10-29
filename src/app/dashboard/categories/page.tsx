@@ -98,7 +98,6 @@ export default function CategoriesPage() {
     setToast(null);
   };
 
-  // ==================== CATEGORY HANDLERS ====================
   const handleSearch = (searchQuery: string) => {
     setSearch(searchQuery);
     fetchCategories(1, searchQuery);
@@ -133,7 +132,6 @@ export default function CategoriesPage() {
     fetchCategories(1);
   };
 
-  // ==================== SUB-CATEGORY HANDLERS ====================
   const handleAddSubCategory = (categoryId: string) => {
     setSelectedSubCategory(null);
     setPreSelectedCategoryId(categoryId);

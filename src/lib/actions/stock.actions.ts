@@ -10,7 +10,6 @@ import { MovementType, Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { requireMinimumRole, requirePermission, type AuthSession } from "../utils/role";
 
-// ==================== GET STOCK MOVEMENTS ====================
 export async function getStockMovements(
   filters?: {
     search?: string;
@@ -117,7 +116,6 @@ export async function getStockMovements(
   }
 }
 
-// ==================== GET LOW STOCK PRODUCTS ====================
 export async function getLowStockProducts() {
   const session = await auth();
   requireMinimumRole(session, "KASIR");
@@ -172,7 +170,6 @@ export async function getLowStockProducts() {
   }
 }
 
-// ==================== CREATE STOCK ADJUSTMENT ====================
 export async function createStockAdjustment(input: StockAdjustmentInput) {
   try {
     // Validate session
@@ -265,7 +262,6 @@ export async function createStockAdjustment(input: StockAdjustmentInput) {
   }
 }
 
-// ==================== GET STOCK STATISTICS ====================
 export async function getStockStatistics() {
   const session = await auth();
 requireMinimumRole(session, "KASIR");
@@ -379,7 +375,6 @@ requireMinimumRole(session, "KASIR");
   }
 }
 
-// ==================== GET STOCK BY PRODUCT ====================
 export async function getStockByProduct(productId: string) {
   const session = await auth();
 requireMinimumRole(session, "KASIR");
@@ -422,7 +417,6 @@ requireMinimumRole(session, "KASIR");
   }
 }
 
-// ==================== DELETE STOCK MOVEMENT (ADMIN ONLY) ====================
 export async function deleteStockMovement(id: string) {
   try {
     // Validate session

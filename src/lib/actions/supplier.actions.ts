@@ -6,7 +6,6 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { requireMinimumRole, requirePermission, type AuthSession } from "@/lib/utils/role";
 import { auth } from "@/lib/auth";
-// ==================== SCHEMAS ====================
 const supplierServerSchema = z.object({
   name: z.string().min(1).max(100).trim(),
   phone: z.string().min(1).max(20).trim(),
@@ -20,7 +19,6 @@ const supplierServerSchema = z.object({
 
 export type SupplierFormData = z.infer<typeof supplierServerSchema>;
 
-// ==================== GENERATE SUPPLIER CODE ====================
 async function generateSupplierCode(): Promise<string> {
   const lastSupplier = await prisma.supplier.findFirst({
     orderBy: { code: "desc" },
@@ -37,7 +35,6 @@ async function generateSupplierCode(): Promise<string> {
   return `SUP-${nextNumber.toString().padStart(5, "0")}`;
 }
 
-// ==================== CREATE SUPPLIER ====================
 export async function createSupplier(data: SupplierFormData) {
   const session = await auth();
 requireMinimumRole(session, "ADMIN");
@@ -104,7 +101,6 @@ requireMinimumRole(session, "ADMIN");
   }
 }
 
-// ==================== GET ALL SUPPLIERS ====================
 export async function getSuppliers(
   params?: {
     search?: string;
@@ -176,7 +172,6 @@ export async function getSuppliers(
   }
 }
 
-// ==================== GET SUPPLIER BY ID ====================
 export async function getSupplierById(id: string) {
   const session = await auth();
 requireMinimumRole(session, "ADMIN");
@@ -213,7 +208,6 @@ requireMinimumRole(session, "ADMIN");
   }
 }
 
-// ==================== UPDATE SUPPLIER ====================
 export async function updateSupplier(id: string, data: SupplierFormData) {
   const session = await auth();
 requireMinimumRole(session, "ADMIN");
@@ -294,7 +288,6 @@ requireMinimumRole(session, "ADMIN");
   }
 }
 
-// ==================== DELETE SUPPLIER ====================
 export async function deleteSupplier(id: string) {
   const session = await auth();
 requireMinimumRole(session, "ADMIN");
@@ -352,7 +345,6 @@ requireMinimumRole(session, "ADMIN");
   }
 }
 
-// ==================== TOGGLE SUPPLIER STATUS ====================
 export async function toggleSupplierStatus(id: string) {
   const session = await auth();
 requireMinimumRole(session, "ADMIN");
@@ -393,7 +385,6 @@ requireMinimumRole(session, "ADMIN");
   }
 }
 
-// ==================== GET SUPPLIERS FOR SELECT ====================
 export async function getSuppliersForSelect(externalSession?: AuthSession | null) {
   const session = externalSession || (await auth());
   requirePermission(session, "VIEW_SUPPLIERS");

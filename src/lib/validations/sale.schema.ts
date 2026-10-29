@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { PaymentMethod, SaleStatus } from "@prisma/client";
 
-// ==================== SALE ITEM SCHEMA ====================
 export const saleItemSchema = z.object({
   productId: z.string().min(1, "Produk wajib dipilih"),
   productUnitId: z.string().min(1, "Satuan wajib dipilih"),
@@ -13,7 +12,6 @@ export const saleItemSchema = z.object({
 
 export type SaleItemInput = z.infer<typeof saleItemSchema>;
 
-// ==================== CREATE SALE SCHEMA ====================
 export const createSaleSchema = z.object({
   customerId: z.string().min(1, "Customer wajib dipilih"),
   items: z
@@ -45,7 +43,6 @@ export const createSaleSchema = z.object({
 
 export type CreateSaleInput = z.infer<typeof createSaleSchema>;
 
-// ==================== SALE FILTER SCHEMA ====================
 export const saleFilterSchema = z.object({
   search: z.string().optional(),
   customerId: z.string().optional(),
@@ -61,7 +58,6 @@ export const saleFilterSchema = z.object({
 
 export type SaleFilterInput = z.input<typeof saleFilterSchema>;
 
-// ==================== PAYMENT VALIDATION SCHEMA ====================
 export const paymentValidationSchema = z
   .object({
     paymentMethod: z.nativeEnum(PaymentMethod),

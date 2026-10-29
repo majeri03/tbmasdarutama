@@ -10,7 +10,6 @@ import {
 } from "@/lib/validations/supplier-debt.schema";
 import { requireMinimumRole, requirePermission, type AuthSession } from "../utils/role";
 
-// ==================== GET ALL SUPPLIER DEBTS ====================
 export async function getAllSupplierDebts(filters?: {
   search?: string;
   supplierId?: string;
@@ -127,7 +126,6 @@ export async function getAllSupplierDebts(filters?: {
   }
 }
 
-// ==================== GET SUPPLIER DEBT STATISTICS ====================
 export async function getSupplierDebtStatistics() {
   const session = await auth();
   requirePermission(session, "VIEW_SUPPLIER_DEBTS");
@@ -180,7 +178,6 @@ export async function getSupplierDebtStatistics() {
   }
 }
 
-// ==================== GET SUPPLIER DEBT BY ID ====================
 export async function getSupplierDebtById(id: string, externalSession?: AuthSession | null) {
   const session = externalSession || (await auth());
   requirePermission(session, "VIEW_SUPPLIER_DEBTS");
@@ -256,7 +253,6 @@ export async function getSupplierDebtById(id: string, externalSession?: AuthSess
   }
 }
 
-// ==================== ADD PAYMENT ====================
 export async function addSupplierDebtPayment(input: AddSupplierPaymentInput) {
   try {
     const session = await auth();
@@ -355,7 +351,6 @@ export async function addSupplierDebtPayment(input: AddSupplierPaymentInput) {
   }
 }
 
-// ==================== DELETE SUPPLIER DEBT ====================
 export async function deleteSupplierDebt(id: string) {
   try {
     const session = await auth();
@@ -411,7 +406,6 @@ export async function deleteSupplierDebt(id: string) {
   }
 }
 
-// ==================== UPDATE OVERDUE STATUS ====================
 export async function updateOverdueSupplierDebts() {
   const session = await auth();
   requireMinimumRole(session, "ADMIN");

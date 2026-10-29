@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/utils/api";
 import * as admin from "firebase-admin";
 
-// ── Inisialisasi Firebase Admin SDK (hanya jika env var tersedia) ──
 let firebaseReady = false;
 try {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
@@ -20,7 +19,6 @@ try {
   console.warn("[FCM] Firebase Admin SDK tidak dikonfigurasi — notifikasi push dinonaktifkan:", e);
 }
 
-// ── Helper kirim notifikasi ke token tunggal ─────────────
 export async function sendToToken({
   token,
   title,
@@ -52,7 +50,6 @@ export async function sendToToken({
   }
 }
 
-// ── Helper kirim ke topic (semua admin/semua driver) ──────
 export async function sendToTopic({
   topic,
   title,
@@ -83,7 +80,6 @@ export async function sendToTopic({
   }
 }
 
-// ── Helper kirim ke semua token pengguna berdasar role ────
 export async function notifyByRole({
   role,
   title,
@@ -99,7 +95,6 @@ export async function notifyByRole({
   await sendToTopic({ topic, title, body, data });
 }
 
-// ── Notifikasi Spesifik ───────────────────────────────────
 export const Notif = {
   /** Pembayaran utang diterima */
   async paymentReceived(customerId: string, customerName: string, amount: number) {
@@ -164,7 +159,6 @@ export const Notif = {
   },
 };
 
-// ── POST /api/mobile/fcm — Kirim notif manual dari panel ──
 export async function POST(req: NextRequest) {
   const session = await getAuthenticatedUser();
   if (!session?.user) {

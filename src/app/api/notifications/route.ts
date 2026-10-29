@@ -106,4 +106,66 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
+/**
+ * DELETE /api/notifications
+ * Menghapus notifikasi:
+ * - clearRead: true -> hapus notifikasi yang sudah dibaca milik user
+ * - olderThanDays: 3 -> hapus notifikasi yang sudah lewat 3 hari
+ * - id: string -> hapus notifikasi spesifik
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getAuthenticatedUser();
+    if (!session?.user) return unauthorizedResponse();
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    const clearRead = searchParams.get("clearRead") === "true";
+    const olderThanDays = searchParams.get("olderThanDays");
+
+    const userRole = session.user.role as Role;
+    const baseWhere: Prisma.NotificationWhereInput = {
+      OR: [
+        { userId: session.user.id },
+        { role: userRole },
+        ...(userRole === "SUPER_ADMIN" || userRole === "ADMIN" ? [{ role: "ADMIN" as Role }, { role: null }] : []),
+      ],
+    };
+
+    if (id) {
+      await prisma.notification.delete({
+        where: { id },
+      });
+      return successResponse({ success: true }, "Notifikasi berhasil dihapus");
+    }
+
+    if (clearRead) {
+      const res = await prisma.notification.deleteMany({
+        where: {
+          ...baseWhere,
+          isRead: true,
+        },
+      });
+      return successResponse({ success: true, count: res.count }, `Berhasil membersihkan ${res.count} notifikasi terbaca`);
+    }
+
+    if (olderThanDays) {
+      const days = parseInt(olderThanDays, 10) || 3;
+      const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      const res = await prisma.notification.deleteMany({
+        where: {
+          ...baseWhere,
+          createdAt: { lt: cutoff },
+        },
+      });
+      return successResponse({ success: true, count: res.count }, `Berhasil membersihkan notifikasi yang lebih dari ${days} hari`);
+    }
+
+    return errorResponse("Parameter penghapusan tidak valid", 400);
+  } catch (error) {
+    console.error("[API_NOTIFICATIONS_DELETE_ERROR]", error);
+    return errorResponse("Gagal menghapus notifikasi");
+  }
+}
+
 

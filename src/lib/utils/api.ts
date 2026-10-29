@@ -5,7 +5,6 @@ import { hasMinimumRole, hasPermission, type Permission } from "@/lib/utils/role
 import { Role } from "@prisma/client";
 import { verifyMobileToken } from "@/lib/utils/jwt";
 
-// ==================== STANDARD API RESPONSE ====================
 export type ApiResponse<T = unknown> = {
   success: boolean;
   data?: T;
@@ -19,7 +18,6 @@ export type ApiResponse<T = unknown> = {
   };
 };
 
-// ==================== RESPONSE HELPERS ====================
 export function successResponse<T>(data: T, message?: string, status = 200) {
   const body: ApiResponse<T> = { success: true, data };
   if (message) body.message = message;
@@ -61,7 +59,6 @@ export function validationErrorResponse(message: string) {
   );
 }
 
-// ==================== AUTH GUARD ====================
 /**
  * Validates the session and returns the authenticated user.
  * Returns null if not authenticated.
@@ -135,7 +132,6 @@ export async function requireAuthAndPermission(permission: Permission) {
   return session;
 }
 
-// ==================== PARSE SEARCH PARAMS ====================
 export function parseSearchParams(searchParams: URLSearchParams) {
   return {
     search: searchParams.get("search") || undefined,

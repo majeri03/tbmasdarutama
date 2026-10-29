@@ -14,7 +14,6 @@ import { PaymentMethod, SaleStatus, Prisma } from "@prisma/client";
 import { SaleFilters } from "@/types/sale";
 import { requirePermission, type AuthSession } from "../utils/role";
 
-// ==================== GENERATE INVOICE NUMBER ====================
 async function generateInvoiceNumber(): Promise<string> {
   const today = new Date();
   const year = today.getFullYear();
@@ -41,7 +40,6 @@ async function generateInvoiceNumber(): Promise<string> {
   return `INV-${datePrefix}-${newNumber.toString().padStart(3, "0")}`;
 }
 
-// ==================== GENERATE DEBT NUMBER ====================
 async function generateDebtNumber(
   tx: Prisma.TransactionClient
 ): Promise<string> {
@@ -60,13 +58,11 @@ async function generateDebtNumber(
   return `DEBT-CUST-${newNumber.toString().padStart(3, "0")}`;
 }
 
-// ==================== CREATE SALE (OPTIMIZED) ====================
 export async function createSale(data: CreateSaleInput) {
   try {
     const session = await auth();
     requirePermission(session, "CREATE_SALE");
 
-    // --- 1. Validasi User & Session ---
     if (!session?.user?.id) {
       return { success: false, error: "Unauthorized. Please login first." };
     }
@@ -82,7 +78,6 @@ export async function createSale(data: CreateSaleInput) {
 
     const validated = createSaleSchema.parse(data);
 
-    // --- 2. Validasi Stok (PRE-TRANSACTION / DI LUAR TRANSAKSI) ---
     // Mengambil semua data produk sekaligus (Bulk Read) agar cepat
     const productIds = validated.items.map((i) => i.productId);
     const products = await prisma.product.findMany({
@@ -128,7 +123,6 @@ export async function createSale(data: CreateSaleInput) {
       }
     }
 
-    // --- 3. Persiapkan Data Item untuk Disimpan Sekaligus ---
     const saleItemsData = validated.items.map((item) => {
       const unitId = productUnitToUnitMap.get(item.productUnitId);
       if (!unitId) {
@@ -147,7 +141,6 @@ export async function createSale(data: CreateSaleInput) {
     // Generate Invoice Number (Di luar transaksi jika tidak butuh lock ketat, sesuai kode asli)
     const invoiceNumber = await generateInvoiceNumber();
 
-    // --- 4. DATABASE TRANSACTION (OPTIMIZED) ---
     const sale = await prisma.$transaction(async (tx) => {
         // A. Create Sale + Sale Items (Nested Write - Lebih Cepat)
         const newSale = await tx.sale.create({
@@ -241,7 +234,6 @@ export async function createSale(data: CreateSaleInput) {
       { maxWait: 5000, timeout: 20000 }
     );
 
-    // --- 5. Revalidate & Return ---
     revalidatePath("/dashboard/pos");
     revalidatePath("/dashboard/sales");
 
@@ -271,7 +263,6 @@ export async function createSale(data: CreateSaleInput) {
   }
 }
 
-// ==================== UPDATE SALE (EDIT TRANSAKSI) ====================
 export async function updateSale(saleId: string, data: CreateSaleInput) {
   try {
     const session = await auth();
@@ -510,7 +501,6 @@ export async function updateSale(saleId: string, data: CreateSaleInput) {
   }
 }
 
-// ==================== GET SALES ====================
 export async function getSales(params?: SaleFilterInput, externalSession?: AuthSession | null) {
   try {
     const session = externalSession || (await auth());
@@ -707,7 +697,6 @@ export async function getSales(params?: SaleFilterInput, externalSession?: AuthS
   }
 }
 
-// ==================== CANCEL SALE (ADMIN ONLY) ====================
 export async function cancelSale(id: string, reason: string) {
   try {
     const session = await auth();
@@ -832,7 +821,6 @@ export async function cancelSale(id: string, reason: string) {
   }
 }
 
-// ==================== GET SALES STATISTICS ====================
 export async function getSalesStatistics(dateFrom?: Date, dateTo?: Date) {
   try {
     const session = await auth();
@@ -1020,7 +1008,6 @@ export async function getSaleById(saleId: string, externalSession?: AuthSession 
   }
 }
 
-// ==================== GET SALES FOR TABLE ====================
 export async function getSalesForTable(params?: SaleFilters) {
   try {
     const session = await auth();
@@ -1118,7 +1105,6 @@ export async function getSalesForTable(params?: SaleFilters) {
   }
 }
 
-// ==================== GET TODAY STATS ====================
 export async function getTodaySalesStats() {
   try {
     const session = await auth();
@@ -1163,7 +1149,6 @@ export async function getTodaySalesStats() {
     return { success: false, error: "Gagal mengambil statistik" };
   }
 }
-// ==================== DELETE SALE ====================
 export async function deleteSale(id: string, passwordInput?: string) {
   try {
     const session = await auth();

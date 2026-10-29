@@ -5,9 +5,7 @@ import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Helper: verify current user password
-// ─────────────────────────────────────────────────────────────────────────────
 async function verifyCurrentUserPassword(password: string) {
   const currentUser = await getCurrentUser();
   if (!currentUser?.id) throw new Error("Sesi tidak valid. Silakan login ulang.");
@@ -28,9 +26,7 @@ async function verifyCurrentUserPassword(password: string) {
   return user;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // GET STATISTICS: how much data is currently stored
-// ─────────────────────────────────────────────────────────────────────────────
 export async function getDataStatistics() {
   try {
     const currentUser = await getCurrentUser();
@@ -72,10 +68,8 @@ export async function getDataStatistics() {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // HAPUS TRANSAKSI: Delete only SALES data
 // Stok produk tidak direset — hanya data penjualan & turunannya dihapus
-// ─────────────────────────────────────────────────────────────────────────────
 export async function hapusSemuaTransaksiPenjualan(password: string) {
   try {
     await verifyCurrentUserPassword(password);
@@ -115,10 +109,8 @@ export async function hapusSemuaTransaksiPenjualan(password: string) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // TUTUP BUKU TAHUNAN: Wipe ALL transactional data + reset stock to 0
 // Ini adalah operasi year-end closing — data master tetap aman
-// ─────────────────────────────────────────────────────────────────────────────
 export async function tutupBukuTahunan(password: string, tahun: number) {
   try {
     await verifyCurrentUserPassword(password);

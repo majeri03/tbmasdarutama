@@ -15,7 +15,6 @@
 import prisma from "@/lib/prisma";
 import { Role, NotificationType } from "@prisma/client";
 
-// ─── Firebase Admin (lazy init) ─────────────────────────────────────────────
 let _messaging: import("firebase-admin/messaging").Messaging | null = null;
 let _firebaseReady = false;
 
@@ -47,7 +46,6 @@ function getMessaging() {
   }
 }
 
-// ─── Types ───────────────────────────────────────────────────────────────────
 export interface NotifyOptions {
   title: string;
   body: string;
@@ -63,7 +61,6 @@ export interface NotifyOptions {
   type?: string;
 }
 
-// ─── Main notify function ─────────────────────────────────────────────────────
 export async function notify(opts: NotifyOptions): Promise<void> {
   const { title, body, role, userId, screen, params, type } = opts;
 
@@ -209,7 +206,6 @@ export async function notify(opts: NotifyOptions): Promise<void> {
   }
 }
 
-// ─── Shorthand helpers ────────────────────────────────────────────────────────
 
 /** Kirim notifikasi ke semua Admin/Super Admin */
 export const notifyAdmin = (opts: Omit<NotifyOptions, "role">) =>
@@ -219,7 +215,6 @@ export const notifyAdmin = (opts: Omit<NotifyOptions, "role">) =>
 export const notifyUser = (userId: string, opts: Omit<NotifyOptions, "userId">) =>
   notify({ ...opts, userId });
 
-// ─── Predefined event helpers ─────────────────────────────────────────────────
 
 export const NotifEvent = {
   /** Surat jalan baru dibuat */
@@ -249,6 +244,7 @@ export const NotifEvent = {
       body: `Surat Jalan #${doNumber} — ${label}`,
       role: "ADMIN",
       screen: "Delivery",
+      params: { search: doNumber, doNumber },
       type: "delivery",
     });
     // Juga beritahu pembuat DO jika berbeda dari admin
@@ -258,6 +254,7 @@ export const NotifEvent = {
           body: `Status SJ #${doNumber} berubah: ${label}`,
           userId: createdById,
           screen: "Delivery",
+          params: { search: doNumber, doNumber },
           type: "delivery",
         })
       : Promise.resolve();
@@ -270,6 +267,7 @@ export const NotifEvent = {
       title: "🧾 Penjualan Baru",
       body: `${cashierName} — INV ${invoiceNumber} — Rp ${grandTotal.toLocaleString("id-ID")}`,
       screen: "History",
+      params: { search: invoiceNumber, invoiceNumber },
       type: "orders",
     }),
 
@@ -279,6 +277,7 @@ export const NotifEvent = {
       title: "⚠️ Piutang Jatuh Tempo",
       body: `${customerName} — Rp ${amount.toLocaleString("id-ID")}`,
       screen: "Debt",
+      params: { search: customerName, customerName },
       type: "finance",
     }),
 
@@ -288,6 +287,7 @@ export const NotifEvent = {
       title: "💰 Pembayaran Diterima",
       body: `${customerName} membayar Rp ${amount.toLocaleString("id-ID")}`,
       screen: "Debt",
+      params: { search: customerName, customerName },
       type: "finance",
     }),
 
@@ -297,11 +297,11 @@ export const NotifEvent = {
       title: "🛒 Purchase Order Baru",
       body: `PO #${poNumber} dari ${supplierName}`,
       screen: "Purchase",
+      params: { search: poNumber, poNumber },
       type: "orders",
     }),
 };
 
-// ─── Private helpers ─────────────────────────────────────────────────────────
 function getChannelId(type?: string): string {
   const map: Record<string, string> = {
     delivery: "deliveries",
