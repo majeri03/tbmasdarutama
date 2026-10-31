@@ -223,6 +223,7 @@ export const NotifEvent = {
       title: "📦 Surat Jalan Baru",
       body: `DO #${doNumber} untuk ${customerName} telah dibuat.`,
       screen: "Delivery",
+      params: { search: doNumber, doNumber },
       type: "delivery",
     }),
 
