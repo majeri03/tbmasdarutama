@@ -18,6 +18,16 @@ export const metadata: Metadata = {
     icon: "/vercel.svg",
   },
   description: "Sistem Informasi Toko Bangunan Masdar Utama",
+  // SEMBUNYIKAN DARI GOOGLE (Nov 2026): situs operasional internal —
+  // jangan tampilkan halaman mana pun di hasil pencarian.
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
 };
 
 export default function RootLayout({

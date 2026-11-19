@@ -33,6 +33,14 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: [
+          // SEMBUNYIKAN DARI GOOGLE (Nov 2026): situs ini operasional internal.
+          // Header ini dibaca Google di SEMUA halaman & API — perintahnya:
+          // jangan tampilkan di hasil pencarian (noindex), jangan ikuti
+          // link-nya (nofollow), jangan simpan cache-nya (noarchive).
+          {
+            key: "X-Robots-Tag",
+            value: "noindex, nofollow, noarchive",
+          },
           {
             key: "X-Frame-Options",
             value: "DENY",

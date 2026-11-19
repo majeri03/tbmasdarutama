@@ -1,0 +1,11 @@
+# TB Masdar Utama — situs operasional internal, jangan tampil di hasil pencarian.
+#
+# PENTING: file ini SENGAJA tidak memblokir (tidak ada "Disallow: /").
+# Kalau Google diblokir total, dia tidak bisa membaca perintah noindex
+# (di header X-Robots-Tag & meta robots) dan halaman yang sudah terindeks
+# bisa tetap muncul sebagai link kosong.
+# Jadi biarkan Google merayapi dulu, baca noindex, lalu hapus sendiri dari
+# hasil pencarian. Setelah web hilang dari pencarian (beberapa minggu),
+# file ini boleh diganti jadi "Disallow: /" kalau mau menghemat crawl.
+User-agent: *
+Allow: /
