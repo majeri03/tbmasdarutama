@@ -185,44 +185,57 @@ export async function createStockAdjustment(input: StockAdjustmentInput) {
     // Validate input
     const validated = stockAdjustmentSchema.parse(input);
 
-    // Get current product stock
-    const product = await prisma.product.findUnique({
-      where: { id: validated.productId },
-      select: { currentStock: true, name: true },
-    });
-
-    if (!product) {
-      return {
-        success: false,
-        error: "Produk tidak ditemukan",
-      };
-    }
-
-    // Calculate new stock
-    let newStock = product.currentStock;
-    if (validated.type === MovementType.IN) {
-      newStock += validated.quantity;
-    } else if (validated.type === MovementType.OUT) {
-      newStock -= validated.quantity;
-      if (newStock < 0) {
-        return {
-          success: false,
-          error: "Stock tidak mencukupi untuk adjustment OUT",
-        };
-      }
-    } else if (validated.type === MovementType.ADJUSTMENT) {
-      // For adjustment, quantity is the final stock value
-      newStock = validated.quantity;
-    }
-
-    // Create transaction
+    // M-5 FIX (Nov 2026): baca stok + hitung + catat SEMUA di dalam satu
+    // transaksi. Sebelumnya stok dibaca di luar transaksi lalu stok baru
+    // dihitung dari bacaan basi — dua adjustment bersamaan saling menimpa.
+    // Selain itu, untuk tipe ADJUSTMENT quantity yang dicatat sekarang adalah
+    // SELISIH (stok baru - stok sekarang), bukan level absolut: naik dicatat
+    // sebagai IN, turun sebagai OUT, sebesar |selisih|. Dengan begitu riwayat
+    // stok konsisten (jumlah IN - OUT = perubahan stok) dan penghapusan
+    // movement bisa membalikkan efeknya dengan benar (lihat
+    // deleteStockMovement). referenceType tetap "Manual Adjustment" supaya
+    // asal movement tetap ketahuan.
     const result = await prisma.$transaction(async (tx) => {
+      const product = await tx.product.findUnique({
+        where: { id: validated.productId },
+        select: { currentStock: true, name: true },
+      });
+      if (!product) {
+        throw new Error("Produk tidak ditemukan");
+      }
+
+      let newStock = product.currentStock;
+      let movementType = validated.type;
+      let movementQty = validated.quantity;
+
+      if (validated.type === MovementType.IN) {
+        newStock += validated.quantity;
+      } else if (validated.type === MovementType.OUT) {
+        newStock -= validated.quantity;
+      } else if (validated.type === MovementType.ADJUSTMENT) {
+        // quantity = stok akhir yang diinginkan (level absolut dari form).
+        const delta = validated.quantity - product.currentStock;
+        if (delta === 0) {
+          throw new Error("Stock sudah sama dengan nilai adjustment, tidak ada perubahan");
+        }
+        movementType = delta > 0 ? MovementType.IN : MovementType.OUT;
+        movementQty = Math.abs(delta);
+        newStock = validated.quantity;
+      } else {
+        // RETURN: barang kembali masuk (stok bertambah).
+        newStock += validated.quantity;
+      }
+
+      if (newStock < 0) {
+        throw new Error("Stock tidak mencukupi untuk adjustment ini");
+      }
+
       // Create stock movement
       const movement = await tx.stockMovement.create({
         data: {
           productId: validated.productId,
-          type: validated.type,
-          quantity: validated.quantity,
+          type: movementType,
+          quantity: movementQty,
           referenceType: validated.referenceType || "Manual Adjustment",
           referenceId: validated.referenceId,
           notes: validated.notes,
@@ -236,7 +249,7 @@ export async function createStockAdjustment(input: StockAdjustmentInput) {
         data: { currentStock: newStock },
       });
 
-      return movement;
+      return { movement, productName: product.name, newStock };
     });
 
     revalidatePath("/dashboard/stocks");
@@ -244,8 +257,8 @@ export async function createStockAdjustment(input: StockAdjustmentInput) {
 
     return {
       success: true,
-      message: `Stock ${product.name} berhasil disesuaikan`,
-      data: result,
+      message: `Stock ${result.productName} berhasil disesuaikan (stok sekarang: ${result.newStock})`,
+      data: result.movement,
     };
   } catch (error) {
     console.error("Error creating stock adjustment:", error);
@@ -458,31 +471,61 @@ export async function deleteStockMovement(id: string) {
       };
     }
 
-    // Reverse stock adjustment
-    let newStock = movement.product.currentStock;
-    if (movement.type === MovementType.IN) {
-      newStock -= movement.quantity; // Reverse IN
-    } else if (movement.type === MovementType.OUT) {
-      newStock += movement.quantity; // Reverse OUT
-    }
-
-    if (newStock < 0) {
+    // M-6 FIX (Nov 2026): movement dari transaksi penjualan/pembelian tidak
+    // boleh dihapus dari riwayat stok — menghapusnya memutus jejak audit dan
+    // (kalau dibalik) merusak stok yang sudah dipakai transaksi lain.
+    // Yang boleh dihapus hanya movement manual (adjustment/opname/return).
+    const refType = movement.referenceType || "";
+    if (
+      refType === "Sale" ||
+      refType === "Sale Edit" ||
+      refType === "Sale Cancellation" ||
+      refType === "POS_SALE" ||
+      refType === "Purchase" ||
+      refType === "WaOrder" ||
+      refType === "DELIVERY_ORDER"
+    ) {
       return {
         success: false,
-        error: "Tidak dapat menghapus: stock akan menjadi negatif",
+        error: "Pergerakan dari penjualan/pembelian/pengiriman tidak boleh dihapus. Batalkan transaksinya lewat menu terkait.",
       };
     }
 
+    // Reverse stock adjustment — baca stok terbaru DI DALAM transaksi supaya
+    // tidak memakai bacaan basi.
+    // IN/RETURN menambah stok saat dicatat -> hapus = kurangi.
+    // OUT mengurangi stok saat dicatat -> hapus = tambah.
+    // ADJUSTMENT lama (sebelum fix M-5) mencatat quantity sebagai level stok
+    // akhir, bukan selisih — arah perubahannya tidak tercatat, jadi tidak
+    // bisa dibalik dengan aman -> tolak, suruh sesuaikan lewat Stock Opname.
+    if (movement.type === MovementType.ADJUSTMENT) {
+      return {
+        success: false,
+        error: "Pergerakan ADJUSTMENT lama tidak bisa dihapus karena arah perubahannya tidak tercatat. Sesuaikan stok lewat Stock Opname.",
+      };
+    }
+    const delta =
+      movement.type === MovementType.IN || movement.type === MovementType.RETURN
+        ? -movement.quantity
+        : movement.quantity;
+
     // Delete and update in transaction
-    await prisma.$transaction([
-      prisma.stockMovement.delete({
-        where: { id },
-      }),
-      prisma.product.update({
+    await prisma.$transaction(async (tx) => {
+      const fresh = await tx.product.findUnique({
+        where: { id: movement.product.id },
+        select: { currentStock: true },
+      });
+      if (!fresh) throw new Error("Produk tidak ditemukan");
+      const newStock = fresh.currentStock + delta;
+      if (newStock < 0) {
+        throw new Error("Tidak dapat menghapus: stock akan menjadi negatif");
+      }
+      await tx.stockMovement.delete({ where: { id } });
+      await tx.product.update({
         where: { id: movement.product.id },
         data: { currentStock: newStock },
-      }),
-    ]);
+      });
+    });
 
     revalidatePath("/dashboard/stocks");
     revalidatePath("/dashboard/products");

@@ -1,9 +1,19 @@
 -- ==================== INSERT USERS ====================
--- Password: admin123 (hashed dengan bcrypt)
+-- SECURITY FIX (Nov 2026, C1): akun seed dengan password admin123 DIHAPUS dari
+-- file ini. Password itu tertulis di repo dan hash-nya sama untuk kedua akun,
+-- jadi siapa pun bisa login SUPER_ADMIN kalau seed pernah dijalankan ke
+-- production. PENTING: mengubah file ini TIDAK mengubah password di database
+-- yang sudah ada — ganti password admin@tbmasdarutama.com dan
+-- kasir@tbmasdarutama.com langsung di dashboard / database, lalu hapus akun
+-- yang tidak dipakai. Jangan pernah menulis password (atau hash password
+-- yang masih aktif) di repo.
+-- Akun di bawah ini sengaja dibuat NONAKTIF dengan password yang tidak valid,
+-- supaya seed lama tidak bisa dipakai untuk masuk. Buat akun baru lewat
+-- dashboard (Manajemen Akun) dengan password kuat, bukan lewat seed.
 INSERT INTO users (id, name, email, password, role, phone, address, "isActive", "createdAt", "updatedAt")
-VALUES 
-('cm5admin001', 'Super Admin', 'admin@tbmasdarutama.com', '$2b$10$2Jj4WejCXAbJGBlCI65d2erXic.fEONZA8F8S4pugGD00FY/rqe4K', 'SUPER_ADMIN', '081234567890', 'Jl. Raya Bangunan No. 123', true, NOW(), NOW()),
-('cm5kasir001', 'Kasir 1', 'kasir@tbmasdarutama.com', '$2b$10$2Jj4WejCXAbJGBlCI65d2erXic.fEONZA8F8S4pugGD00FY/rqe4K', 'KASIR', '081234567891', NULL, true, NOW(), NOW())
+VALUES
+('cm5admin001', 'Super Admin', 'admin@tbmasdarutama.com', 'DISABLED-NO-VALID-PASSWORD-SET-VIA-DASHBOARD', 'SUPER_ADMIN', '081234567890', 'Jl. Raya Bangunan No. 123', false, NOW(), NOW()),
+('cm5kasir001', 'Kasir 1', 'kasir@tbmasdarutama.com', 'DISABLED-NO-VALID-PASSWORD-SET-VIA-DASHBOARD', 'KASIR', '081234567891', NULL, false, NOW(), NOW())
 ON CONFLICT (email) DO NOTHING;
 
 -- ==================== INSERT UNITS (SATUAN) ====================

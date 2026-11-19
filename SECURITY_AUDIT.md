@@ -52,7 +52,7 @@ Kami menyuntikkan konfigurasi HTTP response headers standar industri ke seluruh 
 Karena sebelumnya proyek Anda sempat menyimpan fallback JWT secret secara keras di kode sumber, **Anda wajib segera mengganti/merotasi secret berikut di panel konfigurasi:**
 
 1.  **`MOBILE_JWT_SECRET`**:
-    *   *Alasan*: Kunci sebelumnya (`masdarutama-secret-key-2024-super-secret`) telah terekspos dalam riwayat git lama.
+    *   *Alasan*: Kunci sebelumnya ([REDACTED — nilai lama dihapus dari dokumen ini]) telah terekspos dalam riwayat git lama. Nilai itu tetap ada di riwayat git — redaksi di sini tidak menghapusnya dari history; yang wajib dilakukan adalah rotasi (ganti dengan nilai baru, lihat Rekomendasi di bawah).
     *   *Rekomendasi Tindakan*: Generate string acak 32 karakter baru dan pasang di `.env` produksi.
 2.  **`NEXTAUTH_SECRET`**:
     *   *Rekomendasi*: Selalu gunakan nilai unik acak tinggi (bisa dihasilkan via `openssl rand -base64 32`).

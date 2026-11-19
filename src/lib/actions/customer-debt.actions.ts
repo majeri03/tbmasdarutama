@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { DebtStatus, Prisma } from "@prisma/client";
 import { addPaymentSchema, AddPaymentInput } from "@/lib/validations/customer-debt.schema";
-import { requirePermission, requireMinimumRole, type AuthSession } from "@/lib/utils/role";
+import { requirePermission, requireMinimumRole, hasMinimumRole, type AuthSession } from "@/lib/utils/role";
 
 //GET ALL CUSTOMER DEBTS
 export async function getAllCustomerDebts(filters?: {
@@ -272,23 +272,52 @@ export async function addCustomerDebtPayment(input: AddPaymentInput) {
       return { success: false, error: "Debt already paid" };
     }
 
-    const remainingDebt = Number(debt.remainingDebt);
-    // Cek double proteksi (opsional, tapi aman)
-    if (validated.amount > remainingDebt) {
-      return { success: false, error: "Payment amount exceeds remaining debt" };
-    }
-
-    // Hitung angka-angka baru
-    const newPaidAmount = Number(debt.paidAmount) + validated.amount;
-    const newRemainingDebt = remainingDebt - validated.amount;
-    const newStatus = newRemainingDebt === 0 ? DebtStatus.PAID : DebtStatus.PARTIAL;
+    // M-15 FIX (Nov 2026): angka-angka di atas hanya cek awal (UX). Cek yang
+    // menentukan ada DI DALAM transaksi di bawah: update kondisional dengan
+    // increment/decrement atomik. Sebelumnya total dihitung dari bacaan di
+    // luar transaksi lalu ditimpa absolut — dua pembayaran bersamaan untuk
+    // sisa Rp1jt (masing-masing Rp600rb) sama-sama lolos dan hutang tercatat
+    // sisa Rp400rb padahal total bayar Rp1,2jt.
 
     // 2. TRANSAKSI DATABASE (Update Debt + Payment + SALE)
     const result = await prisma.$transaction(async (tx) => {
+      // A. Potong sisa hutang secara atomik. Update ini hanya berhasil kalau
+      // hutang belum lunas DAN sisa hutang >= jumlah bayar. Kalau dua
+      // pembayaran bersamaan, hanya satu yang lolos — yang kedua gagal di
+      // sini (bukan setelah payment tercatat).
+      const claimed = await tx.customerDebt.updateMany({
+        where: {
+          id: validated.debtId,
+          status: { not: DebtStatus.PAID },
+          remainingDebt: { gte: validated.amount },
+        },
+        data: {
+          paidAmount: { increment: validated.amount },
+          remainingDebt: { decrement: validated.amount },
+        },
+      });
+      if (claimed.count === 0) {
+        throw new Error("Payment amount exceeds remaining debt or debt already paid");
+      }
+
+      // B. Baca sisa terbaru (di dalam transaksi) untuk menentukan status.
+      const freshDebt = await tx.customerDebt.findUnique({
+        where: { id: validated.debtId },
+        include: { customer: true },
+      });
+      if (!freshDebt) throw new Error("Debt not found");
+      const newRemainingDebt = Number(freshDebt.remainingDebt);
+      const newStatus = newRemainingDebt === 0 ? DebtStatus.PAID : DebtStatus.PARTIAL;
+      const updatedDebt = await tx.customerDebt.update({
+        where: { id: validated.debtId },
+        data: { status: newStatus },
+        include: { customer: true },
+      });
+
       const paymentCount = await tx.debtPayment.count();
       const paymentNumber = `PAY-${String(paymentCount + 1).padStart(6, '0')}`;
 
-      // A. Buat History Pembayaran
+      // C. Buat History Pembayaran
       const payment = await tx.debtPayment.create({
         data: {
           paymentNumber,
@@ -301,36 +330,20 @@ export async function addCustomerDebtPayment(input: AddPaymentInput) {
         },
       });
 
-      // B. Update Data Hutang (CustomerDebt)
-      const updatedDebt = await tx.customerDebt.update({
-        where: { id: validated.debtId },
-        data: {
-          paidAmount: newPaidAmount,
-          remainingDebt: newRemainingDebt,
-          status: newStatus,
-        },
-        include: {
-          customer: true,
-        },
-      });
-
-      // C. [BAGIAN INI YANG HILANG SEBELUMNYA] Update Data Penjualan (Sale)
+      // D. Update Data Penjualan (Sale)
       // Agar status di menu 'Penjualan' ikut berubah jadi Lunas/Partial
       if (debt.saleId) {
-        
         // Tentukan status baru untuk Sale berdasarkan pelunasan hutang
         // Jika Hutang Lunas (PAID) -> Sale jadi COMPLETED
         // Jika Masih Nyicil (PARTIAL) -> Sale tetap PENDING (atau biarkan status lama)
-        
         const saleUpdateData: Prisma.SaleUpdateInput = {
-           paidAmount: { increment: validated.amount }
+          paidAmount: { increment: validated.amount },
         };
 
         // Jika hutang sudah lunas total, kita tandai Sale sebagai COMPLETED
         if (newStatus === DebtStatus.PAID) {
-           saleUpdateData.status = "COMPLETED";
-        } 
-       
+          saleUpdateData.status = "COMPLETED";
+        }
 
         await tx.sale.update({
           where: { id: debt.saleId },
@@ -415,12 +428,18 @@ export async function deleteCustomerDebt(id: string) {
 //UPDATE OVERDUE STATUS (Cron Job Helper)
 export async function updateOverdueDebts() {
   const session = await auth();
-requireMinimumRole(session, "ADMIN");
+  // M-24 FIX (Nov 2026): sebelumnya requireMinimumRole("ADMIN") THROW untuk
+  // KASIR, dan karena CustomerDebtClient memanggil fungsi ini sebelum memuat
+  // data, seluruh halaman hutang pelanggan gagal dimuat untuk kasir. Sekarang
+  // non-admin tidak di-throw — update dilewati dan halaman tetap dimuat.
+  if (!hasMinimumRole(session, "ADMIN")) {
+    return { success: true, skipped: true, message: "Overdue update dilewati (butuh ADMIN)" };
+  }
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    await prisma.customerDebt.updateMany({
+    const res = await prisma.customerDebt.updateMany({
       where: {
         dueDate: { lt: today },
         status: { in: [DebtStatus.UNPAID, DebtStatus.PARTIAL] },
@@ -430,7 +449,43 @@ requireMinimumRole(session, "ADMIN");
       },
     });
 
-    return { success: true, message: "Overdue debts updated" };
+    return { success: true, message: "Overdue debts updated", count: res.count };
+  } catch (error) {
+    console.error("Error updating overdue debts:", error);
+    return { success: false, error: "Failed to update overdue debts" };
+  }
+}
+
+// M-18: satu fungsi untuk cron — membalik status OVERDUE untuk hutang
+// pelanggan DAN hutang supplier yang lewat jatuh tempo & belum lunas.
+// Dipanggil dari endpoint cron /api/notifications/check-overdue (paket
+// perbaikan notifikasi): NotificationService.checkOverdueAndLowStock()
+// harus memanggil updateAllOverdueDebts() ini, atau cron-job.org memanggil
+// endpoint yang memanggilnya. Sebelumnya status OVERDUE hanya berubah saat
+// admin membuka halaman daftar hutang — tidak pernah ada pemicu berkala.
+export async function updateAllOverdueDebts() {
+  const session = await auth();
+  if (!hasMinimumRole(session, "ADMIN")) {
+    return { success: true, skipped: true, message: "Overdue update dilewati (butuh ADMIN)" };
+  }
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const where = {
+      dueDate: { lt: today },
+      status: { in: [DebtStatus.UNPAID, DebtStatus.PARTIAL] },
+    };
+    const [customer, supplier] = await Promise.all([
+      prisma.customerDebt.updateMany({ where, data: { status: DebtStatus.OVERDUE } }),
+      prisma.supplierDebt.updateMany({ where, data: { status: DebtStatus.OVERDUE } }),
+    ]);
+    return {
+      success: true,
+      message: "Overdue debts updated",
+      count: customer.count + supplier.count,
+      customerCount: customer.count,
+      supplierCount: supplier.count,
+    };
   } catch (error) {
     console.error("Error updating overdue debts:", error);
     return { success: false, error: "Failed to update overdue debts" };

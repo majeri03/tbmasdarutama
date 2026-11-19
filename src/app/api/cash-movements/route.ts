@@ -82,6 +82,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // SECURITY FIX (Nov 2026, H6): sebelumnya pengguna login mana pun (kasir)
+  // bisa mencatat kas masuk/keluar bebas — saldo kas bisa dipalsukan.
+  // Catatan kas manual hanya untuk ADMIN/SUPER_ADMIN.
+  const role = (session.user as { role?: string }).role;
+  if (role !== "SUPER_ADMIN" && role !== "ADMIN") {
+    return NextResponse.json({ error: "Forbidden: hanya admin yang bisa mencatat kas manual" }, { status: 403 });
+  }
+
   const { type, amount, description, category } = await req.json();
 
   if (!type || !amount || !description) {
@@ -91,10 +99,19 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Validasi: tipe harus IN/OUT, jumlah harus angka positif yang wajar.
+  if (type !== CashType.IN && type !== CashType.OUT) {
+    return NextResponse.json({ error: "type harus IN atau OUT" }, { status: 400 });
+  }
+  const amountNum = Number(amount);
+  if (!Number.isFinite(amountNum) || amountNum <= 0) {
+    return NextResponse.json({ error: "amount harus angka lebih dari 0" }, { status: 400 });
+  }
+
   const movement = await db.cashMovement.create({
     data: {
       type: type as CashType,
-      amount: Number(amount),
+      amount: amountNum,
       description,
       category,
       userId: session.user.id!,

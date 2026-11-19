@@ -1,0 +1,535 @@
+diff --git a/prisma/seed.sql b/prisma/seed.sql
+index 89b3619..ea3ab39 100644
+--- a/prisma/seed.sql
++++ b/prisma/seed.sql
+@@ -1,9 +1,19 @@
+ -- ==================== INSERT USERS ====================
+--- Password: admin123 (hashed dengan bcrypt)
++-- SECURITY FIX (Nov 2026, C1): akun seed dengan password admin123 DIHAPUS dari
++-- file ini. Password itu tertulis di repo dan hash-nya sama untuk kedua akun,
++-- jadi siapa pun bisa login SUPER_ADMIN kalau seed pernah dijalankan ke
++-- production. PENTING: mengubah file ini TIDAK mengubah password di database
++-- yang sudah ada — ganti password admin@tbmasdarutama.com dan
++-- kasir@tbmasdarutama.com langsung di dashboard / database, lalu hapus akun
++-- yang tidak dipakai. Jangan pernah menulis password (atau hash password
++-- yang masih aktif) di repo.
++-- Akun di bawah ini sengaja dibuat NONAKTIF dengan password yang tidak valid,
++-- supaya seed lama tidak bisa dipakai untuk masuk. Buat akun baru lewat
++-- dashboard (Manajemen Akun) dengan password kuat, bukan lewat seed.
+ INSERT INTO users (id, name, email, password, role, phone, address, "isActive", "createdAt", "updatedAt")
+-VALUES 
+-('cm5admin001', 'Super Admin', 'admin@tbmasdarutama.com', '$2b$10$2Jj4WejCXAbJGBlCI65d2erXic.fEONZA8F8S4pugGD00FY/rqe4K', 'SUPER_ADMIN', '081234567890', 'Jl. Raya Bangunan No. 123', true, NOW(), NOW()),
+-('cm5kasir001', 'Kasir 1', 'kasir@tbmasdarutama.com', '$2b$10$2Jj4WejCXAbJGBlCI65d2erXic.fEONZA8F8S4pugGD00FY/rqe4K', 'KASIR', '081234567891', NULL, true, NOW(), NOW())
++VALUES
++('cm5admin001', 'Super Admin', 'admin@tbmasdarutama.com', 'DISABLED-NO-VALID-PASSWORD-SET-VIA-DASHBOARD', 'SUPER_ADMIN', '081234567890', 'Jl. Raya Bangunan No. 123', false, NOW(), NOW()),
++('cm5kasir001', 'Kasir 1', 'kasir@tbmasdarutama.com', 'DISABLED-NO-VALID-PASSWORD-SET-VIA-DASHBOARD', 'KASIR', '081234567891', NULL, false, NOW(), NOW())
+ ON CONFLICT (email) DO NOTHING;
+ 
+ -- ==================== INSERT UNITS (SATUAN) ====================
+diff --git a/src/app/api/auth/login/route.ts b/src/app/api/auth/login/route.ts
+index 2fc93c6..69c96ac 100644
+--- a/src/app/api/auth/login/route.ts
++++ b/src/app/api/auth/login/route.ts
+@@ -4,6 +4,42 @@ import bcrypt from "bcryptjs";
+ import { signMobileToken } from "@/lib/utils/jwt";
+ import { errorResponse, validationErrorResponse } from "@/lib/utils/api";
+ 
++// SECURITY FIX (Nov 2026, H1): rate-limit login mobile. Sebelumnya tidak ada
++// batas percobaan sama sekali — password bisa ditebak berkali-kali.
++// Sederhana dan in-memory: 10 kegagalan per email+IP dalam 15 menit, lalu 429.
++// Catatan: di serverless (Vercel) tiap instance punya hitungannya sendiri,
++// jadi ini memperlambat brute-force, bukan menghilangkannya sepenuhnya.
++// Untuk perlindungan penuh, tambahkan rate-limit di edge (mis. Vercel /
++// Cloudflare) atau simpan hitungan di Redis/DB.
++const LOGIN_WINDOW_MS = 15 * 60 * 1000;
++const LOGIN_MAX_FAILED = 10;
++const failedLogins = new Map<string, { count: number; firstAt: number }>();
++
++function loginRateKey(request: NextRequest, email: string): string {
++  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
++  return `${ip}:${email.toLowerCase().trim()}`;
++}
++
++function isLoginRateLimited(key: string): boolean {
++  const entry = failedLogins.get(key);
++  if (!entry) return false;
++  if (Date.now() - entry.firstAt > LOGIN_WINDOW_MS) {
++    failedLogins.delete(key);
++    return false;
++  }
++  return entry.count >= LOGIN_MAX_FAILED;
++}
++
++function recordFailedLogin(key: string): void {
++  const now = Date.now();
++  const entry = failedLogins.get(key);
++  if (!entry || now - entry.firstAt > LOGIN_WINDOW_MS) {
++    failedLogins.set(key, { count: 1, firstAt: now });
++  } else {
++    entry.count += 1;
++  }
++}
++
+ /**
+  * POST /api/auth/login
+  * Endpoint login untuk aplikasi mobile (Expo).
+@@ -19,6 +55,15 @@ export async function POST(request: NextRequest) {
+       return validationErrorResponse("Email dan password wajib diisi.");
+     }
+ 
++    // 1b. Rate-limit: tolak sebelum cek password kalau sudah terlalu banyak gagal.
++    const rateKey = loginRateKey(request, String(email));
++    if (isLoginRateLimited(rateKey)) {
++      return NextResponse.json(
++        { success: false, error: "Terlalu banyak percobaan login. Coba lagi 15 menit lagi." },
++        { status: 429 }
++      );
++    }
++
+     // 2. Cari user di database
+     const user = await prisma.user.findUnique({
+       where: { email: email.toLowerCase().trim() },
+@@ -33,6 +78,7 @@ export async function POST(request: NextRequest) {
+     });
+ 
+     if (!user) {
++      recordFailedLogin(rateKey);
+       return NextResponse.json(
+         { success: false, error: "Email atau password salah." },
+         { status: 401 }
+@@ -40,22 +86,30 @@ export async function POST(request: NextRequest) {
+     }
+ 
+     // 3. Cek status akun
++    // SECURITY FIX (Nov 2026, L4): pesan dibedakan sebelumnya (403 khusus
++    // akun nonaktif) membocorkan akun mana yang nonaktif. Sekarang jawabannya
++    // sama seperti password salah — admin yang memberitahu pengguna langsung.
+     if (!user.isActive) {
++      recordFailedLogin(rateKey);
+       return NextResponse.json(
+-        { success: false, error: "Akun Anda telah dinonaktifkan. Hubungi admin." },
+-        { status: 403 }
++        { success: false, error: "Email atau password salah." },
++        { status: 401 }
+       );
+     }
+ 
+     // 4. Verifikasi password
+     const isPasswordValid = await bcrypt.compare(password, user.password);
+     if (!isPasswordValid) {
++      recordFailedLogin(rateKey);
+       return NextResponse.json(
+         { success: false, error: "Email atau password salah." },
+         { status: 401 }
+       );
+     }
+ 
++    // Login berhasil: bersihkan hitungan gagal untuk kunci ini.
++    failedLogins.delete(rateKey);
++
+     // 5. Generate mobile token yang terverifikasi
+     const sessionToken = signMobileToken({
+       id: user.id,
+diff --git a/src/app/api/bot/query/route.ts b/src/app/api/bot/query/route.ts
+index 69592b3..9de9ca3 100644
+--- a/src/app/api/bot/query/route.ts
++++ b/src/app/api/bot/query/route.ts
+@@ -1,5 +1,6 @@
+ import { NextResponse } from "next/server";
+ import prisma from "@/lib/prisma";
++import { getAuthenticatedUser } from "@/lib/utils/api";
+ 
+ function authCheck(request: Request) {
+   const clientApiKey = request.headers.get("x-api-key");
+@@ -14,7 +15,30 @@ const BLOCKED_KEYWORDS = [
+ ];
+ 
+ // POST /api/bot/query — Raw SQL SELECT only
++//
++// SECURITY FIX (Nov 2026, C3): endpoint ini DINONAKTIFKAN secara default.
++// `$queryRawUnsafe` dengan blocklist kata tidak bisa mencegah exfiltrasi:
++// `SELECT password, email FROM users` adalah query SELECT yang valid dan
++// lolos semua cek lama. Satu BOT_API_KEY yang bocor = semua hash password,
++// token reset, hutang, dan data keuangan bisa diambil.
++// Endpoint hanya hidup kalau SEMUA syarat ini terpenuhi:
++//   1. env BOT_QUERY_ENABLED === "true", DAN
++//   2. pemanggil login sebagai ADMIN/SUPER_ADMIN (sesi web/mobile), DAN
++//   3. header x-api-key cocok dengan BOT_API_KEY.
++// Rekomendasi: biarkan tetap mati. Kalau bot butuh data, buatkan endpoint
++// khusus dengan query tetap (bukan SQL bebas dari klien).
+ export async function POST(request: Request) {
++  if (process.env.BOT_QUERY_ENABLED !== "true") {
++    return NextResponse.json(
++      { status: "error", message: "Endpoint query SQL dinonaktifkan. Lihat komentar di src/app/api/bot/query/route.ts." },
++      { status: 403 }
++    );
++  }
++  const session = await getAuthenticatedUser();
++  const role = (session?.user as { role?: string } | undefined)?.role;
++  if (!session?.user || (role !== "SUPER_ADMIN" && role !== "ADMIN")) {
++    return NextResponse.json({ status: "error", message: "Akses Ditolak" }, { status: 401 });
++  }
+   if (!authCheck(request)) {
+     return NextResponse.json({ status: "error", message: "Akses Ditolak" }, { status: 401 });
+   }
+diff --git a/src/app/api/cash-movements/route.ts b/src/app/api/cash-movements/route.ts
+index a8aa937..fab1242 100644
+--- a/src/app/api/cash-movements/route.ts
++++ b/src/app/api/cash-movements/route.ts
+@@ -82,6 +82,14 @@ export async function POST(req: NextRequest) {
+     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+   }
+ 
++  // SECURITY FIX (Nov 2026, H6): sebelumnya pengguna login mana pun (kasir)
++  // bisa mencatat kas masuk/keluar bebas — saldo kas bisa dipalsukan.
++  // Catatan kas manual hanya untuk ADMIN/SUPER_ADMIN.
++  const role = (session.user as { role?: string }).role;
++  if (role !== "SUPER_ADMIN" && role !== "ADMIN") {
++    return NextResponse.json({ error: "Forbidden: hanya admin yang bisa mencatat kas manual" }, { status: 403 });
++  }
++
+   const { type, amount, description, category } = await req.json();
+ 
+   if (!type || !amount || !description) {
+@@ -91,10 +99,19 @@ export async function POST(req: NextRequest) {
+     );
+   }
+ 
++  // Validasi: tipe harus IN/OUT, jumlah harus angka positif yang wajar.
++  if (type !== CashType.IN && type !== CashType.OUT) {
++    return NextResponse.json({ error: "type harus IN atau OUT" }, { status: 400 });
++  }
++  const amountNum = Number(amount);
++  if (!Number.isFinite(amountNum) || amountNum <= 0) {
++    return NextResponse.json({ error: "amount harus angka lebih dari 0" }, { status: 400 });
++  }
++
+   const movement = await db.cashMovement.create({
+     data: {
+       type: type as CashType,
+-      amount: Number(amount),
++      amount: amountNum,
+       description,
+       category,
+       userId: session.user.id!,
+diff --git a/src/app/api/mobile/fcm/route.ts b/src/app/api/mobile/fcm/route.ts
+index 0b0353c..adcfda4 100644
+--- a/src/app/api/mobile/fcm/route.ts
++++ b/src/app/api/mobile/fcm/route.ts
+@@ -165,12 +165,26 @@ export async function POST(req: NextRequest) {
+     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+   }
+ 
++  // SECURITY FIX (Nov 2026, H3): sebelumnya pengguna login mana pun bisa
++  // mengirim push ke topik bebas ("admin", "driver", ...) dengan isi bebas —
++  // kasir bisa mengirim pengumuman palsu ke semua admin/driver.
++  // Sekarang hanya ADMIN/SUPER_ADMIN dan hanya ke topik yang dikenal.
++  const role = (session.user as { role?: string }).role;
++  if (role !== "SUPER_ADMIN" && role !== "ADMIN") {
++    return NextResponse.json({ error: "Forbidden: hanya admin yang bisa mengirim push manual" }, { status: 403 });
++  }
++
+   const { topic, title, body, data } = await req.json();
+ 
+   if (!topic || !title || !body) {
+     return NextResponse.json({ error: "topic, title, body wajib diisi" }, { status: 400 });
+   }
+ 
++  const ALLOWED_TOPICS = ["admin", "driver"];
++  if (!ALLOWED_TOPICS.includes(topic)) {
++    return NextResponse.json({ error: "topic tidak diizinkan" }, { status: 400 });
++  }
++
+   await sendToTopic({ topic, title, body, data: data ?? {} });
+   return NextResponse.json({ success: true });
+ }
+diff --git a/src/app/api/notifications/route.ts b/src/app/api/notifications/route.ts
+index 8c9c5b3..ff26662 100644
+--- a/src/app/api/notifications/route.ts
++++ b/src/app/api/notifications/route.ts
+@@ -92,10 +92,24 @@ export async function PATCH(request: NextRequest) {
+     }
+ 
+     if (id) {
+-      await prisma.notification.update({
+-        where: { id },
++      // SECURITY FIX (Nov 2026, H5): sebelumnya update by id tanpa batasan —
++      // kasir mana pun bisa menandai notifikasi admin sebagai dibaca.
++      // Sekarang hanya notifikasi milik user / role-nya yang bisa diubah.
++      const userRole = session.user.role as Role;
++      const scopedWhere: Prisma.NotificationWhereInput = {
++        id,
++        OR: [
++          { userId: session.user.id },
++          { role: userRole },
++          { role: null },
++          ...(userRole === "SUPER_ADMIN" ? [{ role: "ADMIN" as Role }] : []),
++        ],
++      };
++      const res = await prisma.notification.updateMany({
++        where: scopedWhere,
+         data: { isRead: true },
+       });
++      if (res.count === 0) return errorResponse("Notifikasi tidak ditemukan", 404);
+       return successResponse({ success: true }, "Notifikasi ditandai telah dibaca");
+     }
+ 
+@@ -133,9 +147,13 @@ export async function DELETE(request: NextRequest) {
+     };
+ 
+     if (id) {
+-      await prisma.notification.delete({
+-        where: { id },
++      // SECURITY FIX (Nov 2026, H5): sama seperti PATCH — hapus hanya kalau
++      // notifikasi itu milik user / role-nya (baseWhere yang sebelumnya
++      // dihitung tapi tidak dipakai di cabang ini).
++      const res = await prisma.notification.deleteMany({
++        where: { id, ...baseWhere },
+       });
++      if (res.count === 0) return errorResponse("Notifikasi tidak ditemukan", 404);
+       return successResponse({ success: true }, "Notifikasi berhasil dihapus");
+     }
+ 
+diff --git a/src/app/api/upload/route.ts b/src/app/api/upload/route.ts
+index 7d6734c..1930fd4 100644
+--- a/src/app/api/upload/route.ts
++++ b/src/app/api/upload/route.ts
+@@ -24,7 +24,17 @@ export async function POST(request: NextRequest) {
+     }
+ 
+     // Validate file type
+-    if (!file.type.startsWith("image/")) {
++    // SECURITY FIX (Nov 2026, H7): sebelumnya `image/*` lolos untuk SVG
++    // (`image/svg+xml`) — file SVG yang diunggah lalu dibuka bisa menjalankan
++    // script (stored XSS). Sekarang hanya jpg/png/webp, dan ekstensi diambil
++    // dari MIME yang sudah di-allowlist, bukan dari nama file.
++    const ALLOWED_MIME: Record<string, string> = {
++      "image/jpeg": "jpg",
++      "image/png": "png",
++      "image/webp": "webp",
++    };
++    const extension = ALLOWED_MIME[file.type];
++    if (!extension) {
+       return NextResponse.json(
+         { error: "File harus berupa gambar (jpg, png, webp)" },
+         { status: 400 }
+@@ -45,7 +55,6 @@ export async function POST(request: NextRequest) {
+     const cleanFolder = folder.replace(/[^a-zA-Z0-9_-]/g, "") || "products";
+     const timestamp = Date.now();
+     const randomString = Math.random().toString(36).substring(2, 15);
+-    const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+     const filename = `${cleanFolder}/${timestamp}-${randomString}.${extension}`;
+ 
+     // Convert file to buffer
+@@ -108,6 +117,21 @@ export async function DELETE(request: NextRequest) {
+       );
+     }
+ 
++    // SECURITY FIX (Nov 2026, H7): hapus file sebelumnya bisa dilakukan
++    // pengguna login mana pun dengan nama file bebas (termasuk `../`).
++    // Sekarang hanya ADMIN/SUPER_ADMIN, dan nama file harus pola
++    // `folder/nama.ext` tanpa path traversal.
++    const role = (session.user as { role?: string }).role;
++    if (role !== "SUPER_ADMIN" && role !== "ADMIN") {
++      return NextResponse.json(
++        { error: "Forbidden: hanya admin yang bisa menghapus file" },
++        { status: 403 }
++      );
++    }
++    if (!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+(?:-[a-zA-Z0-9_-]+)*\.(jpg|jpeg|png|webp)$/.test(filename)) {
++      return NextResponse.json({ error: "Nama file tidak valid" }, { status: 400 });
++    }
++
+     // Call Cloudflare Worker delete endpoint
+     if (WORKER_URL) {
+       try {
+diff --git a/src/app/api/wa-orders/[id]/route.ts b/src/app/api/wa-orders/[id]/route.ts
+index 984a7c7..ae77ab5 100644
+--- a/src/app/api/wa-orders/[id]/route.ts
++++ b/src/app/api/wa-orders/[id]/route.ts
+@@ -5,6 +5,12 @@ import { auth } from '@/lib/auth';
+ // GET /api/wa-orders/[id] - Detail satu orderan
+ export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+   try {
++    // SECURITY FIX (Nov 2026, C2): file ini mengimpor `auth` tapi tidak pernah
++    // memanggilnya di GET — detail order WA bisa dibaca tanpa login.
++    const session = await auth();
++    if (!session?.user) {
++      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
++    }
+     const { id } = await params;
+     const order = await prisma.waOrder.findUnique({
+       where: { id },
+diff --git a/src/app/api/wa-orders/cleanup/route.ts b/src/app/api/wa-orders/cleanup/route.ts
+index e3bbb09..af9da98 100644
+--- a/src/app/api/wa-orders/cleanup/route.ts
++++ b/src/app/api/wa-orders/cleanup/route.ts
+@@ -7,8 +7,9 @@ export async function DELETE(request: NextRequest) {
+     // Validasi API key (bisa dipanggil dari bot WA atau cron external)
+     const apiKey = request.headers.get('x-bot-api-key');
+     const validKey = process.env.WA_BOT_API_KEY || process.env.BOT_API_KEY;
+-    
+-    if (validKey && apiKey !== validKey) {
++
++    // SECURITY FIX (Nov 2026, C2): fail-closed — kunci yang hilang = ditolak.
++    if (!validKey || apiKey !== validKey) {
+       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+     }
+ 
+diff --git a/src/app/api/wa-orders/route.ts b/src/app/api/wa-orders/route.ts
+index 8712fd1..9ae9fd2 100644
+--- a/src/app/api/wa-orders/route.ts
++++ b/src/app/api/wa-orders/route.ts
+@@ -1,10 +1,17 @@
+ import { NextRequest, NextResponse } from 'next/server';
+ import prisma from '@/lib/prisma';
+ import { Prisma, WaOrderStatus } from '@prisma/client';
++import { getAuthenticatedUser } from '@/lib/utils/api';
+ 
+ // GET /api/wa-orders - List semua orderan WA
+ export async function GET(request: NextRequest) {
+   try {
++    // SECURITY FIX (Nov 2026, C2): GET ini sebelumnya tanpa auth sama sekali —
++    // siapa pun bisa membaca semua order WA (nama + nomor HP pelanggan).
++    const session = await getAuthenticatedUser();
++    if (!session?.user) {
++      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
++    }
+     const { searchParams } = new URL(request.url);
+     const status = searchParams.get('status') as WaOrderStatus | null;
+     const page = parseInt(searchParams.get('page') || '1');
+@@ -33,20 +40,10 @@ export async function GET(request: NextRequest) {
+       };
+     }
+ 
+-    // Auto-delete CONFIRMED/REJECTED orders older than 7 days
+-    try {
+-      const sevenDaysAgo = new Date();
+-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+-      await prisma.waOrder.deleteMany({
+-        where: {
+-          status: { in: ['CONFIRMED', 'REJECTED'] },
+-          createdAt: { lt: sevenDaysAgo }
+-        }
+-      });
+-    } catch (e) {
+-      console.error('[WA-ORDERS AUTO-CLEANUP]', e);
+-    }
+-
++    // SECURITY FIX (Nov 2026, H4): auto-delete di dalam GET DIHAPUS. GET yang
++    // menghapus data berarti siapa pun (termasuk crawler) bisa menghapus
++    // order CONFIRMED/REJECTED lama hanya dengan membuka endpoint ini.
++    // Pembersihan hanya lewat DELETE /api/wa-orders/cleanup yang ber-auth.
+     const [orders, total] = await Promise.all([
+       prisma.waOrder.findMany({
+         where,
+@@ -82,9 +79,14 @@ export async function GET(request: NextRequest) {
+ export async function POST(request: NextRequest) {
+   try {
+     // Validasi API key dari bot
++    // SECURITY FIX (Nov 2026, C2): fail-closed. Sebelumnya `if (validKey && ...)`
++    // berarti kalau WA_BOT_API_KEY tidak di-set, pengecekan dilewati dan siapa
++    // pun bisa menyuntik order palsu. Sekarang kunci yang hilang = ditolak.
++    // Pastikan WA_BOT_API_KEY di-set di hosting SEBELUM deploy ini, kalau
++    // tidak bot WA tidak bisa mengirim order.
+     const apiKey = request.headers.get('x-bot-api-key');
+     const validKey = process.env.WA_BOT_API_KEY;
+-    if (validKey && apiKey !== validKey) {
++    if (!validKey || apiKey !== validKey) {
+       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+     }
+ 
+diff --git a/src/lib/actions/password-reset.actions.ts b/src/lib/actions/password-reset.actions.ts
+index 2b2eec7..555124c 100644
+--- a/src/lib/actions/password-reset.actions.ts
++++ b/src/lib/actions/password-reset.actions.ts
+@@ -66,8 +66,12 @@ export async function requestPasswordReset(email: string) {
+       where: { email },
+     });
+ 
++    // SECURITY FIX (Nov 2026, M1): jangan bocorkan email terdaftar atau tidak.
++    // Sebelumnya pesan "Email tidak ditemukan" membuat penyerang bisa
++    // menebak alamat email mana yang punya akun. Sekarang jawabannya selalu
++    // sama — email reset hanya benar-benar dikirim kalau akunnya ada.
+     if (!user) {
+-      return { success: false, error: "Email tidak ditemukan" };
++      return { success: true, message: "Jika email terdaftar, link reset password telah dikirim ke email Anda" };
+     }
+ 
+     // Generate token (32 random bytes)
+diff --git a/src/lib/env.ts b/src/lib/env.ts
+index 8b5675b..ee5a956 100644
+--- a/src/lib/env.ts
++++ b/src/lib/env.ts
+@@ -5,6 +5,13 @@ const envSchema = z.object({
+   NEXTAUTH_SECRET: z.string().min(8, "NEXTAUTH_SECRET minimal harus 8 karakter"),
+   MOBILE_JWT_SECRET: z.string().min(8, "MOBILE_JWT_SECRET minimal harus 8 karakter").optional(),
+   NEXT_PUBLIC_APP_URL: z.string().url("NEXT_PUBLIC_APP_URL harus berupa URL valid").optional(),
++  // SECURITY FIX (Nov 2026, M6): kunci bot sebelumnya tidak divalidasi sama
++  // sekali, jadi ketiadaannya diam-diam mematikan auth (fail-open). Kunci
++  // ini tetap opsional di schema agar aplikasi tidak crash saat boot, tapi
++  // endpoint yang memakainya sekarang fail-closed (kunci hilang = ditolak).
++  // Set BOT_API_KEY dan WA_BOT_API_KEY di hosting sebelum deploy patch ini.
++  BOT_API_KEY: z.string().min(16, "BOT_API_KEY minimal 16 karakter").optional(),
++  WA_BOT_API_KEY: z.string().min(16, "WA_BOT_API_KEY minimal 16 karakter").optional(),
+   CLOUDFLARE_WORKER_URL: z.string().url("CLOUDFLARE_WORKER_URL harus berupa URL valid").optional(),
+   GROQ_API_KEYS: z.string().optional(),
+   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+diff --git a/src/lib/utils/jwt.ts b/src/lib/utils/jwt.ts
+index c3c7a9e..cce880e 100644
+--- a/src/lib/utils/jwt.ts
++++ b/src/lib/utils/jwt.ts
+@@ -3,15 +3,19 @@ import crypto from "crypto";
+ // MOBILE_JWT_SECRET dipisah dari NEXTAUTH_SECRET agar konsisten di Vercel.
+ // Set di Vercel: Settings → Environment Variables → MOBILE_JWT_SECRET
+ // Harus SAMA persis antara lokal .env dan Vercel env vars.
++//
++// SECURITY FIX (Nov 2026, C4): fallback string hardcoded sebelumnya dihapus.
++// Dulu, kalau MOBILE_JWT_SECRET dan NEXTAUTH_SECRET tidak di-set, fungsi ini
++// mengembalikan "temp-dev-only-secret-..." yang tertulis di repo — siapa pun
++// yang membaca repo bisa memalsukan token SUPER_ADMIN di environment
++// non-production. Sekarang: secret tidak ada = error keras di SEMUA
++// environment. Jangan tambahkan fallback apa pun di sini.
++// Catatan deploy: pastikan MOBILE_JWT_SECRET sudah di-set SEBELUM deploy ini,
++// kalau tidak login mobile akan gagal dengan error di atas (sengaja).
+ const getJwtSecret = (): string => {
+-  const secret = process.env.MOBILE_JWT_SECRET || process.env.NEXTAUTH_SECRET;
++  const secret = process.env.MOBILE_JWT_SECRET;
+   if (!secret) {
+-    if (process.env.NODE_ENV === "production") {
+-      throw new Error("CRITICAL ERROR: MOBILE_JWT_SECRET atau NEXTAUTH_SECRET wajib dikonfigurasi di production!");
+-    }
+-    // Hanya untuk kenyamanan development lokal jika lupa set env, namun tetap diberi peringatan
+-    console.warn("WARNING: MOBILE_JWT_SECRET / NEXTAUTH_SECRET belum dikonfigurasi. Menggunakan fallback lokal sementara.");
+-    return "temp-dev-only-secret-do-not-use-in-production-123456789";
++    throw new Error("CRITICAL ERROR: MOBILE_JWT_SECRET wajib dikonfigurasi. Jangan pakai fallback.");
+   }
+   return secret;
+ };
+@@ -56,12 +60,24 @@ export function verifyMobileToken(token: string): TokenPayload | null {
+     if (parts.length !== 3) return null;
+ 
+     const [header, data, signature] = parts;
++
++    // SECURITY FIX (Nov 2026, L2): validasi alg dan bandingkan signature
++    // dengan timingSafeEqual, bukan perbandingan string biasa.
++    let headerObj: { alg?: string };
++    try {
++      headerObj = JSON.parse(Buffer.from(header, "base64url").toString("utf-8")) as { alg?: string };
++    } catch {
++      return null;
++    }
++    if (headerObj.alg !== "HS256") return null;
++
+     const expectedSignature = crypto
+       .createHmac("sha256", JWT_SECRET)
+       .update(`${header}.${data}`)
+       .digest("base64url");
+-
+-    if (signature !== expectedSignature) {
++    const sigBuf = Buffer.from(signature);
++    const expBuf = Buffer.from(expectedSignature);
++    if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+       return null;
+     }
+ 

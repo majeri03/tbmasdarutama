@@ -13,6 +13,11 @@ import {
 } from "@/lib/validations/purchase.schema";
 import { Prisma, PurchaseStatus, MovementType } from "@prisma/client";
 import { requirePermission, type AuthSession } from "../utils/role";
+import {
+  loadUnitNames,
+  primaryQuantityOrThrow,
+  withUniqueRetry,
+} from "@/lib/utils/stock-units";
 
 //    GENERATE PO NUMBER   
 async function generatePONumber(): Promise<string> {
@@ -59,18 +64,27 @@ export async function createPurchase(input: CreatePurchaseInput) {
     requirePermission(session, "CREATE_PURCHASE");
     const validated = createPurchaseSchema.parse(input);
 
-    // Calculate totals
-    const totalAmount = validated.items.reduce(
-      (sum, item) => sum + item.subtotal,
-      0
-    );
-    const grandTotal = totalAmount - validated.discount + validated.tax;
+    // FIX QA (M-1/M-17): hitung ulang aritmetika dari harga & diskon per item
+    // (subtotal tidak lagi dipercaya mentah dari klien), tolak bayar lebih.
+    const recomputedItems = validated.items.map((item) => {
+      const gross = item.quantity * item.unitPrice;
+      const discount = Math.min(Math.max(item.discount ?? 0, 0), gross);
+      return { ...item, discount, subtotal: gross - discount };
+    });
+    const totalAmount = recomputedItems.reduce((sum, item) => sum + item.subtotal, 0);
+    const totalDiscount = Math.min(Math.max(validated.discount, 0), totalAmount);
+    const tax = Math.max(validated.tax, 0);
+    const grandTotal = totalAmount - totalDiscount + tax;
+    if (validated.paidAmount > grandTotal) {
+      return { success: false, error: "Jumlah bayar melebihi total PO." };
+    }
 
-    // Generate PO Number
-    const poNumber = await generatePONumber();
+    // Nomor PO dibuat fresh setiap percobaan (M-2 — tabrakan nomor diulang).
+    const purchase = await withUniqueRetry(async () => {
+      const poNumber = await generatePONumber();
 
-    // Create purchase with items
-    const purchase = await prisma.$transaction(async (tx) => {
+      // Create purchase with items
+      return prisma.$transaction(async (tx) => {
       const newPurchase = await tx.purchase.create({
         data: {
           poNumber,
@@ -78,15 +92,15 @@ export async function createPurchase(input: CreatePurchaseInput) {
           adminId: session.user.id,
           purchaseDate: validated.purchaseDate,
           totalAmount,
-          discount: validated.discount,
-          tax: validated.tax,
+          discount: totalDiscount,
+          tax,
           grandTotal,
           paidAmount: validated.paidAmount,
           paymentMethod: validated.paymentMethod,
           notes: validated.notes,
           status: PurchaseStatus.PENDING,
           purchaseItems: {
-            create: validated.items.map((item) => ({
+            create: recomputedItems.map((item) => ({
               productId: item.productId,
               unitId: item.unitId,
               quantity: item.quantity,
@@ -118,16 +132,17 @@ export async function createPurchase(input: CreatePurchaseInput) {
             debtNumber: `DEBT-SUPP-${poNumber}`,
             purchaseId: newPurchase.id,
             supplierId: validated.supplierId,
-            totalDebt: remainingDebt,
-            paidAmount: 0,
+            totalDebt: grandTotal,
+            paidAmount: validated.paidAmount,
             remainingDebt,
             dueDate,
-            status: "UNPAID",
+            status: validated.paidAmount > 0 ? "PARTIAL" : "UNPAID",
           },
         });
       }
 
       return newPurchase;
+      });
     });
 
     revalidatePath("/dashboard/purchases");
@@ -393,37 +408,63 @@ export async function receivePurchase(input: ReceivePurchaseInput) {
       return { success: false, error: "Purchase Order sudah diterima" };
     }
 
+    // FIX QA (M-19): klaim status di DALAM transaksi — dua klik "Terima"
+    // bersamaan tidak bisa sama-sama masuk. (B-1): konversi DIBAGI ke
+    // satuan utama, harus bulat, diagregasi per produk.
+    const unitNames = await loadUnitNames();
+    const receivePlan: Array<{ productId: string; qtyPrimary: number; productName: string }> = [];
+    {
+      const addByProduct = new Map<string, number>();
+      for (const item of purchase.purchaseItems) {
+        const productUnit = await prisma.productUnit.findFirst({
+          where: { productId: item.productId, unitId: item.unitId },
+        });
+        if (!productUnit) {
+          throw new Error(`Satuan untuk ${item.product?.name || "produk"} tidak ditemukan di master.`);
+        }
+        let qtyPrimary: number;
+        try {
+          qtyPrimary = primaryQuantityOrThrow({
+            quantity: item.quantity,
+            conversionValue: Number(productUnit.conversionValue),
+            productName: item.product?.name || "Produk",
+            unitName: unitNames.get(item.unitId) || "satuan",
+          });
+        } catch (e) {
+          return { success: false, error: e instanceof Error ? e.message : "Item tidak valid." };
+        }
+        addByProduct.set(item.productId, (addByProduct.get(item.productId) || 0) + qtyPrimary);
+      }
+      for (const [productId, qtyPrimary] of addByProduct.entries()) {
+        const product = purchase.purchaseItems.find((i) => i.productId === productId)?.product;
+        receivePlan.push({ productId, qtyPrimary, productName: product?.name || "Produk" });
+      }
+    }
+
     // Update purchase and stock in transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Update purchase status
-      const updatedPurchase = await tx.purchase.update({
-        where: { id: validated.id },
+      // Klaim dulu: hanya 1 yang berhasil kalau dipanggil bersamaan.
+      const claimed = await tx.purchase.updateMany({
+        where: { id: validated.id, status: { not: PurchaseStatus.RECEIVED } },
         data: {
           status: PurchaseStatus.RECEIVED,
           receivedDate: validated.receivedDate,
         },
       });
+      if (claimed.count === 0) {
+        throw new Error("Purchase Order sudah diterima atau tidak ditemukan");
+      }
+      const updatedPurchase = await tx.purchase.findUniqueOrThrow({
+        where: { id: validated.id },
+      });
 
-      // Update stock for each item
-      for (const item of purchase.purchaseItems) {
-        // Calculate quantity in base unit
-        const productUnit = await tx.productUnit.findFirst({
-          where: {
-            productId: item.productId,
-            unitId: item.unitId,
-          },
-        });
-
-        if (!productUnit) continue;
-
-        const quantityInBaseUnit = item.quantity * productUnit.conversionValue;
-
-        // Update product stock
+      // Update stock for each product (agregat, satuan utama)
+      for (const plan of receivePlan) {
         await tx.product.update({
-          where: { id: item.productId },
+          where: { id: plan.productId },
           data: {
             currentStock: {
-              increment: quantityInBaseUnit,
+              increment: plan.qtyPrimary,
             },
           },
         });
@@ -431,9 +472,9 @@ export async function receivePurchase(input: ReceivePurchaseInput) {
         // Create stock movement
         await tx.stockMovement.create({
           data: {
-            productId: item.productId,
+            productId: plan.productId,
             type: MovementType.IN,
-            quantity: quantityInBaseUnit,
+            quantity: plan.qtyPrimary,
             referenceType: "Purchase",
             referenceId: purchase.poNumber,
             notes: `Receive from PO: ${purchase.poNumber}`,
@@ -503,12 +544,30 @@ export async function updatePurchase(input: UpdatePurchaseInput) {
       };
     }
 
-    // Calculate totals
-    const totalAmount = validated.items.reduce(
-      (sum, item) => sum + item.subtotal,
-      0
-    );
-    const grandTotal = totalAmount - validated.discount + validated.tax;
+    // FIX QA (M-1/M-17): hitung ulang aritmetika; tolak bayar lebih.
+    const recomputedItems = validated.items.map((item) => {
+      const gross = item.quantity * item.unitPrice;
+      const discount = Math.min(Math.max(item.discount ?? 0, 0), gross);
+      return { ...item, discount, subtotal: gross - discount };
+    });
+    const totalAmount = recomputedItems.reduce((sum, item) => sum + item.subtotal, 0);
+    const totalDiscount = Math.min(Math.max(validated.discount, 0), totalAmount);
+    const tax = Math.max(validated.tax, 0);
+    const grandTotal = totalAmount - totalDiscount + tax;
+    if (validated.paidAmount > grandTotal) {
+      return { success: false, error: "Jumlah bayar melebihi total PO." };
+    }
+
+    // Cicilan hutang supplier yang sudah dibayar dipertahankan (M-3/M-17):
+    // totalDebt = grandTotal (bukan sisa), paidAmount tidak ditimpa form.
+    const existingDebt = await prisma.supplierDebt.findFirst({
+      where: { purchaseId: validated.id },
+    });
+    const preservedPaid = existingDebt ? Number(existingDebt.paidAmount) : 0;
+    if (preservedPaid > grandTotal) {
+      return { success: false, error: `Total baru (Rp ${grandTotal.toLocaleString("id-ID")}) lebih kecil dari yang sudah dibayar ke supplier (Rp ${preservedPaid.toLocaleString("id-ID")}).` };
+    }
+    const effectivePaid = existingDebt ? preservedPaid : validated.paidAmount;
 
     // Update purchase
     const purchase = await prisma.$transaction(async (tx) => {
@@ -523,14 +582,14 @@ export async function updatePurchase(input: UpdatePurchaseInput) {
           supplierId: validated.supplierId,
           purchaseDate: validated.purchaseDate,
           totalAmount,
-          discount: validated.discount,
-          tax: validated.tax,
+          discount: totalDiscount,
+          tax,
           grandTotal,
-          paidAmount: validated.paidAmount,
+          paidAmount: effectivePaid,
           paymentMethod: validated.paymentMethod,
           notes: validated.notes,
           purchaseItems: {
-            create: validated.items.map((item) => ({
+            create: recomputedItems.map((item) => ({
               productId: item.productId,
               unitId: item.unitId,
               quantity: item.quantity,
@@ -551,18 +610,18 @@ export async function updatePurchase(input: UpdatePurchaseInput) {
         },
       });
 
-      // Update supplier debt if exists
-      const debt = await tx.supplierDebt.findFirst({
-        where: { purchaseId: validated.id },
-      });
-
+      // Update supplier debt if exists (M-17): totalDebt = grandTotal,
+      // paidAmount dipertahankan, remaining = grandTotal - paid.
+      const debt = existingDebt;
       if (debt) {
-        const remainingDebt = grandTotal - validated.paidAmount;
+        const remainingDebt = grandTotal - preservedPaid;
         await tx.supplierDebt.update({
           where: { id: debt.id },
           data: {
-            totalDebt: remainingDebt,
+            totalDebt: grandTotal,
+            paidAmount: preservedPaid,
             remainingDebt,
+            status: remainingDebt <= 0 ? "PAID" : preservedPaid > 0 ? "PARTIAL" : "UNPAID",
           },
         });
       } else if (validated.paidAmount < grandTotal) {
@@ -575,11 +634,11 @@ export async function updatePurchase(input: UpdatePurchaseInput) {
             debtNumber: `DEBT-SUPP-${existingPurchase.poNumber}`,
             purchaseId: validated.id,
             supplierId: validated.supplierId,
-            totalDebt: remainingDebt,
-            paidAmount: 0,
+            totalDebt: grandTotal,
+            paidAmount: validated.paidAmount,
             remainingDebt,
             dueDate,
-            status: "UNPAID",
+            status: validated.paidAmount > 0 ? "PARTIAL" : "UNPAID",
           },
         });
       }

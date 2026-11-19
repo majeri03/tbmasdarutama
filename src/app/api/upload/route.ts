@@ -24,7 +24,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file type
-    if (!file.type.startsWith("image/")) {
+    // SECURITY FIX (Nov 2026, H7): sebelumnya `image/*` lolos untuk SVG
+    // (`image/svg+xml`) — file SVG yang diunggah lalu dibuka bisa menjalankan
+    // script (stored XSS). Sekarang hanya jpg/png/webp, dan ekstensi diambil
+    // dari MIME yang sudah di-allowlist, bukan dari nama file.
+    const ALLOWED_MIME: Record<string, string> = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+    };
+    const extension = ALLOWED_MIME[file.type];
+    if (!extension) {
       return NextResponse.json(
         { error: "File harus berupa gambar (jpg, png, webp)" },
         { status: 400 }
@@ -45,7 +55,6 @@ export async function POST(request: NextRequest) {
     const cleanFolder = folder.replace(/[^a-zA-Z0-9_-]/g, "") || "products";
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 15);
-    const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
     const filename = `${cleanFolder}/${timestamp}-${randomString}.${extension}`;
 
     // Convert file to buffer
@@ -106,6 +115,21 @@ export async function DELETE(request: NextRequest) {
         { error: "Parameter 'filename' wajib diisi" },
         { status: 400 }
       );
+    }
+
+    // SECURITY FIX (Nov 2026, H7): hapus file sebelumnya bisa dilakukan
+    // pengguna login mana pun dengan nama file bebas (termasuk `../`).
+    // Sekarang hanya ADMIN/SUPER_ADMIN, dan nama file harus pola
+    // `folder/nama.ext` tanpa path traversal.
+    const role = (session.user as { role?: string }).role;
+    if (role !== "SUPER_ADMIN" && role !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Forbidden: hanya admin yang bisa menghapus file" },
+        { status: 403 }
+      );
+    }
+    if (!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+(?:-[a-zA-Z0-9_-]+)*\.(jpg|jpeg|png|webp)$/.test(filename)) {
+      return NextResponse.json({ error: "Nama file tidak valid" }, { status: 400 });
     }
 
     // Call Cloudflare Worker delete endpoint

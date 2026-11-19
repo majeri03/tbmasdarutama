@@ -1,38 +1,25 @@
 import { Client } from 'pg';
 
-// Test tanpa password
-const client1 = new Client({
-  host: 'localhost',
-  port: 5432,
-  database: 'tb_masdarutama',
-  user: 'postgres',
-  password: '', // kosong
+// SECURITY FIX (Nov 2026): password database lokal sebelumnya ditulis
+// langsung di file ini ('', 'root'). Sekarang dibaca dari environment.
+// Cara pakai: PGPASSWORD=<password-postgres-lokal> node test-connection.js
+// (file ini hanya untuk tes koneksi lokal, jangan dipakai di production)
+const dbPassword = process.env.PGPASSWORD ?? process.env.DB_PASSWORD ?? '';
+
+const client = new Client({
+  host: process.env.PGHOST || 'localhost',
+  port: Number(process.env.PGPORT || 5432),
+  database: process.env.PGDATABASE || 'tb_masdarutama',
+  user: process.env.PGUSER || 'postgres',
+  password: dbPassword,
 });
 
-client1.connect()
+client.connect()
   .then(() => {
-    console.log('✅ Connected with EMPTY password');
-    client1.end();
+    console.log('✅ Connected to PostgreSQL');
+    client.end();
   })
-  .catch(() => {
-    console.log('❌ Failed with empty password');
-    
-    // Test dengan password = root
-    const client2 = new Client({
-      host: 'localhost',
-      port: 5432,
-      database: 'tb_masdarutama',
-      user: 'postgres',
-      password: 'root',
-    });
-    
-    client2.connect()
-      .then(() => {
-        console.log('✅ Connected with password: root');
-        client2.end();
-      })
-      .catch(() => {
-        console.log('❌ Failed with password: root');
-        console.log('⚠️  Coba cek password PostgreSQL di Laragon!');
-      });
+  .catch((err) => {
+    console.log('❌ Failed to connect. Cek PGPASSWORD / password PostgreSQL lokal.');
+    console.error(err.message);
   });

@@ -8,7 +8,7 @@ import {
   addSupplierPaymentSchema,
   AddSupplierPaymentInput,
 } from "@/lib/validations/supplier-debt.schema";
-import { requireMinimumRole, requirePermission, type AuthSession } from "../utils/role";
+import { requireMinimumRole, hasMinimumRole, requirePermission, type AuthSession } from "../utils/role";
 
 export async function getAllSupplierDebts(filters?: {
   search?: string;
@@ -275,32 +275,61 @@ export async function addSupplierDebtPayment(input: AddSupplierPaymentInput) {
       return { success: false, error: "Debt already paid" };
     }
 
+    // Cek awal di luar transaksi (UX saja). Cek yang menentukan ada DI DALAM
+    // transaksi di bawah (M-15) — lihat komentar di sana.
     const remainingDebt = Number(debt.remainingDebt);
     if (validated.amount > remainingDebt) {
       return { success: false, error: "Payment amount exceeds remaining debt" };
     }
 
-    // Calculate new values
-    const newPaidAmount = Number(debt.paidAmount) + validated.amount;
-    const newRemainingDebt = remainingDebt - validated.amount;
-    const newStatus =
-      newRemainingDebt === 0 ? DebtStatus.PAID : DebtStatus.PARTIAL;
-
-    // Generate payment number
-    const today = new Date();
-    const dateStr = today.toISOString().split("T")[0].replace(/-/g, "");
-    const count = await prisma.debtPayment.count({
-      where: {
-        paymentNumber: { startsWith: `PAY-${dateStr}` },
-      },
-    });
-    const paymentNumber = `PAY-${dateStr}-${String(count + 1).padStart(
-      3,
-      "0"
-    )}`;
-
     // Update in transaction
     const result = await prisma.$transaction(async (tx) => {
+      // M-15 FIX (Nov 2026): potong sisa hutang secara atomik. Update ini
+      // hanya berhasil kalau hutang belum lunas DAN sisa >= jumlah bayar,
+      // jadi dua pembayaran bersamaan tidak bisa sama-sama lolos dan
+      // menimpa total dengan nilai absolut dari bacaan basi.
+      const claimed = await tx.supplierDebt.updateMany({
+        where: {
+          id: validated.debtId,
+          status: { not: DebtStatus.PAID },
+          remainingDebt: { gte: validated.amount },
+        },
+        data: {
+          paidAmount: { increment: validated.amount },
+          remainingDebt: { decrement: validated.amount },
+        },
+      });
+      if (claimed.count === 0) {
+        throw new Error("Payment amount exceeds remaining debt or debt already paid");
+      }
+
+      // Baca sisa terbaru (di dalam transaksi) untuk menentukan status.
+      const freshDebt = await tx.supplierDebt.findUnique({
+        where: { id: validated.debtId },
+        include: { supplier: true },
+      });
+      if (!freshDebt) throw new Error("Debt not found");
+      const newStatus =
+        Number(freshDebt.remainingDebt) === 0 ? DebtStatus.PAID : DebtStatus.PARTIAL;
+      const updatedDebt = await tx.supplierDebt.update({
+        where: { id: validated.debtId },
+        data: { status: newStatus },
+        include: { supplier: true },
+      });
+
+      // Generate payment number
+      const today = new Date();
+      const dateStr = today.toISOString().split("T")[0].replace(/-/g, "");
+      const count = await tx.debtPayment.count({
+        where: {
+          paymentNumber: { startsWith: `PAY-${dateStr}` },
+        },
+      });
+      const paymentNumber = `PAY-${dateStr}-${String(count + 1).padStart(
+        3,
+        "0"
+      )}`;
+
       // Create payment record
       const payment = await tx.debtPayment.create({
         data: {
@@ -314,18 +343,18 @@ export async function addSupplierDebtPayment(input: AddSupplierPaymentInput) {
         },
       });
 
-      // Update debt
-      const updatedDebt = await tx.supplierDebt.update({
-        where: { id: validated.debtId },
-        data: {
-          paidAmount: newPaidAmount,
-          remainingDebt: newRemainingDebt,
-          status: newStatus,
-        },
-        include: {
-          supplier: true,
-        },
-      });
+      // M-16 FIX (Nov 2026): pembayaran hutang supplier sebelumnya tidak
+      // pernah memperbarui Purchase — Purchase.paidAmount selalu 0 walau
+      // hutang sudah dicicil. Sekarang naik bersamaan di transaksi yang sama.
+      // Catatan: model Purchase tidak punya remainingDebt; Purchase.status
+      // adalah status penerimaan barang (PENDING/RECEIVED/dll), bukan status
+      // bayar — jadi status Purchase TIDAK diubah di sini.
+      if (debt.purchaseId) {
+        await tx.purchase.update({
+          where: { id: debt.purchaseId },
+          data: { paidAmount: { increment: validated.amount } },
+        });
+      }
 
       return { payment, debt: updatedDebt };
     });
@@ -408,12 +437,17 @@ export async function deleteSupplierDebt(id: string) {
 
 export async function updateOverdueSupplierDebts() {
   const session = await auth();
-  requireMinimumRole(session, "ADMIN");
+  // M-24 FIX (Nov 2026): sama seperti updateOverdueDebts — jangan throw
+  // untuk non-admin (halaman hutang supplier gagal dimuat untuk kasir).
+  // Non-admin: lewati update, halaman tetap dimuat.
+  if (!hasMinimumRole(session, "ADMIN")) {
+    return { success: true, skipped: true, message: "Overdue update dilewati (butuh ADMIN)" };
+  }
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    await prisma.supplierDebt.updateMany({
+    const res = await prisma.supplierDebt.updateMany({
       where: {
         dueDate: { lt: today },
         status: { in: [DebtStatus.UNPAID, DebtStatus.PARTIAL] },
@@ -423,7 +457,7 @@ export async function updateOverdueSupplierDebts() {
       },
     });
 
-    return { success: true, message: "Overdue debts updated" };
+    return { success: true, message: "Overdue debts updated", count: res.count };
   } catch (error) {
     console.error("Error updating overdue debts:", error);
     return { success: false, error: "Failed to update overdue debts" };

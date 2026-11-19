@@ -165,10 +165,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // SECURITY FIX (Nov 2026, H3): sebelumnya pengguna login mana pun bisa
+  // mengirim push ke topik bebas ("admin", "driver", ...) dengan isi bebas —
+  // kasir bisa mengirim pengumuman palsu ke semua admin/driver.
+  // Sekarang hanya ADMIN/SUPER_ADMIN dan hanya ke topik yang dikenal.
+  const role = (session.user as { role?: string }).role;
+  if (role !== "SUPER_ADMIN" && role !== "ADMIN") {
+    return NextResponse.json({ error: "Forbidden: hanya admin yang bisa mengirim push manual" }, { status: 403 });
+  }
+
   const { topic, title, body, data } = await req.json();
 
   if (!topic || !title || !body) {
     return NextResponse.json({ error: "topic, title, body wajib diisi" }, { status: 400 });
+  }
+
+  const ALLOWED_TOPICS = ["admin", "driver"];
+  if (!ALLOWED_TOPICS.includes(topic)) {
+    return NextResponse.json({ error: "topic tidak diizinkan" }, { status: 400 });
   }
 
   await sendToTopic({ topic, title, body, data: data ?? {} });

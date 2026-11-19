@@ -5,6 +5,13 @@ const envSchema = z.object({
   NEXTAUTH_SECRET: z.string().min(8, "NEXTAUTH_SECRET minimal harus 8 karakter"),
   MOBILE_JWT_SECRET: z.string().min(8, "MOBILE_JWT_SECRET minimal harus 8 karakter").optional(),
   NEXT_PUBLIC_APP_URL: z.string().url("NEXT_PUBLIC_APP_URL harus berupa URL valid").optional(),
+  // SECURITY FIX (Nov 2026, M6): kunci bot sebelumnya tidak divalidasi sama
+  // sekali, jadi ketiadaannya diam-diam mematikan auth (fail-open). Kunci
+  // ini tetap opsional di schema agar aplikasi tidak crash saat boot, tapi
+  // endpoint yang memakainya sekarang fail-closed (kunci hilang = ditolak).
+  // Set BOT_API_KEY dan WA_BOT_API_KEY di hosting sebelum deploy patch ini.
+  BOT_API_KEY: z.string().min(16, "BOT_API_KEY minimal 16 karakter").optional(),
+  WA_BOT_API_KEY: z.string().min(16, "WA_BOT_API_KEY minimal 16 karakter").optional(),
   CLOUDFLARE_WORKER_URL: z.string().url("CLOUDFLARE_WORKER_URL harus berupa URL valid").optional(),
   GROQ_API_KEYS: z.string().optional(),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),

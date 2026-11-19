@@ -11,6 +11,14 @@ import { getSales, createSale } from "@/lib/actions/sale.actions";
 import { hasPermission } from "@/lib/utils/role";
 import { PaymentMethod, SaleStatus } from "@prisma/client";
 
+// Ubah tanggal menjadi akhir hari itu (23:59:59.999) supaya filter tanggal
+// mencakup seluruh hari yang dipilih (M-31).
+function endOfDay(d: Date): Date {
+  const out = new Date(d);
+  out.setHours(23, 59, 59, 999);
+  return out;
+}
+
 /**
  * GET /api/sales
  * Mengambil riwayat penjualan dengan filter lengkap.
@@ -25,6 +33,11 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const params = parseSearchParams(searchParams);
 
+    // M-31: dateTo harus akhir hari (23:59:59.999), bukan tengah malam —
+    // kalau tidak, filter satu hari (mis. dari APK: dateFrom = dateTo =
+    // hari yang sama) hampir tidak mengembalikan apa pun.
+    const dateToEnd = params.dateTo ? endOfDay(params.dateTo) : undefined;
+
     const result = await getSales({
       search: params.search,
       page: params.page,
@@ -34,7 +47,7 @@ export async function GET(request: NextRequest) {
       paymentMethod: params.paymentMethod as PaymentMethod | undefined,
       status: params.status as SaleStatus | undefined,
       dateFrom: params.dateFrom,
-      dateTo: params.dateTo,
+      dateTo: dateToEnd,
       sortOrder: params.sortOrder as "asc" | "desc" | undefined,
     }, session);
 

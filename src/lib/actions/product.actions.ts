@@ -245,6 +245,10 @@ export async function getProducts(
 
     const where: Prisma.ProductWhereInput = {
       AND: [
+        // m-3 FIX (Nov 2026): produk yang di-soft-delete (deletedAt terisi)
+        // sebelumnya bocor ke daftar produk. Selalu sembunyikan — restore
+        // pakai fungsi restoreProduct sendiri, bukan daftar ini.
+        { deletedAt: null },
         search
           ? {
               OR: [
@@ -400,7 +404,10 @@ export async function getProductById(id: string, externalSession?: AuthSession |
       },
     });
 
-    if (!product) {
+    // m-3 FIX (Nov 2026): jangan kembalikan produk yang sudah di-soft-delete
+    // (deletedAt terisi) — sebelumnya bisa dibuka lewat detail / dipakai
+    // transaksi. Restore tetap lewat restoreProduct.
+    if (!product || product.deletedAt) {
       return {
         success: false,
         error: "Produk tidak ditemukan.",

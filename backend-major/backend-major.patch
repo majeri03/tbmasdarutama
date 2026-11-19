@@ -1,0 +1,814 @@
+diff --git a/src/app/api/customers/route.ts b/src/app/api/customers/route.ts
+index db29dff..970206b 100644
+--- a/src/app/api/customers/route.ts
++++ b/src/app/api/customers/route.ts
+@@ -35,7 +35,27 @@ export async function GET(request: NextRequest) {
+       return errorResponse(result.error || "Gagal mengambil data customer.", 400);
+     }
+ 
+-    return successResponse(result.data);
++    // M-32 FIX (Nov 2026): param `search` sebelumnya diterima lalu dibuang —
++    // getCustomers tidak punya filter search, jadi pencarian pelanggan di APK
++    // tidak pernah memfilter apa pun. getCustomers ada di customer.actions.ts
++    // (di luar cakupan patch ini), jadi filter dilakukan di sini: daftar
++    // pelanggan toko kecil (5 pelanggan saat audit), dan hasilnya sama dengan
++    // filter contains-insensitive di nama/telepon/kode.
++    // TODO untuk pemilik customer.actions.ts: pindahkan filter ini ke
++    // getCustomers (where OR name/phone/code contains) supaya tetap cepat
++    // kalau pelanggan sudah banyak.
++    let data = result.data as Array<{ name?: string; phone?: string | null; code?: string }>;
++    if (params.search) {
++      const q = params.search.toLowerCase();
++      data = data.filter(
++        (c) =>
++          c.name?.toLowerCase().includes(q) ||
++          c.phone?.toLowerCase().includes(q) ||
++          c.code?.toLowerCase().includes(q)
++      );
++    }
++
++    return successResponse(data);
+   } catch (error) {
+     console.error("[API_CUSTOMERS_GET_ERROR]", error);
+     return errorResponse("Terjadi kesalahan internal server.");
+diff --git a/src/app/api/delivery-orders/route.ts b/src/app/api/delivery-orders/route.ts
+index 930899b..e2eaf35 100644
+--- a/src/app/api/delivery-orders/route.ts
++++ b/src/app/api/delivery-orders/route.ts
+@@ -14,6 +14,14 @@ import {
+ import { hasPermission } from "@/lib/utils/role";
+ import { DeliveryStatus } from "@prisma/client";
+ 
++// Ubah tanggal menjadi akhir hari itu (23:59:59.999) supaya filter tanggal
++// mencakup seluruh hari yang dipilih (M-31).
++function endOfDay(d: Date): Date {
++  const out = new Date(d);
++  out.setHours(23, 59, 59, 999);
++  return out;
++}
++
+ /**
+  * GET /api/delivery-orders
+  * Mengambil daftar Surat Jalan dengan filter.
+@@ -28,12 +36,24 @@ export async function GET(request: NextRequest) {
+     const { searchParams } = new URL(request.url);
+     const params = parseSearchParams(searchParams);
+ 
++    // M-33 FIX (Nov 2026): APK mengirim startDate/endDate, backend hanya
++    // membaca dateFrom/dateTo — filter tanggal pengiriman diam-diam diabaikan.
++    // Terima keduanya (dateFrom/dateTo tetap diutamakan kalau dua-duanya ada).
++    const dateFrom =
++      params.dateFrom ??
++      (searchParams.get("startDate") ? new Date(searchParams.get("startDate")!) : undefined);
++    // M-31: dateTo harus akhir hari, bukan tengah malam.
++    const dateToRaw =
++      params.dateTo ??
++      (searchParams.get("endDate") ? new Date(searchParams.get("endDate")!) : undefined);
++    const dateTo = dateToRaw ? endOfDay(dateToRaw) : undefined;
++
+     const result = await getAllDeliveryOrders({
+       search: params.search,
+       customerId: params.customerId,
+       status: params.status as DeliveryStatus | undefined,
+-      dateFrom: params.dateFrom,
+-      dateTo: params.dateTo,
++      dateFrom,
++      dateTo,
+     }, session);
+ 
+     if (!result.success) {
+diff --git a/src/app/api/products/route.ts b/src/app/api/products/route.ts
+index ca2361c..2ab874f 100644
+--- a/src/app/api/products/route.ts
++++ b/src/app/api/products/route.ts
+@@ -1,4 +1,4 @@
+-import { NextRequest } from "next/server";
++import { NextRequest, NextResponse } from "next/server";
+ import {
+   getAuthenticatedUser,
+   successResponse,
+@@ -39,7 +39,14 @@ export async function GET(request: NextRequest) {
+       return errorResponse(result.error || "Gagal mengambil data produk.", 400);
+     }
+ 
+-    return successResponse(result.data, undefined, 200);
++    // M-25 FIX (Nov 2026): getProducts sudah menghitung pagination, tapi
++    // successResponse(result.data) membuangnya — APK & klien lain hanya
++    // melihat halaman pertama. Kembalikan pagination di level atas (sesuai
++    // tipe ApiResponse). Bentuk data tetap array seperti sebelumnya.
++    return NextResponse.json(
++      { success: true, data: result.data, pagination: result.pagination },
++      { status: 200 }
++    );
+   } catch (error) {
+     console.error("[API_PRODUCTS_GET_ERROR]", error);
+     return errorResponse("Terjadi kesalahan internal server.");
+diff --git a/src/app/api/purchases/route.ts b/src/app/api/purchases/route.ts
+index 45190b5..a0e6c0d 100644
+--- a/src/app/api/purchases/route.ts
++++ b/src/app/api/purchases/route.ts
+@@ -1,4 +1,4 @@
+-import { NextRequest } from "next/server";
++import { NextRequest, NextResponse } from "next/server";
+ import {
+   getAuthenticatedUser,
+   successResponse,
+@@ -11,6 +11,14 @@ import { getAllPurchases, createPurchase } from "@/lib/actions/purchase.actions"
+ import { hasMinimumRole } from "@/lib/utils/role";
+ import { PurchaseStatus } from "@prisma/client";
+ 
++// Ubah tanggal menjadi akhir hari itu (23:59:59.999) supaya filter tanggal
++// mencakup seluruh hari yang dipilih (M-31).
++function endOfDay(d: Date): Date {
++  const out = new Date(d);
++  out.setHours(23, 59, 59, 999);
++  return out;
++}
++
+ /**
+  * GET /api/purchases
+  * Mengambil daftar Purchase Order dengan filter.
+@@ -25,6 +33,10 @@ export async function GET(request: NextRequest) {
+     const { searchParams } = new URL(request.url);
+     const params = parseSearchParams(searchParams);
+ 
++    // M-31: dateTo harus akhir hari (23:59:59.999), bukan tengah malam —
++    // kalau tidak, filter satu hari hampir tidak mengembalikan apa pun.
++    const dateToEnd = params.dateTo ? endOfDay(params.dateTo) : undefined;
++
+     const result = await getAllPurchases({
+       search: params.search,
+       page: params.page,
+@@ -32,14 +44,20 @@ export async function GET(request: NextRequest) {
+       supplierId: params.supplierId,
+       status: params.status as PurchaseStatus | undefined,
+       dateFrom: params.dateFrom,
+-      dateTo: params.dateTo,
++      dateTo: dateToEnd,
+     }, session);
+ 
+     if (!result.success) {
+       return errorResponse(result.error || "Gagal mengambil data purchase.", 400);
+     }
+ 
+-    return successResponse(result.data);
++    // M-27 FIX (Nov 2026): pagination dari getAllPurchases sebelumnya
++    // dibuang oleh successResponse(result.data) — APK hanya melihat 10 PO
++    // pertama. Kembalikan di level atas; bentuk data tetap array.
++    return NextResponse.json(
++      { success: true, data: result.data, pagination: result.pagination },
++      { status: 200 }
++    );
+   } catch (error) {
+     console.error("[API_PURCHASES_GET_ERROR]", error);
+     return errorResponse("Terjadi kesalahan internal server.");
+diff --git a/src/app/api/sales/route.ts b/src/app/api/sales/route.ts
+index d1108be..6d45774 100644
+--- a/src/app/api/sales/route.ts
++++ b/src/app/api/sales/route.ts
+@@ -11,6 +11,14 @@ import { getSales, createSale } from "@/lib/actions/sale.actions";
+ import { hasPermission } from "@/lib/utils/role";
+ import { PaymentMethod, SaleStatus } from "@prisma/client";
+ 
++// Ubah tanggal menjadi akhir hari itu (23:59:59.999) supaya filter tanggal
++// mencakup seluruh hari yang dipilih (M-31).
++function endOfDay(d: Date): Date {
++  const out = new Date(d);
++  out.setHours(23, 59, 59, 999);
++  return out;
++}
++
+ /**
+  * GET /api/sales
+  * Mengambil riwayat penjualan dengan filter lengkap.
+@@ -25,6 +33,11 @@ export async function GET(request: NextRequest) {
+     const { searchParams } = new URL(request.url);
+     const params = parseSearchParams(searchParams);
+ 
++    // M-31: dateTo harus akhir hari (23:59:59.999), bukan tengah malam —
++    // kalau tidak, filter satu hari (mis. dari APK: dateFrom = dateTo =
++    // hari yang sama) hampir tidak mengembalikan apa pun.
++    const dateToEnd = params.dateTo ? endOfDay(params.dateTo) : undefined;
++
+     const result = await getSales({
+       search: params.search,
+       page: params.page,
+@@ -34,7 +47,7 @@ export async function GET(request: NextRequest) {
+       paymentMethod: params.paymentMethod as PaymentMethod | undefined,
+       status: params.status as SaleStatus | undefined,
+       dateFrom: params.dateFrom,
+-      dateTo: params.dateTo,
++      dateTo: dateToEnd,
+       sortOrder: params.sortOrder as "asc" | "desc" | undefined,
+     }, session);
+ 
+diff --git a/src/app/api/stocks/route.ts b/src/app/api/stocks/route.ts
+index 87311d7..bf7008c 100644
+--- a/src/app/api/stocks/route.ts
++++ b/src/app/api/stocks/route.ts
+@@ -1,4 +1,4 @@
+-import { NextRequest } from "next/server";
++import { NextRequest, NextResponse } from "next/server";
+ import {
+   getAuthenticatedUser,
+   successResponse,
+@@ -14,6 +14,14 @@ import {
+ import { hasPermission } from "@/lib/utils/role";
+ import { MovementType } from "@prisma/client";
+ 
++// Ubah tanggal menjadi akhir hari itu (23:59:59.999) supaya filter tanggal
++// mencakup seluruh hari yang dipilih (M-31).
++function endOfDay(d: Date): Date {
++  const out = new Date(d);
++  out.setHours(23, 59, 59, 999);
++  return out;
++}
++
+ /**
+  * GET /api/stocks
+  * Mengambil riwayat pergerakan stok (Stock Movements) dengan filter.
+@@ -33,7 +41,8 @@ export async function GET(request: NextRequest) {
+       productId: params.productId,
+       movementType: searchParams.get("type") as MovementType | undefined,
+       dateFrom: searchParams.get("dateFrom") ? new Date(searchParams.get("dateFrom")!) : undefined,
+-      dateTo: searchParams.get("dateTo") ? new Date(searchParams.get("dateTo")!) : undefined,
++      // M-31: dateTo harus akhir hari, bukan tengah malam.
++      dateTo: searchParams.get("dateTo") ? endOfDay(new Date(searchParams.get("dateTo")!)) : undefined,
+       page: params.page,
+       limit: params.limit,
+     }, session);
+@@ -42,7 +51,20 @@ export async function GET(request: NextRequest) {
+       return errorResponse(result.error || "Gagal mengambil data stok.", 400);
+     }
+ 
+-    return successResponse(result.data);
++    // M-26 FIX (Nov 2026): pagination dari getStockMovements sebelumnya
++    // dibuang oleh successResponse(result.data) — Stock Opname di APK hanya
++    // melihat 15 movement pertama. Bentuk data mengikuti pola route sales
++    // yang sudah benar ({movements, pagination}) supaya StockOpnameScreen
++    // (membaca rawData.movements & rawData.pagination) langsung jalan, plus
++    // pagination di level atas (tipe ApiResponse).
++    return NextResponse.json(
++      {
++        success: true,
++        data: { movements: result.data, pagination: result.pagination },
++        pagination: result.pagination,
++      },
++      { status: 200 }
++    );
+   } catch (error) {
+     console.error("[API_STOCKS_GET_ERROR]", error);
+     return errorResponse("Terjadi kesalahan internal server.");
+diff --git a/src/lib/actions/customer-debt.actions.ts b/src/lib/actions/customer-debt.actions.ts
+index 990cb88..1cacbf6 100644
+--- a/src/lib/actions/customer-debt.actions.ts
++++ b/src/lib/actions/customer-debt.actions.ts
+@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
+ import { auth } from "@/lib/auth";
+ import { DebtStatus, Prisma } from "@prisma/client";
+ import { addPaymentSchema, AddPaymentInput } from "@/lib/validations/customer-debt.schema";
+-import { requirePermission, requireMinimumRole, type AuthSession } from "@/lib/utils/role";
++import { requirePermission, requireMinimumRole, hasMinimumRole, type AuthSession } from "@/lib/utils/role";
+ 
+ //GET ALL CUSTOMER DEBTS
+ export async function getAllCustomerDebts(filters?: {
+@@ -272,23 +272,52 @@ export async function addCustomerDebtPayment(input: AddPaymentInput) {
+       return { success: false, error: "Debt already paid" };
+     }
+ 
+-    const remainingDebt = Number(debt.remainingDebt);
+-    // Cek double proteksi (opsional, tapi aman)
+-    if (validated.amount > remainingDebt) {
+-      return { success: false, error: "Payment amount exceeds remaining debt" };
+-    }
+-
+-    // Hitung angka-angka baru
+-    const newPaidAmount = Number(debt.paidAmount) + validated.amount;
+-    const newRemainingDebt = remainingDebt - validated.amount;
+-    const newStatus = newRemainingDebt === 0 ? DebtStatus.PAID : DebtStatus.PARTIAL;
++    // M-15 FIX (Nov 2026): angka-angka di atas hanya cek awal (UX). Cek yang
++    // menentukan ada DI DALAM transaksi di bawah: update kondisional dengan
++    // increment/decrement atomik. Sebelumnya total dihitung dari bacaan di
++    // luar transaksi lalu ditimpa absolut — dua pembayaran bersamaan untuk
++    // sisa Rp1jt (masing-masing Rp600rb) sama-sama lolos dan hutang tercatat
++    // sisa Rp400rb padahal total bayar Rp1,2jt.
+ 
+     // 2. TRANSAKSI DATABASE (Update Debt + Payment + SALE)
+     const result = await prisma.$transaction(async (tx) => {
++      // A. Potong sisa hutang secara atomik. Update ini hanya berhasil kalau
++      // hutang belum lunas DAN sisa hutang >= jumlah bayar. Kalau dua
++      // pembayaran bersamaan, hanya satu yang lolos — yang kedua gagal di
++      // sini (bukan setelah payment tercatat).
++      const claimed = await tx.customerDebt.updateMany({
++        where: {
++          id: validated.debtId,
++          status: { not: DebtStatus.PAID },
++          remainingDebt: { gte: validated.amount },
++        },
++        data: {
++          paidAmount: { increment: validated.amount },
++          remainingDebt: { decrement: validated.amount },
++        },
++      });
++      if (claimed.count === 0) {
++        throw new Error("Payment amount exceeds remaining debt or debt already paid");
++      }
++
++      // B. Baca sisa terbaru (di dalam transaksi) untuk menentukan status.
++      const freshDebt = await tx.customerDebt.findUnique({
++        where: { id: validated.debtId },
++        include: { customer: true },
++      });
++      if (!freshDebt) throw new Error("Debt not found");
++      const newRemainingDebt = Number(freshDebt.remainingDebt);
++      const newStatus = newRemainingDebt === 0 ? DebtStatus.PAID : DebtStatus.PARTIAL;
++      const updatedDebt = await tx.customerDebt.update({
++        where: { id: validated.debtId },
++        data: { status: newStatus },
++        include: { customer: true },
++      });
++
+       const paymentCount = await tx.debtPayment.count();
+       const paymentNumber = `PAY-${String(paymentCount + 1).padStart(6, '0')}`;
+ 
+-      // A. Buat History Pembayaran
++      // C. Buat History Pembayaran
+       const payment = await tx.debtPayment.create({
+         data: {
+           paymentNumber,
+@@ -301,36 +330,20 @@ export async function addCustomerDebtPayment(input: AddPaymentInput) {
+         },
+       });
+ 
+-      // B. Update Data Hutang (CustomerDebt)
+-      const updatedDebt = await tx.customerDebt.update({
+-        where: { id: validated.debtId },
+-        data: {
+-          paidAmount: newPaidAmount,
+-          remainingDebt: newRemainingDebt,
+-          status: newStatus,
+-        },
+-        include: {
+-          customer: true,
+-        },
+-      });
+-
+-      // C. [BAGIAN INI YANG HILANG SEBELUMNYA] Update Data Penjualan (Sale)
++      // D. Update Data Penjualan (Sale)
+       // Agar status di menu 'Penjualan' ikut berubah jadi Lunas/Partial
+       if (debt.saleId) {
+-        
+         // Tentukan status baru untuk Sale berdasarkan pelunasan hutang
+         // Jika Hutang Lunas (PAID) -> Sale jadi COMPLETED
+         // Jika Masih Nyicil (PARTIAL) -> Sale tetap PENDING (atau biarkan status lama)
+-        
+         const saleUpdateData: Prisma.SaleUpdateInput = {
+-           paidAmount: { increment: validated.amount }
++          paidAmount: { increment: validated.amount },
+         };
+ 
+         // Jika hutang sudah lunas total, kita tandai Sale sebagai COMPLETED
+         if (newStatus === DebtStatus.PAID) {
+-           saleUpdateData.status = "COMPLETED";
+-        } 
+-       
++          saleUpdateData.status = "COMPLETED";
++        }
+ 
+         await tx.sale.update({
+           where: { id: debt.saleId },
+@@ -415,12 +428,18 @@ export async function deleteCustomerDebt(id: string) {
+ //UPDATE OVERDUE STATUS (Cron Job Helper)
+ export async function updateOverdueDebts() {
+   const session = await auth();
+-requireMinimumRole(session, "ADMIN");
++  // M-24 FIX (Nov 2026): sebelumnya requireMinimumRole("ADMIN") THROW untuk
++  // KASIR, dan karena CustomerDebtClient memanggil fungsi ini sebelum memuat
++  // data, seluruh halaman hutang pelanggan gagal dimuat untuk kasir. Sekarang
++  // non-admin tidak di-throw — update dilewati dan halaman tetap dimuat.
++  if (!hasMinimumRole(session, "ADMIN")) {
++    return { success: true, skipped: true, message: "Overdue update dilewati (butuh ADMIN)" };
++  }
+   try {
+     const today = new Date();
+     today.setHours(0, 0, 0, 0);
+ 
+-    await prisma.customerDebt.updateMany({
++    const res = await prisma.customerDebt.updateMany({
+       where: {
+         dueDate: { lt: today },
+         status: { in: [DebtStatus.UNPAID, DebtStatus.PARTIAL] },
+@@ -430,7 +449,43 @@ requireMinimumRole(session, "ADMIN");
+       },
+     });
+ 
+-    return { success: true, message: "Overdue debts updated" };
++    return { success: true, message: "Overdue debts updated", count: res.count };
++  } catch (error) {
++    console.error("Error updating overdue debts:", error);
++    return { success: false, error: "Failed to update overdue debts" };
++  }
++}
++
++// M-18: satu fungsi untuk cron — membalik status OVERDUE untuk hutang
++// pelanggan DAN hutang supplier yang lewat jatuh tempo & belum lunas.
++// Dipanggil dari endpoint cron /api/notifications/check-overdue (paket
++// perbaikan notifikasi): NotificationService.checkOverdueAndLowStock()
++// harus memanggil updateAllOverdueDebts() ini, atau cron-job.org memanggil
++// endpoint yang memanggilnya. Sebelumnya status OVERDUE hanya berubah saat
++// admin membuka halaman daftar hutang — tidak pernah ada pemicu berkala.
++export async function updateAllOverdueDebts() {
++  const session = await auth();
++  if (!hasMinimumRole(session, "ADMIN")) {
++    return { success: true, skipped: true, message: "Overdue update dilewati (butuh ADMIN)" };
++  }
++  try {
++    const today = new Date();
++    today.setHours(0, 0, 0, 0);
++    const where = {
++      dueDate: { lt: today },
++      status: { in: [DebtStatus.UNPAID, DebtStatus.PARTIAL] },
++    };
++    const [customer, supplier] = await Promise.all([
++      prisma.customerDebt.updateMany({ where, data: { status: DebtStatus.OVERDUE } }),
++      prisma.supplierDebt.updateMany({ where, data: { status: DebtStatus.OVERDUE } }),
++    ]);
++    return {
++      success: true,
++      message: "Overdue debts updated",
++      count: customer.count + supplier.count,
++      customerCount: customer.count,
++      supplierCount: supplier.count,
++    };
+   } catch (error) {
+     console.error("Error updating overdue debts:", error);
+     return { success: false, error: "Failed to update overdue debts" };
+diff --git a/src/lib/actions/product.actions.ts b/src/lib/actions/product.actions.ts
+index e2d37c0..c41c6ce 100644
+--- a/src/lib/actions/product.actions.ts
++++ b/src/lib/actions/product.actions.ts
+@@ -245,6 +245,10 @@ export async function getProducts(
+ 
+     const where: Prisma.ProductWhereInput = {
+       AND: [
++        // m-3 FIX (Nov 2026): produk yang di-soft-delete (deletedAt terisi)
++        // sebelumnya bocor ke daftar produk. Selalu sembunyikan — restore
++        // pakai fungsi restoreProduct sendiri, bukan daftar ini.
++        { deletedAt: null },
+         search
+           ? {
+               OR: [
+@@ -400,7 +404,10 @@ export async function getProductById(id: string, externalSession?: AuthSession |
+       },
+     });
+ 
+-    if (!product) {
++    // m-3 FIX (Nov 2026): jangan kembalikan produk yang sudah di-soft-delete
++    // (deletedAt terisi) — sebelumnya bisa dibuka lewat detail / dipakai
++    // transaksi. Restore tetap lewat restoreProduct.
++    if (!product || product.deletedAt) {
+       return {
+         success: false,
+         error: "Produk tidak ditemukan.",
+diff --git a/src/lib/actions/stock.actions.ts b/src/lib/actions/stock.actions.ts
+index facf6ee..8a95cff 100644
+--- a/src/lib/actions/stock.actions.ts
++++ b/src/lib/actions/stock.actions.ts
+@@ -185,44 +185,57 @@ export async function createStockAdjustment(input: StockAdjustmentInput) {
+     // Validate input
+     const validated = stockAdjustmentSchema.parse(input);
+ 
+-    // Get current product stock
+-    const product = await prisma.product.findUnique({
+-      where: { id: validated.productId },
+-      select: { currentStock: true, name: true },
+-    });
++    // M-5 FIX (Nov 2026): baca stok + hitung + catat SEMUA di dalam satu
++    // transaksi. Sebelumnya stok dibaca di luar transaksi lalu stok baru
++    // dihitung dari bacaan basi — dua adjustment bersamaan saling menimpa.
++    // Selain itu, untuk tipe ADJUSTMENT quantity yang dicatat sekarang adalah
++    // SELISIH (stok baru - stok sekarang), bukan level absolut: naik dicatat
++    // sebagai IN, turun sebagai OUT, sebesar |selisih|. Dengan begitu riwayat
++    // stok konsisten (jumlah IN - OUT = perubahan stok) dan penghapusan
++    // movement bisa membalikkan efeknya dengan benar (lihat
++    // deleteStockMovement). referenceType tetap "Manual Adjustment" supaya
++    // asal movement tetap ketahuan.
++    const result = await prisma.$transaction(async (tx) => {
++      const product = await tx.product.findUnique({
++        where: { id: validated.productId },
++        select: { currentStock: true, name: true },
++      });
++      if (!product) {
++        throw new Error("Produk tidak ditemukan");
++      }
+ 
+-    if (!product) {
+-      return {
+-        success: false,
+-        error: "Produk tidak ditemukan",
+-      };
+-    }
++      let newStock = product.currentStock;
++      let movementType = validated.type;
++      let movementQty = validated.quantity;
++
++      if (validated.type === MovementType.IN) {
++        newStock += validated.quantity;
++      } else if (validated.type === MovementType.OUT) {
++        newStock -= validated.quantity;
++      } else if (validated.type === MovementType.ADJUSTMENT) {
++        // quantity = stok akhir yang diinginkan (level absolut dari form).
++        const delta = validated.quantity - product.currentStock;
++        if (delta === 0) {
++          throw new Error("Stock sudah sama dengan nilai adjustment, tidak ada perubahan");
++        }
++        movementType = delta > 0 ? MovementType.IN : MovementType.OUT;
++        movementQty = Math.abs(delta);
++        newStock = validated.quantity;
++      } else {
++        // RETURN: barang kembali masuk (stok bertambah).
++        newStock += validated.quantity;
++      }
+ 
+-    // Calculate new stock
+-    let newStock = product.currentStock;
+-    if (validated.type === MovementType.IN) {
+-      newStock += validated.quantity;
+-    } else if (validated.type === MovementType.OUT) {
+-      newStock -= validated.quantity;
+       if (newStock < 0) {
+-        return {
+-          success: false,
+-          error: "Stock tidak mencukupi untuk adjustment OUT",
+-        };
++        throw new Error("Stock tidak mencukupi untuk adjustment ini");
+       }
+-    } else if (validated.type === MovementType.ADJUSTMENT) {
+-      // For adjustment, quantity is the final stock value
+-      newStock = validated.quantity;
+-    }
+ 
+-    // Create transaction
+-    const result = await prisma.$transaction(async (tx) => {
+       // Create stock movement
+       const movement = await tx.stockMovement.create({
+         data: {
+           productId: validated.productId,
+-          type: validated.type,
+-          quantity: validated.quantity,
++          type: movementType,
++          quantity: movementQty,
+           referenceType: validated.referenceType || "Manual Adjustment",
+           referenceId: validated.referenceId,
+           notes: validated.notes,
+@@ -236,7 +249,7 @@ export async function createStockAdjustment(input: StockAdjustmentInput) {
+         data: { currentStock: newStock },
+       });
+ 
+-      return movement;
++      return { movement, productName: product.name, newStock };
+     });
+ 
+     revalidatePath("/dashboard/stocks");
+@@ -244,8 +257,8 @@ export async function createStockAdjustment(input: StockAdjustmentInput) {
+ 
+     return {
+       success: true,
+-      message: `Stock ${product.name} berhasil disesuaikan`,
+-      data: result,
++      message: `Stock ${result.productName} berhasil disesuaikan (stok sekarang: ${result.newStock})`,
++      data: result.movement,
+     };
+   } catch (error) {
+     console.error("Error creating stock adjustment:", error);
+@@ -458,31 +471,61 @@ export async function deleteStockMovement(id: string) {
+       };
+     }
+ 
+-    // Reverse stock adjustment
+-    let newStock = movement.product.currentStock;
+-    if (movement.type === MovementType.IN) {
+-      newStock -= movement.quantity; // Reverse IN
+-    } else if (movement.type === MovementType.OUT) {
+-      newStock += movement.quantity; // Reverse OUT
++    // M-6 FIX (Nov 2026): movement dari transaksi penjualan/pembelian tidak
++    // boleh dihapus dari riwayat stok — menghapusnya memutus jejak audit dan
++    // (kalau dibalik) merusak stok yang sudah dipakai transaksi lain.
++    // Yang boleh dihapus hanya movement manual (adjustment/opname/return).
++    const refType = movement.referenceType || "";
++    if (
++      refType === "Sale" ||
++      refType === "Sale Edit" ||
++      refType === "Sale Cancellation" ||
++      refType === "POS_SALE" ||
++      refType === "Purchase" ||
++      refType === "WaOrder" ||
++      refType === "DELIVERY_ORDER"
++    ) {
++      return {
++        success: false,
++        error: "Pergerakan dari penjualan/pembelian/pengiriman tidak boleh dihapus. Batalkan transaksinya lewat menu terkait.",
++      };
+     }
+ 
+-    if (newStock < 0) {
++    // Reverse stock adjustment — baca stok terbaru DI DALAM transaksi supaya
++    // tidak memakai bacaan basi.
++    // IN/RETURN menambah stok saat dicatat -> hapus = kurangi.
++    // OUT mengurangi stok saat dicatat -> hapus = tambah.
++    // ADJUSTMENT lama (sebelum fix M-5) mencatat quantity sebagai level stok
++    // akhir, bukan selisih — arah perubahannya tidak tercatat, jadi tidak
++    // bisa dibalik dengan aman -> tolak, suruh sesuaikan lewat Stock Opname.
++    if (movement.type === MovementType.ADJUSTMENT) {
+       return {
+         success: false,
+-        error: "Tidak dapat menghapus: stock akan menjadi negatif",
++        error: "Pergerakan ADJUSTMENT lama tidak bisa dihapus karena arah perubahannya tidak tercatat. Sesuaikan stok lewat Stock Opname.",
+       };
+     }
++    const delta =
++      movement.type === MovementType.IN || movement.type === MovementType.RETURN
++        ? -movement.quantity
++        : movement.quantity;
+ 
+     // Delete and update in transaction
+-    await prisma.$transaction([
+-      prisma.stockMovement.delete({
+-        where: { id },
+-      }),
+-      prisma.product.update({
++    await prisma.$transaction(async (tx) => {
++      const fresh = await tx.product.findUnique({
++        where: { id: movement.product.id },
++        select: { currentStock: true },
++      });
++      if (!fresh) throw new Error("Produk tidak ditemukan");
++      const newStock = fresh.currentStock + delta;
++      if (newStock < 0) {
++        throw new Error("Tidak dapat menghapus: stock akan menjadi negatif");
++      }
++      await tx.stockMovement.delete({ where: { id } });
++      await tx.product.update({
+         where: { id: movement.product.id },
+         data: { currentStock: newStock },
+-      }),
+-    ]);
++      });
++    });
+ 
+     revalidatePath("/dashboard/stocks");
+     revalidatePath("/dashboard/products");
+diff --git a/src/lib/actions/supplier-debt.actions.ts b/src/lib/actions/supplier-debt.actions.ts
+index 68ec2ec..1db6911 100644
+--- a/src/lib/actions/supplier-debt.actions.ts
++++ b/src/lib/actions/supplier-debt.actions.ts
+@@ -8,7 +8,7 @@ import {
+   addSupplierPaymentSchema,
+   AddSupplierPaymentInput,
+ } from "@/lib/validations/supplier-debt.schema";
+-import { requireMinimumRole, requirePermission, type AuthSession } from "../utils/role";
++import { requireMinimumRole, hasMinimumRole, requirePermission, type AuthSession } from "../utils/role";
+ 
+ export async function getAllSupplierDebts(filters?: {
+   search?: string;
+@@ -275,32 +275,61 @@ export async function addSupplierDebtPayment(input: AddSupplierPaymentInput) {
+       return { success: false, error: "Debt already paid" };
+     }
+ 
++    // Cek awal di luar transaksi (UX saja). Cek yang menentukan ada DI DALAM
++    // transaksi di bawah (M-15) — lihat komentar di sana.
+     const remainingDebt = Number(debt.remainingDebt);
+     if (validated.amount > remainingDebt) {
+       return { success: false, error: "Payment amount exceeds remaining debt" };
+     }
+ 
+-    // Calculate new values
+-    const newPaidAmount = Number(debt.paidAmount) + validated.amount;
+-    const newRemainingDebt = remainingDebt - validated.amount;
+-    const newStatus =
+-      newRemainingDebt === 0 ? DebtStatus.PAID : DebtStatus.PARTIAL;
+-
+-    // Generate payment number
+-    const today = new Date();
+-    const dateStr = today.toISOString().split("T")[0].replace(/-/g, "");
+-    const count = await prisma.debtPayment.count({
+-      where: {
+-        paymentNumber: { startsWith: `PAY-${dateStr}` },
+-      },
+-    });
+-    const paymentNumber = `PAY-${dateStr}-${String(count + 1).padStart(
+-      3,
+-      "0"
+-    )}`;
+-
+     // Update in transaction
+     const result = await prisma.$transaction(async (tx) => {
++      // M-15 FIX (Nov 2026): potong sisa hutang secara atomik. Update ini
++      // hanya berhasil kalau hutang belum lunas DAN sisa >= jumlah bayar,
++      // jadi dua pembayaran bersamaan tidak bisa sama-sama lolos dan
++      // menimpa total dengan nilai absolut dari bacaan basi.
++      const claimed = await tx.supplierDebt.updateMany({
++        where: {
++          id: validated.debtId,
++          status: { not: DebtStatus.PAID },
++          remainingDebt: { gte: validated.amount },
++        },
++        data: {
++          paidAmount: { increment: validated.amount },
++          remainingDebt: { decrement: validated.amount },
++        },
++      });
++      if (claimed.count === 0) {
++        throw new Error("Payment amount exceeds remaining debt or debt already paid");
++      }
++
++      // Baca sisa terbaru (di dalam transaksi) untuk menentukan status.
++      const freshDebt = await tx.supplierDebt.findUnique({
++        where: { id: validated.debtId },
++        include: { supplier: true },
++      });
++      if (!freshDebt) throw new Error("Debt not found");
++      const newStatus =
++        Number(freshDebt.remainingDebt) === 0 ? DebtStatus.PAID : DebtStatus.PARTIAL;
++      const updatedDebt = await tx.supplierDebt.update({
++        where: { id: validated.debtId },
++        data: { status: newStatus },
++        include: { supplier: true },
++      });
++
++      // Generate payment number
++      const today = new Date();
++      const dateStr = today.toISOString().split("T")[0].replace(/-/g, "");
++      const count = await tx.debtPayment.count({
++        where: {
++          paymentNumber: { startsWith: `PAY-${dateStr}` },
++        },
++      });
++      const paymentNumber = `PAY-${dateStr}-${String(count + 1).padStart(
++        3,
++        "0"
++      )}`;
++
+       // Create payment record
+       const payment = await tx.debtPayment.create({
+         data: {
+@@ -314,18 +343,18 @@ export async function addSupplierDebtPayment(input: AddSupplierPaymentInput) {
+         },
+       });
+ 
+-      // Update debt
+-      const updatedDebt = await tx.supplierDebt.update({
+-        where: { id: validated.debtId },
+-        data: {
+-          paidAmount: newPaidAmount,
+-          remainingDebt: newRemainingDebt,
+-          status: newStatus,
+-        },
+-        include: {
+-          supplier: true,
+-        },
+-      });
++      // M-16 FIX (Nov 2026): pembayaran hutang supplier sebelumnya tidak
++      // pernah memperbarui Purchase — Purchase.paidAmount selalu 0 walau
++      // hutang sudah dicicil. Sekarang naik bersamaan di transaksi yang sama.
++      // Catatan: model Purchase tidak punya remainingDebt; Purchase.status
++      // adalah status penerimaan barang (PENDING/RECEIVED/dll), bukan status
++      // bayar — jadi status Purchase TIDAK diubah di sini.
++      if (debt.purchaseId) {
++        await tx.purchase.update({
++          where: { id: debt.purchaseId },
++          data: { paidAmount: { increment: validated.amount } },
++        });
++      }
+ 
+       return { payment, debt: updatedDebt };
+     });
+@@ -408,12 +437,17 @@ export async function deleteSupplierDebt(id: string) {
+ 
+ export async function updateOverdueSupplierDebts() {
+   const session = await auth();
+-  requireMinimumRole(session, "ADMIN");
++  // M-24 FIX (Nov 2026): sama seperti updateOverdueDebts — jangan throw
++  // untuk non-admin (halaman hutang supplier gagal dimuat untuk kasir).
++  // Non-admin: lewati update, halaman tetap dimuat.
++  if (!hasMinimumRole(session, "ADMIN")) {
++    return { success: true, skipped: true, message: "Overdue update dilewati (butuh ADMIN)" };
++  }
+   try {
+     const today = new Date();
+     today.setHours(0, 0, 0, 0);
+ 
+-    await prisma.supplierDebt.updateMany({
++    const res = await prisma.supplierDebt.updateMany({
+       where: {
+         dueDate: { lt: today },
+         status: { in: [DebtStatus.UNPAID, DebtStatus.PARTIAL] },
+@@ -423,7 +457,7 @@ export async function updateOverdueSupplierDebts() {
+       },
+     });
+ 
+-    return { success: true, message: "Overdue debts updated" };
++    return { success: true, message: "Overdue debts updated", count: res.count };
+   } catch (error) {
+     console.error("Error updating overdue debts:", error);
+     return { success: false, error: "Failed to update overdue debts" };

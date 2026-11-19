@@ -3,15 +3,19 @@ import crypto from "crypto";
 // MOBILE_JWT_SECRET dipisah dari NEXTAUTH_SECRET agar konsisten di Vercel.
 // Set di Vercel: Settings → Environment Variables → MOBILE_JWT_SECRET
 // Harus SAMA persis antara lokal .env dan Vercel env vars.
+//
+// SECURITY FIX (Nov 2026, C4): fallback string hardcoded sebelumnya dihapus.
+// Dulu, kalau MOBILE_JWT_SECRET dan NEXTAUTH_SECRET tidak di-set, fungsi ini
+// mengembalikan "temp-dev-only-secret-..." yang tertulis di repo — siapa pun
+// yang membaca repo bisa memalsukan token SUPER_ADMIN di environment
+// non-production. Sekarang: secret tidak ada = error keras di SEMUA
+// environment. Jangan tambahkan fallback apa pun di sini.
+// Catatan deploy: pastikan MOBILE_JWT_SECRET sudah di-set SEBELUM deploy ini,
+// kalau tidak login mobile akan gagal dengan error di atas (sengaja).
 const getJwtSecret = (): string => {
-  const secret = process.env.MOBILE_JWT_SECRET || process.env.NEXTAUTH_SECRET;
+  const secret = process.env.MOBILE_JWT_SECRET;
   if (!secret) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("CRITICAL ERROR: MOBILE_JWT_SECRET atau NEXTAUTH_SECRET wajib dikonfigurasi di production!");
-    }
-    // Hanya untuk kenyamanan development lokal jika lupa set env, namun tetap diberi peringatan
-    console.warn("WARNING: MOBILE_JWT_SECRET / NEXTAUTH_SECRET belum dikonfigurasi. Menggunakan fallback lokal sementara.");
-    return "temp-dev-only-secret-do-not-use-in-production-123456789";
+    throw new Error("CRITICAL ERROR: MOBILE_JWT_SECRET wajib dikonfigurasi. Jangan pakai fallback.");
   }
   return secret;
 };
@@ -56,12 +60,24 @@ export function verifyMobileToken(token: string): TokenPayload | null {
     if (parts.length !== 3) return null;
 
     const [header, data, signature] = parts;
+
+    // SECURITY FIX (Nov 2026, L2): validasi alg dan bandingkan signature
+    // dengan timingSafeEqual, bukan perbandingan string biasa.
+    let headerObj: { alg?: string };
+    try {
+      headerObj = JSON.parse(Buffer.from(header, "base64url").toString("utf-8")) as { alg?: string };
+    } catch {
+      return null;
+    }
+    if (headerObj.alg !== "HS256") return null;
+
     const expectedSignature = crypto
       .createHmac("sha256", JWT_SECRET)
       .update(`${header}.${data}`)
       .digest("base64url");
-
-    if (signature !== expectedSignature) {
+    const sigBuf = Buffer.from(signature);
+    const expBuf = Buffer.from(expectedSignature);
+    if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
       return null;
     }
 

@@ -1,6 +1,6 @@
 import { Expo, ExpoPushMessage, ExpoPushTicket } from 'expo-server-sdk';
 import prisma from '@/lib/prisma';
-import { NotificationType, Prisma, Role } from '@prisma/client';
+import { DebtStatus, NotificationType, Prisma, Role } from '@prisma/client';
 
 const expo = new Expo();
 
@@ -67,7 +67,15 @@ export class NotificationService {
       }
 
       const validTokens = tokens.filter((t) => Expo.isExpoPushToken(t));
-      if (validTokens.length === 0) return;
+      if (validTokens.length === 0) {
+        // FIX (Nov 2026): sebelumnya diam-diam return di sini, jadi notifikasi
+        // tersimpan di DB tapi tidak ada push — dan tidak ada jejak di log.
+        // Sekarang dicatat supaya ketahuan kalau token HP belum terdaftar.
+        console.warn(
+          `[NotificationService] TIDAK ADA TOKEN VALID untuk "${options.title}" (type=${options.type}, role=${options.role ?? '-'}, userId=${options.userId ?? '-'}, total token di DB=${tokens.length}). Push TIDAK dikirim, hanya tersimpan di DB. Cek: APK sudah login & izinkan notifikasi? Token sudah masuk tabel device_tokens?`,
+        );
+        return;
+      }
 
       // 3. Bangun payload pesan
       const messages: ExpoPushMessage[] = validTokens.map((token) => ({
@@ -100,6 +108,11 @@ export class NotificationService {
                 await prisma.deviceToken.deleteMany({ where: { token: deadToken } }).catch(() => {});
                 await prisma.user.updateMany({ where: { expoPushToken: deadToken }, data: { expoPushToken: null } }).catch(() => {});
               }
+            } else if (ticket.status === 'error') {
+              // FIX (Nov 2026): error push selain DeviceNotRegistered sebelumnya
+              // diabaikan begitu saja. Sekarang dicatat, mis. FCM belum
+              // dikonfigurasi di Expo / token tidak valid.
+              console.error('[NotificationService] Push ticket error:', ticket.details?.error, ticket.message ?? '');
             }
           }
         } catch (e) {
@@ -123,17 +136,9 @@ export class NotificationService {
     });
   }
 
-  static async onWaOrderReceived(waOrderId: string, senderName: string, senderPhone: string) {
-    await this.send({
-      role: 'ADMIN',
-      title: '📱 Pesanan WA Baru!',
-      body: `Dari ${senderName} (${senderPhone}). Segera tinjau & konfirmasi.`,
-      type: 'NEW_ORDER',
-      screen: 'NotificationCenter',
-      params: { waOrderId },
-      channelId: 'orders',
-    });
-  }
+  // NOTE (Nov 2026): onWaOrderReceived DIHAPUS bersama endpoint WA order
+  // (src/app/api/wa-orders dihapus — pemilik tidak memakai order WA / bot).
+  // Satu-satunya pemanggil method ini adalah route WA yang sudah dihapus.
 
   static async onDeliveryUpdate(doId: string, doNumber: string, status: string, driverUserId?: string) {
     const statusLabel: Record<string, string> = {
@@ -175,5 +180,106 @@ export class NotificationService {
       screen: 'Debt',
       channelId: 'finance',
     });
+  }
+
+  // ── FIX (Nov 2026): pemicu yang sebelumnya tidak ada sama sekali ──────────
+  // onDebtOverdue / onLowStock ada idenya di notify.ts tapi tidak pernah
+  // dipanggil dari mana pun, jadi hutang jatuh tempo & stok rendah tidak
+  // pernah jadi push. Keduanya didedup 24 jam supaya tidak spam tiap cek.
+
+  private static async alreadyNotifiedRecently(
+    type: NotificationType,
+    title: string,
+    body: string,
+    hours = 24,
+  ): Promise<boolean> {
+    const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+    const existing = await prisma.notification.findFirst({
+      where: { type, title, body, createdAt: { gte: since } },
+      select: { id: true },
+    });
+    return !!existing;
+  }
+
+  /** Hutang/piutang jatuh tempo. Return false kalau sudah dikirim <24 jam lalu. */
+  static async onDebtOverdue(customerName: string, amount: number): Promise<boolean> {
+    const title = '⚠️ Piutang Jatuh Tempo';
+    const body = `${customerName} — Sisa Rp ${Number(amount).toLocaleString('id-ID')}`;
+    if (await this.alreadyNotifiedRecently('DEBT_DUE', title, body)) return false;
+    await this.send({
+      role: 'ADMIN',
+      title,
+      body,
+      type: 'DEBT_DUE',
+      screen: 'Debt',
+      channelId: 'finance',
+    });
+    return true;
+  }
+
+  /** Stok di bawah minimum. Return false kalau sudah dikirim <24 jam lalu. */
+  static async onLowStock(productName: string, currentStock: number, minStock: number): Promise<boolean> {
+    const title = '📉 Stok Rendah!';
+    const body = `${productName} tersisa ${currentStock} (min. ${minStock}). Segera lakukan pembelian.`;
+    if (await this.alreadyNotifiedRecently('LOW_STOCK', title, body)) return false;
+    await this.send({
+      role: 'ADMIN',
+      title,
+      body,
+      type: 'LOW_STOCK',
+      screen: 'Products',
+      channelId: 'default',
+    });
+    return true;
+  }
+
+  /** Cek stok rendah hanya untuk produk yang baru terjual (dipanggil setelah POS). */
+  static async checkLowStockForProductIds(productIds: string[]): Promise<number> {
+    if (productIds.length === 0) return 0;
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { name: true, currentStock: true, minStock: true },
+    });
+    let sent = 0;
+    for (const p of products) {
+      if (p.minStock > 0 && p.currentStock <= p.minStock) {
+        if (await this.onLowStock(p.name, p.currentStock, p.minStock)) sent++;
+      }
+    }
+    return sent;
+  }
+
+  /**
+   * Cek berkala (dipanggil endpoint /api/notifications/check-overdue):
+   * semua piutang yang sudah lewat jatuh tempo + semua produk stok rendah.
+   * Dipakai cron harian — dedup 24 jam ada di onDebtOverdue / onLowStock.
+   */
+  static async checkOverdueAndLowStock(): Promise<{ debtSent: number; stockSent: number }> {
+    let debtSent = 0;
+    const overdue = await prisma.customerDebt.findMany({
+      where: {
+        dueDate: { lt: new Date() },
+        remainingDebt: { gt: 0 },
+        status: { in: [DebtStatus.UNPAID, DebtStatus.PARTIAL, DebtStatus.OVERDUE] },
+      },
+      include: { customer: { select: { name: true } } },
+      take: 50,
+    });
+    for (const d of overdue) {
+      if (await this.onDebtOverdue(d.customer?.name ?? 'Pelanggan', Number(d.remainingDebt))) debtSent++;
+    }
+
+    let stockSent = 0;
+    const products = await prisma.product.findMany({
+      where: { isActive: true },
+      select: { name: true, currentStock: true, minStock: true },
+      take: 200,
+    });
+    for (const p of products) {
+      if (p.minStock > 0 && p.currentStock <= p.minStock) {
+        if (await this.onLowStock(p.name, p.currentStock, p.minStock)) stockSent++;
+      }
+    }
+    return { debtSent, stockSent };
   }
 }

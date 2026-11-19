@@ -234,6 +234,25 @@ export async function createSale(data: CreateSaleInput) {
       { maxWait: 5000, timeout: 20000 }
     );
 
+    // FIX (Nov 2026): penjualan manual dari web (SaleFormModal) sebelumnya
+    // TIDAK PERNAH memicu notifikasi — jalur ini langsung ke DB dan melewati
+    // POST /api/sales. Sekarang dipanggil juga dari sini, fire-and-forget
+    // supaya gagal kirim tidak menggagalkan transaksi.
+    try {
+      const { NotificationService } = await import("@/lib/services/notification.service");
+      NotificationService.onNewOrder(
+        sale.id,
+        invoiceNumber,
+        sale.customer?.name ?? "Pelanggan",
+        Number(sale.grandTotal),
+      ).catch((e) => console.error("[Notif] Error notifying new sale:", e));
+      NotificationService.checkLowStockForProductIds(productIds).catch((e) =>
+        console.error("[Notif] Error checking low stock after sale:", e),
+      );
+    } catch (e) {
+      console.error("[Notif] Order notification dispatch error (createSale):", e);
+    }
+
     revalidatePath("/dashboard/pos");
     revalidatePath("/dashboard/sales");
 

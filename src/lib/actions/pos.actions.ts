@@ -367,6 +367,26 @@ export async function createPosTransaction(data: CreateSaleInput) {
         return newSale;
     }, { timeout: 15000 }); // Timeout 15s
 
+    // D1. FIX (Nov 2026): Web POS sebelumnya TIDAK PERNAH memicu notifikasi —
+    // jalur ini langsung ke DB dan melewati POST /api/sales yang memanggil
+    // NotificationService.onNewOrder. Sekarang dipanggil juga dari sini,
+    // fire-and-forget supaya checkout tetap cepat (gagal kirim tidak
+    // menggagalkan transaksi). Sekalian cek stok rendah produk yang terjual.
+    try {
+      const { NotificationService } = await import("@/lib/services/notification.service");
+      NotificationService.onNewOrder(
+        sale.id,
+        sale.invoiceNumber,
+        sale.customer?.name ?? "Pelanggan",
+        Number(sale.grandTotal),
+      ).catch((e) => console.error("[Notif] Error notifying new POS order:", e));
+      NotificationService.checkLowStockForProductIds(productIds).catch((e) =>
+        console.error("[Notif] Error checking low stock after POS sale:", e),
+      );
+    } catch (e) {
+      console.error("[Notif] Order notification dispatch error (POS):", e);
+    }
+
     // D. Revalidate (Hanya path penting agar cepat)
     revalidatePath("/dashboard/pos"); 
     // Note: Kita tunda revalidate path lain (products/sales) jika dirasa membuat lambat, 

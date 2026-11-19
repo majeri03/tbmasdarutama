@@ -12,10 +12,10 @@ export async function GET() {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    const [waOrdersPending, deliveriesPending, overdueDebts, todayOrders] = await Promise.all([
-      prisma.waOrder.count({
-        where: { status: 'PENDING' }
-      }),
+    // NOTE (Nov 2026): hitungan WaOrder DIHAPUS — endpoint WA order & bot
+    // dihapus atas permintaan pemilik. Field `waOrders` dipertahankan = 0
+    // supaya APK lama yang membaca field ini tidak error.
+    const [deliveriesPending, overdueDebts, todayOrders] = await Promise.all([
       prisma.deliveryOrder.count({
         where: { status: 'PENDING' }
       }),
@@ -30,13 +30,13 @@ export async function GET() {
       })
     ]);
 
-    const totalUnread = waOrdersPending + deliveriesPending + overdueDebts;
+    const totalUnread = deliveriesPending + overdueDebts;
 
     return NextResponse.json({
       success: true,
       data: {
         total: totalUnread,
-        waOrders: waOrdersPending,
+        waOrders: 0,
         deliveries: deliveriesPending,
         overdueDebts,
         todayOrders

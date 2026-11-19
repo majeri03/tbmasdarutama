@@ -14,6 +14,14 @@ import {
 import { hasPermission } from "@/lib/utils/role";
 import { DeliveryStatus } from "@prisma/client";
 
+// Ubah tanggal menjadi akhir hari itu (23:59:59.999) supaya filter tanggal
+// mencakup seluruh hari yang dipilih (M-31).
+function endOfDay(d: Date): Date {
+  const out = new Date(d);
+  out.setHours(23, 59, 59, 999);
+  return out;
+}
+
 /**
  * GET /api/delivery-orders
  * Mengambil daftar Surat Jalan dengan filter.
@@ -28,12 +36,24 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const params = parseSearchParams(searchParams);
 
+    // M-33 FIX (Nov 2026): APK mengirim startDate/endDate, backend hanya
+    // membaca dateFrom/dateTo — filter tanggal pengiriman diam-diam diabaikan.
+    // Terima keduanya (dateFrom/dateTo tetap diutamakan kalau dua-duanya ada).
+    const dateFrom =
+      params.dateFrom ??
+      (searchParams.get("startDate") ? new Date(searchParams.get("startDate")!) : undefined);
+    // M-31: dateTo harus akhir hari, bukan tengah malam.
+    const dateToRaw =
+      params.dateTo ??
+      (searchParams.get("endDate") ? new Date(searchParams.get("endDate")!) : undefined);
+    const dateTo = dateToRaw ? endOfDay(dateToRaw) : undefined;
+
     const result = await getAllDeliveryOrders({
       search: params.search,
       customerId: params.customerId,
       status: params.status as DeliveryStatus | undefined,
-      dateFrom: params.dateFrom,
-      dateTo: params.dateTo,
+      dateFrom,
+      dateTo,
     }, session);
 
     if (!result.success) {

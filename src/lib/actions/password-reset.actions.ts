@@ -66,8 +66,12 @@ export async function requestPasswordReset(email: string) {
       where: { email },
     });
 
+    // SECURITY FIX (Nov 2026, M1): jangan bocorkan email terdaftar atau tidak.
+    // Sebelumnya pesan "Email tidak ditemukan" membuat penyerang bisa
+    // menebak alamat email mana yang punya akun. Sekarang jawabannya selalu
+    // sama — email reset hanya benar-benar dikirim kalau akunnya ada.
     if (!user) {
-      return { success: false, error: "Email tidak ditemukan" };
+      return { success: true, message: "Jika email terdaftar, link reset password telah dikirim ke email Anda" };
     }
 
     // Generate token (32 random bytes)

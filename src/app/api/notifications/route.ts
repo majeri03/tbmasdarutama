@@ -92,10 +92,24 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (id) {
-      await prisma.notification.update({
-        where: { id },
+      // SECURITY FIX (Nov 2026, H5): sebelumnya update by id tanpa batasan —
+      // kasir mana pun bisa menandai notifikasi admin sebagai dibaca.
+      // Sekarang hanya notifikasi milik user / role-nya yang bisa diubah.
+      const userRole = session.user.role as Role;
+      const scopedWhere: Prisma.NotificationWhereInput = {
+        id,
+        OR: [
+          { userId: session.user.id },
+          { role: userRole },
+          { role: null },
+          ...(userRole === "SUPER_ADMIN" ? [{ role: "ADMIN" as Role }] : []),
+        ],
+      };
+      const res = await prisma.notification.updateMany({
+        where: scopedWhere,
         data: { isRead: true },
       });
+      if (res.count === 0) return errorResponse("Notifikasi tidak ditemukan", 404);
       return successResponse({ success: true }, "Notifikasi ditandai telah dibaca");
     }
 
@@ -133,9 +147,13 @@ export async function DELETE(request: NextRequest) {
     };
 
     if (id) {
-      await prisma.notification.delete({
-        where: { id },
+      // SECURITY FIX (Nov 2026, H5): sama seperti PATCH — hapus hanya kalau
+      // notifikasi itu milik user / role-nya (baseWhere yang sebelumnya
+      // dihitung tapi tidak dipakai di cabang ini).
+      const res = await prisma.notification.deleteMany({
+        where: { id, ...baseWhere },
       });
+      if (res.count === 0) return errorResponse("Notifikasi tidak ditemukan", 404);
       return successResponse({ success: true }, "Notifikasi berhasil dihapus");
     }
 

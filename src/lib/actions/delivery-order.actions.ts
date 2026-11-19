@@ -15,6 +15,12 @@ import {
 import { requirePermission, type AuthSession } from "../utils/role";
 import { NotifEvent } from "../utils/notify";
 import { deleteFromR2, extractR2Filename } from "../utils/storage";
+import {
+  loadUnitNames,
+  primaryQuantityOrThrow,
+  decrementStockOrThrow,
+  withUniqueRetry,
+} from "@/lib/utils/stock-units";
 
 // Helper untuk mengekstrak Bukti Pengiriman dari field proofImage atau tag di notes
 function resolveProofImage(
@@ -325,11 +331,12 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
     // 1. Validasi Input Zod
     const validated = createDeliveryOrderSchema.parse(input);
 
-    // 2. VALIDASI STOK (PENTING: Jangan dihapus)
-    for (const item of validated.items) {
-      // Kita cek stok saat ini di database
-      const product = await prisma.product.findUnique({
-        where: { id: item.productId },
+    // 2. VALIDASI STOK (FIX QA B-1: konversi DIBAGI ke satuan utama, agregat
+    // per produk supaya 2 baris produk yang sama tidak lolos sendiri-sendiri)
+    {
+      const productIds = Array.from(new Set(validated.items.map((it) => it.productId)));
+      const checkProducts = await prisma.product.findMany({
+        where: { id: { in: productIds } },
         select: {
           id: true,
           name: true,
@@ -337,26 +344,37 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
           productUnits: { include: { unit: true } },
         },
       });
-
-      if (!product) {
-        return { success: false, error: `Produk tidak ditemukan: ${item.productId}` };
+      const needByProduct = new Map<string, number>();
+      for (const item of validated.items) {
+        const product = checkProducts.find((p) => p.id === item.productId);
+        if (!product) {
+          return { success: false, error: `Produk tidak ditemukan: ${item.productId}` };
+        }
+        const itemUnit = product.productUnits.find((pu) => pu.unitId === item.unitId);
+        if (!itemUnit) {
+          return { success: false, error: `Satuan tidak valid untuk produk: ${product.name}` };
+        }
+        let qtyPrimary: number;
+        try {
+          qtyPrimary = primaryQuantityOrThrow({
+            quantity: item.quantity,
+            conversionValue: Number(itemUnit.conversionValue),
+            productName: product.name,
+            unitName: itemUnit.unit?.name || "satuan",
+          });
+        } catch (e) {
+          return { success: false, error: e instanceof Error ? e.message : "Item tidak valid." };
+        }
+        needByProduct.set(item.productId, (needByProduct.get(item.productId) || 0) + qtyPrimary);
       }
-
-      // Validasi Unit
-      const itemUnit = product.productUnits.find((pu) => pu.unitId === item.unitId);
-      if (!itemUnit) {
-        return { success: false, error: `Satuan tidak valid untuk produk: ${product.name}` };
-      }
-
-      // Hitung kebutuhan stok dalam satuan dasar (misal: 1 Dus = 10 Pcs)
-      const requiredStock = item.quantity * Number(itemUnit.conversionValue);
-
-      // Cek apakah stok cukup
-      if (Number(product.currentStock) < requiredStock) {
-        return {
-          success: false,
-          error: `Stok ${product.name} tidak cukup. Tersedia: ${product.currentStock}, Butuh: ${requiredStock}`,
-        };
+      for (const [productId, need] of needByProduct.entries()) {
+        const product = checkProducts.find((p) => p.id === productId)!;
+        if (Number(product.currentStock) < need) {
+          return {
+            success: false,
+            error: `Stok ${product.name} tidak cukup. Tersedia: ${product.currentStock} (satuan utama), Butuh: ${need}`,
+          };
+        }
       }
     }
 
@@ -400,12 +418,6 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
       discount: number;
     }[] = [];
 
-    // Tipe data eksplisit untuk Stock Update
-    const stockUpdates: {
-      productId: string;
-      qtyBase: number;
-    }[] = [];
-
     // C. Loop Kalkulasi (Tanpa Query Database)
     for (const item of validated.items) {
       const unitKey = `${item.productId}-${item.unitId}`;
@@ -427,18 +439,12 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
         discount: 0,
       });
 
-      // Hitung Pengurangan Stok (Qty x Nilai Konversi)
-      const totalQtyBase = item.quantity * unitData.conversionValue;
-      
-      // Masukkan ke array Stock Updates
-      stockUpdates.push({
-        productId: item.productId,
-        qtyBase: totalQtyBase,
-      });
     }
 
     // 4. DATABASE TRANSACTION (OPTIMIZED)
-    const result = await prisma.$transaction(async (tx) => {
+    // Diulang kalau nomor DO/invoice/hutang tabrakan (M-2).
+    const result = await withUniqueRetry(() =>
+      prisma.$transaction(async (tx) => {
       // A. Generate Nomor Surat Jalan
       const doNumber = await generateDONumber(tx);
       
@@ -521,12 +527,12 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
       });
 
       return deliveryOrder;
-    }, 
+    },
     // KONFIGURASI TIMEOUT: 20 Detik
     {
-        maxWait: 5000, 
-        timeout: 20000 
-    });
+        maxWait: 5000,
+        timeout: 20000
+    }));
 
     // Revalidate semua halaman terkait
     revalidatePath("/dashboard/delivery-orders");
@@ -566,7 +572,6 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
     requirePermission(session, "UPDATE_DELIVERY_STATUS");
     const validated = updateDeliveryStatusSchema.parse(input);
 
-    // Get delivery order with items
     const deliveryOrder = await prisma.deliveryOrder.findUnique({
       where: { id: validated.id },
       include: {
@@ -575,193 +580,151 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
             product: true,
           },
         },
+        customer: true,
+        sale: {
+          include: { customerDebts: true },
+        },
       },
     });
 
     if (!deliveryOrder) {
       return { success: false, error: "Delivery order not found" };
     }
-    // MODIFIKASI: CEK KHUSUS STATUS CANCELLED
-    if (validated.status === "CANCELLED") {
-      
-      // 2. JALANKAN TRANSAKSI PEMBATALAN
-      await prisma.$transaction(async (tx) => {
-          // A. KEMBALIKAN STOK (RESTORE)
-          for (const item of deliveryOrder.deliveryItems) {
-              // Ambil konversi unit (misal 1 Sak = 50kg)
-              // Note: Pastikan Anda mengambil data unit/konversi yang benar
-              const pUnit = await tx.productUnit.findFirst({
-                  where: { productId: item.productId, unitId: item.unitId }
-              });
-              const conversion = Number(pUnit?.conversionValue || 1);
-              
-              // BALIKKAN STOK (INCREMENT)
-              await tx.product.update({
-                  where: { id: item.productId },
-                  data: { currentStock: { increment: Number(item.quantity) * Number(conversion) } }
-              });
-              
-              // BERSIHKAN LOG KELUAR (Stock Movement)
-              // Hapus log 'OUT' sebelumnya agar stok balance
-              await tx.stockMovement.deleteMany({
-                  where: { referenceId: validated.id, referenceType: "DELIVERY_ORDER" }
-              });
-          }
 
-          // B. HAPUS TAGIHAN/HUTANG (Agar customer tidak ditagih)
-          if (deliveryOrder.saleId) {
-              await tx.customerDebt.deleteMany({ 
-                  where: { saleId: deliveryOrder.saleId } 
-              });
-              
-              // C. NOL-KAN OMSET PENJUALAN
-              await tx.sale.update({
-                  where: { id: deliveryOrder.saleId },
-                  data: { 
-                      status: "CANCELLED", // Pastikan enum SaleStatus ada CANCELLED
-                      totalAmount: 0,
-                      grandTotal: 0,
-                      notes: `Dibatalkan dari DO: ${deliveryOrder.doNumber}`
-                  }
-              });
-          }
-
-          // D. AKHIRNYA UPDATE STATUS DO JADI CANCELLED
-          await tx.deliveryOrder.update({
-              where: { id: validated.id },
-              data: { status: "CANCELLED" }
-          });
-      });
-
-      revalidatePath("/dashboard/delivery-orders");
-      // LANGSUNG RETURN AGAR KODE DI BAWAHNYA TIDAK DIJALANKAN
-      return { success: true, message: "Pengiriman dibatalkan, stok dikembalikan & hutang dihapus." };
+    // FIX QA (M-9): state machine — hanya transisi yang masuk akal, dan status
+    // terminal (DELIVERED / CANCELLED) tidak bisa diubah lagi.
+    const ALLOWED: Record<string, string[]> = {
+      PENDING: ["IN_TRANSIT", "DELIVERED", "CANCELLED"],
+      IN_TRANSIT: ["DELIVERED", "CANCELLED"],
+      DELIVERED: [],
+      CANCELLED: [],
+    };
+    const from = deliveryOrder.status;
+    if (!ALLOWED[from].includes(validated.status)) {
+      return { success: false, error: `Status ${from} tidak bisa diubah ke ${validated.status}.` };
     }
-    // ✅ TAMBAHKAN: Check if status changing to DELIVERED
-    const isBecomingDelivered =
-      deliveryOrder.status !== "DELIVERED" && validated.status === "DELIVERED";
 
-    // Update delivery order
-    const updated = await prisma.deliveryOrder.update({
-      where: { id: validated.id },
-      data: {
-        status: validated.status,
-        receivedBy: validated.receivedBy,
-        receivedDate: validated.receivedDate,
-        ...(validated.notes ? { notes: validated.notes } : {}),
-        ...(validated.proofImage !== undefined
-          ? { proofImage: validated.proofImage }
-          : validated.notes
-          ? { proofImage: resolveProofImage(undefined, validated.notes) }
-          : {}),
-      },
-      include: {
-        customer: true,
-        deliveryItems: {
-          include: {
-            product: true,
-            unit: true,
+    // Penjualan yang dibuat otomatis oleh DO ini (bukan penjualan POS asli).
+    const isAutoSale = !!deliveryOrder.sale?.notes?.startsWith("Auto-Invoice DO:");
+
+    // ---- CANCELLED (dari PENDING / IN_TRANSIT): stok TIDAK pernah dipotong di
+    // status ini, jadi tidak ada yang dikembalikan (M-12). Hutang & penjualan
+    // hanya disentuh kalau penjualannya dibuat otomatis oleh DO ini; penjualan
+    // POS asli tidak boleh ikut terhapus / ternolkan.
+    if (validated.status === "CANCELLED") {
+      const paidDebt = deliveryOrder.sale?.customerDebts?.find((d) => Number(d.paidAmount) > 0);
+      if (isAutoSale && paidDebt) {
+        return {
+          success: false,
+          error: `Tidak dapat membatalkan: hutang ini sudah dibayar Rp ${Number(paidDebt.paidAmount).toLocaleString("id-ID")}.`,
+        };
+      }
+      await prisma.$transaction(async (tx) => {
+        if (isAutoSale && deliveryOrder.saleId) {
+          await tx.customerDebt.deleteMany({ where: { saleId: deliveryOrder.saleId } });
+          await tx.sale.update({
+            where: { id: deliveryOrder.saleId },
+            data: {
+              status: "CANCELLED",
+              totalAmount: 0,
+              grandTotal: 0,
+              notes: `Dibatalkan dari DO: ${deliveryOrder.doNumber}`,
+            },
+          });
+        }
+        await tx.deliveryOrder.update({
+          where: { id: validated.id },
+          data: { status: "CANCELLED" },
+        });
+      });
+      revalidatePath("/dashboard/delivery-orders");
+      return { success: true, message: "Pengiriman dibatalkan." };
+    }
+
+    // ---- IN_TRANSIT / DELIVERED: semua dalam SATU transaksi (M-14).
+    const updated = await prisma.$transaction(async (tx) => {
+      if (validated.status === "DELIVERED") {
+        // Apakah penjualan terkait sudah memotong stok saat dibuat? (B-5)
+        // Kalau ya (penjualan POS / manual), DO tidak boleh memotong lagi.
+        let saleAlreadyDeducted = false;
+        if (deliveryOrder.saleId) {
+          const saleMovements = await tx.stockMovement.findMany({
+            where: {
+              referenceId: deliveryOrder.saleId,
+              referenceType: { in: ["Sale", "POS_SALE", "Sale Edit"] },
+              type: "OUT",
+            },
+            select: { id: true },
+            take: 1,
+          });
+          saleAlreadyDeducted = saleMovements.length > 0;
+        }
+
+        if (!saleAlreadyDeducted) {
+          // Hitung kebutuhan stok dalam satuan utama (DIBAGI, harus bulat).
+          const unitNames = await loadUnitNames();
+          const needByProduct = new Map<string, { qtyPrimary: number; name: string }>();
+          for (const item of deliveryOrder.deliveryItems) {
+            const pu = await tx.productUnit.findFirst({
+              where: { productId: item.productId, unitId: item.unitId },
+            });
+            if (!pu) {
+              throw new Error(`Satuan untuk ${item.product?.name || "produk"} tidak ditemukan di master.`);
+            }
+            const qtyPrimary = primaryQuantityOrThrow({
+              quantity: item.quantity,
+              conversionValue: Number(pu.conversionValue),
+              productName: item.product?.name || "Produk",
+              unitName: unitNames.get(item.unitId) || "satuan",
+            });
+            const prev = needByProduct.get(item.productId);
+            needByProduct.set(item.productId, {
+              qtyPrimary: (prev?.qtyPrimary ?? 0) + qtyPrimary,
+              name: item.product?.name || "Produk",
+            });
+          }
+          for (const [productId, need] of needByProduct.entries()) {
+            await decrementStockOrThrow(tx, productId, need.qtyPrimary, need.name);
+            await tx.stockMovement.create({
+              data: {
+                productId,
+                type: "OUT",
+                quantity: need.qtyPrimary,
+                referenceType: "DELIVERY_ORDER",
+                referenceId: deliveryOrder.id,
+                notes: `Pengiriman ke ${deliveryOrder.customer.name}`,
+                createdById: session.user.id,
+              },
+            });
+          }
+        }
+      }
+
+      return tx.deliveryOrder.update({
+        where: { id: validated.id },
+        data: {
+          status: validated.status,
+          receivedBy: validated.receivedBy,
+          receivedDate: validated.receivedDate,
+          ...(validated.notes ? { notes: validated.notes } : {}),
+          ...(validated.proofImage !== undefined
+            ? { proofImage: validated.proofImage }
+            : validated.notes
+            ? { proofImage: resolveProofImage(undefined, validated.notes) }
+            : {}),
+        },
+        include: {
+          customer: true,
+          deliveryItems: {
+            include: {
+              product: true,
+              unit: true,
+            },
           },
         },
-      },
+      });
     });
 
-    // ✅ TAMBAHKAN: Deduct stock if status changed to DELIVERED
-    if (isBecomingDelivered) {
-      for (const item of deliveryOrder.deliveryItems) {
-        // Get primary unit for this product
-        const primaryUnit = await prisma.productUnit.findFirst({
-          where: {
-            productId: item.productId,
-            isPrimary: true,
-          },
-        });
-
-        if (!primaryUnit) {
-          console.warn(`No primary unit found for product ${item.productId}`);
-          continue;
-        }
-
-        // Get delivery item's unit conversion
-        const deliveryUnit = await prisma.productUnit.findFirst({
-          where: {
-            productId: item.productId,
-            unitId: item.unitId,
-          },
-        });
-
-        if (!deliveryUnit) {
-          console.warn(`Unit not found for product ${item.productId}`);
-          continue;
-        }
-
-        // Calculate quantity in primary unit
-        const quantityInPrimaryUnit =
-          Number(item.quantity) * Number(deliveryUnit.conversionValue);
-
-        // ✅ Create stock movement record
-        await prisma.stockMovement.create({
-          data: {
-            productId: item.productId,
-            type: "OUT",
-            quantity: quantityInPrimaryUnit,
-            referenceType: "DELIVERY_ORDER",
-            referenceId: deliveryOrder.id,
-            notes: `Pengiriman ke ${updated.customer.name}`,
-            createdById: session.user.id,
-          },
-        });
-        await prisma.product.update({
-          where: { id: item.productId },
-          data: {
-            currentStock: {
-              decrement: quantityInPrimaryUnit,
-            },
-          },
-        });
-      }
-    }
-    const isBecomingCancelled =
-      deliveryOrder.status === "DELIVERED" && validated.status === "DELIVERED";
-
-    if (isBecomingCancelled) {
-      // Restore stock (reverse the deduction)
-      for (const item of deliveryOrder.deliveryItems) {
-        const primaryUnit = await prisma.productUnit.findFirst({
-          where: { productId: item.productId, isPrimary: true },
-        });
-
-        const deliveryUnit = await prisma.productUnit.findFirst({
-          where: { productId: item.productId, unitId: item.unitId },
-        });
-
-        if (primaryUnit && deliveryUnit) {
-          const quantityInPrimaryUnit =
-            Number(item.quantity) * Number(deliveryUnit.conversionValue);
-
-          await prisma.stockMovement.create({
-            data: {
-              productId: item.productId,
-              type: "IN",
-              quantity: quantityInPrimaryUnit,
-              reference: `Cancelled DO: ${deliveryOrder.doNumber}`,
-              referenceType: "DELIVERY_ORDER", // ✅ TAMBAH INI (opsional)
-              referenceId: deliveryOrder.id,
-              notes: `Pembatalan pengiriman`,
-              createdById: session.user.id,
-            },
-          });
-          await prisma.product.update({
-            where: { id: item.productId },
-            data: {
-              currentStock: {
-                decrement: quantityInPrimaryUnit,
-              },
-            },
-          });
-        }
-      }
-    }
     revalidatePath("/dashboard/delivery-orders");
 
     // Kirim notifikasi perubahan status DO
@@ -792,6 +755,7 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
   }
 }
 
+
 //         UPDATE DELIVERY ORDER (EDIT SURAT JALAN OLEH ADMIN / SUPERADMIN)
 export async function updateDeliveryOrder(
   input: UpdateDeliveryOrderInput,
@@ -810,6 +774,19 @@ export async function updateDeliveryOrder(
     });
     if (!existingDO) {
       return { success: false, error: "Surat Jalan tidak ditemukan" };
+    }
+
+    // FIX QA (M-13): status & tanda terima TIDAK boleh diubah lewat Edit —
+    // status hanya lewat updateDeliveryStatus (ada efek stoknya), edit hanya
+    // untuk tanggal/supir/kendaraan/catatan/bukti.
+    if (validated.status !== undefined) {
+      return { success: false, error: "Status Surat Jalan tidak bisa diubah lewat Edit. Pakai menu Ubah Status." };
+    }
+    if (validated.receivedBy !== undefined || validated.receivedDate !== undefined) {
+      return { success: false, error: "Penerima / tanggal terima hanya bisa diisi saat mengubah status ke DITERIMA." };
+    }
+    if (existingDO.status === "DELIVERED" || existingDO.status === "CANCELLED") {
+      return { success: false, error: "Surat Jalan yang sudah DITERIMA / dibatalkan tidak bisa diedit." };
     }
 
     // Siapkan data update
@@ -831,15 +808,6 @@ export async function updateDeliveryOrder(
     } else if (validated.notes) {
       const extracted = resolveProofImage(undefined, validated.notes);
       if (extracted) updateData.proofImage = extracted;
-    }
-    if (validated.status !== undefined) {
-      updateData.status = validated.status;
-    }
-    if (validated.receivedBy !== undefined) {
-      updateData.receivedBy = validated.receivedBy;
-    }
-    if (validated.receivedDate !== undefined) {
-      updateData.receivedDate = validated.receivedDate;
     }
 
     const updated = await prisma.deliveryOrder.update({
@@ -942,44 +910,20 @@ export async function deleteDeliveryOrder(id: string) {
     // 5. EKSEKUSI PENGHAPUSAN BERANTAI (TRANSAKSI)
     await prisma.$transaction(async (tx) => {
         
-        // A. KEMBALIKAN STOK (RESTORE STOCK)
-        for (const item of deliveryOrder.deliveryItems) {
-            const pUnit = await tx.productUnit.findFirst({
-                where: { productId: item.productId, unitId: item.unitId }
-            });
-            const conversion = Number(pUnit?.conversionValue || 1);
-            const totalQtyBase = Number(item.quantity) * conversion;
-
-            // 1. Update Stok Produk (Increment)
-            await tx.product.update({
-                where: { id: item.productId },
-                data: {
-                    currentStock: { increment: totalQtyBase }
-                }
-            });
-
-            // 2. Hapus Log StockMovement terkait DO ini
-            await tx.stockMovement.deleteMany({
-                where: { 
-                    referenceId: deliveryOrder.id,
-                    referenceType: "DELIVERY_ORDER"
-                }
-            });
-        }
-
-        // B. Hapus Data Hutang (CustomerDebt)
-        if (deliveryOrder.saleId) {
+        // A. STOK: tidak ada yang dikembalikan (M-12). DO yang bisa dihapus
+        // hanya PENDING / IN_TRANSIT / CANCELLED (DELIVERED ditolak di atas),
+        // dan di status itu stok belum pernah dipotong. Memulihkan stok di sini
+        // justru MENCIPTAKAN stok dari nol.
+        // B/C. Hapus hutang & penjualan HANYA kalau penjualannya dibuat otomatis
+        // oleh DO ini. Penjualan POS asli tidak boleh ikut terhapus.
+        const isAutoSale = !!deliveryOrder.sale?.notes?.startsWith("Auto-Invoice DO:");
+        if (deliveryOrder.saleId && isAutoSale) {
             await tx.customerDebt.deleteMany({
                 where: { saleId: deliveryOrder.saleId }
             });
-        }
-
-        // C. Hapus Data Penjualan (Sale) & Item Penjualan
-        if (deliveryOrder.saleId) {
             await tx.saleItem.deleteMany({
                 where: { saleId: deliveryOrder.saleId }
             });
-            
             await tx.sale.delete({
                 where: { id: deliveryOrder.saleId }
             });
@@ -1011,7 +955,7 @@ export async function deleteDeliveryOrder(id: string) {
 
     return {
       success: true,
-      message: "Surat jalan dibatalkan & data terkait (Penjualan/Hutang) telah dihapus.",
+      message: "Surat jalan berhasil dihapus.",
     };
 
   } catch (error) {
@@ -1050,14 +994,15 @@ export async function cancelDeliveryOrder(id: string) {
         return { success: false, error: "Dokumen ini sudah dibatalkan sebelumnya." };
     }
 
-    // 3. PROTEKSI PEMBAYARAN (Sama seperti Delete)
-    // Jangan izinkan batal jika customer sudah bayar cicilan
-    if (deliveryOrder.sale && deliveryOrder.sale.customerDebts.length > 0) {
+    // 3. PROTEKSI PEMBAYARAN — hanya untuk penjualan otomatis DO ini.
+    // Penjualan POS asli tidak ikut dibatalkan, jadi cicilannya bukan urusan DO.
+    const isAutoSale = !!deliveryOrder.sale?.notes?.startsWith("Auto-Invoice DO:");
+    if (isAutoSale && deliveryOrder.sale && deliveryOrder.sale.customerDebts.length > 0) {
         const debt = deliveryOrder.sale.customerDebts[0];
         if (Number(debt.paidAmount) > 0) {
-            return { 
-                success: false, 
-                error: `GAGAL: Ada pembayaran masuk sebesar Rp ${Number(debt.paidAmount).toLocaleString()}. Harap hapus pembayaran dulu di menu Hutang sebelum membatalkan.` 
+            return {
+                success: false,
+                error: `GAGAL: Ada pembayaran masuk sebesar Rp ${Number(debt.paidAmount).toLocaleString()}. Harap hapus pembayaran dulu di menu Hutang sebelum membatalkan.`
             };
         }
     }
@@ -1065,61 +1010,32 @@ export async function cancelDeliveryOrder(id: string) {
     // 4. EKSEKUSI PEMBATALAN
     await prisma.$transaction(async (tx) => {
         
-        // A. KEMBALIKAN STOK (RESTORE STOCK)
-        for (const item of deliveryOrder.deliveryItems) {
-            const pUnit = await tx.productUnit.findFirst({
-                where: { productId: item.productId, unitId: item.unitId }
-            });
-            const conversion = Number(pUnit?.conversionValue || 1);
-            const totalQtyBase = Number(item.quantity) * conversion;
-
-            // Kembalikan Stok
-            await tx.product.update({
-                where: { id: item.productId },
-                data: { currentStock: { increment: totalQtyBase } }
-            });
-
-            // Catat di Kartu Stok sebagai "Koreksi Masuk" (opsional, agar history jelas)
-            await tx.stockMovement.create({
-                data: {
-                    productId: item.productId,
-                    type: "IN", // Barang masuk kembali
-                    quantity: totalQtyBase,
-                    referenceType: "DELIVERY_ORDER",
-                    referenceId: deliveryOrder.id,
-                    notes: `Pembatalan DO: ${deliveryOrder.doNumber}`,
-                    createdById: session.user.id
-                }
-            });
-        }
-
-        // B. HAPUS HUTANG (Agar tidak tertagih)
-        // Kita hapus record hutang karena transaksinya batal
-        if (deliveryOrder.saleId) {
+        // A. STOK: tidak ada yang dikembalikan (M-12) — DO yang dibatalkan
+        // di sini masih PENDING / IN_TRANSIT (DELIVERED ditolak di atas),
+        // jadi stok belum pernah dipotong.
+        // B. Hapus hutang HANYA kalau penjualannya dibuat otomatis oleh DO ini.
+        if (deliveryOrder.saleId && isAutoSale) {
             await tx.customerDebt.deleteMany({
                 where: { saleId: deliveryOrder.saleId }
             });
         }
 
-        // C. UPDATE STATUS DO & SALE JADI "CANCELLED"
-        // Kita tidak menghapus record ini agar tetap ada history nomornya (untuk audit)
-        
-        // Update DO
+        // C. UPDATE STATUS DO JADI "CANCELLED" (penjualan tetap ada sebagai history)
         await tx.deliveryOrder.update({
             where: { id },
-            data: { 
-                status: "CANCELLED", // Pastikan enum DeliveryStatus punya 'CANCELLED'
+            data: {
+                status: "CANCELLED",
                 notes: `${deliveryOrder.notes || ''} [DIBATALKAN]`.trim()
             }
         });
 
-        // Update Sale (Invoice)
-        if (deliveryOrder.saleId) {
+        // Update Sale (Invoice) HANYA untuk penjualan otomatis DO ini.
+        if (deliveryOrder.saleId && isAutoSale) {
             await tx.sale.update({
                 where: { id: deliveryOrder.saleId },
-                data: { 
-                    status: "CANCELLED", // Pastikan enum SaleStatus punya 'CANCELLED'
-                    totalAmount: 0,      // Nol-kan omset agar tidak masuk laporan keuangan
+                data: {
+                    status: "CANCELLED",
+                    totalAmount: 0,
                     grandTotal: 0,
                     notes: `Dibatalkan dari DO: ${deliveryOrder.doNumber}`
                 }
@@ -1132,7 +1048,7 @@ export async function cancelDeliveryOrder(id: string) {
     revalidatePath("/dashboard/customer-debts");
     revalidatePath("/dashboard/products");
 
-    return { success: true, message: "Pengiriman berhasil dibatalkan. Stok telah dikembalikan." };
+    return { success: true, message: "Pengiriman berhasil dibatalkan." };
 
   } catch (error: unknown) {
     console.error("Cancel DO Error:", error);

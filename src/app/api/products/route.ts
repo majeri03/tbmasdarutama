@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import {
   getAuthenticatedUser,
   successResponse,
@@ -39,7 +39,14 @@ export async function GET(request: NextRequest) {
       return errorResponse(result.error || "Gagal mengambil data produk.", 400);
     }
 
-    return successResponse(result.data, undefined, 200);
+    // M-25 FIX (Nov 2026): getProducts sudah menghitung pagination, tapi
+    // successResponse(result.data) membuangnya — APK & klien lain hanya
+    // melihat halaman pertama. Kembalikan pagination di level atas (sesuai
+    // tipe ApiResponse). Bentuk data tetap array seperti sebelumnya.
+    return NextResponse.json(
+      { success: true, data: result.data, pagination: result.pagination },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("[API_PRODUCTS_GET_ERROR]", error);
     return errorResponse("Terjadi kesalahan internal server.");
