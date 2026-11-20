@@ -284,7 +284,7 @@ export async function createPosTransaction(data: CreateSaleInput) {
         const prefix = `INV/${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
         const lastSale = await tx.sale.findFirst({
             where: { invoiceNumber: { startsWith: prefix } },
-            orderBy: { invoiceNumber: 'desc' },
+            orderBy: { createdAt: 'desc' },
             select: { invoiceNumber: true }
         });
         const nextNum = lastSale ? parseInt(lastSale.invoiceNumber.split('-').pop() || '0') + 1 : 1;

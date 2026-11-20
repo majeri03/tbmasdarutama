@@ -13,7 +13,6 @@ import {
   UpdateDeliveryOrderInput,
 } from "@/lib/validations/delivery-order.schema";
 import { requirePermission, type AuthSession } from "../utils/role";
-import { NotifEvent } from "../utils/notify";
 import { deleteFromR2, extractR2Filename } from "../utils/storage";
 import {
   loadUnitNames,
@@ -541,8 +540,18 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
     revalidatePath("/dashboard/products");
     revalidatePath("/dashboard/stocks");
 
-    // Kirim notifikasi ke admin bahwa DO baru telah dibuat
-    NotifEvent.doCreated(result.doNumber, result.customer?.name || "Pelanggan").catch(() => {});
+    // Notifikasi DO baru — SATU sistem saja (NotificationService / Sistem A),
+    // supaya sampai ke SUPER_ADMIN juga. Dulu pakai NotifEvent (Sistem B) yang
+    // token-nya difilter role tepat "ADMIN", jadi akun owner tidak dapat push.
+    // PENDING sudah punya label "📦 Surat Jalan Baru Siap Muat" di onDeliveryUpdate.
+    try {
+      const { NotificationService } = await import("@/lib/services/notification.service");
+      NotificationService.onDeliveryUpdate(result.id, result.doNumber, "PENDING").catch((e) =>
+        console.error("[Notif] Error notifying new delivery order:", e),
+      );
+    } catch (e) {
+      console.error("[Notif] Delivery notification dispatch error (createDeliveryOrder):", e);
+    }
 
     return {
       success: true,
@@ -620,6 +629,13 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
         };
       }
       await prisma.$transaction(async (tx) => {
+        // Klaim status di DALAM transaksi: kalau admin lain sudah mengubah
+        // status DO ini barusan, updateMany kena 0 baris dan transaksi batal.
+        const claimedCancel = await tx.deliveryOrder.updateMany({
+          where: { id: validated.id, status: from },
+          data: { status: "CANCELLED" },
+        });
+        if (claimedCancel.count === 0) throw new Error("Status surat jalan sudah berubah, muat ulang dulu.");
         if (isAutoSale && deliveryOrder.saleId) {
           await tx.customerDebt.deleteMany({ where: { saleId: deliveryOrder.saleId } });
           await tx.sale.update({
@@ -643,6 +659,12 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
 
     // ---- IN_TRANSIT / DELIVERED: semua dalam SATU transaksi (M-14).
     const updated = await prisma.$transaction(async (tx) => {
+      // Klaim status di DALAM transaksi (lihat CANCELLED di atas).
+      const claimed = await tx.deliveryOrder.updateMany({
+        where: { id: validated.id, status: from },
+        data: { status: validated.status },
+      });
+      if (claimed.count === 0) throw new Error("Status surat jalan sudah berubah, muat ulang dulu.");
       if (validated.status === "DELIVERED") {
         // Apakah penjualan terkait sudah memotong stok saat dibuat? (B-5)
         // Kalau ya (penjualan POS / manual), DO tidak boleh memotong lagi.
@@ -730,12 +752,17 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
 
     revalidatePath("/dashboard/delivery-orders");
 
-    // Kirim notifikasi perubahan status DO
-    NotifEvent.doStatusChanged(
-      updated.doNumber,
-      validated.status,
-      updated.createdById ?? undefined
-    ).catch(() => {});
+    // Notifikasi perubahan status DO — SATU sistem saja (Sistem A).
+    // Dulu di sini Sistem B + route PUT memanggil Sistem A lagi = dobel.
+    // Route PUT tidak lagi memanggil onDeliveryUpdate (lihat route.ts).
+    try {
+      const { NotificationService } = await import("@/lib/services/notification.service");
+      NotificationService.onDeliveryUpdate(updated.id, updated.doNumber, validated.status).catch((e) =>
+        console.error("[Notif] Error notifying delivery status:", e),
+      );
+    } catch (e) {
+      console.error("[Notif] Delivery status notification dispatch error:", e);
+    }
 
     return {
       success: true,

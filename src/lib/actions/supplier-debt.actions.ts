@@ -9,6 +9,7 @@ import {
   AddSupplierPaymentInput,
 } from "@/lib/validations/supplier-debt.schema";
 import { requireMinimumRole, hasMinimumRole, requirePermission, type AuthSession } from "../utils/role";
+import { withUniqueRetry } from "@/lib/utils/stock-units";
 
 export async function getAllSupplierDebts(filters?: {
   search?: string;
@@ -283,7 +284,7 @@ export async function addSupplierDebtPayment(input: AddSupplierPaymentInput) {
     }
 
     // Update in transaction
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await withUniqueRetry(() => prisma.$transaction(async (tx) => {
       // M-15 FIX (Nov 2026): potong sisa hutang secara atomik. Update ini
       // hanya berhasil kalau hutang belum lunas DAN sisa >= jumlah bayar,
       // jadi dua pembayaran bersamaan tidak bisa sama-sama lolos dan
@@ -320,15 +321,14 @@ export async function addSupplierDebtPayment(input: AddSupplierPaymentInput) {
       // Generate payment number
       const today = new Date();
       const dateStr = today.toISOString().split("T")[0].replace(/-/g, "");
-      const count = await tx.debtPayment.count({
-        where: {
-          paymentNumber: { startsWith: `PAY-${dateStr}` },
-        },
+      // Nomor dari pembayaran terakhir hari ini (urut waktu), bukan count()+1.
+      const lastPayment = await tx.debtPayment.findFirst({
+        where: { paymentNumber: { startsWith: `PAY-${dateStr}` } },
+        orderBy: { createdAt: "desc" },
+        select: { paymentNumber: true },
       });
-      const paymentNumber = `PAY-${dateStr}-${String(count + 1).padStart(
-        3,
-        "0"
-      )}`;
+      const lastNum = lastPayment ? parseInt(lastPayment.paymentNumber.split("-").pop() || "0") : 0;
+      const paymentNumber = `PAY-${dateStr}-${String((Number.isFinite(lastNum) ? lastNum : 0) + 1).padStart(3, "0")}`;
 
       // Create payment record
       const payment = await tx.debtPayment.create({
@@ -357,7 +357,7 @@ export async function addSupplierDebtPayment(input: AddSupplierPaymentInput) {
       }
 
       return { payment, debt: updatedDebt };
-    });
+    }));
 
     revalidatePath("/dashboard/supplier-debts");
 

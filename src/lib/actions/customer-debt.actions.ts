@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { DebtStatus, Prisma } from "@prisma/client";
 import { addPaymentSchema, AddPaymentInput } from "@/lib/validations/customer-debt.schema";
 import { requirePermission, requireMinimumRole, hasMinimumRole, type AuthSession } from "@/lib/utils/role";
+import { withUniqueRetry } from "@/lib/utils/stock-units";
 
 //GET ALL CUSTOMER DEBTS
 export async function getAllCustomerDebts(filters?: {
@@ -280,7 +281,7 @@ export async function addCustomerDebtPayment(input: AddPaymentInput) {
     // sisa Rp400rb padahal total bayar Rp1,2jt.
 
     // 2. TRANSAKSI DATABASE (Update Debt + Payment + SALE)
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await withUniqueRetry(() => prisma.$transaction(async (tx) => {
       // A. Potong sisa hutang secara atomik. Update ini hanya berhasil kalau
       // hutang belum lunas DAN sisa hutang >= jumlah bayar. Kalau dua
       // pembayaran bersamaan, hanya satu yang lolos — yang kedua gagal di
@@ -314,8 +315,14 @@ export async function addCustomerDebtPayment(input: AddPaymentInput) {
         include: { customer: true },
       });
 
-      const paymentCount = await tx.debtPayment.count();
-      const paymentNumber = `PAY-${String(paymentCount + 1).padStart(6, '0')}`;
+      // Nomor dari pembayaran terakhir (urut waktu), bukan count()+1 —
+      // dua kasir bayar bersamaan dulu bisa dapat nomor sama lalu satu gagal.
+      const lastPayment = await tx.debtPayment.findFirst({
+        orderBy: { createdAt: "desc" },
+        select: { paymentNumber: true },
+      });
+      const lastNum = lastPayment ? parseInt(lastPayment.paymentNumber.replace(/\D/g, "")) : 0;
+      const paymentNumber = `PAY-${String((Number.isFinite(lastNum) ? lastNum : 0) + 1).padStart(6, "0")}`;
 
       // C. Buat History Pembayaran
       const payment = await tx.debtPayment.create({
@@ -352,7 +359,7 @@ export async function addCustomerDebtPayment(input: AddPaymentInput) {
       }
 
       return { payment, debt: updatedDebt };
-    });
+    }));
 
     revalidatePath("/dashboard/customer-debts");
     revalidatePath("/dashboard/sales"); // Refresh halaman sales agar angka berubah

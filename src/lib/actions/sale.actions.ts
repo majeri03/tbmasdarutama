@@ -824,6 +824,13 @@ export async function cancelSale(id: string, reason: string) {
     }
 
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Klaim di DALAM transaksi: dua admin batalkan bersamaan tidak boleh
+      // mengembalikan stok 2x.
+      const claimed = await tx.sale.updateMany({
+        where: { id, status: { not: SaleStatus.CANCELLED } },
+        data: { status: SaleStatus.CANCELLED },
+      });
+      if (claimed.count === 0) throw new Error("Transaksi sudah dibatalkan, muat ulang dulu.");
       await tx.sale.update({
         where: { id },
         data: {
@@ -1321,6 +1328,12 @@ export async function deleteSale(id: string, passwordInput?: string) {
 
     // Soft delete (Tutup Buku): update status to CANCELLED and restore stock/debt
     await prisma.$transaction(async (tx) => {
+      // Klaim di DALAM transaksi (lihat cancelSale di atas).
+      const claimed = await tx.sale.updateMany({
+        where: { id, status: { not: SaleStatus.CANCELLED } },
+        data: { status: SaleStatus.CANCELLED },
+      });
+      if (claimed.count === 0) throw new Error("Penjualan sudah dibatalkan sebelumnya, muat ulang dulu.");
       // 1. Update sale status to CANCELLED
       await tx.sale.update({
         where: { id },

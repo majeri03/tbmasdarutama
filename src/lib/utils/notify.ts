@@ -104,10 +104,13 @@ export async function notify(opts: NotifyOptions): Promise<void> {
     if (params) fcmData.params = typeof params === "string" ? params : JSON.stringify(params);
 
     // Ambil token perangkat
+    // FIX: role "ADMIN" harus menjangkau SUPER_ADMIN juga (akun owner).
+    // Dulu filter role tepat "ADMIN" saja, jadi push doCreated/doStatusChanged
+    // tidak pernah sampai ke HP owner.
     const tokenFilter = userId
       ? { userId }
       : role
-      ? { user: { role: role as Role } }
+      ? { user: { role: role === "ADMIN" ? { in: ["ADMIN", "SUPER_ADMIN"] as Role[] } : (role as Role) } }
       : undefined;
 
     if (!tokenFilter) return;
@@ -224,7 +227,7 @@ export const NotifEvent = {
       body: `DO #${doNumber} untuk ${customerName} telah dibuat.`,
       screen: "Delivery",
       params: { search: doNumber, doNumber },
-      type: "delivery",
+      type: "DELIVERY_UPDATE",
     }),
 
   /** Status pengiriman diperbarui */
@@ -246,7 +249,7 @@ export const NotifEvent = {
       role: "ADMIN",
       screen: "Delivery",
       params: { search: doNumber, doNumber },
-      type: "delivery",
+      type: "DELIVERY_UPDATE",
     });
     // Juga beritahu pembuat DO jika berbeda dari admin
     const p2 = createdById
@@ -256,7 +259,7 @@ export const NotifEvent = {
           userId: createdById,
           screen: "Delivery",
           params: { search: doNumber, doNumber },
-          type: "delivery",
+          type: "DELIVERY_UPDATE",
         })
       : Promise.resolve();
     return Promise.all([p, p2]);
@@ -306,9 +309,10 @@ export const NotifEvent = {
 function getChannelId(type?: string): string {
   const map: Record<string, string> = {
     delivery: "deliveries",
+    DELIVERY_UPDATE: "deliveries",
     deliveries: "deliveries",
     orders: "orders",
     finance: "finance",
   };
-  return (type && map[type]) || "masdar_channel_v2";
+  return (type && map[type]) || "masdar_channel_v3";
 }

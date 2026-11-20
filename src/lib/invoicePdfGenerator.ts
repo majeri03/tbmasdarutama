@@ -8,6 +8,12 @@ const PAYMENT_LABEL: Record<string, string> = {
   QRIS: 'QRIS',
 };
 
+// XSS fix (Nov 2026): teks dari database (nama pelanggan/produk/toko)
+// tidak boleh ditempel mentah ke HTML invoice — karakter < > & " '
+ // diubah jadi kode aman supaya tidak bisa menjalankan script.
+const escapeHtml = (s: unknown): string =>
+  String(s ?? "").replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"} as Record<string, string>)[c]);
+
 export const getStoreSettings = async () => {
   try {
     const store = await prisma.storeSetting.findFirst();
@@ -101,7 +107,7 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
     // 1. TEMPLATE STRUK KECIL (THERMAL 58mm/80mm)
     const itemsHtml = items.map((item: any) => `
       <div style="margin-bottom: 8px; font-size: ${12 * scale}px;">
-        <div style="font-weight: bold;">${item.product.name}</div>
+        <div style="font-weight: bold;">${escapeHtml(item.product.name)}</div>
         <div style="display: flex; justify-content: space-between; font-size: ${11 * scale}px; color: #4B5563; margin-top: 2px;">
           <div>${item.quantity} ${item.unit?.name || 'Unit'} x Rp ${item.unitPrice.toLocaleString('id-ID')}</div>
           <div style="font-weight: bold; color: #111827;">Rp ${item.subtotal.toLocaleString('id-ID')}</div>
@@ -182,7 +188,7 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
             <div class="row"><div>Tanggal</div><div>${dateStr}</div></div>
             <div class="row"><div>Kasir</div><div>${sale.cashier?.name || '-'}</div></div>
             ${layout.showCustomerInfo && sale.customer ? `
-              <div class="row"><div>Pelanggan</div><div class="bold">${sale.customer.name}</div></div>
+              <div class="row"><div>Pelanggan</div><div class="bold">${escapeHtml(sale.customer.name)}</div></div>
             ` : ''}
           </div>
 
@@ -235,7 +241,7 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
       <tr style="font-size: ${12 * scale}px;">
         <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center;">${index + 1}</td>
         <td style="padding: 10px 8px; border: 1px solid #000000;">
-          <div style="font-weight: bold;">${item.product.name}</div>
+          <div style="font-weight: bold;">${escapeHtml(item.product.name)}</div>
           <div style="font-size: 10px; color: #4B5563;">${item.product.code}</div>
         </td>
         <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center; font-weight: bold;">
@@ -367,16 +373,16 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
             <table style="width: 100%;">
               <tr>
                 <td style="width: 15%; font-weight: bold;">Nama Penerima</td>
-                <td style="width: 85%;">: ${sale.customer?.name || 'Umum'}</td>
+                <td style="width: 85%;">: ${escapeHtml(sale.customer?.name || 'Umum')}</td>
               </tr>
               <tr>
                 <td style="font-weight: bold; vertical-align: top;">Alamat Kirim</td>
-                <td>: ${sale.customer?.address || '-'}</td>
+                <td>: ${escapeHtml(sale.customer?.address || '-')}</td>
               </tr>
               ${sale.customer?.phone ? `
                 <tr>
                   <td style="font-weight: bold;">No. Telepon</td>
-                  <td>: ${sale.customer.phone}</td>
+                  <td>: ${escapeHtml(sale.customer.phone)}</td>
                 </tr>
               ` : ''}
             </table>
@@ -427,7 +433,7 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
         <tr style="font-size: ${12 * scale}px;">
           <td style="padding: 10px 8px; text-align: center;">${index + 1}</td>
           <td style="padding: 10px 8px;">
-            <div style="font-weight: bold; color: #000000;">${item.product.name}</div>
+            <div style="font-weight: bold; color: #000000;">${escapeHtml(item.product.name)}</div>
             <div style="font-size: 10px; color: #4B5563; font-family: monospace;">${item.product.code}</div>
           </td>
           <td style="padding: 10px 8px; text-align: center;">
@@ -661,10 +667,10 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="width: 12%; font-weight: bold;">Customer</td>
-                  <td>: <b>${sale.customer?.name || 'Umum'}</b></td>
+                  <td>: <b>${escapeHtml(sale.customer?.name || 'Umum')}</b></td>
                 </tr>
-                ${sale.customer?.phone ? `<tr><td style="font-weight: bold;">Phone</td><td>: ${sale.customer.phone}</td></tr>` : ''}
-                ${sale.customer?.address ? `<tr><td style="font-weight: bold;">Address</td><td>: ${sale.customer.address}</td></tr>` : ''}
+                ${sale.customer?.phone ? `<tr><td style="font-weight: bold;">Phone</td><td>: ${escapeHtml(sale.customer.phone)}</td></tr>` : ''}
+                ${sale.customer?.address ? `<tr><td style="font-weight: bold;">Address</td><td>: ${escapeHtml(sale.customer.address)}</td></tr>` : ''}
               </table>
             </div>
           ` : ''}
@@ -763,7 +769,7 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
         <tr style="font-size: ${12 * scale}px;">
           <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center;">${index + 1}</td>
           <td style="padding: 10px 8px; border: 1px solid #000000;">
-            <div style="font-weight: bold; color: #000000;">${item.product.name}</div>
+            <div style="font-weight: bold; color: #000000;">${escapeHtml(item.product.name)}</div>
             <div style="font-size: 10px; color: #4B5563; font-family: monospace;">${item.product.code}</div>
           </td>
           <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center;">
@@ -1003,10 +1009,10 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="width: 12%; font-weight: bold;">Customer</td>
-                  <td>: <b>${sale.customer?.name || 'Umum'}</b></td>
+                  <td>: <b>${escapeHtml(sale.customer?.name || 'Umum')}</b></td>
                 </tr>
-                ${sale.customer?.phone ? `<tr><td style="font-weight: bold;">Phone</td><td>: ${sale.customer.phone}</td></tr>` : ''}
-                ${sale.customer?.address ? `<tr><td style="font-weight: bold;">Address</td><td>: ${sale.customer.address}</td></tr>` : ''}
+                ${sale.customer?.phone ? `<tr><td style="font-weight: bold;">Phone</td><td>: ${escapeHtml(sale.customer.phone)}</td></tr>` : ''}
+                ${sale.customer?.address ? `<tr><td style="font-weight: bold;">Address</td><td>: ${escapeHtml(sale.customer.address)}</td></tr>` : ''}
               </table>
             </div>
           ` : ''}

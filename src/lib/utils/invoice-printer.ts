@@ -1,6 +1,13 @@
 import { format } from "date-fns";
 import { formatCurrency } from "./pos-helpers";
 
+// XSS fix (Nov 2026): teks dari database (nama pelanggan/produk/toko)
+// tidak boleh ditempel mentah ke HTML invoice — karakter < > & " '
+ // diubah jadi kode aman supaya tidak bisa menjalankan script.
+const escapeHtml = (s: unknown): string =>
+  String(s ?? "").replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"} as Record<string, string>)[c]);
+
+
 export interface InvoiceData {
     invoiceNumber: string;
     saleDate: Date | string;
@@ -130,7 +137,7 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
         
         const itemsHtml = sale.saleItems.map(item => `
             <div style="margin-bottom: 6px;">
-                <div style="font-weight: bold;">${item.product.name}</div>
+                <div style="font-weight: bold;">${escapeHtml(item.product.name)}</div>
                 <div style="display: flex; justify-content: space-between;">
                     <div>${item.quantity} ${item.unit.symbol || item.unit.name} x ${formatCurrency(item.unitPrice).replace('Rp ','')}</div>
                     <div style="font-weight: bold;">${formatCurrency(item.subtotal).replace('Rp ','')}</div>
@@ -164,17 +171,17 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                     ${showHeader ? `
                     <div style="display:flex; justify-content:center; align-items:center; flex-direction:column; margin-bottom: 4px;">
                         ${logoImg}
-                        <div class="center bold" style="font-size: 1.2em; margin-top: 4px;">${storeName}</div>
-                        <div class="center">${storeAddress}</div>
-                        <div class="center">Telp: ${storePhone}</div>
+                        <div class="center bold" style="font-size: 1.2em; margin-top: 4px;">${escapeHtml(storeName)}</div>
+                        <div class="center">${escapeHtml(storeAddress)}</div>
+                        <div class="center">Telp: ${escapeHtml(storePhone)}</div>
                     </div>
                     <div class="divider"></div>
                     ` : ''}
                     
                     <div class="row"><span>No</span><span>${sale.invoiceNumber}</span></div>
                     <div class="row"><span>Tgl</span><span>${dateStr}</span></div>
-                    <div class="row"><span>Kasir</span><span>${sale.cashier?.name || '-'}</span></div>
-                    ${showCustomerInfo && sale.customer ? `<div class="row"><span class="bold">Plgn</span><span class="bold">${sale.customer.name}</span></div>` : ''}
+                    <div class="row"><span>Kasir</span><span>${escapeHtml(sale.cashier?.name || '-')}</span></div>
+                    ${showCustomerInfo && sale.customer ? `<div class="row"><span class="bold">Plgn</span><span class="bold">${escapeHtml(sale.customer.name)}</span></div>` : ''}
                     
                     <div class="divider"></div>
                     <div class="bold" style="margin-bottom: 4px;">DAFTAR BARANG</div>
@@ -194,7 +201,7 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                     ${showFooter ? `
                     <div class="divider"></div>
                     <div class="center bold" style="margin-top: 8px;">TERIMA KASIH</div>
-                    <div class="center" style="font-size: 0.9em;">${footerTerms}</div>
+                    <div class="center" style="font-size: 0.9em;">${escapeHtml(footerTerms)}</div>
                     ` : ''}
                 </body>
             </html>
@@ -221,7 +228,7 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
             <tr>
                 <td style="text-align:center;">${index + 1}</td>
                 <td>
-                    <b>${item.product.name}</b><br/>
+                    <b>${escapeHtml(item.product.name)}</b><br/>
                     <span style="font-size:10px; color:#555;">${item.product.code}</span>
                 </td>
                 <td style="text-align:center;">${item.quantity} ${item.unit.symbol || item.unit.name}</td>
@@ -289,9 +296,9 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                     <div style="display:flex; align-items:center;">
                         ${logoImg}
                         <div>
-                            <h1 style="margin:0; font-size:20px;">${storeName}</h1>
-                            <p style="margin:4px 0 0 0;">${storeAddress}</p>
-                            <p style="margin:2px 0 0 0;">Phone: ${storePhone}</p>
+                            <h1 style="margin:0; font-size:20px;">${escapeHtml(storeName)}</h1>
+                            <p style="margin:4px 0 0 0;">${escapeHtml(storeAddress)}</p>
+                            <p style="margin:2px 0 0 0;">Phone: ${escapeHtml(storePhone)}</p>
                         </div>
                     </div>
                     <div style="text-align:right;">
@@ -300,7 +307,7 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                             <tr><td>Number</td><td>: <b>${layoutType === 'SURAT_JALAN' ? 'DO-' : ''}${sale.invoiceNumber}</b></td></tr>
                             <tr><td>Date</td><td>: ${dateStr}</td></tr>
                             ${layoutType !== 'SURAT_JALAN' ? `<tr><td>Payment</td><td>: ${sale.paymentMethod}</td></tr>` : ''}
-                            <tr><td>Cashier</td><td>: ${sale.cashier?.name || '-'}</td></tr>
+                            <tr><td>Cashier</td><td>: ${escapeHtml(sale.cashier?.name || '-')}</td></tr>
                         </table>
                     </div>
                 </div>
@@ -388,7 +395,7 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                 
                 ${showFooter ? `
                 <div style="text-align:center; margin-top:40px; font-size:10px; border-top:2px solid #000; padding-top:10px;">
-                    <b>${footerTerms}</b>
+                    <b>${escapeHtml(footerTerms)}</b>
                 </div>
                 ` : ''}
             </body>

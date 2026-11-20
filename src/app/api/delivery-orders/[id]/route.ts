@@ -10,6 +10,7 @@ import {
 import {
   getDeliveryOrderById,
   updateDeliveryStatus,
+  deleteDeliveryOrder,
 } from "@/lib/actions/delivery-order.actions";
 import { hasPermission } from "@/lib/utils/role";
 
@@ -83,10 +84,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       return errorResponse(result.error || "Gagal memperbarui status pengiriman.", 400);
     }
 
-    // Kirim notifikasi saat status berubah
-    const { status, doNumber } = result.data as { status: string; doNumber: string };
-    const { NotificationService } = await import("@/lib/services/notification.service");
-    NotificationService.onDeliveryUpdate(id, doNumber, status).catch(console.error);
+    // Notifikasi perubahan status sudah dikirim di dalam updateDeliveryStatus
+    // (Sistem A, sekali). Dulu route ini memanggilnya lagi = dobel.
 
     return successResponse(result.data, result.message);
   } catch (error) {
@@ -120,6 +119,27 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return successResponse(result.data, result.message);
   } catch (error) {
     console.error("[API_DELIVERY_ORDER_PATCH_ERROR]", error);
+    return errorResponse("Terjadi kesalahan internal server.");
+  }
+}
+
+/**
+ * DELETE /api/delivery-orders/[id]
+ * Hapus Surat Jalan. Role: SUPER_ADMIN (DELETE_DELIVERY_ORDER).
+ */
+export async function DELETE(request: NextRequest, context: RouteContext) {
+  try {
+    const session = await getAuthenticatedUser();
+    if (!session) return unauthorizedResponse();
+    if (!hasPermission(session, "DELETE_DELIVERY_ORDER")) return forbiddenResponse();
+    const { id } = await context.params;
+    const result = await deleteDeliveryOrder(id);
+    if (!result.success) {
+      return errorResponse(result.error || "Gagal menghapus Surat Jalan.", 400);
+    }
+    return successResponse(result.data, result.message);
+  } catch (error) {
+    console.error("[API_DELIVERY_ORDER_DELETE_ERROR]", error);
     return errorResponse("Terjadi kesalahan internal server.");
   }
 }

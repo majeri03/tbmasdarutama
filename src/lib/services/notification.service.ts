@@ -13,6 +13,8 @@ export interface SendNotificationOptions {
   screen?: string;
   params?: Record<string, unknown>;
   channelId?: string;
+  /** Kunci dedup lintas jalur (push vs polling vs lokal), mis. `sale-<id>`. */
+  dedupKey?: string;
 }
 
 export class NotificationService {
@@ -80,7 +82,7 @@ export class NotificationService {
       // 3. Bangun payload pesan
       const messages: ExpoPushMessage[] = validTokens.map((token) => ({
         to: token,
-        sound: 'default',
+        sound: 'masdar_utama.mp3',
         title: options.title,
         body: options.body,
         data: {
@@ -88,8 +90,9 @@ export class NotificationService {
           type: options.type,
           screen: options.screen ?? 'NotificationCenter',
           params: options.params ?? {},
+          ...(options.dedupKey ? { dedupKey: options.dedupKey } : {}),
         },
-        channelId: options.channelId ?? 'default',
+        channelId: options.channelId ?? 'masdar_channel_v3',
         priority: 'high',
         badge: 1,
       }));
@@ -125,14 +128,21 @@ export class NotificationService {
   }
 
   static async onNewOrder(saleId: string, invoiceNumber: string, customerName: string, amount: number) {
+    const title = '🛒 Pesanan Baru Masuk!';
+    const body = `${customerName} — Invoice #${invoiceNumber} (Rp ${amount.toLocaleString('id-ID')})`;
+    // Jaring pengaman: kalau ada pemanggil ganda di masa depan, notif yang sama
+    // (judul+isi persis) tidak terkirim 2x dalam 5 menit.
+    if (await this.alreadyNotifiedRecently('NEW_ORDER', title, body, 5 / 60)) return;
     await this.send({
       role: 'ADMIN',
-      title: '🛒 Pesanan Baru Masuk!',
-      body: `${customerName} — Invoice #${invoiceNumber} (Rp ${amount.toLocaleString('id-ID')})`,
+      title,
+      body,
       type: 'NEW_ORDER',
       screen: 'History',
-      params: { saleId },
-      channelId: 'orders',
+      // invoiceNumber dibaca TransactionHistoryScreen untuk auto-filter saat diketuk.
+      params: { saleId, invoiceNumber },
+      channelId: 'masdar_channel_v3',
+      dedupKey: `sale-${saleId}`,
     });
   }
 
@@ -154,8 +164,10 @@ export class NotificationService {
       body: `Surat Jalan #${doNumber} status: ${status}`,
       type: 'DELIVERY_UPDATE',
       screen: 'Delivery',
-      params: { doId },
-      channelId: 'deliveries',
+      // doNumber dibaca DeliveryScreen untuk auto-filter saat diketuk.
+      params: { doId, doNumber },
+      channelId: 'masdar_channel_v3',
+      dedupKey: `do-${doId}-${status}`,
     });
 
     if (driverUserId) {
@@ -165,8 +177,9 @@ export class NotificationService {
         body: `Tugas #${doNumber}: status diperbarui menjadi ${status}`,
         type: 'DELIVERY_UPDATE',
         screen: 'Delivery',
-        params: { doId },
-        channelId: 'deliveries',
+        params: { doId, doNumber },
+        channelId: 'masdar_channel_v3',
+        dedupKey: `do-${doId}-${status}-driver`,
       });
     }
   }
@@ -178,7 +191,9 @@ export class NotificationService {
       body: `${customerName} membayar cicilan/pelunasan Rp ${amount.toLocaleString('id-ID')}`,
       type: 'PAYMENT_RECEIVED',
       screen: 'Debt',
-      channelId: 'finance',
+      // customerName dibaca DebtScreen untuk auto-filter saat diketuk.
+      params: { customerName },
+      channelId: 'masdar_channel_v3',
     });
   }
 
@@ -212,7 +227,8 @@ export class NotificationService {
       body,
       type: 'DEBT_DUE',
       screen: 'Debt',
-      channelId: 'finance',
+      params: { customerName },
+      channelId: 'masdar_channel_v3',
     });
     return true;
   }
@@ -228,7 +244,7 @@ export class NotificationService {
       body,
       type: 'LOW_STOCK',
       screen: 'Products',
-      channelId: 'default',
+      channelId: 'masdar_channel_v3',
     });
     return true;
   }

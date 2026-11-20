@@ -25,6 +25,25 @@ declare module "@auth/core/jwt" {
     role: string;
   }
 }
+// Rate-limit login web (dashboard) — samakan dengan login mobile:
+// 10x gagal per email dalam 15 menit, lalu tolak 15 menit.
+// In-memory per instance (catatan yang sama seperti login mobile).
+const WEB_LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const WEB_LOGIN_MAX_FAILED = 10;
+const webFailedLogins = new Map<string, { count: number; firstAt: number }>();
+function webLoginRateLimited(email: string): boolean {
+  const e = webFailedLogins.get(email);
+  if (!e) return false;
+  if (Date.now() - e.firstAt > WEB_LOGIN_WINDOW_MS) { webFailedLogins.delete(email); return false; }
+  return e.count >= WEB_LOGIN_MAX_FAILED;
+}
+function webRecordFailedLogin(email: string): void {
+  const now = Date.now();
+  const e = webFailedLogins.get(email);
+  if (!e || now - e.firstAt > WEB_LOGIN_WINDOW_MS) webFailedLogins.set(email, { count: 1, firstAt: now });
+  else e.count += 1;
+}
+
 export const authConfig: NextAuthConfig = {
   trustHost: true,
   providers: [
@@ -39,11 +58,17 @@ export const authConfig: NextAuthConfig = {
           throw new Error("Email dan password harus diisi");
         }
 
+        const emailKey = String(credentials.email).toLowerCase().trim();
+        if (webLoginRateLimited(emailKey)) {
+          throw new Error("Terlalu banyak percobaan login. Coba lagi 15 menit lagi.");
+        }
+
         const user = await prisma.user.findUnique({
           where: { email: credentials.email as string },
         });
 
         if (!user || !user.isActive) {
+          webRecordFailedLogin(emailKey);
           throw new Error("Email tidak ditemukan atau akun tidak aktif");
         }
 
@@ -53,8 +78,11 @@ export const authConfig: NextAuthConfig = {
         );
 
         if (!isPasswordValid) {
+          webRecordFailedLogin(emailKey);
           throw new Error("Password salah");
         }
+
+        webFailedLogins.delete(emailKey);
 
         return {
           id: user.id,

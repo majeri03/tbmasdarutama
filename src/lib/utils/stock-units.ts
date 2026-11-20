@@ -223,7 +223,7 @@ export async function decrementStockOrThrow(
 export async function generateDebtNumber(tx: Prisma.TransactionClient): Promise<string> {
   const lastDebt = await tx.customerDebt.findFirst({
     where: { debtNumber: { startsWith: "DEBT-CUST-" } },
-    orderBy: { debtNumber: "desc" },
+    orderBy: { createdAt: "desc" },
     select: { debtNumber: true },
   });
   if (!lastDebt) return "DEBT-CUST-001";

@@ -84,28 +84,9 @@ export async function POST(request: NextRequest) {
       return errorResponse(result.error || "Gagal menyimpan transaksi.", 400);
     }
 
-    // Trigger Notifikasi ke Admin/Owner secara realtime
-    try {
-      interface SaleWithCustomer {
-        id: string;
-        invoiceNumber?: string;
-        customer?: { name?: string } | null;
-        grandTotal: number | string;
-      }
-      const saleData = result.data as unknown as SaleWithCustomer;
-      const custName = saleData?.customer?.name || "Pelanggan";
-      const invoiceNo = saleData?.invoiceNumber || "INV";
-      const grandTotal = Number(saleData?.grandTotal || 0);
-      const saleId = saleData?.id || "";
-      if (saleId) {
-        const { NotificationService } = await import("@/lib/services/notification.service");
-        NotificationService.onNewOrder(saleId, invoiceNo, custName, grandTotal).catch((e) =>
-          console.error("[Notif] Error notifying new order:", e)
-        );
-      }
-    } catch (e) {
-      console.error("[Notif] Order notification dispatch error:", e);
-    }
+    // Notifikasi order baru sudah dikirim di dalam createSale() (sale.actions.ts).
+    // Jangan panggil onNewOrder lagi di sini — dulu blok inilah yang bikin
+    // 1 transaksi jadi 2 notifikasi identik (2 baris DB + 2 push per token).
 
     return successResponse(result.data, result.message, 201);
   } catch (error) {
