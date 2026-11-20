@@ -1,0 +1,323 @@
+diff --git a/src/app/dashboard/delivery-orders/_components/DeliveryOrderFormModal.tsx b/src/app/dashboard/delivery-orders/_components/DeliveryOrderFormModal.tsx
+index 477eb50..fc0e096 100644
+--- a/src/app/dashboard/delivery-orders/_components/DeliveryOrderFormModal.tsx
++++ b/src/app/dashboard/delivery-orders/_components/DeliveryOrderFormModal.tsx
+@@ -88,6 +88,10 @@ export function DeliveryOrderFormModal({
+   const [customers, setCustomers] = useState<Customer[]>([]);
+   const [products, setProducts] = useState<Product[]>([]);
+   const [salesList, setSalesList] = useState<SaleOption[]>([]);
++  const [saleSearch, setSaleSearch] = useState("");
++  const [saleSearching, setSaleSearching] = useState(false);
++  const [saleDropdownOpen, setSaleDropdownOpen] = useState(false);
++  const saleSearchTimeout = useRef<NodeJS.Timeout | null>(null);
+   const [fleetList, setFleetList] = useState<FleetVehicleOption[]>([]);
+   const { toast, showToast, hideToast } = useToast();
+   // State untuk teks input pencarian
+@@ -123,9 +127,12 @@ export function DeliveryOrderFormModal({
+ 
+   const loadData = async () => {
+     try {
+-      const [customersResult, salesResult, fleetResult] = await Promise.all([
++      // Penjualan TIDAK dimuat di sini lagi: dulu 100 sale berat dimuat tiap
++      // buka modal, dan sale di luar 100 terbaru tidak bisa dipilih sama
++      // sekali. Sekarang sale hanya dicari saat user mengetik (lihat
++      // handleSaleSearchChange) — 0 request saat buka, max 10 hasil per cari.
++      const [customersResult, fleetResult] = await Promise.all([
+         getCustomers({ status: "ACTIVE" }),
+-        getSales({ limit: 100, sortOrder: "desc" }),
+         getFleetVehicles(),
+       ]);
+ 
+@@ -133,23 +140,15 @@ export function DeliveryOrderFormModal({
+         setCustomers(customersResult.data);
+       }
+ 
+-      if (salesResult.success && salesResult.data) {
+-        // Hanya tampilkan penjualan yang aktif/pending dan belum memiliki DO aktif
+-        const availableSales = (salesResult.data as any[]).filter((s) => {
+-          if (s.status === "CANCELLED" || s.status === "RETURN") return false;
+-          // Belum punya DO atau DO-nya sudah CANCELLED
+-          if (s.deliveryOrder && s.deliveryOrder.status !== "CANCELLED") return false;
+-          return true;
+-        });
+-        setSalesList(availableSales);
+-      }
+-
+       if (fleetResult.success && fleetResult.data) {
+         setFleetList(fleetResult.data);
+       }
+ 
+       // Reset form
+       setSelectedSaleId("");
++      setSaleSearch("");
++      setSalesList([]);
++      setSaleDropdownOpen(false);
+       setSearchProducts([""]);
+       setItems([{ productId: "", unitId: "", quantity: 1, notes: "" }]);
+     } catch (error) {
+@@ -290,13 +289,52 @@ export function DeliveryOrderFormModal({
+     }
+   };
+ 
++  // Pencarian penjualan server-side (debounce 400ms, pola sama dengan
++  // pencarian produk di bawah). Cari No. Invoice atau nama pelanggan.
++  const handleSaleSearchChange = (value: string) => {
++    setSaleSearch(value);
++    setSaleDropdownOpen(true);
++    if (saleSearchTimeout.current) {
++      clearTimeout(saleSearchTimeout.current);
++    }
++    if (!value.trim() || value.trim().length < 2) {
++      setSalesList([]);
++      setSaleSearching(false);
++      return;
++    }
++    setSaleSearching(true);
++    saleSearchTimeout.current = setTimeout(async () => {
++      try {
++        const result = await getSales({ search: value.trim(), limit: 10, sortOrder: "desc" });
++        if (result.success && result.data) {
++          // Filter yang sama seperti dulu: buang batal/return & yang sudah punya DO aktif
++          const availableSales = (result.data as any[]).filter((s) => {
++            if (s.status === "CANCELLED" || s.status === "RETURN") return false;
++            if (s.deliveryOrder && s.deliveryOrder.status !== "CANCELLED") return false;
++            return true;
++          });
++          setSalesList(availableSales as SaleOption[]);
++        }
++      } catch (error) {
++        console.error("Search sale error:", error);
++      } finally {
++        setSaleSearching(false);
++      }
++    }, 400);
++  };
++
+   const handleSaleSelect = (saleId: string) => {
+     setSelectedSaleId(saleId);
++    setSaleDropdownOpen(false);
+     if (!saleId) return;
+ 
+     const selectedSale = salesList.find((s) => s.id === saleId);
+     if (!selectedSale) return;
+ 
++    setSaleSearch(
++      `${selectedSale.invoiceNumber} • ${selectedSale.customer?.name || "Pelanggan"}`
++    );
++
+     // 1. Sinkron Customer
+     if (selectedSale.customerId) {
+       setCustomerId(selectedSale.customerId);
+@@ -402,7 +440,13 @@ export function DeliveryOrderFormModal({
+       });
+ 
+       if (result.success) {
+-        showToast(result.message || "Surat jalan berhasil dibuat", "success");
++        const autoInv = (result.data as any)?.autoInvoiceNumber as string | undefined;
++        showToast(
++          autoInv
++            ? `${result.message || "Surat jalan berhasil dibuat"} Invoice otomatis: ${autoInv} (jatuh tempo 30 hari).`
++            : result.message || "Surat jalan berhasil dibuat",
++          "success"
++        );
+         onSuccess();
+         onClose();
+         resetForm();
+@@ -419,6 +463,9 @@ export function DeliveryOrderFormModal({
+ 
+   const resetForm = () => {
+     setSelectedSaleId("");
++    setSaleSearch("");
++    setSalesList([]);
++    setSaleDropdownOpen(false);
+     setCustomerId("");
+     setDeliveryDate(new Date().toISOString().split("T")[0]);
+     setDriver("");
+@@ -457,6 +504,9 @@ export function DeliveryOrderFormModal({
+                   type="button"
+                   onClick={() => {
+                     setSelectedSaleId("");
++                    setSaleSearch("");
++                    setSalesList([]);
++                    setSaleDropdownOpen(false);
+                     setItems([{ productId: "", unitId: "", quantity: 1, notes: "" }]);
+                     setSearchProducts([""]);
+                   }}
+@@ -466,19 +516,47 @@ export function DeliveryOrderFormModal({
+                 </button>
+               )}
+             </div>
+-            <select
+-              value={selectedSaleId}
+-              onChange={(e) => handleSaleSelect(e.target.value)}
+-              className="w-full px-3 py-2 bg-white border border-blue-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+-            >
+-              <option value="">-- Buat DO Manual (Tanpa Transaksi POS) --</option>
+-              {salesList.map((sale) => (
+-                <option key={sale.id} value={sale.id}>
+-                  {sale.invoiceNumber} • {sale.customer?.name || "Pelanggan"} (
+-                  {new Date(sale.saleDate).toLocaleDateString("id-ID")})
+-                </option>
+-              ))}
+-            </select>
++            <div className="relative">
++              <input
++                type="text"
++                value={saleSearch}
++                onChange={(e) => handleSaleSearchChange(e.target.value)}
++                onFocus={() => {
++                  if (salesList.length > 0) setSaleDropdownOpen(true);
++                }}
++                placeholder="Ketik No. Invoice / nama pelanggan... (min. 2 huruf, kosong = DO Manual)"
++                className="w-full px-3 py-2 bg-white border border-blue-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
++              />
++              {saleDropdownOpen &&
++                (saleSearching || salesList.length > 0 || saleSearch.trim().length >= 2) && (
++                  <div className="absolute z-20 mt-1 w-full bg-white border border-blue-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
++                    {saleSearching ? (
++                      <div className="px-3 py-2 text-sm text-gray-500">Mencari...</div>
++                    ) : salesList.length === 0 ? (
++                      <div className="px-3 py-2 text-sm text-gray-500">
++                        Tidak ada transaksi yang cocok. Coba kata kunci lain, atau kosongkan untuk DO Manual.
++                      </div>
++                    ) : (
++                      salesList.map((sale) => (
++                        <button
++                          type="button"
++                          key={sale.id}
++                          onClick={() => handleSaleSelect(sale.id)}
++                          className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm text-gray-800 border-b border-gray-100 last:border-b-0"
++                        >
++                          <span className="font-semibold">{sale.invoiceNumber}</span> •{" "}
++                          {sale.customer?.name || "Pelanggan"}
++                          <span className="block text-xs text-gray-500">
++                            {new Date(sale.saleDate).toLocaleDateString("id-ID")} • Rp{" "}
++                            {Number((sale as any).grandTotal || 0).toLocaleString("id-ID")} •{" "}
++                            {(sale as any).status}
++                          </span>
++                        </button>
++                      ))
++                    )}
++                  </div>
++                )}
++            </div>
+             <p className="text-xs text-blue-700">
+               {selectedSaleId
+                 ? "✓ Data customer dan barang terisi otomatis dari transaksi penjualan yang dipilih."
+@@ -495,7 +573,9 @@ export function DeliveryOrderFormModal({
+               <select
+                 value={customerId}
+                 onChange={(e) => setCustomerId(e.target.value)}
+-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
++                disabled={!!selectedSaleId}
++                title={selectedSaleId ? "Pelanggan terkunci dari invoice yang dipilih" : undefined}
++                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all disabled:bg-gray-100 disabled:text-gray-500"
+                 required
+               >
+                 <option value="">Pilih Customer</option>
+@@ -505,6 +585,11 @@ export function DeliveryOrderFormModal({
+                   </option>
+                 ))}
+               </select>
++              {selectedSaleId && (
++                <p className="text-xs text-blue-700 mt-1">
++                  Pelanggan terkunci dari invoice yang dipilih. Pilih "Reset / Buat DO Manual" untuk mengganti.
++                </p>
++              )}
+             </div>
+ 
+             <div>
+diff --git a/src/lib/actions/customer.actions.ts b/src/lib/actions/customer.actions.ts
+index 2dabcbf..a6c091c 100644
+--- a/src/lib/actions/customer.actions.ts
++++ b/src/lib/actions/customer.actions.ts
+@@ -279,6 +279,7 @@ export async function getCustomers(filters?: { status?: "ACTIVE" | "INACTIVE" },
+ 
+     const customers = await prisma.customer.findMany({
+       where,
++      take: 200,
+       select: {
+         id: true,
+         code: true,
+diff --git a/src/lib/actions/delivery-order.actions.ts b/src/lib/actions/delivery-order.actions.ts
+index 167a7c6..41755b5 100644
+--- a/src/lib/actions/delivery-order.actions.ts
++++ b/src/lib/actions/delivery-order.actions.ts
+@@ -311,10 +311,10 @@ async function generateInvoiceNumber(tx: Prisma.TransactionClient) {
+   return invoiceNumber;
+ }
+ 
+-async function generateDebtNumber(tx: Prisma.TransactionClient) {
+-  const count = await tx.customerDebt.count();
+-  return `DEBT-CUST-${(count + 1).toString().padStart(5, "0")}`;
+-}
++// Nomor hutang: pakai generator bersama di stock-units.ts (dipakai POS juga).
++// Dulu fungsi lokal di sini memakai count()+1 dengan format 5 digit
++// (DEBT-CUST-00001) — dua urutan nomor untuk kolom yang sama, dan nomor lama
++// bisa dipakai ulang kalau satu hutang dihapus.
+ 
+ 
+ // Pastikan import PaymentMethod ada di paling atas file
+@@ -378,12 +378,26 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
+       }
+     }
+ 
+-    // 3. Cek Duplikasi Sale ID
++    // 3. Cek Duplikasi Sale ID + validasi sale yang dipilih
+     if (validated.saleId) {
+       const existingDO = await prisma.deliveryOrder.findFirst({
+         where: { saleId: validated.saleId },
+       });
+       if (existingDO) return { success: false, error: "Transaksi ini sudah dibuatkan Surat Jalan." };
++      // Penjualan harus ada, belum batal/return, dan milik pelanggan yang sama
++      // dengan yang dipilih di form (dulu tidak dicek: DO bisa nyambung ke
++      // invoice pelanggan lain).
++      const sale = await prisma.sale.findUnique({
++        where: { id: validated.saleId },
++        select: { id: true, customerId: true, status: true },
++      });
++      if (!sale) return { success: false, error: "Transaksi penjualan tidak ditemukan." };
++      if (sale.status === "CANCELLED" || sale.status === "RETURN") {
++        return { success: false, error: "Transaksi penjualan sudah dibatalkan / di-return." };
++      }
++      if (sale.customerId !== validated.customerId) {
++        return { success: false, error: "Penjualan yang dipilih milik pelanggan lain." };
++      }
+     }
+ 
+     // OPTIMISASI: PERSIAPAN DATA (PRE-CALCULATION)
+@@ -447,12 +461,22 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
+       prisma.$transaction(async (tx) => {
+       // A. Generate Nomor Surat Jalan
+       const doNumber = await generateDONumber(tx);
+-      
++
++      // Cek duplikasi lagi DI DALAM transaksi: cek di luar (langkah 3) bisa
++      // lolos kalau dua admin kirim bersamaan. Di sini yang kedua gagal
++      // dengan pesan yang jelas, bukan error Prisma mentah.
++      if (validated.saleId) {
++        const dupInTx = await tx.deliveryOrder.findFirst({ where: { saleId: validated.saleId } });
++        if (dupInTx) throw new Error("Transaksi ini sudah dibuatkan Surat Jalan.");
++      }
++
+       // B. Logic Invoice Otomatis (Jika DO dibuat manual tanpa POS)
+-      let createdSaleId = validated.saleId; 
++      let createdSaleId = validated.saleId;
++      let autoInvoiceNumber: string | null = null;
+ 
+       if (!createdSaleId) {
+         const invoiceNumber = await generateInvoiceNumber(tx);
++        autoInvoiceNumber = invoiceNumber;
+         
+         // Buat Sale Baru
+         const newSale = await tx.sale.create({
+@@ -549,6 +573,9 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
+       message: `Surat Jalan ${result.doNumber} berhasil dibuat!`,
+       data: {
+         ...result,
++        // Nomor invoice otomatis (hanya untuk DO manual tanpa POS) — supaya
++        // web/APK bisa menampilkannya ke pengguna, dulu tidak dikembalikan.
++        autoInvoiceNumber,
+         deliveryItems: result.deliveryItems.map((item) => ({
+           ...item,
+           quantity: Number(item.quantity),

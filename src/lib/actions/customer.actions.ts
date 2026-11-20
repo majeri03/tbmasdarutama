@@ -279,6 +279,7 @@ export async function getCustomers(filters?: { status?: "ACTIVE" | "INACTIVE" },
 
     const customers = await prisma.customer.findMany({
       where,
+      take: 200,
       select: {
         id: true,
         code: true,

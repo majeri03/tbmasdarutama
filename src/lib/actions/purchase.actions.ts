@@ -736,9 +736,12 @@ export async function deletePurchase(id: string) {
     revalidatePath("/dashboard/purchases");
     revalidatePath("/dashboard/stocks");
 
+    // Dulu tanpa `data`, padahal route DELETE memanggil
+    // successResponse(result.data, ...) — type error di build.
     return {
       success: true,
       message: `Purchase Order ${purchase.poNumber} berhasil dihapus`,
+      data: { id, poNumber: purchase.poNumber },
     };
   } catch (error) {
     console.error("Error deleting purchase:", error);

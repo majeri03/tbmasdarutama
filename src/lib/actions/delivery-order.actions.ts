@@ -19,6 +19,7 @@ import {
   primaryQuantityOrThrow,
   decrementStockOrThrow,
   withUniqueRetry,
+  generateDebtNumber,
 } from "@/lib/utils/stock-units";
 
 // Helper untuk mengekstrak Bukti Pengiriman dari field proofImage atau tag di notes
@@ -310,10 +311,10 @@ async function generateInvoiceNumber(tx: Prisma.TransactionClient) {
   return invoiceNumber;
 }
 
-async function generateDebtNumber(tx: Prisma.TransactionClient) {
-  const count = await tx.customerDebt.count();
-  return `DEBT-CUST-${(count + 1).toString().padStart(5, "0")}`;
-}
+// Nomor hutang: pakai generator bersama di stock-units.ts (dipakai POS juga).
+// Dulu fungsi lokal di sini memakai count()+1 dengan format 5 digit
+// (DEBT-CUST-00001) — dua urutan nomor untuk kolom yang sama, dan nomor lama
+// bisa dipakai ulang kalau satu hutang dihapus.
 
 
 // Pastikan import PaymentMethod ada di paling atas file
@@ -377,12 +378,26 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
       }
     }
 
-    // 3. Cek Duplikasi Sale ID
+    // 3. Cek Duplikasi Sale ID + validasi sale yang dipilih
     if (validated.saleId) {
       const existingDO = await prisma.deliveryOrder.findFirst({
         where: { saleId: validated.saleId },
       });
       if (existingDO) return { success: false, error: "Transaksi ini sudah dibuatkan Surat Jalan." };
+      // Penjualan harus ada, belum batal/return, dan milik pelanggan yang sama
+      // dengan yang dipilih di form (dulu tidak dicek: DO bisa nyambung ke
+      // invoice pelanggan lain).
+      const sale = await prisma.sale.findUnique({
+        where: { id: validated.saleId },
+        select: { id: true, customerId: true, status: true },
+      });
+      if (!sale) return { success: false, error: "Transaksi penjualan tidak ditemukan." };
+      if (sale.status === "CANCELLED" || sale.status === "RETURN") {
+        return { success: false, error: "Transaksi penjualan sudah dibatalkan / di-return." };
+      }
+      if (sale.customerId !== validated.customerId) {
+        return { success: false, error: "Penjualan yang dipilih milik pelanggan lain." };
+      }
     }
 
     // OPTIMISASI: PERSIAPAN DATA (PRE-CALCULATION)
@@ -442,16 +457,26 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
 
     // 4. DATABASE TRANSACTION (OPTIMIZED)
     // Diulang kalau nomor DO/invoice/hutang tabrakan (M-2).
-    const result = await withUniqueRetry(() =>
+    const txResult = await withUniqueRetry(() =>
       prisma.$transaction(async (tx) => {
       // A. Generate Nomor Surat Jalan
       const doNumber = await generateDONumber(tx);
-      
+
+      // Cek duplikasi lagi DI DALAM transaksi: cek di luar (langkah 3) bisa
+      // lolos kalau dua admin kirim bersamaan. Di sini yang kedua gagal
+      // dengan pesan yang jelas, bukan error Prisma mentah.
+      if (validated.saleId) {
+        const dupInTx = await tx.deliveryOrder.findFirst({ where: { saleId: validated.saleId } });
+        if (dupInTx) throw new Error("Transaksi ini sudah dibuatkan Surat Jalan.");
+      }
+
       // B. Logic Invoice Otomatis (Jika DO dibuat manual tanpa POS)
-      let createdSaleId = validated.saleId; 
+      let createdSaleId = validated.saleId;
+      let autoInvoiceNumber: string | null = null;
 
       if (!createdSaleId) {
         const invoiceNumber = await generateInvoiceNumber(tx);
+        autoInvoiceNumber = invoiceNumber;
         
         // Buat Sale Baru
         const newSale = await tx.sale.create({
@@ -525,13 +550,15 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
         },
       });
 
-      return deliveryOrder;
+      return { deliveryOrder, autoInvoiceNumber };
     },
     // KONFIGURASI TIMEOUT: 20 Detik
     {
         maxWait: 5000,
         timeout: 20000
     }));
+
+    const { deliveryOrder: result, autoInvoiceNumber } = txResult;
 
     // Revalidate semua halaman terkait
     revalidatePath("/dashboard/delivery-orders");
@@ -558,6 +585,9 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
       message: `Surat Jalan ${result.doNumber} berhasil dibuat!`,
       data: {
         ...result,
+        // Nomor invoice otomatis (hanya untuk DO manual tanpa POS) — supaya
+        // web/APK bisa menampilkannya ke pengguna, dulu tidak dikembalikan.
+        autoInvoiceNumber,
         deliveryItems: result.deliveryItems.map((item) => ({
           ...item,
           quantity: Number(item.quantity),
@@ -654,7 +684,20 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
         });
       });
       revalidatePath("/dashboard/delivery-orders");
-      return { success: true, message: "Pengiriman dibatalkan." };
+      // Dulu tanpa `data`, padahal route PUT memanggil
+      // successResponse(result.data, ...) — type error di build.
+      return {
+        success: true,
+        message: "Pengiriman dibatalkan.",
+        data: {
+          ...deliveryOrder,
+          status: "CANCELLED",
+          deliveryItems: deliveryOrder.deliveryItems.map((item) => ({
+            ...item,
+            quantity: Number(item.quantity),
+          })),
+        },
+      };
     }
 
     // ---- IN_TRANSIT / DELIVERED: semua dalam SATU transaksi (M-14).
@@ -983,9 +1026,12 @@ export async function deleteDeliveryOrder(id: string) {
     revalidatePath("/dashboard/customer-debts"); // Hutang hilang dari list
     revalidatePath("/dashboard/products");       // Stok kembali
 
+    // Dulu tanpa `data`, padahal route DELETE memanggil
+    // successResponse(result.data, ...) — type error di build.
     return {
       success: true,
       message: "Surat jalan berhasil dihapus.",
+      data: { id, doNumber: deliveryOrder.doNumber },
     };
 
   } catch (error) {
