@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { getAuthenticatedUser, successResponse, errorResponse } from "@/lib/utils/api";
 import { NotificationService } from "@/lib/services/notification.service";
+import { updateAllOverdueDebts } from "@/lib/actions/customer-debt.actions";
 
 /**
  * GET /api/notifications/check-overdue
@@ -13,19 +14,20 @@ import { NotificationService } from "@/lib/services/notification.service";
  *
  * Cara pakai (pilih satu):
  * 1. Cron eksternal (mis. cron-job.org, tiap hari 08:00 WITA):
- *    GET https://masdarutama.tech/api/notifications/check-overdue?key=<NOTIFICATION_CRON_SECRET>
+ *    GET https://masdarutama.tech/api/notifications/check-overdue
+ *    dengan header `x-cron-secret: <NOTIFICATION_CRON_SECRET>`
  *    + set env NOTIFICATION_CRON_SECRET di hosting.
- * 2. Login sebagai ADMIN / SUPER_ADMIN lalu buka URL yang sama tanpa ?key=
+ *    (SECURITY FIX Nov 2026, M7: secret TIDAK BOLEH lagi dikirim lewat
+ *    query `?key=` — URL tercatat di log akses & riwayat browser. Hanya
+ *    lewat header.)
+ * 2. Login sebagai ADMIN / SUPER_ADMIN lalu buka URL yang sama tanpa header
  *    (dipakai untuk tes manual).
  */
 async function handler(request: NextRequest) {
   try {
     const cronSecret = process.env.NOTIFICATION_CRON_SECRET;
-    const url = new URL(request.url);
     const keyOk =
-      !!cronSecret &&
-      (url.searchParams.get("key") === cronSecret ||
-        request.headers.get("x-cron-secret") === cronSecret);
+      !!cronSecret && request.headers.get("x-cron-secret") === cronSecret;
 
     if (!keyOk) {
       const session = await getAuthenticatedUser();
@@ -35,8 +37,17 @@ async function handler(request: NextRequest) {
       }
     }
 
+    // QA FIX (M-18, Nov 2026): sebelum mengirim notifikasi, balik dulu status
+    // hutang yang sudah lewat jatuh tempo jadi OVERDUE (pelanggan + supplier).
+    // Fungsi ini dari patch QA backend (customer-debt.actions.ts).
+    // Kalau patch QA belum dipasang, baris ini gagal di-build — pasang patch
+    // QA dulu, atau hapus 2 baris ini sementara (notifikasi tetap jalan).
+    const overdue = await updateAllOverdueDebts();
     const result = await NotificationService.checkOverdueAndLowStock();
-    return successResponse(result, `Cek selesai: ${result.debtSent} notifikasi hutang, ${result.stockSent} notifikasi stok rendah dikirim.`);
+    return successResponse(
+      { ...result, overdueUpdated: overdue.count },
+      `Cek selesai: ${overdue.count} hutang jadi OVERDUE, ${result.debtSent} notifikasi hutang, ${result.stockSent} notifikasi stok rendah dikirim.`
+    );
   } catch (error) {
     console.error("[CHECK_OVERDUE_ERROR]", error);
     return errorResponse("Gagal mengecek hutang jatuh tempo / stok rendah");

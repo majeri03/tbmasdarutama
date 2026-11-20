@@ -7,6 +7,17 @@ import { PaymentMethod, Prisma, SaleStatus } from "@prisma/client";
 import { requirePermission } from "../utils/role";
 import { CreateSaleInput, createSaleSchema } from "../validations/sale.schema";
 import { revalidatePath } from "next/cache";
+import {
+  loadCheckoutProducts,
+  loadUnitNames,
+  prepareCheckoutItems,
+  computeGrandTotal,
+  validatePaymentAndChange,
+  decrementStockOrThrow,
+  generateDebtNumber,
+  recordCashIn,
+  withUniqueRetry,
+} from "@/lib/utils/stock-units";
 
 // Get products for POS
 export async function getPOSProducts(search?: string, categoryId?: string) {
@@ -225,36 +236,46 @@ export async function createPosTransaction(data: CreateSaleInput) {
 
     const validated = createSaleSchema.parse(data);
 
-    // A. Validasi Stok Cepat (Tanpa Transaction dulu)
+    // A. Validasi & hitung ulang dari harga master (FIX QA B-1/B-3/M-1/M-8/M-30).
+    // Harga, diskon, dan total dari HP tidak lagi dipercaya mentah-mentah.
     const productIds = validated.items.map((i) => i.productId);
-    const products = await prisma.product.findMany({
-        where: { id: { in: productIds } },
-        select: {
-            id: true,
-            currentStock: true,
-            name: true,
-            productUnits: {
-                select: {
-                    id: true,
-                    unitId: true,
-                },
-            },
-        }
+    const customer = await prisma.customer.findUnique({
+      where: { id: validated.customerId },
+      select: { id: true, type: true },
     });
-
-    // Build a map of ProductUnit.id to Unit.id
-    const productUnitToUnitMap = new Map<string, string>();
-    for (const product of products) {
-        for (const pu of product.productUnits) {
-            productUnitToUnitMap.set(pu.id, pu.unitId);
-        }
+    if (!customer) {
+      return { success: false, error: "Customer tidak ditemukan." };
+    }
+    const checkoutProducts = await loadCheckoutProducts(productIds);
+    const unitNames = await loadUnitNames();
+    let prepared;
+    try {
+      prepared = prepareCheckoutItems(validated.items, checkoutProducts, unitNames);
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : "Item tidak valid." };
+    }
+    const totals = computeGrandTotal(prepared.totalAmount, validated.discount, validated.tax);
+    let changeAmount: number;
+    try {
+      ({ changeAmount } = validatePaymentAndChange({
+        paymentMethod: validated.paymentMethod,
+        customerType: customer.type,
+        grandTotal: totals.grandTotal,
+        paidAmount: validated.paidAmount,
+      }));
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : "Pembayaran tidak valid." };
     }
     
-    for (const item of validated.items) {
-        const product = products.find(p => p.id === item.productId);
-        if (!product || (Number(product.currentStock) < item.quantity)) {
-            return { success: false, error: `Stok ${product?.name || 'Produk'} tidak cukup.` };
-        }
+    // Cek cepat stok (angka final tetap dicek atomik di dalam transaksi).
+    for (const [productId, qtyPrimary] of prepared.qtyPrimaryByProduct.entries()) {
+      const product = checkoutProducts.find((p) => p.id === productId);
+      if (!product || product.currentStock < qtyPrimary) {
+        return {
+          success: false,
+          error: `Stok ${product?.name || "Produk"} tidak cukup. Tersedia: ${product?.currentStock ?? 0} (satuan utama), dibutuhkan: ${qtyPrimary}.`,
+        };
+      }
     }
 
     // B. Generate Invoice Helper
@@ -270,8 +291,9 @@ export async function createPosTransaction(data: CreateSaleInput) {
         return `${prefix}-${String(nextNum).padStart(4, '0')}`;
     };
 
-    // C. DATABASE TRANSACTION
-    const sale = await prisma.$transaction(async (tx) => {
+    // C. DATABASE TRANSACTION (diulang kalau nomor invoice tabrakan — M-2)
+    const sale = await withUniqueRetry(() =>
+      prisma.$transaction(async (tx) => {
         const invoiceNumber = await generateInvoiceNumber(tx);
 
         // 1. Create Sale + Items (Nested Write)
@@ -280,32 +302,26 @@ export async function createPosTransaction(data: CreateSaleInput) {
                 invoiceNumber,
                 customerId: validated.customerId,
                 cashierId: session.user.id,
-                totalAmount: validated.totalAmount,
-                discount: validated.discount,
-                tax: validated.tax,
-                grandTotal: validated.grandTotal,
+                totalAmount: prepared.totalAmount,
+                discount: totals.discount,
+                tax: totals.tax,
+                grandTotal: totals.grandTotal,
                 paymentMethod: validated.paymentMethod,
                 paidAmount: validated.paidAmount,
-                changeAmount: validated.changeAmount,
-                status: (validated.paymentMethod === PaymentMethod.CREDIT && validated.paidAmount < validated.grandTotal) 
-                    ? SaleStatus.PENDING 
+                changeAmount,
+                status: (validated.paymentMethod === PaymentMethod.CREDIT && validated.paidAmount < totals.grandTotal)
+                    ? SaleStatus.PENDING
                     : SaleStatus.COMPLETED,
                 notes: "POS Transaction",
                 saleItems: {
-                    create: validated.items.map(item => {
-                        const unitId = productUnitToUnitMap.get(item.productUnitId);
-                        if (!unitId) {
-                            throw new Error(`Master Satuan tidak ditemukan untuk productUnitId: ${item.productUnitId}`);
-                        }
-                        return {
-                            productId: item.productId,
-                            unitId: unitId, // resolved to Unit.id
-                            quantity: item.quantity,
-                            unitPrice: item.unitPrice,
-                            discount: item.discount,
-                            subtotal: item.subtotal
-                        };
-                    })
+                    create: prepared.lines.map((item) => ({
+                        productId: item.productId,
+                        unitId: item.unitId,
+                        quantity: item.quantity,
+                        unitPrice: item.unitPrice,
+                        discount: item.discount,
+                        subtotal: item.subtotal,
+                    }))
                 }
             },
             include: {
@@ -320,58 +336,63 @@ export async function createPosTransaction(data: CreateSaleInput) {
             }
         });
 
-        // 2. Update Stock (Parallel Promise)
-        await Promise.all(validated.items.map(async (item) => {
-             // Kurangi Stok
-             await tx.product.update({
-                 where: { id: item.productId },
-                 data: { currentStock: { decrement: item.quantity } }
-             });
-             // Catat Log
-             await tx.stockMovement.create({
-                 data: {
-                     productId: item.productId,
-                     type: "OUT",
-                     quantity: item.quantity,
-                     referenceType: "POS_SALE",
-                     referenceId: newSale.id,
-                     createdById: session.user.id,
-                     notes: `POS ${invoiceNumber}`
-                 }
-             });
-        }));
+        // 2. Kurangi stok secara atomik per produk (FIX QA B-1/B-2).
+        // qtyPrimary sudah dalam satuan utama; updateMany bersyarat memastikan
+        // stok tidak bisa minus kalau ada 2 kasir checkout bersamaan.
+        for (const [productId, qtyPrimary] of prepared.qtyPrimaryByProduct.entries()) {
+          const product = checkoutProducts.find((p) => p.id === productId);
+          await decrementStockOrThrow(tx, productId, qtyPrimary, product?.name || "Produk");
+        }
+        // Catat log per baris item (jumlah dalam satuan utama)
+        for (const item of prepared.lines) {
+          await tx.stockMovement.create({
+            data: {
+              productId: item.productId,
+              type: "OUT",
+              quantity: item.qtyPrimary,
+              referenceType: "POS_SALE",
+              referenceId: newSale.id,
+              createdById: session.user.id,
+              notes: `POS ${invoiceNumber}`,
+            },
+          });
+        }
 
-        // 3. Handle Debt (Jika Kredit)
+        // 2b. Catat kas masuk (FIX QA M-7 — dulu checkout tidak pernah mencatat kas).
+        await recordCashIn(tx, {
+          amount: validated.paymentMethod === PaymentMethod.CREDIT ? validated.paidAmount : totals.grandTotal,
+          description: `Penjualan ${invoiceNumber}`,
+          userId: session.user.id,
+        });
+
+        // 3. Handle Debt (Jika Kredit) — hanya kalau masih ada sisa hutang (m-9:
+        // CREDIT yang langsung lunas tidak membuat baris hutang nol yang abadi).
         if (validated.paymentMethod === PaymentMethod.CREDIT) {
-             const debtStatus = validated.paidAmount >= validated.grandTotal
-                 ? "PAID"
-                 : validated.paidAmount > 0
-                     ? "PARTIAL"
-                     : "UNPAID";
-
-             await tx.customerDebt.create({
-                 data: {
-                     debtNumber: `DEBT-${Date.now()}`,
-                     saleId: newSale.id,
-                     customerId: validated.customerId,
-                     totalDebt: validated.grandTotal,
-                     paidAmount: validated.paidAmount,
-                     remainingDebt: validated.grandTotal - validated.paidAmount,
-                     dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-                     status: debtStatus,
-                     notes: "POS Credit"
-                 }
-             });
+          const remainingDebt = totals.grandTotal - validated.paidAmount;
+          if (remainingDebt > 0) {
+            const debtStatus = validated.paidAmount > 0 ? "PARTIAL" : "UNPAID";
+            await tx.customerDebt.create({
+              data: {
+                debtNumber: await generateDebtNumber(tx),
+                saleId: newSale.id,
+                customerId: validated.customerId,
+                totalDebt: totals.grandTotal,
+                paidAmount: validated.paidAmount,
+                remainingDebt,
+                dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                status: debtStatus,
+                notes: "POS Credit",
+              },
+            });
+          }
         }
 
         return newSale;
-    }, { timeout: 15000 }); // Timeout 15s
+      }, { timeout: 15000 }) // Timeout 15s
+    );
 
-    // D1. FIX (Nov 2026): Web POS sebelumnya TIDAK PERNAH memicu notifikasi —
-    // jalur ini langsung ke DB dan melewati POST /api/sales yang memanggil
-    // NotificationService.onNewOrder. Sekarang dipanggil juga dari sini,
-    // fire-and-forget supaya checkout tetap cepat (gagal kirim tidak
-    // menggagalkan transaksi). Sekalian cek stok rendah produk yang terjual.
+    // D1. Notifikasi order baru (dari paket perbaikan notifikasi — disatukan ke
+    // sini supaya patch QA ini tidak menghapusnya; fire-and-forget).
     try {
       const { NotificationService } = await import("@/lib/services/notification.service");
       NotificationService.onNewOrder(
@@ -415,6 +436,10 @@ export async function createPosTransaction(data: CreateSaleInput) {
 
   } catch (error) {
     console.error("Create POS Transaction Error:", error);
+    // Sampaikan pesan validasi (mis. stok berubah) ke kasir; error teknis lain tetap generik.
+    if (error instanceof Error && /Stok |tidak cukup|CREDIT|bayar|satuan utama/i.test(error.message)) {
+      return { success: false, error: error.message };
+    }
     return { success: false, error: "Gagal memproses transaksi" };
   }
 }

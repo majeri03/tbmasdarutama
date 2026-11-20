@@ -13,6 +13,19 @@ import { revalidatePath } from "next/cache";
 import { PaymentMethod, SaleStatus, Prisma } from "@prisma/client";
 import { SaleFilters } from "@/types/sale";
 import { requirePermission, type AuthSession } from "../utils/role";
+import {
+  loadCheckoutProducts,
+  loadUnitNames,
+  prepareCheckoutItems,
+  computeGrandTotal,
+  validatePaymentAndChange,
+  decrementStockOrThrow,
+  generateDebtNumber,
+  recordCashIn,
+  reverseCashIn,
+  primaryQuantityOrThrow,
+  withUniqueRetry,
+} from "@/lib/utils/stock-units";
 
 async function generateInvoiceNumber(): Promise<string> {
   const today = new Date();
@@ -40,24 +53,6 @@ async function generateInvoiceNumber(): Promise<string> {
   return `INV-${datePrefix}-${newNumber.toString().padStart(3, "0")}`;
 }
 
-async function generateDebtNumber(
-  tx: Prisma.TransactionClient
-): Promise<string> {
-  const lastDebt = await tx.customerDebt.findFirst({
-    where: { debtNumber: { startsWith: "DEBT-CUST-" } },
-    orderBy: { debtNumber: "desc" },
-    select: { debtNumber: true },
-  });
-
-  if (!lastDebt) {
-    return "DEBT-CUST-001";
-  }
-
-  const lastNumber = parseInt(lastDebt.debtNumber.split("-")[2]);
-  const newNumber = lastNumber + 1;
-  return `DEBT-CUST-${newNumber.toString().padStart(3, "0")}`;
-}
-
 export async function createSale(data: CreateSaleInput) {
   try {
     const session = await auth();
@@ -78,86 +73,78 @@ export async function createSale(data: CreateSaleInput) {
 
     const validated = createSaleSchema.parse(data);
 
-    // Mengambil semua data produk sekaligus (Bulk Read) agar cepat
-    const productIds = validated.items.map((i) => i.productId);
-    const products = await prisma.product.findMany({
-      where: { id: { in: productIds } },
-      select: {
-        id: true,
-        currentStock: true,
-        name: true,
-        code: true,
-        productUnits: {
-          select: {
-            id: true,
-            unitId: true,
-          },
-        },
-      },
+    // FIX QA (B-1/B-3/M-1/M-8/M-30): validasi & hitung ulang dari harga master.
+    // Harga/total dari klien tidak lagi dipercaya; satuan harus milik produk itu.
+    const customer = await prisma.customer.findUnique({
+      where: { id: validated.customerId },
+      select: { id: true, type: true },
     });
-
-    // Buat Map untuk pencarian cepat
-    const productMap = new Map(products.map((p) => [p.id, p]));
-
-    // Build a map of ProductUnit.id to Unit.id
-    const productUnitToUnitMap = new Map<string, string>();
-    for (const product of products) {
-      for (const pu of product.productUnits) {
-        productUnitToUnitMap.set(pu.id, pu.unitId);
-      }
+    if (!customer) {
+      return { success: false, error: "Customer tidak ditemukan" };
+    }
+    const productIds = validated.items.map((i) => i.productId);
+    const checkoutProducts = await loadCheckoutProducts(productIds);
+    const unitNames = await loadUnitNames();
+    let prepared;
+    try {
+      prepared = prepareCheckoutItems(validated.items, checkoutProducts, unitNames);
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : "Item tidak valid." };
+    }
+    const totals = computeGrandTotal(prepared.totalAmount, validated.discount, validated.tax);
+    let changeAmount: number;
+    try {
+      ({ changeAmount } = validatePaymentAndChange({
+        paymentMethod: validated.paymentMethod,
+        customerType: customer.type,
+        grandTotal: totals.grandTotal,
+        paidAmount: validated.paidAmount,
+      }));
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : "Pembayaran tidak valid." };
     }
 
-    for (const item of validated.items) {
-      const product = productMap.get(item.productId);
-      
-      if (!product) {
-        return { success: false, error: `Produk tidak ditemukan: ${item.productId}` };
-      }
-
-      // Cek Stok (Tanpa Query DB lagi)
-      if (Number(product.currentStock) < item.quantity) {
+    // Cek cepat stok (angka final tetap dicek atomik di dalam transaksi).
+    for (const [productId, qtyPrimary] of prepared.qtyPrimaryByProduct.entries()) {
+      const product = checkoutProducts.find((p) => p.id === productId);
+      if (!product || product.currentStock < qtyPrimary) {
         return {
           success: false,
-          error: `Stock ${product.name} (${product.code}) tidak mencukupi. Tersedia: ${product.currentStock}, Diminta: ${item.quantity}`,
+          error: `Stock ${product?.name || "Produk"} (${product?.code || ""}) tidak mencukupi. Tersedia: ${product?.currentStock ?? 0} (satuan utama), dibutuhkan: ${qtyPrimary}`,
         };
       }
     }
 
-    const saleItemsData = validated.items.map((item) => {
-      const unitId = productUnitToUnitMap.get(item.productUnitId);
-      if (!unitId) {
-        throw new Error(`Master Satuan tidak ditemukan untuk productUnitId: ${item.productUnitId}`);
-      }
-      return {
-        productId: item.productId,
-        unitId: unitId, // resolved to Unit.id
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        discount: item.discount,
-        subtotal: item.subtotal,
-      };
-    });
+    const saleItemsData = prepared.lines.map((item) => ({
+      productId: item.productId,
+      unitId: item.unitId,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      discount: item.discount,
+      subtotal: item.subtotal,
+    }));
 
-    // Generate Invoice Number (Di luar transaksi jika tidak butuh lock ketat, sesuai kode asli)
-    const invoiceNumber = await generateInvoiceNumber();
+    // Nomor invoice dibuat fresh setiap percobaan (M-2 — tabrakan nomor diulang).
+    const sale = await withUniqueRetry(async () => {
+      const invoiceNumber = await generateInvoiceNumber();
 
-    const sale = await prisma.$transaction(async (tx) => {
+      return prisma.$transaction(async (tx) => {
         // A. Create Sale + Sale Items (Nested Write - Lebih Cepat)
         const newSale = await tx.sale.create({
           data: {
             invoiceNumber,
             customerId: validated.customerId,
             cashierId: cashier.id,
-            totalAmount: validated.totalAmount,
-            discount: validated.discount,
-            tax: validated.tax,
-            grandTotal: validated.grandTotal,
+            totalAmount: prepared.totalAmount,
+            discount: totals.discount,
+            tax: totals.tax,
+            grandTotal: totals.grandTotal,
             paymentMethod: validated.paymentMethod,
             paidAmount: validated.paidAmount,
-            changeAmount: validated.changeAmount,
+            changeAmount,
             status:
               validated.paymentMethod === PaymentMethod.CREDIT
-                ? validated.paidAmount >= validated.grandTotal
+                ? validated.paidAmount >= totals.grandTotal
                   ? SaleStatus.COMPLETED
                   : SaleStatus.PENDING
                 : SaleStatus.COMPLETED,
@@ -177,72 +164,68 @@ export async function createSale(data: CreateSaleInput) {
           },
         });
 
-        // B. Update Stock & Create Log (PARALLEL EXECUTION)
-        // Jalankan semua update stok secara paralel, bukan antrian
-        await Promise.all(
-          validated.items.map(async (item) => {
-            // 1. Update Product Stock
-            await tx.product.update({
-              where: { id: item.productId },
-              data: {
-                currentStock: { decrement: item.quantity },
-              },
-            });
-
-            // 2. Create Stock Movement
-            await tx.stockMovement.create({
-              data: {
-                productId: item.productId,
-                type: "OUT",
-                quantity: item.quantity,
-                notes: `Penjualan ${invoiceNumber}`,
-                referenceType: "Sale",
-                referenceId: newSale.id,
-                createdById: session.user.id,
-              },
-            });
-          })
-        );
-
-        // C. Create Customer Debt (Jika Credit)
-        if (validated.paymentMethod === PaymentMethod.CREDIT) {
-          const debtNumber = await generateDebtNumber(tx); // Asumsi fungsi ini butuh tx
-          const debtStatus = validated.paidAmount >= validated.grandTotal
-            ? "PAID"
-            : validated.paidAmount > 0
-              ? "PARTIAL"
-              : "UNPAID";
-
-          await tx.customerDebt.create({
+        // B. Kurangi stok atomik per produk (FIX QA B-1/B-2) + catat log.
+        for (const [productId, qtyPrimary] of prepared.qtyPrimaryByProduct.entries()) {
+          const product = checkoutProducts.find((p) => p.id === productId);
+          await decrementStockOrThrow(tx, productId, qtyPrimary, product?.name || "Produk");
+        }
+        for (const item of prepared.lines) {
+          await tx.stockMovement.create({
             data: {
-              debtNumber,
-              saleId: newSale.id,
-              customerId: validated.customerId,
-              totalDebt: validated.grandTotal,
-              paidAmount: validated.paidAmount,
-              remainingDebt: validated.grandTotal - validated.paidAmount,
-              dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 Hari
-              status: debtStatus,
-              notes: `Utang dari penjualan ${invoiceNumber}`,
+              productId: item.productId,
+              type: "OUT",
+              quantity: item.qtyPrimary,
+              notes: `Penjualan ${invoiceNumber}`,
+              referenceType: "Sale",
+              referenceId: newSale.id,
+              createdById: session.user.id,
             },
           });
         }
 
-        return newSale;
-      },
-      // Config Timeout: Beri waktu lebih (20 detik)
-      { maxWait: 5000, timeout: 20000 }
-    );
+        // B2. Catat kas masuk (FIX QA M-7).
+        await recordCashIn(tx, {
+          amount: validated.paymentMethod === PaymentMethod.CREDIT ? validated.paidAmount : totals.grandTotal,
+          description: `Penjualan ${invoiceNumber}`,
+          userId: session.user.id,
+        });
 
-    // FIX (Nov 2026): penjualan manual dari web (SaleFormModal) sebelumnya
-    // TIDAK PERNAH memicu notifikasi — jalur ini langsung ke DB dan melewati
-    // POST /api/sales. Sekarang dipanggil juga dari sini, fire-and-forget
-    // supaya gagal kirim tidak menggagalkan transaksi.
+        // C. Create Customer Debt (Jika Credit) — hanya kalau ada sisa hutang (m-9).
+        if (validated.paymentMethod === PaymentMethod.CREDIT) {
+          const remainingDebt = totals.grandTotal - validated.paidAmount;
+          if (remainingDebt > 0) {
+            const debtNumber = await generateDebtNumber(tx);
+            const debtStatus = validated.paidAmount > 0 ? "PARTIAL" : "UNPAID";
+            await tx.customerDebt.create({
+              data: {
+                debtNumber,
+                saleId: newSale.id,
+                customerId: validated.customerId,
+                totalDebt: totals.grandTotal,
+                paidAmount: validated.paidAmount,
+                remainingDebt,
+                dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 Hari
+                status: debtStatus,
+                notes: `Utang dari penjualan ${invoiceNumber}`,
+              },
+            });
+          }
+        }
+
+        return newSale;
+        },
+        // Config Timeout: Beri waktu lebih (20 detik)
+        { maxWait: 5000, timeout: 20000 }
+      );
+    });
+
+    // Notifikasi order baru (dari paket perbaikan notifikasi — disatukan ke
+    // sini supaya patch QA ini tidak menghapusnya; fire-and-forget).
     try {
       const { NotificationService } = await import("@/lib/services/notification.service");
       NotificationService.onNewOrder(
         sale.id,
-        invoiceNumber,
+        sale.invoiceNumber,
         sale.customer?.name ?? "Pelanggan",
         Number(sale.grandTotal),
       ).catch((e) => console.error("[Notif] Error notifying new sale:", e));
@@ -322,39 +305,74 @@ export async function updateSale(saleId: string, data: CreateSaleInput) {
         return { success: false, error: "Tidak dapat mengubah transaksi karena Surat Jalan sudah di jalan (IN_TRANSIT) atau Selesai." };
     }
 
-    // 2. Resolve Products & Units
+    // 2. Resolve Products & Units — FIX QA (B-1/M-1/M-3/M-8): hitung ulang dari
+    // harga master, konversi ke satuan utama, cicilan lama dipertahankan.
+    const customer = await prisma.customer.findUnique({
+      where: { id: validated.customerId },
+      select: { id: true, type: true },
+    });
+    if (!customer) return { success: false, error: "Customer tidak ditemukan" };
+
     const productIds = validated.items.map((i) => i.productId);
     const oldProductIds = existingSale.saleItems.map(i => i.productId);
     const allProductIds = Array.from(new Set([...productIds, ...oldProductIds]));
 
-    const products = await prisma.product.findMany({
-      where: { id: { in: allProductIds } },
-      select: {
-        id: true,
-        currentStock: true,
-        name: true,
-        code: true,
-        productUnits: {
-          select: { id: true, unitId: true },
-        },
-      },
-    });
+    const checkoutProducts = await loadCheckoutProducts(allProductIds);
+    const unitNames = await loadUnitNames();
+    const productMap = new Map(checkoutProducts.map((p) => [p.id, p]));
 
-    const productMap = new Map(products.map((p) => [p.id, p]));
-    const productUnitToUnitMap = new Map<string, string>();
-    for (const product of products) {
-      for (const pu of product.productUnits) {
-        productUnitToUnitMap.set(pu.id, pu.unitId);
-      }
+    let prepared;
+    try {
+      prepared = prepareCheckoutItems(validated.items, checkoutProducts, unitNames);
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : "Item tidak valid." };
+    }
+    const totals = computeGrandTotal(prepared.totalAmount, validated.discount, validated.tax);
+    let changeAmount: number;
+    try {
+      ({ changeAmount } = validatePaymentAndChange({
+        paymentMethod: validated.paymentMethod,
+        customerType: customer.type,
+        grandTotal: totals.grandTotal,
+        paidAmount: validated.paidAmount,
+      }));
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : "Pembayaran tidak valid." };
     }
 
-    // Calculate diff for stock
-    const stockDiff = new Map<string, number>(); 
+    // Cicilan yang sudah dibayar tidak boleh hilang saat edit (M-3).
+    const existingDebt = existingSale.customerDebts?.[0] ?? null;
+    const preservedPaid = existingDebt ? Number(existingDebt.paidAmount) : 0;
+    if (preservedPaid > totals.grandTotal) {
+      return { success: false, error: `Total baru (Rp ${totals.grandTotal.toLocaleString("id-ID")}) lebih kecil dari yang sudah dibayar (Rp ${preservedPaid.toLocaleString("id-ID")}). Kurangi pembayaran dulu di menu Hutang sebelum mengedit.` };
+    }
+    const effectivePaid = validated.paymentMethod === PaymentMethod.CREDIT
+      ? Math.max(preservedPaid, validated.paidAmount)
+      : validated.paidAmount;
+
+    // Calculate diff for stock (dalam satuan utama)
+    const stockDiff = new Map<string, number>();
     for (const oldItem of existingSale.saleItems) {
-        stockDiff.set(oldItem.productId, (stockDiff.get(oldItem.productId) || 0) - oldItem.quantity);
+      const oldProduct = productMap.get(oldItem.productId);
+      const oldPu = oldProduct?.productUnits.find((pu) => pu.unitId === oldItem.unitId);
+      if (!oldPu) {
+        return { success: false, error: `Satuan lama untuk ${oldProduct?.name || "produk"} tidak ditemukan di master. Perbaiki data produk dulu sebelum mengedit transaksi ini.` };
+      }
+      let qtyPrimaryOld: number;
+      try {
+        qtyPrimaryOld = primaryQuantityOrThrow({
+          quantity: oldItem.quantity,
+          conversionValue: oldPu.conversionValue,
+          productName: oldProduct?.name || "Produk",
+          unitName: unitNames.get(oldItem.unitId) || "satuan",
+        });
+      } catch (e) {
+        return { success: false, error: e instanceof Error ? e.message : "Item lama tidak valid." };
+      }
+      stockDiff.set(oldItem.productId, (stockDiff.get(oldItem.productId) || 0) - qtyPrimaryOld);
     }
-    for (const newItem of validated.items) {
-        stockDiff.set(newItem.productId, (stockDiff.get(newItem.productId) || 0) + newItem.quantity);
+    for (const [pId, qtyPrimary] of prepared.qtyPrimaryByProduct.entries()) {
+      stockDiff.set(pId, (stockDiff.get(pId) || 0) + qtyPrimary);
     }
 
     // Verify stock availability
@@ -362,25 +380,21 @@ export async function updateSale(saleId: string, data: CreateSaleInput) {
         if (diffQty > 0) {
             const product = productMap.get(pId);
             if (!product) return { success: false, error: `Produk tidak ditemukan` };
-            if (Number(product.currentStock) < diffQty) {
+            if (product.currentStock < diffQty) {
                 return { success: false, error: `Stock ${product.name} tidak mencukupi untuk penambahan.` };
             }
         }
     }
 
     // 3. Prepare new Sale Items
-    const saleItemsData = validated.items.map((item) => {
-      const unitId = productUnitToUnitMap.get(item.productUnitId);
-      if (!unitId) throw new Error(`Master Satuan tidak ditemukan`);
-      return {
-        productId: item.productId,
-        unitId: unitId,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        discount: item.discount,
-        subtotal: item.subtotal,
-      };
-    });
+    const saleItemsData = prepared.lines.map((item) => ({
+      productId: item.productId,
+      unitId: item.unitId,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      discount: item.discount,
+      subtotal: item.subtotal,
+    }));
 
     // 4. TRANSACTION
     const updatedSale = await prisma.$transaction(async (tx) => {
@@ -390,26 +404,22 @@ export async function updateSale(saleId: string, data: CreateSaleInput) {
             await tx.deliveryItem.deleteMany({ where: { deliveryOrderId: existingSale.deliveryOrder.id } });
         }
 
-        // B. Update Sale & Create new Sale Items
-        if (validated.paymentMethod !== PaymentMethod.CREDIT && validated.paidAmount < validated.grandTotal) {
-           throw new Error("Untuk pembayaran tunai/transfer, jumlah bayar tidak boleh kurang dari total.");
-        }
-
+        // B. Update Sale & Create new Sale Items (harga/total dari hitung ulang)
         const status = validated.paymentMethod === PaymentMethod.CREDIT
-            ? (validated.paidAmount >= validated.grandTotal ? SaleStatus.COMPLETED : SaleStatus.PENDING)
+            ? (effectivePaid >= totals.grandTotal ? SaleStatus.COMPLETED : SaleStatus.PENDING)
             : SaleStatus.COMPLETED;
 
         const sale = await tx.sale.update({
             where: { id: saleId },
             data: {
                 customerId: validated.customerId,
-                totalAmount: validated.totalAmount,
-                discount: validated.discount,
-                tax: validated.tax,
-                grandTotal: validated.grandTotal,
+                totalAmount: prepared.totalAmount,
+                discount: totals.discount,
+                tax: totals.tax,
+                grandTotal: totals.grandTotal,
                 paymentMethod: validated.paymentMethod,
-                paidAmount: validated.paidAmount,
-                changeAmount: validated.changeAmount,
+                paidAmount: effectivePaid,
+                changeAmount,
                 status,
                 notes: validated.notes || existingSale.notes,
                 saleItems: { create: saleItemsData }
@@ -418,14 +428,11 @@ export async function updateSale(saleId: string, data: CreateSaleInput) {
 
         // C. Update Delivery Order Items if exists
         if (existingSale.deliveryOrder) {
-            const deliveryItemsData = validated.items.map((item) => {
-                const unitId = productUnitToUnitMap.get(item.productUnitId)!;
-                return {
-                    productId: item.productId,
-                    unitId: unitId,
-                    quantity: item.quantity,
-                };
-            });
+            const deliveryItemsData = prepared.lines.map((item) => ({
+                productId: item.productId,
+                unitId: item.unitId,
+                quantity: item.quantity,
+            }));
             await tx.deliveryOrder.update({
                 where: { id: existingSale.deliveryOrder.id },
                 data: {
@@ -435,13 +442,19 @@ export async function updateSale(saleId: string, data: CreateSaleInput) {
             });
         }
 
-        // D. Stock update & StockMovement Log
+        // D. Stock update & StockMovement Log (selisih dalam satuan utama;
+        // penambahan dicek atomik supaya tidak minus kalau stok berubah bersamaan)
         for (const [pId, diffQty] of stockDiff.entries()) {
             if (diffQty !== 0) {
-                await tx.product.update({
+                if (diffQty > 0) {
+                  const product = checkoutProducts.find((p) => p.id === pId);
+                  await decrementStockOrThrow(tx, pId, diffQty, product?.name || "Produk");
+                } else {
+                  await tx.product.update({
                     where: { id: pId },
-                    data: { currentStock: { decrement: diffQty } } 
-                });
+                    data: { currentStock: { increment: -diffQty } },
+                  });
+                }
 
                 await tx.stockMovement.create({
                     data: {
@@ -457,31 +470,31 @@ export async function updateSale(saleId: string, data: CreateSaleInput) {
             }
         }
 
-        // E. Update Customer Debt
+        // E. Update Customer Debt (FIX QA M-3: cicilan yang sudah dibayar dipertahankan)
         if (validated.paymentMethod === PaymentMethod.CREDIT) {
-            const remainingDebt = validated.grandTotal - validated.paidAmount;
-            const debtStatus = remainingDebt <= 0 ? "PAID" : (validated.paidAmount > 0 ? "PARTIAL" : "UNPAID");
-            
-            if (existingSale.customerDebts && existingSale.customerDebts.length > 0) {
+            const remainingDebt = totals.grandTotal - effectivePaid;
+            const debtStatus = remainingDebt <= 0 ? "PAID" : (effectivePaid > 0 ? "PARTIAL" : "UNPAID");
+
+            if (existingDebt) {
                 await tx.customerDebt.update({
-                    where: { id: existingSale.customerDebts[0].id },
+                    where: { id: existingDebt.id },
                     data: {
                         customerId: validated.customerId,
-                        totalDebt: validated.grandTotal,
-                        paidAmount: validated.paidAmount,
+                        totalDebt: totals.grandTotal,
+                        paidAmount: effectivePaid,
                         remainingDebt,
                         status: debtStatus,
                     }
                 });
-            } else {
+            } else if (remainingDebt > 0) {
                 const debtNumber = await generateDebtNumber(tx);
                 await tx.customerDebt.create({
                     data: {
                         debtNumber,
                         saleId: sale.id,
                         customerId: validated.customerId,
-                        totalDebt: validated.grandTotal,
-                        paidAmount: validated.paidAmount,
+                        totalDebt: totals.grandTotal,
+                        paidAmount: effectivePaid,
                         remainingDebt,
                         status: debtStatus,
                         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -490,10 +503,11 @@ export async function updateSale(saleId: string, data: CreateSaleInput) {
                 });
             }
         } else {
-            if (existingSale.customerDebts && existingSale.customerDebts.length > 0) {
+            if (existingDebt) {
                  await tx.customerDebt.update({
-                    where: { id: existingSale.customerDebts[0].id },
+                    where: { id: existingDebt.id },
                     data: {
+                        paidAmount: totals.grandTotal,
                         status: "PAID",
                         remainingDebt: 0,
                         notes: `[LUNAS KARENA EDIT METODE PEMBAYARAN KE ${validated.paymentMethod}]`
@@ -740,6 +754,7 @@ export async function cancelSale(id: string, reason: string) {
       include: {
         saleItems: true, // ✅ FIXED: saleItems
         deliveryOrder: true,
+        customerDebts: true,
       },
     });
 
@@ -757,11 +772,55 @@ export async function cancelSale(id: string, reason: string) {
       };
     }
 
+    if (sale.status === SaleStatus.RETURN) {
+      return {
+        success: false,
+        error: "Transaksi yang sudah di-return tidak dapat dibatalkan",
+      };
+    }
+
     if (sale.deliveryOrder && (sale.deliveryOrder.status === "IN_TRANSIT" || sale.deliveryOrder.status === "DELIVERED")) {
       return {
         success: false,
         error: "Tidak dapat membatalkan transaksi karena Surat Jalan sedang dikirim (IN_TRANSIT) atau sudah terkirim (DELIVERED).",
       };
+    }
+
+    // FIX QA (M-4): hutang yang sudah ada cicilannya tidak boleh dibatalkan
+    // diam-diam — cicilan itu uang yang sudah masuk.
+    const paidDebt = sale.customerDebts.find((d) => Number(d.paidAmount) > 0);
+    if (paidDebt) {
+      return {
+        success: false,
+        error: `Tidak dapat membatalkan: hutang ini sudah dibayar Rp ${Number(paidDebt.paidAmount).toLocaleString("id-ID")}. Hapus pembayaran dulu di menu Hutang.`,
+      };
+    }
+
+    // Hitung pengembalian stok dalam satuan utama (FIX QA B-1).
+    const restoreItems: Array<{ productId: string; qtyPrimary: number; productName: string }> = [];
+    {
+      const productIds = Array.from(new Set(sale.saleItems.map((i) => i.productId)));
+      const checkoutProducts = await loadCheckoutProducts(productIds);
+      const unitNames = await loadUnitNames();
+      for (const item of sale.saleItems) {
+        const product = checkoutProducts.find((p) => p.id === item.productId);
+        const pu = product?.productUnits.find((u) => u.unitId === item.unitId);
+        if (!product || !pu) {
+          return { success: false, error: `Satuan untuk ${product?.name || "produk"} tidak ditemukan di master. Perbaiki data produk dulu.` };
+        }
+        let qtyPrimary: number;
+        try {
+          qtyPrimary = primaryQuantityOrThrow({
+            quantity: item.quantity,
+            conversionValue: pu.conversionValue,
+            productName: product.name,
+            unitName: unitNames.get(item.unitId) || "satuan",
+          });
+        } catch (e) {
+          return { success: false, error: e instanceof Error ? e.message : "Item tidak valid." };
+        }
+        restoreItems.push({ productId: item.productId, qtyPrimary, productName: product.name });
+      }
     }
 
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -773,13 +832,13 @@ export async function cancelSale(id: string, reason: string) {
         },
       });
 
-      // ✅ FIXED: sale.saleItems
-      for (const item of sale.saleItems) {
+      // Kembalikan stok (satuan utama) + catat log
+      for (const item of restoreItems) {
         await tx.product.update({
           where: { id: item.productId },
           data: {
             currentStock: {
-              increment: item.quantity,
+              increment: item.qtyPrimary,
             },
           },
         });
@@ -788,7 +847,7 @@ export async function cancelSale(id: string, reason: string) {
           data: {
             productId: item.productId,
             type: "IN",
-            quantity: item.quantity,
+            quantity: item.qtyPrimary,
             notes: `Pembatalan penjualan ${sale.invoiceNumber} - ${reason}`,
             referenceType: "Sale Cancellation",
             referenceId: sale.id,
@@ -797,19 +856,16 @@ export async function cancelSale(id: string, reason: string) {
         });
       }
 
-      // ✅ FIXED: Update debt using saleId
+      // FIX QA (M-4): hutang yang dibatalkan DIHAPUS (belum ada pembayaran),
+      // bukan ditandai PAID — menandai PAID membuat laporan hutang salah.
       if (sale.paymentMethod === PaymentMethod.CREDIT) {
-        await tx.customerDebt.updateMany({
-          where: {
-            saleId: sale.id, // ✅ FIXED: Direct saleId
-          },
-          data: {
-            remainingDebt: 0, // ✅ FIXED: remainingDebt
-            status: "PAID",
-            notes: `[CANCELLED] ${reason}`, // ✅ FIXED: notes
-          },
+        await tx.customerDebt.deleteMany({
+          where: { saleId: sale.id },
         });
       }
+
+      // Balikkan kas masuk dari penjualan ini (pasangan M-7).
+      await reverseCashIn(tx, { invoiceNumber: sale.invoiceNumber, userId: session.user.id });
 
       // ✅ Update Delivery Order status to CANCELLED if exists
       if (sale.deliveryOrder) {
@@ -1198,6 +1254,7 @@ export async function deleteSale(id: string, passwordInput?: string) {
       include: {
         saleItems: true,
         deliveryOrder: true,
+        customerDebts: true,
       },
     });
 
@@ -1219,6 +1276,49 @@ export async function deleteSale(id: string, passwordInput?: string) {
       };
     }
 
+    if (sale.status === SaleStatus.RETURN) {
+      return {
+        success: false,
+        error: "Penjualan yang sudah di-return tidak dapat dihapus",
+      };
+    }
+
+    // FIX QA (M-4): hutang yang sudah ada cicilannya tidak boleh dihapus diam-diam.
+    const paidDebt = sale.customerDebts.find((d) => Number(d.paidAmount) > 0);
+    if (paidDebt) {
+      return {
+        success: false,
+        error: `Tidak dapat menghapus: hutang ini sudah dibayar Rp ${Number(paidDebt.paidAmount).toLocaleString("id-ID")}. Hapus pembayaran dulu di menu Hutang.`,
+      };
+    }
+
+    // Hitung pengembalian stok dalam satuan utama (FIX QA B-1).
+    const restoreItems: Array<{ productId: string; qtyPrimary: number }> = [];
+    {
+      const productIds = Array.from(new Set(sale.saleItems.map((i) => i.productId)));
+      const checkoutProducts = await loadCheckoutProducts(productIds);
+      const unitNames = await loadUnitNames();
+      for (const item of sale.saleItems) {
+        const product = checkoutProducts.find((p) => p.id === item.productId);
+        const pu = product?.productUnits.find((u) => u.unitId === item.unitId);
+        if (!product || !pu) {
+          return { success: false, error: `Satuan untuk ${product?.name || "produk"} tidak ditemukan di master. Perbaiki data produk dulu.` };
+        }
+        let qtyPrimary: number;
+        try {
+          qtyPrimary = primaryQuantityOrThrow({
+            quantity: item.quantity,
+            conversionValue: pu.conversionValue,
+            productName: product.name,
+            unitName: unitNames.get(item.unitId) || "satuan",
+          });
+        } catch (e) {
+          return { success: false, error: e instanceof Error ? e.message : "Item tidak valid." };
+        }
+        restoreItems.push({ productId: item.productId, qtyPrimary });
+      }
+    }
+
     // Soft delete (Tutup Buku): update status to CANCELLED and restore stock/debt
     await prisma.$transaction(async (tx) => {
       // 1. Update sale status to CANCELLED
@@ -1230,13 +1330,13 @@ export async function deleteSale(id: string, passwordInput?: string) {
         },
       });
 
-      // 2. Restore stock for each item
-      for (const item of sale.saleItems) {
+      // 2. Restore stock for each item (satuan utama)
+      for (const item of restoreItems) {
         await tx.product.update({
           where: { id: item.productId },
           data: {
             currentStock: {
-              increment: item.quantity,
+              increment: item.qtyPrimary,
             },
           },
         });
@@ -1246,7 +1346,7 @@ export async function deleteSale(id: string, passwordInput?: string) {
           data: {
             productId: item.productId,
             type: "IN",
-            quantity: item.quantity,
+            quantity: item.qtyPrimary,
             notes: `Pembatalan/Penghapusan Transaksi ${sale.invoiceNumber}`,
             referenceType: "Sale Cancellation",
             referenceId: sale.id,
@@ -1255,19 +1355,15 @@ export async function deleteSale(id: string, passwordInput?: string) {
         });
       }
 
-      // 4. Update customer debt if credit
+      // 4. Hapus hutang (belum ada pembayaran) — bukan ditandai PAID (M-4).
       if (sale.paymentMethod === PaymentMethod.CREDIT) {
-        await tx.customerDebt.updateMany({
-          where: {
-            saleId: sale.id,
-          },
-          data: {
-            remainingDebt: 0,
-            status: "PAID", // Mark as settled/reverted
-            notes: `[CANCELLED/DIHAPUS] Transaksi dihapus`,
-          },
+        await tx.customerDebt.deleteMany({
+          where: { saleId: sale.id },
         });
       }
+
+      // 4b. Balikkan kas masuk dari penjualan ini (pasangan M-7).
+      await reverseCashIn(tx, { invoiceNumber: sale.invoiceNumber, userId: session.user.id });
 
       // 5. Update Delivery Order status to CANCELLED if exists
       if (sale.deliveryOrder) {
