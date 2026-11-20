@@ -672,7 +672,10 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
               throw new Error(`Satuan untuk ${item.product?.name || "produk"} tidak ditemukan di master.`);
             }
             const qtyPrimary = primaryQuantityOrThrow({
-              quantity: item.quantity,
+              // BUILD FIX (Nov 2026): item di sini dari database
+              // (DeliveryItem.quantity bertipe Decimal di Prisma),
+              // sedangkan helper-nya minta number biasa.
+              quantity: Number(item.quantity),
               conversionValue: Number(pu.conversionValue),
               productName: item.product?.name || "Produk",
               unitName: unitNames.get(item.unitId) || "satuan",
