@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     failedLogins.delete(rateKey);
 
     // 5. Generate mobile token yang terverifikasi
-    const sessionToken = signMobileToken({
+    const sessionToken = await signMobileToken({
       id: user.id,
       email: user.email,
       name: user.name,

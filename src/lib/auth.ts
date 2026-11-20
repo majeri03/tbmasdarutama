@@ -155,7 +155,7 @@ export const auth: typeof nextAuthInstance.auth = ((...args: any[]) => {
 
       if (token) {
         const { verifyMobileToken } = await import("@/lib/utils/jwt");
-        const payload = verifyMobileToken(token);
+        const payload = await verifyMobileToken(token);
         if (payload) {
           return {
             user: {

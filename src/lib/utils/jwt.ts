@@ -1,5 +1,3 @@
-import crypto from "crypto";
-
 // MOBILE_JWT_SECRET dipisah dari NEXTAUTH_SECRET agar konsisten di Vercel.
 // Set di Vercel: Settings → Environment Variables → MOBILE_JWT_SECRET
 // Harus SAMA persis antara lokal .env dan Vercel env vars.
@@ -12,6 +10,11 @@ import crypto from "crypto";
 // environment. Jangan tambahkan fallback apa pun di sini.
 // Catatan deploy: pastikan MOBILE_JWT_SECRET sudah di-set SEBELUM deploy ini,
 // kalau tidak login mobile akan gagal dengan error di atas (sengaja).
+//
+// EDGE RUNTIME FIX (Nov 2026): Diganti dari Node.js `crypto` module ke
+// Web Crypto API (globalThis.crypto / SubtleCrypto) agar kompatibel dengan
+// Next.js Edge Runtime (middleware). Buffer.from base64url tetap aman di Edge.
+
 const getJwtSecret = (): string => {
   const secret = process.env.MOBILE_JWT_SECRET;
   if (!secret) {
@@ -19,8 +22,6 @@ const getJwtSecret = (): string => {
   }
   return secret;
 };
-
-const JWT_SECRET = getJwtSecret();
 
 export type TokenPayload = {
   id: string;
@@ -30,58 +31,92 @@ export type TokenPayload = {
   exp?: number;
 };
 
+// --- helpers Web Crypto (Edge-safe) ---
+
+function base64urlEncode(buf: ArrayBuffer | Uint8Array): string {
+  const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+  let str = "";
+  for (const b of bytes) str += String.fromCharCode(b);
+  return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
+
+function base64urlDecode(s: string): Uint8Array {
+  const padded = s.replace(/-/g, "+").replace(/_/g, "/").padEnd(s.length + ((4 - (s.length % 4)) % 4), "=");
+  const bin = atob(padded);
+  return Uint8Array.from(bin, (c) => c.charCodeAt(0));
+}
+
+async function hmacSign(secret: string, message: string): Promise<string> {
+  const enc = new TextEncoder();
+  const key = await globalThis.crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sig = await globalThis.crypto.subtle.sign("HMAC", key, enc.encode(message));
+  return base64urlEncode(sig);
+}
+
+async function hmacVerify(secret: string, message: string, signature: string): Promise<boolean> {
+  const enc = new TextEncoder();
+  const key = await globalThis.crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["verify"]
+  );
+  const sigBytes = base64urlDecode(signature);
+  return globalThis.crypto.subtle.verify("HMAC", key, sigBytes.buffer as ArrayBuffer, enc.encode(message));
+}
+
 /**
  * Signs a mobile auth token with HMAC-SHA256.
  * Valid for 30 days.
  */
-export function signMobileToken(payload: Omit<TokenPayload, "exp">): string {
-  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
-  const data = Buffer.from(
-    JSON.stringify({
-      ...payload,
-      exp: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 hari
-    })
-  ).toString("base64url");
+export async function signMobileToken(payload: Omit<TokenPayload, "exp">): Promise<string> {
+  const secret = getJwtSecret();
+  const header = base64urlEncode(new TextEncoder().encode(JSON.stringify({ alg: "HS256", typ: "JWT" })));
+  const data = base64urlEncode(
+    new TextEncoder().encode(
+      JSON.stringify({
+        ...payload,
+        exp: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 hari
+      })
+    )
+  );
 
-  const signature = crypto
-    .createHmac("sha256", JWT_SECRET)
-    .update(`${header}.${data}`)
-    .digest("base64url");
-
+  const signature = await hmacSign(secret, `${header}.${data}`);
   return `${header}.${data}.${signature}`;
 }
 
 /**
  * Verifies and decodes a mobile auth token.
  */
-export function verifyMobileToken(token: string): TokenPayload | null {
+export async function verifyMobileToken(token: string): Promise<TokenPayload | null> {
   try {
+    const secret = getJwtSecret();
     const parts = token.split(".");
     if (parts.length !== 3) return null;
 
     const [header, data, signature] = parts;
 
     // SECURITY FIX (Nov 2026, L2): validasi alg dan bandingkan signature
-    // dengan timingSafeEqual, bukan perbandingan string biasa.
+    // dengan Web Crypto (constant-time di engine level).
     let headerObj: { alg?: string };
     try {
-      headerObj = JSON.parse(Buffer.from(header, "base64url").toString("utf-8")) as { alg?: string };
+      headerObj = JSON.parse(new TextDecoder().decode(base64urlDecode(header))) as { alg?: string };
     } catch {
       return null;
     }
     if (headerObj.alg !== "HS256") return null;
 
-    const expectedSignature = crypto
-      .createHmac("sha256", JWT_SECRET)
-      .update(`${header}.${data}`)
-      .digest("base64url");
-    const sigBuf = Buffer.from(signature);
-    const expBuf = Buffer.from(expectedSignature);
-    if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
-      return null;
-    }
+    const valid = await hmacVerify(secret, `${header}.${data}`, signature);
+    if (!valid) return null;
 
-    const decoded = JSON.parse(Buffer.from(data, "base64url").toString("utf-8")) as TokenPayload;
+    const decoded = JSON.parse(new TextDecoder().decode(base64urlDecode(data))) as TokenPayload;
     if (decoded.exp && Date.now() > decoded.exp) {
       return null;
     }

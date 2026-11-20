@@ -91,7 +91,7 @@ export async function getAuthenticatedUser() {
     }
 
     if (token) {
-      const payload = verifyMobileToken(token);
+      const payload = await verifyMobileToken(token);
       if (payload) {
         return {
           user: {

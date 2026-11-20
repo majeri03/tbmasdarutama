@@ -150,7 +150,7 @@ export async function createPurchase(input: CreatePurchaseInput) {
 
     return {
       success: true,
-      message: `Purchase Order ${poNumber} berhasil dibuat`,
+      message: `Purchase Order ${purchase.poNumber} berhasil dibuat`,
       data: {
         ...purchase,
         totalAmount: Number(purchase.totalAmount),

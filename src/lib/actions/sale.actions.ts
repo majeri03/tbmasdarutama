@@ -253,7 +253,7 @@ export async function createSale(data: CreateSaleInput) {
     return {
       success: true,
       data: serializedSale,
-      message: `Transaksi ${invoiceNumber} berhasil disimpan`,
+      message: `Transaksi ${sale.invoiceNumber} berhasil disimpan`,
     };
 
   } catch (error) {
