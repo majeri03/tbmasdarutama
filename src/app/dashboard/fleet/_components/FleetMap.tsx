@@ -1,32 +1,83 @@
 // Peta armada live — tanpa dependensi peta baru. Tile OpenStreetMap
 // dirender langsung (rumus slippy map), marker dari posisi terakhir
 // kendaraan (GET /api/fleet/vehicles, polling 15 detik, sama seperti APK).
-// Posisi dikirim dari HP sopir (POST /api/fleet/location, ADMIN+).
+// Posisi dikirim dari HP sopir yang ditugaskan (atau ADMIN) lewat
+// POST /api/fleet/location saat tombol "Mulai GPS" di APK aktif.
+// FIX (22 Nov 2026, rombakan armada): API mengembalikan lokasi BERSARANG
+// (lastLocation: {latitude, longitude, address, updatedAt}) — versi lama
+// komponen ini membaca v.latitude datar sehingga marker tidak pernah muncul.
+// Manajemen kendaraan (tambah/edit/nonaktifkan, ADMIN+) juga ditambahkan
+// di halaman ini; seed kendaraan contoh sudah dihapus dari API.
 
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MapPin, Navigation, RefreshCw, Plus, Minus, Truck, Clock } from "lucide-react";
+import { MapPin, Navigation, RefreshCw, Plus, Minus, Truck, Clock, Pencil, Power, X } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { useSession } from "next-auth/react";
+import { hasMinimumRole } from "@/lib/utils/role";
+
+interface VehicleLocation {
+  latitude: number;
+  longitude: number;
+  address?: string;
+  updatedAt: string;
+}
 
 interface Vehicle {
   id: string;
   plateNumber: string;
   vehicleType?: string | null;
   brand?: string | null;
+  year?: number | null;
   driverName?: string | null;
   driverPhone?: string | null;
+  driverUserId?: string | null;
+  coDriverUserId?: string | null;
+  driverUserName?: string | null;
+  coDriverName?: string | null;
   status?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-  address?: string | null;
-  lastLocationAt?: string | null;
+  lastLocation?: VehicleLocation | null;
 }
+
+interface DriverOption {
+  id: string;
+  name: string;
+  role: string;
+  phone?: string | null;
+}
+
+interface VehicleForm {
+  plateNumber: string;
+  vehicleType: string;
+  brand: string;
+  year: string;
+  driverUserId: string;
+  coDriverUserId: string;
+  driverName: string;
+  driverPhone: string;
+  status: string;
+}
+
+const EMPTY_FORM: VehicleForm = {
+  plateNumber: "",
+  vehicleType: "PICKUP",
+  brand: "",
+  year: "",
+  driverUserId: "",
+  coDriverUserId: "",
+  driverName: "",
+  driverPhone: "",
+  status: "ACTIVE",
+};
 
 const TILE = 256;
 const DEFAULT_CENTER = { lat: -5.147, lng: 119.43 }; // Makassar
 const POLL_MS = 15000;
+
+const VEHICLE_TYPES = ["TRUCK", "PICKUP", "MOTOR", "VAN", "OTHER"];
+const VEHICLE_STATUSES = ["ACTIVE", "IDLE", "MAINTENANCE", "OFF"];
 
 function lngToX(lng: number, z: number) {
   return ((lng + 180) / 360) * TILE * Math.pow(2, z);
@@ -51,6 +102,32 @@ function statusColor(status?: string | null) {
   return "bg-gray-400";
 }
 
+/** Lokasi terakhir kendaraan (bersarang dari API), atau null kalau belum ada GPS. */
+function locOf(v: Vehicle): VehicleLocation | null {
+  const l = v.lastLocation;
+  if (l && typeof l.latitude === "number" && typeof l.longitude === "number") {
+    return l;
+  }
+  return null;
+}
+
+/** Waktu relatif dari ISO string, mis. "5 mnt lalu". */
+function timeAgo(iso?: string | null) {
+  if (!iso) return "";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "";
+  const diff = Date.now() - t;
+  if (diff < 0) return "baru saja";
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "baru saja";
+  if (m < 60) return `${m} mnt lalu`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} jam lalu`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d} hari lalu`;
+  return format(new Date(iso), "dd MMM yyyy, HH:mm", { locale: localeId });
+}
+
 export function FleetMap() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,6 +139,16 @@ export function FleetMap() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ x: number; y: number; lat: number; lng: number } | null>(null);
+
+  // Manajemen kendaraan (ADMIN+ saja — server juga mengecek di API).
+  const { data: session } = useSession();
+  const canManage = hasMinimumRole(session, "ADMIN");
+  const [drivers, setDrivers] = useState<DriverOption[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<VehicleForm>(EMPTY_FORM);
+  const [formError, setFormError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const loadVehicles = useCallback(async () => {
     try {
@@ -81,11 +168,27 @@ export function FleetMap() {
     }
   }, []);
 
+  const loadDrivers = useCallback(async () => {
+    try {
+      const res = await fetch("/api/users");
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        setDrivers(json.data);
+      }
+    } catch {
+      // Dropdown tetap bisa dipakai manual (nama sopir diketik tangan).
+    }
+  }, []);
+
   useEffect(() => {
     loadVehicles();
     const t = setInterval(loadVehicles, POLL_MS);
     return () => clearInterval(t);
   }, [loadVehicles]);
+
+  useEffect(() => {
+    if (canManage) loadDrivers();
+  }, [canManage, loadDrivers]);
 
   // Ukur ukuran wadah peta supaya tile yang dirender pas.
   useEffect(() => {
@@ -120,14 +223,13 @@ export function FleetMap() {
     }
   }
 
-  const withLocation = vehicles.filter(
-    (v) => typeof v.latitude === "number" && typeof v.longitude === "number"
-  );
+  const withLocation = vehicles.filter((v) => locOf(v) !== null);
   const selected = vehicles.find((v) => v.id === selectedId) || null;
 
   const focusVehicle = (v: Vehicle) => {
-    if (typeof v.latitude === "number" && typeof v.longitude === "number") {
-      setCenter({ lat: v.latitude, lng: v.longitude });
+    const loc = locOf(v);
+    if (loc) {
+      setCenter({ lat: loc.latitude, lng: loc.longitude });
       setZoom(Math.max(zoom, 14));
       setSelectedId(v.id);
     }
@@ -136,9 +238,11 @@ export function FleetMap() {
   const recenter = () => {
     if (withLocation.length > 0) {
       const lat =
-        withLocation.reduce((s, v) => s + (v.latitude || 0), 0) / withLocation.length;
+        withLocation.reduce((s, v) => s + (locOf(v)?.latitude || 0), 0) /
+        withLocation.length;
       const lng =
-        withLocation.reduce((s, v) => s + (v.longitude || 0), 0) / withLocation.length;
+        withLocation.reduce((s, v) => s + (locOf(v)?.longitude || 0), 0) /
+        withLocation.length;
       setCenter({ lat, lng });
     } else {
       setCenter(DEFAULT_CENTER);
@@ -163,6 +267,112 @@ export function FleetMap() {
     dragRef.current = null;
   };
 
+  const openAddForm = () => {
+    setEditingId(null);
+    setForm(EMPTY_FORM);
+    setFormError("");
+    setShowForm(true);
+  };
+
+  const openEditForm = (v: Vehicle) => {
+    setEditingId(v.id);
+    setForm({
+      plateNumber: v.plateNumber,
+      vehicleType: v.vehicleType || "PICKUP",
+      brand: v.brand || "",
+      year: v.year ? String(v.year) : "",
+      driverUserId: v.driverUserId || "",
+      coDriverUserId: v.coDriverUserId || "",
+      driverName: v.driverName || "",
+      driverPhone: v.driverPhone || "",
+      status: v.status || "ACTIVE",
+    });
+    setFormError("");
+    setShowForm(true);
+  };
+
+  // Pilih sopir dari daftar akun: nama + no HP ikut terisi otomatis kalau
+  // kolomnya masih kosong (server juga mengisi dari akun bila kosong).
+  const onDriverSelect = (field: "driverUserId" | "coDriverUserId", userId: string) => {
+    setForm((f) => {
+      const next = { ...f, [field]: userId };
+      if (field === "driverUserId" && userId) {
+        const u = drivers.find((d) => d.id === userId);
+        if (u) {
+          if (!next.driverName.trim()) next.driverName = u.name;
+          if (!next.driverPhone.trim() && u.phone) next.driverPhone = u.phone;
+        }
+      }
+      return next;
+    });
+  };
+
+  const submitForm = async () => {
+    setFormError("");
+    if (!form.plateNumber.trim()) {
+      setFormError("Nomor plat wajib diisi.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        plateNumber: form.plateNumber.trim(),
+        vehicleType: form.vehicleType,
+        brand: form.brand.trim() || null,
+        year: form.year ? Number(form.year) : null,
+        driverUserId: form.driverUserId || null,
+        coDriverUserId: form.coDriverUserId || null,
+        driverName: form.driverName.trim(),
+        driverPhone: form.driverPhone.trim() || null,
+        status: form.status,
+      };
+      const res = await fetch(
+        editingId ? `/api/fleet/vehicles/${editingId}` : "/api/fleet/vehicles",
+        {
+          method: editingId ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+      const json = await res.json();
+      if (!json.success) {
+        setFormError(json.message || "Gagal menyimpan kendaraan.");
+        return;
+      }
+      setShowForm(false);
+      setEditingId(null);
+      loadVehicles();
+    } catch {
+      setFormError("Gagal menyimpan kendaraan.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deactivateVehicle = async (v: Vehicle) => {
+    if (
+      !window.confirm(
+        `Nonaktifkan kendaraan ${v.plateNumber}? Kendaraan tidak tampil di peta, tapi bisa diaktifkan lagi dengan mendaftarkan plat yang sama.`
+      )
+    ) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/fleet/vehicles/${v.id}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (!json.success) {
+        setError(json.message || "Gagal menonaktifkan kendaraan.");
+        return;
+      }
+      if (selectedId === v.id) setSelectedId(null);
+      loadVehicles();
+    } catch {
+      setError("Gagal menonaktifkan kendaraan.");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -172,10 +382,18 @@ export function FleetMap() {
             Posisi terakhir kendaraan — diperbarui otomatis tiap 15 detik dari HP sopir
           </p>
         </div>
-        <button onClick={loadVehicles} className="btn-secondary">
-          <RefreshCw className="w-4 h-4" />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          {canManage && (
+            <button onClick={openAddForm} className="btn-primary">
+              <Plus className="w-4 h-4" />
+              Tambah Kendaraan
+            </button>
+          )}
+          <button onClick={loadVehicles} className="btn-secondary">
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -212,8 +430,9 @@ export function FleetMap() {
                   />
                 ))}
                 {withLocation.map((v) => {
-                  const left = lngToX(v.longitude as number, zoom) - centerPx + size.w / 2;
-                  const top = latToY(v.latitude as number, zoom) - centerPy + size.h / 2;
+                  const loc = locOf(v)!;
+                  const left = lngToX(loc.longitude, zoom) - centerPx + size.w / 2;
+                  const top = latToY(loc.latitude, zoom) - centerPy + size.h / 2;
                   const active = v.id === selectedId;
                   return (
                     <button
@@ -224,7 +443,7 @@ export function FleetMap() {
                       }}
                       className="absolute z-10 -translate-x-1/2 -translate-y-full"
                       style={{ left, top }}
-                      title={`${v.plateNumber} — ${v.driverName || "-"}`}
+                      title={`${v.plateNumber} — ${v.driverName || "-"} • ${timeAgo(loc.updatedAt)}`}
                     >
                       <span
                         className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold text-white shadow-lg whitespace-nowrap ${
@@ -290,10 +509,11 @@ export function FleetMap() {
                   <p className="text-sm text-gray-600">
                     Sopir: {selected.driverName || "-"}
                     {selected.driverPhone ? ` (${selected.driverPhone})` : ""}
+                    {selected.coDriverName ? ` • Pendamping: ${selected.coDriverName}` : ""}
                   </p>
                   <p className="text-sm text-gray-600 flex items-center gap-1">
                     <MapPin className="w-4 h-4" />
-                    {selected.address || "Alamat tidak diketahui"}
+                    {locOf(selected)?.address || "Alamat tidak diketahui"}
                   </p>
                 </div>
                 <span
@@ -304,13 +524,15 @@ export function FleetMap() {
                   {selected.status || "-"}
                 </span>
               </div>
-              {selected.lastLocationAt && (
+              {locOf(selected) && (
                 <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5" />
                   Lokasi terakhir:{" "}
-                  {format(new Date(selected.lastLocationAt), "dd MMM yyyy, HH:mm", {
+                  {format(new Date(locOf(selected)!.updatedAt), "dd MMM yyyy, HH:mm", {
                     locale: localeId,
                   })}
+                  {" • "}
+                  {timeAgo(locOf(selected)!.updatedAt)}
                 </p>
               )}
             </div>
@@ -326,18 +548,20 @@ export function FleetMap() {
             <p className="text-sm text-gray-500">Memuat...</p>
           ) : vehicles.length === 0 ? (
             <p className="text-sm text-gray-500">
-              Belum ada kendaraan. Tambah kendaraan lewat menu Pengaturan / API armada.
+              Belum ada kendaraan.
+              {canManage
+                ? " Tekan \"Tambah Kendaraan\" untuk mendaftarkan armada pertama."
+                : " Minta ADMIN / SUPER_ADMIN untuk mendaftarkan kendaraan."}
             </p>
           ) : (
             <div className="space-y-2">
               {vehicles.map((v) => {
-                const hasLoc =
-                  typeof v.latitude === "number" && typeof v.longitude === "number";
+                const loc = locOf(v);
                 return (
-                  <button
+                  <div
                     key={v.id}
                     onClick={() => focusVehicle(v)}
-                    className={`w-full text-left p-3 border rounded-lg transition-colors ${
+                    className={`w-full text-left p-3 border rounded-lg transition-colors cursor-pointer ${
                       v.id === selectedId
                         ? "border-blue-500 bg-blue-50"
                         : "border-gray-200 hover:border-gray-300"
@@ -352,23 +576,245 @@ export function FleetMap() {
                     </div>
                     <p className="text-xs text-gray-600">
                       {v.brand || v.vehicleType || "-"} • {v.driverName || "Tanpa sopir"}
+                      {v.coDriverName ? ` • Pendamping: ${v.coDriverName}` : ""}
                     </p>
                     <p className="text-xs text-gray-500 truncate">
-                      {hasLoc
-                        ? v.address || `${v.latitude}, ${v.longitude}`
+                      {loc
+                        ? `${loc.address || `${loc.latitude}, ${loc.longitude}`} • ${timeAgo(loc.updatedAt)}`
                         : "Belum ada lokasi GPS"}
                     </p>
-                  </button>
+                    {canManage && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditForm(v);
+                          }}
+                          className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          Edit
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deactivateVehicle(v);
+                          }}
+                          className="flex items-center gap-1 text-xs font-semibold text-red-600 hover:text-red-800"
+                        >
+                          <Power className="w-3.5 h-3.5" />
+                          Nonaktifkan
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
           )}
           <p className="text-xs text-gray-400 mt-4">
-            Lokasi dikirim otomatis dari HP sopir yang login sebagai ADMIN saat tombol
-            &quot;Mulai GPS&quot; di APK aktif.
+            Lokasi dikirim otomatis dari HP sopir yang ditugaskan (atau ADMIN)
+            saat tombol &quot;Mulai GPS&quot; di APK aktif.
           </p>
         </div>
       </div>
+
+      {/* Form tambah / edit kendaraan (ADMIN+) */}
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="glass-card w-full max-w-lg max-h-[90vh] overflow-y-auto p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-lg text-gray-900">
+                {editingId ? "Edit Kendaraan" : "Tambah Kendaraan"}
+              </h3>
+              <button
+                onClick={() => setShowForm(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100"
+                aria-label="Tutup"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {formError && (
+              <div className="p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                {formError}
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nomor Plat *
+                </label>
+                <input
+                  className="input-field w-full uppercase"
+                  value={form.plateNumber}
+                  onChange={(e) => setForm({ ...form, plateNumber: e.target.value })}
+                  placeholder="DD 1234 AB"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Jenis Kendaraan
+                  </label>
+                  <select
+                    className="input-field w-full"
+                    value={form.vehicleType}
+                    onChange={(e) => setForm({ ...form, vehicleType: e.target.value })}
+                  >
+                    {VEHICLE_TYPES.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Status
+                  </label>
+                  <select
+                    className="input-field w-full"
+                    value={form.status}
+                    onChange={(e) => setForm({ ...form, status: e.target.value })}
+                  >
+                    {VEHICLE_STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Merek
+                  </label>
+                  <input
+                    className="input-field w-full"
+                    value={form.brand}
+                    onChange={(e) => setForm({ ...form, brand: e.target.value })}
+                    placeholder="Mitsubishi Canter"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tahun
+                  </label>
+                  <input
+                    className="input-field w-full"
+                    type="number"
+                    value={form.year}
+                    onChange={(e) => setForm({ ...form, year: e.target.value })}
+                    placeholder="2022"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Sopir Utama (akun)
+                </label>
+                <select
+                  className="input-field w-full"
+                  value={form.driverUserId}
+                  onChange={(e) => onDriverSelect("driverUserId", e.target.value)}
+                >
+                  <option value="">— Pilih akun sopir —</option>
+                  {drivers.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} ({d.role})
+                    </option>
+                  ))}
+                  {editingId &&
+                    form.driverUserId &&
+                    !drivers.some((d) => d.id === form.driverUserId) && (
+                      <option value={form.driverUserId}>
+                        {form.driverName || "Sopir terdaftar"}
+                      </option>
+                    )}
+                </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  Sopir boleh ADMIN / KASIR — siapa pun yang akunnya dipilih
+                  bisa mengirim GPS kendaraan ini dari HP-nya.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Sopir Pendamping (opsional)
+                </label>
+                <select
+                  className="input-field w-full"
+                  value={form.coDriverUserId}
+                  onChange={(e) => onDriverSelect("coDriverUserId", e.target.value)}
+                >
+                  <option value="">— Tanpa pendamping —</option>
+                  {drivers
+                    .filter((d) => d.id !== form.driverUserId)
+                    .map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name} ({d.role})
+                      </option>
+                    ))}
+                  {editingId &&
+                    form.coDriverUserId &&
+                    !drivers.some((d) => d.id === form.coDriverUserId) && (
+                      <option value={form.coDriverUserId}>
+                        Sopir pendamping terdaftar
+                      </option>
+                    )}
+                </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  Untuk dua sopir yang jalan bareng di kendaraan yang sama.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nama Sopir
+                </label>
+                <input
+                  className="input-field w-full"
+                  value={form.driverName}
+                  onChange={(e) => setForm({ ...form, driverName: e.target.value })}
+                  placeholder="Nama sopir (otomatis dari akun kalau dipilih)"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  No HP Sopir
+                </label>
+                <input
+                  className="input-field w-full"
+                  value={form.driverPhone}
+                  onChange={(e) => setForm({ ...form, driverPhone: e.target.value })}
+                  placeholder="08xxxxxxxxxx"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  onClick={() => setShowForm(false)}
+                  className="btn-secondary"
+                  disabled={saving}
+                >
+                  Batal
+                </button>
+                <button onClick={submitForm} className="btn-primary" disabled={saving}>
+                  {saving ? "Menyimpan..." : editingId ? "Simpan Perubahan" : "Daftarkan Kendaraan"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

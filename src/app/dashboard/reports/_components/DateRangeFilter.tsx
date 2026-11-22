@@ -45,7 +45,10 @@ export default function DateRangeFilter({
         </div>
       </div>
 
-      <button onClick={onApply} className="btn-primary">
+      <button
+        onClick={onApply}
+        className="inline-flex items-center gap-2 rounded-lg bg-[#111111] px-4 py-2 text-sm font-semibold text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
+      >
         Tampilkan
       </button>
     </div>

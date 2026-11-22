@@ -476,6 +476,22 @@
     td {
       border-color: #000 !important;
     }
+
+    /* Laporan: merah tua (garis kop + angka total akhir) tetap tercetak.
+       Aturan `* { color: black }` di atas mematikan semua warna, jadi
+       dua class ini dikecualikan secara eksplisit. */
+    #print-content {
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+
+    #print-content .report-total-red {
+      color: #7f1d1d !important;
+    }
+
+    #print-content .report-rule-red {
+      border-color: #7f1d1d !important;
+    }
   }
 
   /* ==================== SETTINGS TABS ==================== */

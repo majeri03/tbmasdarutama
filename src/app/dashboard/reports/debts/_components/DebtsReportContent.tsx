@@ -1,4 +1,6 @@
 import ReportHeader from "../../_components/ReportHeader";
+import ReportFooter from "../../_components/ReportFooter";
+import ReportSummary, { ReportSectionTitle } from "../../_components/ReportSummary";
 import { formatCurrency, formatDate } from "@/lib/utils/pdf-helpers";
 
 interface CustomerDebt {
@@ -43,101 +45,78 @@ export default function DebtsReportContent({ data }: DebtsReportContentProps) {
   const { customerDebts, supplierDebts, customerDebtSummary, supplierDebtSummary } = data;
 
   return (
-    <div id="print-content" className="bg-white p-8 min-h-[297mm]">
+    <div id="print-content" className="bg-white p-8 min-h-[297mm] text-[#111111]">
       <ReportHeader title="Laporan Piutang & Hutang" />
 
-      {/* Summary Cards */}
+      {/* Summary */}
       <div className="grid grid-cols-2 gap-6 mb-8">
-        {/* Customer Debts (Piutang) */}
-        <div className="border-2 border-green-300 rounded-lg p-4 bg-green-50">
-          <h3 className="text-lg font-bold text-green-700 mb-3">💰 PIUTANG (Dari Customer)</h3>
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Total Piutang:</span>
-              <span className="font-bold text-green-700">{formatCurrency(customerDebtSummary.totalDebt)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Sudah Dibayar:</span>
-              <span className="font-semibold text-gray-700">{formatCurrency(customerDebtSummary.totalPaid)}</span>
-            </div>
-            <div className="flex justify-between border-t-2 border-green-300 pt-2">
-              <span className="font-bold text-gray-700">Sisa Piutang:</span>
-              <span className="font-bold text-green-600 text-xl">{formatCurrency(customerDebtSummary.totalRemaining)}</span>
-            </div>
-            <div className="text-xs text-gray-500 text-right">{customerDebtSummary.count} transaksi</div>
-          </div>
-        </div>
-
-        {/* Supplier Debts (Hutang) */}
-        <div className="border-2 border-red-300 rounded-lg p-4 bg-red-50">
-          <h3 className="text-lg font-bold text-red-700 mb-3">📋 HUTANG (Ke Supplier)</h3>
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Total Hutang:</span>
-              <span className="font-bold text-red-700">{formatCurrency(supplierDebtSummary.totalDebt)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Sudah Dibayar:</span>
-              <span className="font-semibold text-gray-700">{formatCurrency(supplierDebtSummary.totalPaid)}</span>
-            </div>
-            <div className="flex justify-between border-t-2 border-red-300 pt-2">
-              <span className="font-bold text-gray-700">Sisa Hutang:</span>
-              <span className="font-bold text-red-600 text-xl">{formatCurrency(supplierDebtSummary.totalRemaining)}</span>
-            </div>
-            <div className="text-xs text-gray-500 text-right">{supplierDebtSummary.count} transaksi</div>
-          </div>
-        </div>
+        <ReportSummary
+          title="Piutang"
+          items={[
+            { label: "Total Piutang", value: formatCurrency(customerDebtSummary.totalDebt) },
+            { label: "Sudah Dibayar", value: formatCurrency(customerDebtSummary.totalPaid) },
+            {
+              label: "Sisa Piutang",
+              value: formatCurrency(customerDebtSummary.totalRemaining),
+              note: `${customerDebtSummary.count} transaksi`,
+              strong: true,
+            },
+          ]}
+        />
+        <ReportSummary
+          title="Hutang"
+          items={[
+            { label: "Total Hutang", value: formatCurrency(supplierDebtSummary.totalDebt) },
+            { label: "Sudah Dibayar", value: formatCurrency(supplierDebtSummary.totalPaid) },
+            {
+              label: "Sisa Hutang",
+              value: formatCurrency(supplierDebtSummary.totalRemaining),
+              note: `${supplierDebtSummary.count} transaksi`,
+              strong: true,
+            },
+          ]}
+        />
       </div>
 
       {/* Customer Debts Table */}
       <div className="mb-8">
-        <h3 className="text-lg font-bold text-gray-900 mb-3 bg-green-100 p-2 rounded">
-          💰 Detail Piutang Customer
-        </h3>
+        <ReportSectionTitle>Detail Piutang Customer</ReportSectionTitle>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-green-50 border-b-2 border-green-300">
-              <th className="px-3 py-2 text-left font-semibold">No</th>
-              <th className="px-3 py-2 text-left font-semibold">Customer</th>
-              <th className="px-3 py-2 text-left font-semibold">Invoice</th>
-              <th className="px-3 py-2 text-left font-semibold">Jatuh Tempo</th>
-              <th className="px-3 py-2 text-right font-semibold">Total</th>
-              <th className="px-3 py-2 text-right font-semibold">Dibayar</th>
-              <th className="px-3 py-2 text-right font-semibold">Sisa</th>
-              <th className="px-3 py-2 text-center font-semibold">Status</th>
+            <tr className="border-b-2 border-[#111111]">
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">No</th>
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">Customer</th>
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">Invoice</th>
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">Jatuh Tempo</th>
+              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-[#111111]">Total</th>
+              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-[#111111]">Dibayar</th>
+              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-[#111111]">Sisa</th>
+              <th className="px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wider text-[#111111]">Status</th>
             </tr>
           </thead>
           <tbody>
             {customerDebts.map((debt, index) => (
-              <tr key={debt.id} className="border-b border-gray-200">
+              <tr key={debt.id} className="border-b border-gray-200 even:bg-[#FAFAFA]">
                 <td className="px-3 py-2">{index + 1}</td>
                 <td className="px-3 py-2">
                   <div className="font-semibold">{debt.customer.name}</div>
-                  <div className="text-xs text-gray-500">{debt.customer.phone}</div>
+                  <div className="text-xs text-[#6B7280]">{debt.customer.phone}</div>
                 </td>
                 <td className="px-3 py-2 font-mono text-xs">{debt.sale.invoiceNumber}</td>
                 <td className="px-3 py-2">{formatDate(debt.dueDate)}</td>
-                <td className="px-3 py-2 text-right">{formatCurrency(debt.totalDebt)}</td>
-                <td className="px-3 py-2 text-right text-green-600">{formatCurrency(debt.paidAmount)}</td>
-                <td className="px-3 py-2 text-right font-semibold text-orange-600">{formatCurrency(debt.remainingDebt)}</td>
-                <td className="px-3 py-2 text-center">
-                  <span className={`text-xs px-2 py-1 rounded ${
-                    debt.status === 'PAID' ? 'bg-green-100 text-green-700' : 
-                    debt.status === 'PARTIAL' ? 'bg-yellow-100 text-yellow-700' : 
-                    'bg-red-100 text-red-700'
-                  }`}>
-                    {debt.status}
-                  </span>
-                </td>
+                <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(debt.totalDebt)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(debt.paidAmount)}</td>
+                <td className="px-3 py-2 text-right font-semibold tabular-nums">{formatCurrency(debt.remainingDebt)}</td>
+                <td className="px-3 py-2 text-center">{debt.status}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
-            <tr className="bg-green-100 font-bold border-t-2 border-green-300">
+            <tr className="border-t-2 border-[#111111] font-bold">
               <td colSpan={4} className="px-3 py-3 text-right">TOTAL PIUTANG</td>
-              <td className="px-3 py-3 text-right">{formatCurrency(customerDebtSummary.totalDebt)}</td>
-              <td className="px-3 py-3 text-right text-green-600">{formatCurrency(customerDebtSummary.totalPaid)}</td>
-              <td className="px-3 py-3 text-right text-orange-600">{formatCurrency(customerDebtSummary.totalRemaining)}</td>
+              <td className="report-total-red px-3 py-3 text-right tabular-nums text-red-900">{formatCurrency(customerDebtSummary.totalDebt)}</td>
+              <td className="px-3 py-3 text-right tabular-nums">{formatCurrency(customerDebtSummary.totalPaid)}</td>
+              <td className="px-3 py-3 text-right tabular-nums">{formatCurrency(customerDebtSummary.totalRemaining)}</td>
               <td></td>
             </tr>
           </tfoot>
@@ -146,58 +125,50 @@ export default function DebtsReportContent({ data }: DebtsReportContentProps) {
 
       {/* Supplier Debts Table */}
       <div className="mb-8">
-        <h3 className="text-lg font-bold text-gray-900 mb-3 bg-red-100 p-2 rounded">
-          📋 Detail Hutang Supplier
-        </h3>
+        <ReportSectionTitle>Detail Hutang Supplier</ReportSectionTitle>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-red-50 border-b-2 border-red-300">
-              <th className="px-3 py-2 text-left font-semibold">No</th>
-              <th className="px-3 py-2 text-left font-semibold">Supplier</th>
-              <th className="px-3 py-2 text-left font-semibold">Invoice</th>
-              <th className="px-3 py-2 text-left font-semibold">Jatuh Tempo</th>
-              <th className="px-3 py-2 text-right font-semibold">Total</th>
-              <th className="px-3 py-2 text-right font-semibold">Dibayar</th>
-              <th className="px-3 py-2 text-right font-semibold">Sisa</th>
-              <th className="px-3 py-2 text-center font-semibold">Status</th>
+            <tr className="border-b-2 border-[#111111]">
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">No</th>
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">Supplier</th>
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">Invoice</th>
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">Jatuh Tempo</th>
+              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-[#111111]">Total</th>
+              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-[#111111]">Dibayar</th>
+              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-[#111111]">Sisa</th>
+              <th className="px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wider text-[#111111]">Status</th>
             </tr>
           </thead>
           <tbody>
             {supplierDebts.map((debt, index) => (
-              <tr key={debt.id} className="border-b border-gray-200">
+              <tr key={debt.id} className="border-b border-gray-200 even:bg-[#FAFAFA]">
                 <td className="px-3 py-2">{index + 1}</td>
                 <td className="px-3 py-2">
                   <div className="font-semibold">{debt.supplier.name}</div>
-                  <div className="text-xs text-gray-500">{debt.supplier.phone}</div>
+                  <div className="text-xs text-[#6B7280]">{debt.supplier.phone}</div>
                 </td>
                 <td className="px-3 py-2 font-mono text-xs">{debt.purchase.invoiceNumber}</td>
                 <td className="px-3 py-2">{formatDate(debt.dueDate)}</td>
-                <td className="px-3 py-2 text-right">{formatCurrency(debt.totalDebt)}</td>
-                <td className="px-3 py-2 text-right text-green-600">{formatCurrency(debt.paidAmount)}</td>
-                <td className="px-3 py-2 text-right font-semibold text-orange-600">{formatCurrency(debt.remainingDebt)}</td>
-                <td className="px-3 py-2 text-center">
-                  <span className={`text-xs px-2 py-1 rounded ${
-                    debt.status === 'PAID' ? 'bg-green-100 text-green-700' : 
-                    debt.status === 'PARTIAL' ? 'bg-yellow-100 text-yellow-700' : 
-                    'bg-red-100 text-red-700'
-                  }`}>
-                    {debt.status}
-                  </span>
-                </td>
+                <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(debt.totalDebt)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(debt.paidAmount)}</td>
+                <td className="px-3 py-2 text-right font-semibold tabular-nums">{formatCurrency(debt.remainingDebt)}</td>
+                <td className="px-3 py-2 text-center">{debt.status}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
-            <tr className="bg-red-100 font-bold border-t-2 border-red-300">
+            <tr className="border-t-2 border-[#111111] font-bold">
               <td colSpan={4} className="px-3 py-3 text-right">TOTAL HUTANG</td>
-              <td className="px-3 py-3 text-right">{formatCurrency(supplierDebtSummary.totalDebt)}</td>
-              <td className="px-3 py-3 text-right text-green-600">{formatCurrency(supplierDebtSummary.totalPaid)}</td>
-              <td className="px-3 py-3 text-right text-orange-600">{formatCurrency(supplierDebtSummary.totalRemaining)}</td>
+              <td className="report-total-red px-3 py-3 text-right tabular-nums text-red-900">{formatCurrency(supplierDebtSummary.totalDebt)}</td>
+              <td className="px-3 py-3 text-right tabular-nums">{formatCurrency(supplierDebtSummary.totalPaid)}</td>
+              <td className="px-3 py-3 text-right tabular-nums">{formatCurrency(supplierDebtSummary.totalRemaining)}</td>
               <td></td>
             </tr>
           </tfoot>
         </table>
       </div>
+
+      <ReportFooter />
     </div>
   );
 }

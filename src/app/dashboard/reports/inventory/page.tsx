@@ -84,7 +84,7 @@ export default function InventoryReportPage() {
             {reportData ? (
                 <>
                     <div className="mb-4 flex gap-3 justify-end print:hidden">
-                        <button onClick={handleGenerateReport} className="btn-secondary">
+                        <button onClick={handleGenerateReport} className="inline-flex items-center gap-2 rounded-lg border border-[#111111] bg-white px-4 py-2 text-sm font-semibold text-[#111111] hover:bg-[#FAFAFA] disabled:cursor-not-allowed disabled:opacity-50">
                             Refresh Data
                         </button>
                         <ReportDownloadButton
@@ -100,7 +100,7 @@ export default function InventoryReportPage() {
             ) : (
                 <div className="text-center py-12">
                     <p className="text-gray-500 mb-4">Klik tombol di bawah untuk generate laporan</p>
-                    <button onClick={handleGenerateReport} className="btn-primary">
+                    <button onClick={handleGenerateReport} className="inline-flex items-center gap-2 rounded-lg bg-[#111111] px-4 py-2 text-sm font-semibold text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-50">
                         Generate Laporan
                     </button>
                 </div>

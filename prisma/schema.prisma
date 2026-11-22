@@ -38,6 +38,10 @@ model User {
   notifications       Notification[]
   deliveryPhotos      DeliveryPhoto[]
   r2Files             R2File[]
+  // FIX (22 Nov 2026, rombakan armada): kendaraan yang dikemudikan user ini
+  // sebagai sopir utama / pendamping (dipilih SUPER_ADMIN/ADMIN saat mendaftar).
+  drivenVehicles   FleetVehicle[] @relation("VehicleDriver")
+  coDrivenVehicles FleetVehicle[] @relation("VehicleCoDriver")
 
   @@map("users")
 }
@@ -768,6 +772,14 @@ model FleetVehicle {
   year           Int?
   driverName     String    // Nama sopir
   driverPhone    String?   // No telepon sopir
+  // FIX (22 Nov 2026, rombakan armada): kaitan ke akun User sopir utama dan
+  // sopir pendamping (boleh role apa pun — ADMIN pun bisa jadi sopir).
+  // Dipakai aturan GPS: ADMIN+ untuk kendaraan apa pun, atau sopir yang
+  // ditugaskan untuk kendaraannya sendiri. Hapus akun -> SET NULL.
+  driverUserId   String?
+  coDriverUserId String?
+  driverUser     User?     @relation("VehicleDriver", fields: [driverUserId], references: [id], onDelete: SetNull)
+  coDriverUser   User?     @relation("VehicleCoDriver", fields: [coDriverUserId], references: [id], onDelete: SetNull)
   status         String    @default("ACTIVE") // ACTIVE, IDLE, MAINTENANCE, OFF
   latitude       Float?
   longitude      Float?

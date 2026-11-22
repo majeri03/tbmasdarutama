@@ -13,20 +13,15 @@ import { hasMinimumRole } from "@/lib/utils/role";
 /**
  * POST /api/fleet/location
  * Menerima pembaruan koordinat GPS lokasi armada dari aplikasi mobile.
- * Role: ADMIN+ (SUPER_ADMIN/ADMIN).
- * FIX (22 Nov 2026): sebelumnya user login mana pun bisa mengubah GPS
- * vehicleId mana pun. Tidak ada kaitan sopir↔akun di model FleetVehicle
- * (driver hanya nama bebas), jadi dibatasi ke ADMIN+.
- * PERHATIAN: tombol "Mulai GPS" di APK tidak dibatasi role — kalau sopir
- * login sebagai KASIR, update GPS-nya akan ditolak (403) setelah patch
- * ini. Pastikan HP pelacak login sebagai ADMIN/SUPER_ADMIN, atau tambahkan
- * kaitan sopir↔akun dulu sebelum mengaktifkan GPS untuk KASIR.
+ * Aturan (22 Nov 2026, rombakan armada): boleh ADMIN+ (SUPER_ADMIN/ADMIN)
+ * untuk kendaraan apa pun, ATAU sopir yang ditugaskan ke kendaraan itu
+ * (driverUserId / coDriverUserId — boleh role apa pun, termasuk KASIR)
+ * untuk kendaraannya sendiri. Sopir yang ditugaskan tidak lagi ditolak 403.
  */
 export async function POST(request: NextRequest) {
   try {
     const session = await getAuthenticatedUser();
     if (!session) return unauthorizedResponse();
-    if (!hasMinimumRole(session, "ADMIN")) return forbiddenResponse("Hanya ADMIN yang boleh memperbarui lokasi armada.");
 
     const body = await request.json();
     const { vehicleId, latitude, longitude, accuracy, address, timestamp } = body;
@@ -41,6 +36,18 @@ export async function POST(request: NextRequest) {
 
     if (!vehicle) {
       return errorResponse("Armada tidak ditemukan.", 404);
+    }
+
+    // ADMIN+ boleh untuk kendaraan apa pun; sopir yang ditugaskan hanya
+    // untuk kendaraannya sendiri (utama atau pendamping).
+    const isAdmin = hasMinimumRole(session, "ADMIN");
+    const isAssignedDriver =
+      session.user.id === vehicle.driverUserId ||
+      session.user.id === vehicle.coDriverUserId;
+    if (!isAdmin && !isAssignedDriver) {
+      return forbiddenResponse(
+        "Hanya sopir yang ditugaskan atau ADMIN yang boleh memperbarui lokasi kendaraan ini."
+      );
     }
 
     const updated = await prisma.fleetVehicle.update({

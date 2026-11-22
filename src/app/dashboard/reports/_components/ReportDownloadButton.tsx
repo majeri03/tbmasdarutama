@@ -68,10 +68,10 @@ export default function ReportDownloadButton({
     <button
       onClick={handleDownload}
       disabled={isDownloading || disabled}
-      className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+      className="inline-flex items-center gap-2 rounded-lg bg-[#111111] px-4 py-2 text-sm font-semibold text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
     >
       <Download className="w-4 h-4" />
-      {isDownloading ? "Generating..." : "Download PDF"}
+      {isDownloading ? "Mengunduh..." : "Download PDF"}
     </button>
   );
 }

@@ -10,69 +10,79 @@ import {
 } from "@/lib/utils/api";
 import { hasMinimumRole } from "@/lib/utils/role";
 
-// Initial seed armada jika database masih kosong
-const INITIAL_VEHICLES = [
-  {
-    plateNumber: "DD 8234 XY",
-    vehicleType: "TRUCK",
-    brand: "Mitsubishi Canter FE 74",
-    year: 2022,
-    driverName: "Pak Syamsul",
-    driverPhone: "081245678901",
-    status: "ACTIVE",
-    latitude: -5.1385,
-    longitude: 119.4182,
-    address: "Jl. Veteran Selatan, Makassar",
-    lastLocationAt: new Date(),
-  },
-  {
-    plateNumber: "DD 8512 AB",
-    vehicleType: "PICKUP",
-    brand: "Mitsubishi L300",
-    year: 2021,
-    driverName: "Pak Daeng Rewa",
-    driverPhone: "082198765432",
-    status: "ACTIVE",
-    latitude: -5.1478,
-    longitude: 119.4325,
-    address: "Jl. Pengayoman, Panakkukang, Makassar",
-    lastLocationAt: new Date(),
-  },
-  {
-    plateNumber: "DD 8901 MK",
-    vehicleType: "TRUCK",
-    brand: "Isuzu Giga",
-    year: 2023,
-    driverName: "Pak Basir",
-    driverPhone: "085211223344",
-    status: "IDLE",
-    latitude: -5.1224,
-    longitude: 119.4116,
-    address: "Gudang TB Masdar Utama, Makassar",
-    lastLocationAt: new Date(),
-  },
-];
+type DriverInfo = { id: string; name: string; phone: string | null } | null;
+
+type DriverCheck =
+  | { ok: true; driver: DriverInfo; coDriver: DriverInfo }
+  | { ok: false; message: string };
+
+/**
+ * Validasi penugasan sopir: id harus milik user yang ada, dan sopir utama
+ * tidak boleh sama dengan sopir pendamping. Id kosong / bukan string
+ * dianggap tidak ditugaskan (null).
+ */
+async function checkDrivers(
+  driverUserId: unknown,
+  coDriverUserId: unknown
+): Promise<DriverCheck> {
+  const dId =
+    typeof driverUserId === "string" && driverUserId.trim()
+      ? driverUserId.trim()
+      : null;
+  const cId =
+    typeof coDriverUserId === "string" && coDriverUserId.trim()
+      ? coDriverUserId.trim()
+      : null;
+  if (dId && cId && dId === cId) {
+    return {
+      ok: false,
+      message: "Sopir utama dan sopir pendamping tidak boleh orang yang sama.",
+    };
+  }
+  let driver: DriverInfo = null;
+  let coDriver: DriverInfo = null;
+  if (dId) {
+    driver = await prisma.user.findUnique({
+      where: { id: dId },
+      select: { id: true, name: true, phone: true },
+    });
+    if (!driver) {
+      return { ok: false, message: "Sopir utama tidak ditemukan." };
+    }
+  }
+  if (cId) {
+    coDriver = await prisma.user.findUnique({
+      where: { id: cId },
+      select: { id: true, name: true, phone: true },
+    });
+    if (!coDriver) {
+      return { ok: false, message: "Sopir pendamping tidak ditemukan." };
+    }
+  }
+  return { ok: true, driver, coDriver };
+}
 
 /**
  * GET /api/fleet/vehicles
  * Mengambil daftar armada dan posisi terakhirnya.
+ * FIX (22 Nov 2026, rombakan armada): blok seed INITIAL_VEHICLES dihapus —
+ * data contoh palsu (Pak Syamsul dkk.) tidak boleh masuk produksi, dan seed
+ * itu punya perangkap: count() menghitung baris nonaktif sedangkan DELETE
+ * hanya soft-delete, jadi sekali contoh dihapus daftar jadi "Kendaraan (0)"
+ * selamanya. Kendaraan sekarang hanya dari pendaftaran (POST).
  */
 export async function GET(_request: NextRequest) {
   try {
     const session = await getAuthenticatedUser();
     if (!session) return unauthorizedResponse();
 
-    const count = await prisma.fleetVehicle.count();
-    if (count === 0) {
-      // Auto seed initial Makassar fleet
-      for (const v of INITIAL_VEHICLES) {
-        await prisma.fleetVehicle.create({ data: v });
-      }
-    }
-
     const vehicles = await prisma.fleetVehicle.findMany({
       where: { isActive: true },
       orderBy: { updatedAt: "desc" },
+      include: {
+        driverUser: { select: { id: true, name: true } },
+        coDriverUser: { select: { id: true, name: true } },
+      },
     });
 
     const formatted = vehicles.map((v) => ({
@@ -83,6 +93,10 @@ export async function GET(_request: NextRequest) {
       year: v.year,
       driverName: v.driverName,
       driverPhone: v.driverPhone,
+      driverUserId: v.driverUserId,
+      coDriverUserId: v.coDriverUserId,
+      driverUserName: v.driverUser?.name || undefined,
+      coDriverName: v.coDriverUser?.name || undefined,
       status: v.status,
       lastLocation:
         v.latitude !== null && v.longitude !== null
@@ -106,6 +120,8 @@ export async function GET(_request: NextRequest) {
 /**
  * POST /api/fleet/vehicles
  * Mendaftarkan armada baru. (Admin/Super Admin)
+ * Menerima driverUserId / coDriverUserId (nullable). Kalau driverUserId
+ * diisi dan driverName kosong, nama + no HP diambil dari akun user.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -116,9 +132,27 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { plateNumber, vehicleType, brand, year, driverName, driverPhone, status } = body;
 
-    if (!plateNumber || !driverName) {
-      return validationErrorResponse("Nomor Plat dan Nama Sopir wajib diisi.");
+    if (!plateNumber || !String(plateNumber).trim()) {
+      return validationErrorResponse("Nomor Plat wajib diisi.");
     }
+
+    const check = await checkDrivers(body.driverUserId, body.coDriverUserId);
+    if (!check.ok) return validationErrorResponse(check.message);
+
+    // Nama sopir boleh kosong kalau sopir dipilih dari daftar akun — isi
+    // dari nama akun. No HP juga ikut dari akun kalau tidak diketik.
+    let finalDriverName =
+      typeof driverName === "string" ? driverName.trim() : "";
+    if (!finalDriverName && check.driver) finalDriverName = check.driver.name;
+    if (!finalDriverName) {
+      return validationErrorResponse(
+        "Nama Sopir wajib diisi (atau pilih sopir dari daftar akun)."
+      );
+    }
+    const finalDriverPhone =
+      typeof driverPhone === "string" && driverPhone.trim()
+        ? driverPhone.trim()
+        : check.driver?.phone || null;
 
     const formattedPlate = plateNumber.trim().toUpperCase();
 
@@ -137,8 +171,10 @@ export async function POST(request: NextRequest) {
             vehicleType: vehicleType || existing.vehicleType,
             brand: brand || existing.brand,
             year: year ? Number(year) : existing.year,
-            driverName: driverName.trim(),
-            driverPhone: driverPhone ? driverPhone.trim() : null,
+            driverName: finalDriverName,
+            driverPhone: finalDriverPhone,
+            driverUserId: check.driver ? check.driver.id : null,
+            coDriverUserId: check.coDriver ? check.coDriver.id : null,
             status: status || "ACTIVE",
           },
         });
@@ -153,13 +189,13 @@ export async function POST(request: NextRequest) {
         vehicleType: vehicleType || "PICKUP",
         brand: brand ? brand.trim() : null,
         year: year ? Number(year) : null,
-        driverName: driverName.trim(),
-        driverPhone: driverPhone ? driverPhone.trim() : null,
+        driverName: finalDriverName,
+        driverPhone: finalDriverPhone,
+        driverUserId: check.driver ? check.driver.id : null,
+        coDriverUserId: check.coDriver ? check.coDriver.id : null,
         status: status || "ACTIVE",
-        latitude: -5.1385,
-        longitude: 119.4182,
-        address: "Makassar, Sulawesi Selatan",
-        lastLocationAt: new Date(),
+        // FIX (22 Nov 2026): kendaraan baru TIDAK diberi lokasi palsu
+        // Makassar — lokasi hanya muncul setelah HP sopir mengirim GPS.
       },
     });
 

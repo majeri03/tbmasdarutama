@@ -25,16 +25,16 @@ export default function ReportLayout({
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="glass-card p-6 no-print">
+        {/* Header layar */}
+        <div className="no-print rounded-xl border border-gray-200 bg-white p-6">
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-4">
-              <div className="p-3 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600">
+              <div className="rounded-lg bg-[#111111] p-3">
                 <FileText className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-                <p className="text-gray-600 mt-1">{description}</p>
+                <h1 className="text-2xl font-bold text-[#111111]">{title}</h1>
+                <p className="mt-1 text-[#6B7280]">{description}</p>
               </div>
             </div>
 
@@ -44,7 +44,7 @@ export default function ReportLayout({
                 <button
                   onClick={onPrint}
                   disabled={isLoading}
-                  className="btn-secondary flex items-center gap-2"
+                  className="inline-flex items-center gap-2 rounded-lg border border-[#111111] bg-white px-4 py-2 text-sm font-semibold text-[#111111] hover:bg-[#FAFAFA] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Printer className="w-4 h-4" />
                   Print
@@ -54,7 +54,7 @@ export default function ReportLayout({
                 <button
                   onClick={onDownload}
                   disabled={isLoading}
-                  className="btn-primary flex items-center gap-2"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#111111] px-4 py-2 text-sm font-semibold text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Download className="w-4 h-4" />
                   Download PDF
@@ -68,7 +68,7 @@ export default function ReportLayout({
         </div>
 
         {/* Content */}
-        <div className="glass-card p-6">
+        <div className="rounded-xl border border-gray-200 bg-white p-6">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="spinner-large" />
