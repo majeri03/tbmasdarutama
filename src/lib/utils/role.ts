@@ -16,6 +16,11 @@ export const PERMISSIONS = {
   ACCESS_POS: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
   
   // Sales
+  // KEPUTUSAN PEMILIK (22 Nov 2026, pentest H6 — BY-DESIGN): KASIR BOLEH
+  // membaca semua penjualan/invoice/DO/piutang toko (tanpa filter
+  // cashierId = dirinya sendiri) karena kasir butuh data itu untuk
+  // bertransaksi dan mengerjakan DO. Akses baca ini BY-DESIGN, bukan
+  // kebocoran — jangan "diperbaiki" dengan membatasi ke miliknya sendiri.
   VIEW_SALES: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
   CREATE_SALE: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
   // FIX (22 Nov 2026): edit penjualan sebelumnya memakai CREATE_SALE, jadi
@@ -44,6 +49,9 @@ export const PERMISSIONS = {
   DELETE_STOCK_MOVEMENT: ["SUPER_ADMIN"] as Role[],
 
   // Customers
+  // BY-DESIGN (22 Nov 2026, pentest M27): KASIR BOLEH membaca profil +
+  // riwayat keuangan customer (utang/cicilan) karena kasir butuh info
+  // piutang untuk menerima pembayaran. Bukan kebocoran.
   VIEW_CUSTOMERS: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
   CREATE_CUSTOMER: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
   EDIT_CUSTOMER: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
@@ -56,15 +64,24 @@ export const PERMISSIONS = {
   DELETE_SUPPLIER: ["SUPER_ADMIN", "ADMIN"] as Role[],
 
   // Debts
+  // BY-DESIGN (22 Nov 2026, pentest H6): KASIR BOLEH membaca semua piutang
+  // customer — kasir butuh data itu untuk menerima pembayaran cicilan.
   VIEW_CUSTOMER_DEBTS: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
   MANAGE_CUSTOMER_DEBTS: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
   VIEW_SUPPLIER_DEBTS: ["SUPER_ADMIN", "ADMIN"] as Role[],
   MANAGE_SUPPLIER_DEBTS: ["SUPER_ADMIN", "ADMIN"] as Role[],
 
   // Delivery Orders
+  // BY-DESIGN (22 Nov 2026, pentest H6): KASIR BOLEH membaca semua Surat
+  // Jalan toko — kasir ikut mengerjakan DO. Bukan kebocoran.
   VIEW_DELIVERY_ORDERS: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
   CREATE_DELIVERY_ORDER: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
+  // FIX PENTEST (22 Nov 2026, H5): KASIR hanya boleh mengubah status ke
+  // IN_TRANSIT. CANCELLED (menghapus hutang auto-DO) dan DELIVERED
+  // (memotong stok) khusus ADMIN+ lewat izin di bawah ini.
   UPDATE_DELIVERY_STATUS: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
+  CANCEL_DELIVERY_ORDER: ["SUPER_ADMIN", "ADMIN"] as Role[],
+  CONFIRM_DELIVERY_ORDER: ["SUPER_ADMIN", "ADMIN"] as Role[],
   EDIT_DELIVERY_ORDER: ["SUPER_ADMIN", "ADMIN"] as Role[],
   DELETE_DELIVERY_ORDER: ["SUPER_ADMIN"] as Role[],
 
@@ -80,7 +97,10 @@ export const PERMISSIONS = {
 
   // Settings
   VIEW_SETTINGS: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
-  MANAGE_STORE_SETTINGS: ["SUPER_ADMIN", "ADMIN"] as Role[],
+  // FIX PENTEST (22 Nov 2026, M11): dulu ADMIN juga boleh — padahal komentar
+  // route menyebut SUPER_ADMIN only, dan pengaturan berisi rekening bank /
+  // NPWP. Sekarang SUPER_ADMIN saja.
+  MANAGE_STORE_SETTINGS: ["SUPER_ADMIN"] as Role[],
   MANAGE_LANDING_PAGE: ["SUPER_ADMIN"] as Role[],
   MANAGE_USERS: ["SUPER_ADMIN"] as Role[],
 
@@ -99,7 +119,16 @@ export type Permission = keyof typeof PERMISSIONS;
 
 export interface AuthSession {
   user?: {
-    id?: string;
+    // FIX BUILD (22 Nov 2026, susulan pentest): id WAJIB string, bukan
+    // opsional. Setiap sesi terautentikasi selalu membawa id:
+    // getAuthenticatedUser() hanya mengembalikan sesi kalau
+    // session.user.id ada (web) atau payload token mobile ada id-nya.
+    // Sebelumnya id?: string membuat SEMUA pemakaian session.user.id
+    // (adminId / createdById / cashierId / userId di ~20 tempat di
+    // sale, purchase, delivery-order, debt, product, stock) gagal
+    // compile dengan "string | undefined is not assignable to string"
+    // sejak M18 (externalSession) memperkenalkan tipe ini.
+    id: string;
     email?: string;
     name?: string;
     role?: string;

@@ -1,22 +1,74 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/utils/api";
+import { hasMinimumRole } from "@/lib/utils/role";
 import prisma from "@/lib/prisma";
-import { deleteFromR2, extractR2Filename } from "@/lib/utils/storage";
-import { markR2FilesDeletedByKeys } from "@/lib/utils/r2-tracking";
+import { extractR2Filename } from "@/lib/utils/storage";
+import { deleteR2FileByUrl } from "@/lib/utils/r2-tracking";
 
 // Alias helper for consistency
 const extractFilenameFromUrl = extractR2Filename;
-const deleteFromWorker = deleteFromR2;
+
+// PENTEST FIX (22 Nov 2026, L4/M14): pola key R2 yang sama seperti
+// DELETE /api/upload — dipakai untuk membedakan file R2 asli dari URL
+// luar (placeholder dsb.) yang tidak ada di R2.
+const R2_KEY_RE = /^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+(?:-[a-zA-Z0-9_-]+)*\.(jpg|jpeg|png|webp)$/;
+
+/**
+ * Coba hapus satu file dari R2.
+ * - "deleted": file R2 benar-benar terhapus (atau sudah tercatat DELETED).
+ * - "not-r2": nilainya bukan key R2 (URL luar/placeholder) — tidak ada
+ *   file di R2 yang perlu dihapus, baris DB boleh dihapus.
+ * - "failed": hapus R2 gagal — baris DB WAJIB dipertahankan (L5) dan
+ *   file sudah ditandai DELETE_FAILED oleh deleteR2FileByUrl.
+ */
+async function tryDeleteR2File(
+  urlOrKey: string | null | undefined
+): Promise<"deleted" | "not-r2" | "failed"> {
+  const key = extractFilenameFromUrl(urlOrKey);
+  if (!key) return "failed";
+  if (!R2_KEY_RE.test(key)) return "not-r2";
+  const ok = await deleteR2FileByUrl(key);
+  return ok ? "deleted" : "failed";
+}
+
+/**
+ * PENTEST FIX (22 Nov 2026, M14): tidak ada tabel audit di DB, jadi jejak
+ * audit pembersihan ditulis terstruktur ke log server (Vercel logs) —
+ * siapa, kapan, target, berapa yang terhapus/gagal. Jangan hapus baris ini.
+ */
+function auditCleanupLog(input: {
+  userId: string;
+  email: string;
+  target: string;
+  olderThanDays: number;
+  deletedCount: number;
+  skippedCount: number;
+  failedCount: number;
+}) {
+  console.log(
+    `[STORAGE_CLEANUP_AUDIT] ${JSON.stringify({ ...input, at: new Date().toISOString() })}`
+  );
+}
 
 /**
  * GET /api/storage/cleanup
  * Mendapatkan data statistik penggunaan gambar Cloudflare R2 per kategori.
+ *
+ * PENTEST FIX (22 Nov 2026, L1): dulu tanpa cek role — KASIR bisa membaca
+ * statistik penyimpanan internal. Sekarang ADMIN+ saja (sama seperti POST
+ * dan server action getStorageOverview).
  */
 export async function GET() {
   try {
     const session = await getAuthenticatedUser();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!hasMinimumRole(session, "ADMIN")) {
+      return NextResponse.json(
+        { error: "Hanya Admin / Super Admin yang dapat melihat statistik penyimpanan." },
+        { status: 403 }
+      );
     }
 
     // 1. Gambar Produk per Kategori Produk
@@ -236,6 +288,16 @@ export async function GET() {
 /**
  * POST /api/storage/cleanup
  * Menghapus kumpulan gambar sesuai kategori target untuk menghemat kuota Cloudflare R2 10GB.
+ *
+ * PENTEST FIX (22 Nov 2026, M14 + L2 + L5):
+ * - Role check denylist (role === "KASIR") diganti allowlist ADMIN+.
+ * - olderThanDays WAJIB bilangan bulat 1-365 untuk SEMUA target destruktif
+ *   (termasuk ALL_PRODUCTS / PRODUCT_CATEGORY / HERO_IMAGES yang dulu tidak
+ *   butuh itu sama sekali). Nilai -1 dulu menghasilkan cutoff di masa
+ *   depan sehingga SEMUA bukti ikut terhapus.
+ * - Baris DB hanya dihapus untuk file yang R2-nya benar-benar terhapus.
+ *   Kalau hapus R2 gagal, baris dipertahankan + file ditandai
+ *   DELETE_FAILED (bisa di-retry dari halaman Penyimpanan).
  */
 export async function POST(request: NextRequest) {
   try {
@@ -244,8 +306,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Role check: Admin / Super Admin only
-    if (session.user.role === "KASIR") {
+    // Role check: Admin / Super Admin only (allowlist, bukan denylist).
+    if (!hasMinimumRole(session, "ADMIN")) {
       return NextResponse.json(
         { error: "Hanya Admin / Super Admin yang dapat membersihkan penyimpanan." },
         { status: 403 }
@@ -255,7 +317,80 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { target, categoryId, olderThanDays } = body;
 
+    const validTargets = ["PRODUCT_CATEGORY", "ALL_PRODUCTS", "DELIVERY_PROOFS", "PAYMENT_PROOFS", "HERO_IMAGES"];
+    if (!target || !validTargets.includes(target)) {
+      return NextResponse.json(
+        { error: "Target pembersihan tidak valid atau data tidak lengkap" },
+        { status: 400 }
+      );
+    }
+
+    // olderThanDays wajib untuk semua target destruktif.
+    const days = Number(olderThanDays);
+    if (!Number.isInteger(days) || days < 1 || days > 365) {
+      return NextResponse.json(
+        { error: "olderThanDays wajib diisi bilangan bulat 1–365 (hari)." },
+        { status: 400 }
+      );
+    }
+    const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
     let deletedCount = 0;
+    let skippedCount = 0; // baris DB dihapus tapi nilainya bukan file R2
+    let failedCount = 0; // hapus R2 gagal — baris DB dipertahankan
+
+    const audit = () =>
+      auditCleanupLog({
+        userId: session.user.id!,
+        email: (session.user as { email?: string }).email ?? "-",
+        target,
+        olderThanDays: days,
+        deletedCount,
+        skippedCount,
+        failedCount,
+      });
+
+    // Hapus tag [TAG]: key dari satu notes; hanya tag yang filenya
+    // benar-benar terhapus (atau bukan file R2) yang dibuang dari notes.
+    // Mengembalikan notes baru + apakah ada perubahan.
+    async function cleanNoteTags(
+      notes: string,
+      tags: string[]
+    ): Promise<{ cleaned: string; changed: boolean }> {
+      let cleaned = notes;
+      let changed = false;
+      for (const tag of tags) {
+        const re = new RegExp(`\\[${tag}\\]:\\s*([^\\s\\]\\n]+)`, "g");
+        const matches: Array<{ full: string; value: string }> = [];
+        let m: RegExpExecArray | null;
+        while ((m = re.exec(notes)) !== null) {
+          if (m[1]) matches.push({ full: m[0], value: m[1] });
+        }
+        const seen = new Set<string>();
+        for (const match of matches) {
+          if (seen.has(match.value)) {
+            // Tag duplikat dengan nilai sama — sudah ditangani di atas.
+            cleaned = cleaned.split(match.full).join("");
+            changed = true;
+            continue;
+          }
+          seen.add(match.value);
+          const res = await tryDeleteR2File(match.value);
+          if (res === "deleted") {
+            deletedCount++;
+            cleaned = cleaned.split(match.full).join("");
+            changed = true;
+          } else if (res === "not-r2") {
+            skippedCount++;
+            cleaned = cleaned.split(match.full).join("");
+            changed = true;
+          } else {
+            failedCount++;
+          }
+        }
+      }
+      return { cleaned: cleaned.trim(), changed };
+    }
 
     // TARGET 1: Gambar Produk berdasarkan Kategori Tertentu
     if (target === "PRODUCT_CATEGORY" && categoryId) {
@@ -269,304 +404,255 @@ export async function POST(request: NextRequest) {
           product: {
             categoryId: categoryId,
           },
+          createdAt: { lt: cutoffDate },
         },
         select: { id: true, imageUrl: true },
       });
 
-      // FIX (22 Nov 2026, R2): deletedCount hanya naik kalau hapus R2
-      // benar-benar berhasil; baris pelacakan ikut ditandai DELETED.
+      const deletedIds: string[] = [];
       for (const img of images) {
-        const filename = extractFilenameFromUrl(img.imageUrl);
-        if (filename) {
-          const ok = await deleteFromWorker(filename);
-          if (ok) {
-            deletedCount++;
-            await markR2FilesDeletedByKeys([filename]);
-          }
+        const res = await tryDeleteR2File(img.imageUrl);
+        if (res === "deleted") {
+          deletedCount++;
+          deletedIds.push(img.id);
+        } else if (res === "not-r2") {
+          skippedCount++;
+          deletedIds.push(img.id);
+        } else {
+          failedCount++;
         }
       }
 
-      await prisma.productImage.deleteMany({
-        where: {
-          product: {
-            categoryId: categoryId,
-          },
-        },
-      });
+      if (deletedIds.length > 0) {
+        await prisma.productImage.deleteMany({
+          where: { id: { in: deletedIds } },
+        });
+      }
 
+      audit();
       return NextResponse.json({
         success: true,
         deletedCount,
-        message: `Berhasil menghapus ${deletedCount} foto produk pada kategori "${category?.name || "Kategori"}".`,
+        skippedCount,
+        failedCount,
+        message: `Berhasil menghapus ${deletedCount} foto produk pada kategori "${category?.name || "Kategori"}" (lebih dari ${days} hari).${failedCount > 0 ? ` ${failedCount} gagal dihapus dari R2 dan dipertahankan — lihat status DELETE_FAILED di halaman Penyimpanan.` : ""}`,
       });
     }
 
-    // TARGET 2: Hapus SEMUA Gambar Produk
+    // TARGET 2: Hapus SEMUA Gambar Produk (lebih dari N hari)
     if (target === "ALL_PRODUCTS") {
       const images = await prisma.productImage.findMany({
+        where: { createdAt: { lt: cutoffDate } },
         select: { id: true, imageUrl: true },
       });
 
+      const deletedIds: string[] = [];
       for (const img of images) {
-        const filename = extractFilenameFromUrl(img.imageUrl);
-        if (filename) {
-          const ok = await deleteFromWorker(filename);
-          if (ok) {
-            deletedCount++;
-            await markR2FilesDeletedByKeys([filename]);
-          }
+        const res = await tryDeleteR2File(img.imageUrl);
+        if (res === "deleted") {
+          deletedCount++;
+          deletedIds.push(img.id);
+        } else if (res === "not-r2") {
+          skippedCount++;
+          deletedIds.push(img.id);
+        } else {
+          failedCount++;
         }
       }
 
-      await prisma.productImage.deleteMany();
+      if (deletedIds.length > 0) {
+        await prisma.productImage.deleteMany({
+          where: { id: { in: deletedIds } },
+        });
+      }
 
+      audit();
       return NextResponse.json({
         success: true,
         deletedCount,
-        message: `Berhasil menghapus semua (${deletedCount}) foto produk dari Cloudflare R2 & database.`,
+        skippedCount,
+        failedCount,
+        message: `Berhasil menghapus ${deletedCount} foto produk (lebih dari ${days} hari) dari Cloudflare R2 & database.${failedCount > 0 ? ` ${failedCount} gagal dihapus dari R2 dan dipertahankan — lihat status DELETE_FAILED di halaman Penyimpanan.` : ""}`,
       });
     }
 
     // TARGET 3: Hapus Bukti Pengiriman (Delivery Proofs)
     if (target === "DELIVERY_PROOFS") {
-      const cutoffDate = olderThanDays
-        ? new Date(Date.now() - Number(olderThanDays) * 24 * 60 * 60 * 1000)
-        : null;
-
       // 1. Bersihkan dari tabel DeliveryPhoto
-      const photosWhere: any = {};
-      if (cutoffDate) photosWhere.createdAt = { lt: cutoffDate };
-
       const photos = await prisma.deliveryPhoto.findMany({
-        where: photosWhere,
+        where: { createdAt: { lt: cutoffDate } },
         select: { id: true, filename: true, url: true },
       });
 
-      // FIX (22 Nov 2026, R2): deletedCount hanya naik kalau hapus R2
-      // benar-benar berhasil (sebelumnya naik walau gagal / filename null).
+      const deletedPhotoIds: string[] = [];
       for (const p of photos) {
         const fileToDelete = p.filename || extractFilenameFromUrl(p.url);
-        if (fileToDelete) {
-          const ok = await deleteFromWorker(fileToDelete);
-          if (ok) {
-            deletedCount++;
-            await markR2FilesDeletedByKeys([fileToDelete]);
-          }
+        const res = await tryDeleteR2File(fileToDelete);
+        if (res === "deleted") {
+          deletedCount++;
+          deletedPhotoIds.push(p.id);
+        } else if (res === "not-r2") {
+          skippedCount++;
+          deletedPhotoIds.push(p.id);
+        } else {
+          failedCount++;
         }
       }
 
-      await prisma.deliveryPhoto.deleteMany({
-        where: photosWhere,
-      });
+      if (deletedPhotoIds.length > 0) {
+        await prisma.deliveryPhoto.deleteMany({
+          where: { id: { in: deletedPhotoIds } },
+        });
+      }
 
       // 2. Bersihkan dari DeliveryOrder.proofImage
-      const doWhere: any = { proofImage: { not: null } };
-      if (cutoffDate) doWhere.createdAt = { lt: cutoffDate };
-
       const dosWithProof = await prisma.deliveryOrder.findMany({
-        where: doWhere,
+        where: {
+          proofImage: { not: null },
+          createdAt: { lt: cutoffDate },
+        },
         select: { id: true, proofImage: true },
       });
 
+      const clearedDoIds: string[] = [];
       for (const d of dosWithProof) {
-        if (d.proofImage) {
-          const fn = extractFilenameFromUrl(d.proofImage);
-          if (fn) {
-            const ok = await deleteFromWorker(fn);
-            if (ok) {
-              deletedCount++;
-              await markR2FilesDeletedByKeys([fn]);
-            }
-          }
+        if (!d.proofImage) continue;
+        const res = await tryDeleteR2File(d.proofImage);
+        if (res === "deleted") {
+          deletedCount++;
+          clearedDoIds.push(d.id);
+        } else if (res === "not-r2") {
+          skippedCount++;
+          clearedDoIds.push(d.id);
+        } else {
+          failedCount++;
         }
       }
 
-      await prisma.deliveryOrder.updateMany({
-        where: doWhere,
-        data: { proofImage: null },
-      });
+      if (clearedDoIds.length > 0) {
+        await prisma.deliveryOrder.updateMany({
+          where: { id: { in: clearedDoIds } },
+          data: { proofImage: null },
+        });
+      }
 
       // 3. Bersihkan legacy tag [BUKTI_KIRIM] DAN [FOTO_LOKASI] dari notes.
-      // FIX (22 Nov 2026, R2): hapus SEMUA tag dalam satu note (dulu hanya
-      // match pertama), dan [FOTO_LOKASI] yang dulu tidak pernah dibersihkan.
-      const notesWhere: any = {
-        OR: [
-          { notes: { contains: "[BUKTI_KIRIM]" } },
-          { notes: { contains: "[FOTO_LOKASI]" } },
-        ],
-      };
-      if (cutoffDate) notesWhere.createdAt = { lt: cutoffDate };
-
       const dosWithNotes = await prisma.deliveryOrder.findMany({
-        where: notesWhere,
+        where: {
+          OR: [
+            { notes: { contains: "[BUKTI_KIRIM]" } },
+            { notes: { contains: "[FOTO_LOKASI]" } },
+          ],
+          createdAt: { lt: cutoffDate },
+        },
         select: { id: true, notes: true },
       });
 
       for (const item of dosWithNotes) {
         if (!item.notes) continue;
-        for (const tag of ["BUKTI_KIRIM", "FOTO_LOKASI"]) {
-          const re = new RegExp(`\\[${tag}\\]:\\s*([^\\s\\]\\n]+)`, "g");
-          let m: RegExpExecArray | null;
-          while ((m = re.exec(item.notes)) !== null) {
-            if (m[1]) {
-              const filename = extractFilenameFromUrl(m[1]);
-              if (filename) {
-                const ok = await deleteFromWorker(filename);
-                if (ok) {
-                  deletedCount++;
-                  await markR2FilesDeletedByKeys([filename]);
-                }
-              }
-            }
-          }
+        const { cleaned, changed } = await cleanNoteTags(item.notes, ["BUKTI_KIRIM", "FOTO_LOKASI"]);
+        if (changed) {
+          await prisma.deliveryOrder.update({
+            where: { id: item.id },
+            data: { notes: cleaned || null },
+          });
         }
-
-        const cleanedNotes = item.notes
-          .replace(/\[BUKTI_KIRIM\]:\s*[^\s\]\n]+/g, "")
-          .replace(/\[FOTO_LOKASI\]:\s*[^\s\]\n]+/g, "")
-          .trim();
-
-        await prisma.deliveryOrder.update({
-          where: { id: item.id },
-          data: { notes: cleanedNotes || null },
-        });
       }
 
+      audit();
       return NextResponse.json({
         success: true,
         deletedCount,
-        message: `Berhasil membersihkan ${deletedCount} foto bukti pengiriman dari Cloudflare R2.`,
+        skippedCount,
+        failedCount,
+        message: `Berhasil membersihkan ${deletedCount} foto bukti pengiriman (lebih dari ${days} hari) dari Cloudflare R2.${failedCount > 0 ? ` ${failedCount} gagal dihapus dari R2 dan dipertahankan — lihat status DELETE_FAILED di halaman Penyimpanan.` : ""}`,
       });
     }
 
     // TARGET 4: Hapus Bukti Transfer & Pembayaran (Payment Proofs)
     if (target === "PAYMENT_PROOFS") {
-      const cutoffDate = olderThanDays
-        ? new Date(Date.now() - Number(olderThanDays) * 24 * 60 * 60 * 1000)
-        : null;
-
       // 1. Sales
-      const salesWhere: any = {
-        notes: {
-          contains: "[BUKTI_TF]",
-        },
-      };
-      if (cutoffDate) salesWhere.createdAt = { lt: cutoffDate };
-
       const sales = await prisma.sale.findMany({
-        where: salesWhere,
+        where: {
+          notes: { contains: "[BUKTI_TF]" },
+          createdAt: { lt: cutoffDate },
+        },
         select: { id: true, notes: true },
       });
 
-      // FIX (22 Nov 2026, R2): hapus SEMUA tag dalam satu note (dulu hanya
-      // match pertama) dan hitung hanya kalau hapus R2 benar-benar berhasil.
       for (const sale of sales) {
         if (!sale.notes) continue;
-        const re = /\[BUKTI_TF\]:\s*([^\s\]\n]+)/g;
-        let m: RegExpExecArray | null;
-        while ((m = re.exec(sale.notes)) !== null) {
-          if (m[1]) {
-            const filename = extractFilenameFromUrl(m[1]);
-            if (filename) {
-              const ok = await deleteFromWorker(filename);
-              if (ok) {
-                deletedCount++;
-                await markR2FilesDeletedByKeys([filename]);
-              }
-            }
-          }
+        const { cleaned, changed } = await cleanNoteTags(sale.notes, ["BUKTI_TF"]);
+        if (changed) {
+          await prisma.sale.update({
+            where: { id: sale.id },
+            data: { notes: cleaned || null },
+          });
         }
-
-        const cleanedNotes = sale.notes
-          .replace(/\[BUKTI_TF\]:\s*[^\s\]\n]+/g, "")
-          .trim();
-
-        await prisma.sale.update({
-          where: { id: sale.id },
-          data: { notes: cleanedNotes || null },
-        });
       }
 
       // 2. Debt Payments
-      const debtsWhere: any = {
-        notes: {
-          contains: "[BUKTI_TF]",
-        },
-      };
-      if (cutoffDate) debtsWhere.createdAt = { lt: cutoffDate };
-
       const payments = await prisma.debtPayment.findMany({
-        where: debtsWhere,
+        where: {
+          notes: { contains: "[BUKTI_TF]" },
+          createdAt: { lt: cutoffDate },
+        },
         select: { id: true, notes: true },
       });
 
       for (const p of payments) {
         if (!p.notes) continue;
-        const re = /\[BUKTI_TF\]:\s*([^\s\]\n]+)/g;
-        let m: RegExpExecArray | null;
-        while ((m = re.exec(p.notes)) !== null) {
-          if (m[1]) {
-            const filename = extractFilenameFromUrl(m[1]);
-            if (filename) {
-              const ok = await deleteFromWorker(filename);
-              if (ok) {
-                deletedCount++;
-                await markR2FilesDeletedByKeys([filename]);
-              }
-            }
-          }
+        const { cleaned, changed } = await cleanNoteTags(p.notes, ["BUKTI_TF"]);
+        if (changed) {
+          await prisma.debtPayment.update({
+            where: { id: p.id },
+            data: { notes: cleaned || null },
+          });
         }
-
-        const cleanedNotes = p.notes
-          .replace(/\[BUKTI_TF\]:\s*[^\s\]\n]+/g, "")
-          .trim();
-
-        await prisma.debtPayment.update({
-          where: { id: p.id },
-          data: { notes: cleanedNotes || null },
-        });
       }
 
+      audit();
       return NextResponse.json({
         success: true,
         deletedCount,
-        message: `Berhasil membersihkan ${deletedCount} foto bukti transfer dari Cloudflare R2.`,
+        skippedCount,
+        failedCount,
+        message: `Berhasil membersihkan ${deletedCount} foto bukti transfer (lebih dari ${days} hari) dari Cloudflare R2.${failedCount > 0 ? ` ${failedCount} gagal dihapus dari R2 dan dipertahankan — lihat status DELETE_FAILED di halaman Penyimpanan.` : ""}`,
       });
     }
 
     // TARGET 5: Hapus Gambar Hero / Banner
-    // FIX (22 Nov 2026, R2): cabang ini dideklarasikan di tipe APK
-    // (storage.service.ts) tapi TIDAK ADA di backend — ditekan selalu 400.
     if (target === "HERO_IMAGES") {
-      const cutoffDate = olderThanDays
-        ? new Date(Date.now() - Number(olderThanDays) * 24 * 60 * 60 * 1000)
-        : null;
-
-      const heroWhere: any = {};
-      if (cutoffDate) heroWhere.createdAt = { lt: cutoffDate };
-
       const heroes = await prisma.heroImage.findMany({
-        where: heroWhere,
+        where: { createdAt: { lt: cutoffDate } },
         select: { id: true, imageUrl: true },
       });
 
+      const deletedIds: string[] = [];
       for (const h of heroes) {
-        const filename = extractFilenameFromUrl(h.imageUrl);
-        if (filename) {
-          const ok = await deleteFromWorker(filename);
-          if (ok) {
-            deletedCount++;
-            await markR2FilesDeletedByKeys([filename]);
-          }
+        const res = await tryDeleteR2File(h.imageUrl);
+        if (res === "deleted") {
+          deletedCount++;
+          deletedIds.push(h.id);
+        } else if (res === "not-r2") {
+          skippedCount++;
+          deletedIds.push(h.id);
+        } else {
+          failedCount++;
         }
       }
 
-      await prisma.heroImage.deleteMany({ where: heroWhere });
+      if (deletedIds.length > 0) {
+        await prisma.heroImage.deleteMany({ where: { id: { in: deletedIds } } });
+      }
 
+      audit();
       return NextResponse.json({
         success: true,
         deletedCount,
-        message: `Berhasil menghapus ${deletedCount} gambar hero dari Cloudflare R2 & database.`,
+        skippedCount,
+        failedCount,
+        message: `Berhasil menghapus ${deletedCount} gambar hero (lebih dari ${days} hari) dari Cloudflare R2 & database.${failedCount > 0 ? ` ${failedCount} gagal dihapus dari R2 dan dipertahankan — lihat status DELETE_FAILED di halaman Penyimpanan.` : ""}`,
       });
     }
 

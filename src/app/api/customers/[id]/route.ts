@@ -11,7 +11,7 @@ import {
   updateCustomer,
   deleteCustomer,
 } from "@/lib/actions/customer.actions";
-import { hasMinimumRole } from "@/lib/utils/role";
+import { hasMinimumRole, hasPermission } from "@/lib/utils/role";
 import prisma from "@/lib/prisma";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -21,6 +21,9 @@ type RouteContext = { params: Promise<{ id: string }> };
  * Mengambil profil detail pelanggan beserta riwayat tagihan (faktur/sales),
  * data utang, riwayat pembayaran cicilan, dan ringkasan keuangan.
  * Role: KASIR+
+ * BY-DESIGN (22 Nov 2026, pentest M27): KASIR BOLEH melihat riwayat keuangan
+ * customer — kasir butuh info piutang untuk menerima pembayaran. Bukan
+ * kebocoran; jangan dibatasi ke ADMIN+.
  */
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
@@ -217,17 +220,20 @@ export async function GET(request: NextRequest, context: RouteContext) {
 /**
  * PUT /api/customers/[id]
  * Update customer.
- * Role: ADMIN+
+ * Role: KASIR+ (EDIT_CUSTOMER).
+ * FIX PENTEST (22 Nov 2026, M24): route, action, dan PERMISSIONS dulu
+ * bilang tiga hal berbeda. Sekarang ketiganya konsisten: edit KASIR+,
+ * hapus ADMIN saja.
  */
 export async function PUT(request: NextRequest, context: RouteContext) {
   try {
     const session = await getAuthenticatedUser();
     if (!session) return unauthorizedResponse();
-    if (!hasMinimumRole(session, "KASIR")) return forbiddenResponse();
+    if (!hasPermission(session, "EDIT_CUSTOMER")) return forbiddenResponse();
 
     const { id } = await context.params;
     const body = await request.json();
-    const result = await updateCustomer(id, body);
+    const result = await updateCustomer(id, body, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal memperbarui customer.", 400);
@@ -243,16 +249,18 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 /**
  * DELETE /api/customers/[id]
  * Hapus customer (gagal jika masih ada transaksi/utang).
- * Role: KASIR+
+ * Role: ADMIN+ (DELETE_CUSTOMER).
+ * FIX PENTEST (22 Nov 2026, M24): dulu route bilang KASIR boleh — sekarang
+ * konsisten dengan action dan PERMISSIONS: hapus hanya ADMIN+.
  */
 export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
     const session = await getAuthenticatedUser();
     if (!session) return unauthorizedResponse();
-    if (!hasMinimumRole(session, "KASIR")) return forbiddenResponse();
+    if (!hasPermission(session, "DELETE_CUSTOMER")) return forbiddenResponse();
 
     const { id } = await context.params;
-    const result = await deleteCustomer(id);
+    const result = await deleteCustomer(id, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal menghapus customer.", 400);

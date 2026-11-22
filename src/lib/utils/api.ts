@@ -132,11 +132,32 @@ export async function requireAuthAndPermission(permission: Permission) {
   return session;
 }
 
+/**
+ * PENTEST FIX (22 Nov 2026, M11/M20 + L16): page/limit di-clamp supaya
+ * tidak bisa dipakai dump massal (?limit=1000000) dan nilai non-angka
+ * (NaN) tidak diteruskan ke Prisma (dulu jadi 500). Tanggal tidak valid
+ * juga diubah jadi undefined, bukan Invalid Date.
+ */
+export function parsePageLimit(searchParams: URLSearchParams): { page: number; limit: number } {
+  const rawPage = parseInt(searchParams.get("page") || "", 10);
+  const rawLimit = parseInt(searchParams.get("limit") || "", 10);
+  const page = Number.isFinite(rawPage) ? Math.min(10000, Math.max(1, rawPage)) : 1;
+  const limit = Number.isFinite(rawLimit) ? Math.min(100, Math.max(1, rawLimit)) : 10;
+  return { page, limit };
+}
+
+function parseOptionalDate(value: string | null): Date | undefined {
+  if (!value) return undefined;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
+
 export function parseSearchParams(searchParams: URLSearchParams) {
+  const { page, limit } = parsePageLimit(searchParams);
   return {
     search: searchParams.get("search") || undefined,
-    page: parseInt(searchParams.get("page") || "1"),
-    limit: parseInt(searchParams.get("limit") || "10"),
+    page,
+    limit,
     categoryId: searchParams.get("categoryId") || undefined,
     supplierId: searchParams.get("supplierId") || undefined,
     customerId: searchParams.get("customerId") || undefined,
@@ -146,12 +167,8 @@ export function parseSearchParams(searchParams: URLSearchParams) {
       ? searchParams.get("isActive") === "true"
       : undefined,
     lowStock: searchParams.get("lowStock") === "true",
-    dateFrom: searchParams.get("dateFrom")
-      ? new Date(searchParams.get("dateFrom")!)
-      : undefined,
-    dateTo: searchParams.get("dateTo")
-      ? new Date(searchParams.get("dateTo")!)
-      : undefined,
+    dateFrom: parseOptionalDate(searchParams.get("dateFrom")),
+    dateTo: parseOptionalDate(searchParams.get("dateTo")),
     paymentMethod: searchParams.get("paymentMethod") || undefined,
     includeSubCategories: searchParams.get("includeSubCategories") !== "false",
     productId: searchParams.get("productId") || undefined,

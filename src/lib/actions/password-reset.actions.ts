@@ -3,48 +3,54 @@
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { createHash } from "node:crypto";
 import { changePasswordSchema } from "@/lib/validations/password-reset.schema";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { generatePasswordResetEmail, sendEmail } from "../utils/email";
 import { requireAuth } from "@/lib/utils/role";
+import {
+  getClientIp,
+  isRateLimited,
+  recordRateLimitHit,
+} from "@/lib/utils/rate-limit";
 
-// FIX (22 Nov 2026): rate-limit minta link reset — max 5x per email+IP dalam
-// 1 jam, lalu ditolak 1 jam. Tanpa ini penyerang bisa membanjiri inbox
-// korban dan membuat link reset sah milik korban kedaluwarsa berulang kali.
-// In-memory per instance, sama seperti rate-limit login.
+// SECURITY FIX (22 Nov 2026, pentest M1): SATU pesan sukses yang sama
+// persis untuk email terdaftar dan tidak terdaftar. Sebelumnya dua pesan
+// itu tulisannya berbeda ("Jika email terdaftar, ..." vs tanpa awalan),
+// sehingga penyerang bisa menebak email mana yang punya akun.
+const RESET_SUCCESS_MESSAGE =
+  "Jika email terdaftar, link reset password telah dikirim ke email Anda";
+
+// SECURITY FIX (22 Nov 2026, pentest M5): token reset disimpan sebagai
+// hash SHA-256 di DB, bukan token mentah — kalau DB bocor, token yang
+// tersimpan tidak bisa langsung dipakai. Link di email tetap berisi
+// token mentah; saat verifikasi, token masuk di-hash lalu dicocokkan.
+// PERUBAHAN PERILAKU: link reset yang diterbitkan SEBELUM patch ini
+// (token plaintext di DB) tidak akan cocok lagi dan mati saat deploy.
+function hashResetToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+// Rate limit ganti password via action web (M4): 10x/jam per user,
+// sama seperti route API-nya.
+const CHANGE_PW_WINDOW_MS = 60 * 60 * 1000;
+const CHANGE_PW_MAX_ATTEMPTS = 10;
+// Rate limit minta link reset (M5): 5x per email+IP dalam 1 jam.
 const RESET_WINDOW_MS = 60 * 60 * 1000;
 const RESET_MAX_REQUESTS = 5;
-const resetRequests = new Map<string, { count: number; firstAt: number }>();
+// Rate limit pakai token reset (L-8): 10x per IP dalam 1 jam.
+const RESET_USE_WINDOW_MS = 60 * 60 * 1000;
+const RESET_USE_MAX_ATTEMPTS = 10;
+// Batas panjang password baru (bcrypt memotong di 72 byte; 128 cukup longgar).
+const MAX_PASSWORD_LENGTH = 128;
 
-async function resetRateKey(email: string): Promise<string> {
-  let ip = "unknown";
+async function getRequestIp(): Promise<string> {
   try {
-    const h = await headers();
-    ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    return getClientIp(await headers());
   } catch {
-    // headers() tidak tersedia (mis. dipanggil di luar request) — pakai kunci email saja.
-  }
-  return `${ip}:${email.toLowerCase().trim()}`;
-}
-
-function isResetRateLimited(key: string): boolean {
-  const entry = resetRequests.get(key);
-  if (!entry) return false;
-  if (Date.now() - entry.firstAt > RESET_WINDOW_MS) {
-    resetRequests.delete(key);
-    return false;
-  }
-  return entry.count >= RESET_MAX_REQUESTS;
-}
-
-function recordResetRequest(key: string): void {
-  const now = Date.now();
-  const entry = resetRequests.get(key);
-  if (!entry || now - entry.firstAt > RESET_WINDOW_MS) {
-    resetRequests.set(key, { count: 1, firstAt: now });
-  } else {
-    entry.count += 1;
+    // headers() tidak tersedia (mis. dipanggil di luar request).
+    return "unknown";
   }
 }
 export async function changePassword(formData: {
@@ -59,8 +65,22 @@ export async function changePassword(formData: {
       return { success: false, error: "Unauthorized" };
     }
     requireAuth(session); // Just need to be logged in
+    // SECURITY FIX (22 Nov 2026, pentest M4): action ganti password web
+    // sebelumnya TANPA rate limit — password lama bisa ditebak berkali-kali
+    // dengan sesi curian. Sekarang sama seperti route API-nya: 10x/jam
+    // per user (hitungan di DB, tabel rate_limits).
+    const changePwKey = `changepw-action:user:${session.user.id}`;
+    if (await isRateLimited(changePwKey, CHANGE_PW_MAX_ATTEMPTS, CHANGE_PW_WINDOW_MS)) {
+      return { success: false, error: "Terlalu banyak percobaan ganti password. Coba lagi 1 jam lagi." };
+    }
+    await recordRateLimitHit(changePwKey, CHANGE_PW_WINDOW_MS);
+
     // Validate
     const validated = changePasswordSchema.parse(formData);
+
+    if (validated.newPassword.length > MAX_PASSWORD_LENGTH) {
+      return { success: false, error: "Password baru maksimal 128 karakter" };
+    }
 
     // Get user with password
     const user = await prisma.user.findUnique({
@@ -102,24 +122,28 @@ export async function changePassword(formData: {
 
 export async function requestPasswordReset(email: string) {
   try {
+    const normalizedEmail = email.toLowerCase().trim();
     // Rate-limit dulu (sebelum cek user) supaya penyerang tidak bisa
     // membanjiri inbox siapa pun. Pesan penolakan sengaja sama untuk semua.
-    const rateKey = await resetRateKey(email);
-    if (isResetRateLimited(rateKey)) {
+    // SECURITY FIX (22 Nov 2026, pentest M2 + M28): IP dari elemen TERAKHIR
+    // X-Forwarded-For dan hitungan di DB (bukan in-memory per instance).
+    const ip = await getRequestIp();
+    const rateKey = `reset-request:${ip}:${normalizedEmail}`;
+    if (await isRateLimited(rateKey, RESET_MAX_REQUESTS, RESET_WINDOW_MS)) {
       return { success: false, error: "Terlalu banyak permintaan reset password. Coba lagi 1 jam lagi." };
     }
-    recordResetRequest(rateKey);
+    await recordRateLimitHit(rateKey, RESET_WINDOW_MS);
 
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     });
 
-    // SECURITY FIX (Nov 2026, M1): jangan bocorkan email terdaftar atau tidak.
-    // Sebelumnya pesan "Email tidak ditemukan" membuat penyerang bisa
-    // menebak alamat email mana yang punya akun. Sekarang jawabannya selalu
-    // sama — email reset hanya benar-benar dikirim kalau akunnya ada.
-    if (!user) {
-      return { success: true, message: "Jika email terdaftar, link reset password telah dikirim ke email Anda" };
+    // SECURITY FIX (Nov 2026, M1): jangan bocorkan email terdaftar atau
+    // tidak — jawabannya selalu sama persis, email reset hanya benar-benar
+    // dikirim kalau akunnya ada DAN aktif. Akun nonaktif juga mendapat
+    // jawaban yang sama (tidak ada link yang dibuat).
+    if (!user || !user.isActive) {
+      return { success: true, message: RESET_SUCCESS_MESSAGE };
     }
 
     // Generate token (32 random bytes)
@@ -129,16 +153,18 @@ export async function requestPasswordReset(email: string) {
 
     const expiresAt = new Date(Date.now() + 3600000);
 
-    // Delete old tokens
+    // SECURITY FIX (22 Nov 2026, pentest M5): JANGAN hapus token lama saat
+    // minta baru — sebelumnya tiap request baru menggugurkan link reset sah
+    // milik korban. Yang dihapus hanya token yang SUDAH kedaluwarsa.
     await prisma.passwordResetToken.deleteMany({
-      where: { userId: user.id },
+      where: { userId: user.id, expiresAt: { lt: new Date() } },
     });
 
-    // Create new token
+    // Create new token — yang disimpan HANYA hash-nya (M5).
     await prisma.passwordResetToken.create({
       data: {
         userId: user.id,
-        token,
+        token: hashResetToken(token),
         expiresAt,
       },
     });
@@ -158,7 +184,7 @@ export async function requestPasswordReset(email: string) {
 
     return {
       success: true,
-      message: "Link reset password telah dikirim ke email Anda",
+      message: RESET_SUCCESS_MESSAGE,
     };
   } catch (error) {
     console.error("[REQUEST_RESET_ERROR]", error);
@@ -171,8 +197,18 @@ export async function requestPasswordReset(email: string) {
 
 export async function resetPassword(token: string, newPassword: string) {
   try {
+    // SECURITY FIX (22 Nov 2026, pentest L-8): pemakaian token reset
+    // sebelumnya tanpa rate limit. Sekarang 10x/jam per IP (hitungan DB).
+    const ip = await getRequestIp();
+    const useKey = `reset-use:ip:${ip}`;
+    if (await isRateLimited(useKey, RESET_USE_MAX_ATTEMPTS, RESET_USE_WINDOW_MS)) {
+      return { success: false, error: "Terlalu banyak percobaan reset password. Coba lagi 1 jam lagi." };
+    }
+    await recordRateLimitHit(useKey, RESET_USE_WINDOW_MS);
+
+    // Token masuk di-hash dulu, lalu dicocokkan dengan hash di DB (M5).
     const resetToken = await prisma.passwordResetToken.findUnique({
-      where: { token },
+      where: { token: hashResetToken(token) },
       include: { user: true },
     });
 
@@ -187,10 +223,22 @@ export async function resetPassword(token: string, newPassword: string) {
       return { success: false, error: "Token sudah expired" };
     }
 
+    // Akun yang sudah dinonaktifkan tidak boleh memakai link reset
+    // (token dibuat saat akun masih aktif).
+    if (!resetToken.user.isActive) {
+      await prisma.passwordResetToken.delete({
+        where: { id: resetToken.id },
+      });
+      return { success: false, error: "Token tidak valid" };
+    }
+
     // FIX (22 Nov 2026): minimum password baru naik dari 6 ke 8 karakter
     // (action ini tidak memakai zod schema — validasi langsung di sini).
     if (!newPassword || newPassword.length < 8) {
       return { success: false, error: "Password baru minimal 8 karakter" };
+    }
+    if (newPassword.length > MAX_PASSWORD_LENGTH) {
+      return { success: false, error: "Password baru maksimal 128 karakter" };
     }
 
     // Hash new password

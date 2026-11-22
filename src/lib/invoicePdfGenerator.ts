@@ -63,9 +63,9 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
     showSignature: store?.invoiceShowSignature ?? true,
     showFooter: store?.invoiceShowFooter ?? true,
     showLogo: store?.invoiceShowLogo ?? true,
-    bankName: store?.bankName || 'BCA',
-    bankAccount: store?.bankAccount || '1234567890',
-    bankHolder: store?.bankHolder || 'TB Masdar Utama',
+    bankName: store?.bankName || '',
+    bankAccount: store?.bankAccount || '',
+    bankHolder: store?.bankHolder || '',
     footerTerms: store?.invoiceFooterTerms || 'Barang yang sudah dibeli tidak dapat ditukar atau dikembalikan.',
     ...(customLayout || {})
   };
@@ -109,7 +109,7 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
       <div style="margin-bottom: 8px; font-size: ${12 * scale}px;">
         <div style="font-weight: bold;">${escapeHtml(item.product.name)}</div>
         <div style="display: flex; justify-content: space-between; font-size: ${11 * scale}px; color: #4B5563; margin-top: 2px;">
-          <div>${item.quantity} ${item.unit?.name || 'Unit'} x Rp ${item.unitPrice.toLocaleString('id-ID')}</div>
+          <div>${item.quantity} ${escapeHtml(item.unit?.name || 'Unit')} x Rp ${item.unitPrice.toLocaleString('id-ID')}</div>
           <div style="font-weight: bold; color: #111827;">Rp ${item.subtotal.toLocaleString('id-ID')}</div>
         </div>
         ${item.discount > 0 ? `
@@ -173,11 +173,11 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           ` : ''}
           ${layout.showHeader ? `
             <div class="center">
-              <div style="font-size: ${16 * scale}px; font-weight: bold;">${store.name}</div>
-              ${store.tagline ? `<div style="font-size: ${10 * scale}px; font-style: italic;">${store.tagline}</div>` : ''}
+              <div style="font-size: ${16 * scale}px; font-weight: bold;">${escapeHtml(store.name)}</div>
+              ${store.tagline ? `<div style="font-size: ${10 * scale}px; font-style: italic;">${escapeHtml(store.tagline)}</div>` : ''}
               <div style="font-size: ${10 * scale}px; color: #4B5563; margin-top: 4px;">
-                ${store.address || ''}<br>
-                Telp: ${store.phone || ''}
+                ${escapeHtml(store.address || '')}<br>
+                Telp: ${escapeHtml(store.phone || '')}
               </div>
             </div>
             <div class="divider"></div>
@@ -186,7 +186,7 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           <div style="font-size: ${11 * scale}px; color: #374151;">
             <div class="row"><div>No. Invoice</div><div class="bold">#${sale.invoiceNumber}</div></div>
             <div class="row"><div>Tanggal</div><div>${dateStr}</div></div>
-            <div class="row"><div>Kasir</div><div>${sale.cashier?.name || '-'}</div></div>
+            <div class="row"><div>Kasir</div><div>${escapeHtml(sale.cashier?.name || '-')}</div></div>
             ${layout.showCustomerInfo && sale.customer ? `
               <div class="row"><div>Pelanggan</div><div class="bold">${escapeHtml(sale.customer.name)}</div></div>
             ` : ''}
@@ -210,17 +210,17 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
               <div>Rp ${sale.grandTotal.toLocaleString('id-ID')}</div>
             </div>
             <div class="divider"></div>
-            <div class="row"><div>Metode Bayar</div><div class="bold">${PAYMENT_LABEL[sale.paymentMethod] || sale.paymentMethod}</div></div>
+            <div class="row"><div>Metode Bayar</div><div class="bold">${escapeHtml(PAYMENT_LABEL[sale.paymentMethod] || sale.paymentMethod)}</div></div>
             <div class="row"><div>Bayar</div><div>Rp ${sale.paidAmount.toLocaleString('id-ID')}</div></div>
             <div class="row" style="color: #059669; font-weight: bold;"><div>Kembalian</div><div>Rp ${sale.changeAmount.toLocaleString('id-ID')}</div></div>
           </div>
 
-          ${layout.showPaymentInfo && sale.paymentMethod === 'TRANSFER' ? `
+          ${layout.showPaymentInfo && sale.paymentMethod === 'TRANSFER' && layout.bankAccount ? `
             <div class="divider"></div>
             <div style="font-size: ${10 * scale}px; background: #F3F4F6; padding: 6px; border-radius: 4px; text-align: center;">
               <div style="font-weight: bold;">TRANSFER KE:</div>
-              <div>${layout.bankName} - ${layout.bankAccount}</div>
-              <div style="font-weight: bold;">a/n ${layout.bankHolder}</div>
+              <div>${escapeHtml(layout.bankName)} - ${escapeHtml(layout.bankAccount)}</div>
+              <div style="font-weight: bold;">a/n ${escapeHtml(layout.bankHolder)}</div>
             </div>
           ` : ''}
 
@@ -228,7 +228,7 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
             <div class="divider"></div>
             <div class="center" style="font-size: ${9 * scale}px; color: #6B7280;">
               <div style="font-weight: bold; margin-bottom: 4px;">TERIMA KASIH</div>
-              <div>${layout.footerTerms}</div>
+              <div>${escapeHtml(layout.footerTerms)}</div>
             </div>
           ` : ''}
         </div>
@@ -242,10 +242,10 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
         <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center;">${index + 1}</td>
         <td style="padding: 10px 8px; border: 1px solid #000000;">
           <div style="font-weight: bold;">${escapeHtml(item.product.name)}</div>
-          <div style="font-size: 10px; color: #4B5563;">${item.product.code}</div>
+          <div style="font-size: 10px; color: #4B5563;">${escapeHtml(item.product.code)}</div>
         </td>
         <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center; font-weight: bold;">
-          ${item.quantity} ${item.unit?.name || 'Unit'}
+          ${item.quantity} ${escapeHtml(item.unit?.name || 'Unit')}
         </td>
         <td style="padding: 10px 8px; border: 1px solid #000000; font-style: italic; color: #4B5563;">
           -
@@ -352,10 +352,10 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           ` : ''}
           <div class="header-box">
             <div>
-              <div class="store-title">${store.name}</div>
+              <div class="store-title">${escapeHtml(store.name)}</div>
               <div style="font-size: 11px;">
-                ${store.address}<br>
-                No. Telp: ${store.phone}
+                ${escapeHtml(store.address)}<br>
+                No. Telp: ${escapeHtml(store.phone)}
               </div>
             </div>
             <div>
@@ -417,7 +417,7 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
             </div>
             <div class="signature-box">
               <div>Hormat Kami,</div>
-              <div class="signature-line">( ${sale.cashier?.name || 'Authorized'} )</div>
+              <div class="signature-line">( ${escapeHtml(sale.cashier?.name || 'Authorized')} )</div>
             </div>
           </div>
         </div>
@@ -434,10 +434,10 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           <td style="padding: 10px 8px; text-align: center;">${index + 1}</td>
           <td style="padding: 10px 8px;">
             <div style="font-weight: bold; color: #000000;">${escapeHtml(item.product.name)}</div>
-            <div style="font-size: 10px; color: #4B5563; font-family: monospace;">${item.product.code}</div>
+            <div style="font-size: 10px; color: #4B5563; font-family: monospace;">${escapeHtml(item.product.code)}</div>
           </td>
           <td style="padding: 10px 8px; text-align: center;">
-            ${item.quantity} ${item.unit?.name || 'Unit'}
+            ${item.quantity} ${escapeHtml(item.unit?.name || 'Unit')}
           </td>
           <td style="padding: 10px 8px; text-align: right;">
             Rp ${item.unitPrice.toLocaleString('id-ID')}
@@ -630,10 +630,10 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           ${layout.showHeader ? `
           <div class="header-box" style="align-items: center;">
             <div class="store-info">
-              <div class="store-name" style="margin: 0; font-size: ${18 * scale}px; font-weight: bold; text-transform: uppercase;">${store.name}</div>
+              <div class="store-name" style="margin: 0; font-size: ${18 * scale}px; font-weight: bold; text-transform: uppercase;">${escapeHtml(store.name)}</div>
               <div style="font-size: 11px; margin-top: 4px;">
-                ${store.address}<br>
-                Phone: ${store.phone}
+                ${escapeHtml(store.address)}<br>
+                Phone: ${escapeHtml(store.phone)}
               </div>
             </div>
             <div class="invoice-title-col">
@@ -649,11 +649,11 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
                 </tr>
                 <tr>
                   <td class="meta-label">Payment</td>
-                  <td>: ${PAYMENT_LABEL[sale.paymentMethod] || sale.paymentMethod}</td>
+                  <td>: ${escapeHtml(PAYMENT_LABEL[sale.paymentMethod] || sale.paymentMethod)}</td>
                 </tr>
                 <tr>
                   <td class="meta-label">Cashier</td>
-                  <td>: ${sale.cashier?.name || '-'}</td>
+                  <td>: ${escapeHtml(sale.cashier?.name || '-')}</td>
                 </tr>
               </table>
             </div>
@@ -702,19 +702,19 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
                   <b>Terbilang:</b> <i>${terbilangStr}</i>
                 </div>
 
-                ${layout.showPaymentInfo && sale.paymentMethod === 'TRANSFER' ? `
+                ${layout.showPaymentInfo && sale.paymentMethod === 'TRANSFER' && layout.bankAccount ? `
                   <div class="transfer-box">
                     <b>TRANSFER VIA:</b><br>
-                    ${layout.bankName}<br>
-                    A/C: <b>${layout.bankAccount}</b><br>
-                    A/N: <b>${layout.bankHolder}</b>
+                    ${escapeHtml(layout.bankName)}<br>
+                    A/C: <b>${escapeHtml(layout.bankAccount)}</b><br>
+                    A/N: <b>${escapeHtml(layout.bankHolder)}</b>
                   </div>
                 ` : ''}
               </div>
 
               ${layout.showSignature ? `
                 <div class="signature-box">
-                  <div style="font-weight: bold; text-decoration: underline;">${sale.cashier?.name || 'Authorized'}</div>
+                  <div style="font-weight: bold; text-decoration: underline;">${escapeHtml(sale.cashier?.name || 'Authorized')}</div>
                   <div style="font-size: 9px; color: #4B5563; margin-top: 2px;">Authorized Signature</div>
                 </div>
               ` : ''}
@@ -753,7 +753,7 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           <!-- ─── TERMS / FOOTER ─── -->
           ${layout.showFooter ? `
             <div class="footer-terms">
-              ${layout.footerTerms}
+              ${escapeHtml(layout.footerTerms)}
             </div>
           ` : ''}
         </div>
@@ -770,10 +770,10 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center;">${index + 1}</td>
           <td style="padding: 10px 8px; border: 1px solid #000000;">
             <div style="font-weight: bold; color: #000000;">${escapeHtml(item.product.name)}</div>
-            <div style="font-size: 10px; color: #4B5563; font-family: monospace;">${item.product.code}</div>
+            <div style="font-size: 10px; color: #4B5563; font-family: monospace;">${escapeHtml(item.product.code)}</div>
           </td>
           <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center;">
-            ${item.quantity} ${item.unit?.name || 'Unit'}
+            ${item.quantity} ${escapeHtml(item.unit?.name || 'Unit')}
           </td>
           <td style="padding: 10px 8px; border: 1px solid #000000; text-align: right;">
             Rp ${item.unitPrice.toLocaleString('id-ID')}
@@ -965,17 +965,17 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           <div class="header-box" style="align-items: center;">
             <div class="store-info" style="display: flex; align-items: center; gap: 15px;">
               ${layout.showLogo && logoUrl ? `
-                <img src="${logoUrl}" style="width: 64px; height: 64px; object-fit: contain;" />
+                <img src="${escapeHtml(logoUrl)}" style="width: 64px; height: 64px; object-fit: contain;" />
               ` : layout.showLogo ? `
                 <div style="width: 48px; height: 48px; background-color: #DC2626; clip-path: polygon(50% 0%, 0% 100%, 100% 100%); display: flex; align-items: center; justify-content: center; position: relative; border-radius: 4px; overflow: hidden;">
                   <div style="width: 20px; height: 20px; background-color: #FFFFFF; clip-path: polygon(50% 0%, 0% 100%, 100% 100%); position: absolute; bottom: 0; left: 14px; margin-bottom: 2px;"></div>
                 </div>
               ` : ''}
               <div>
-                <div class="store-name" style="margin: 0; font-size: ${18 * scale}px; font-weight: bold; text-transform: uppercase;">${store.name}</div>
+                <div class="store-name" style="margin: 0; font-size: ${18 * scale}px; font-weight: bold; text-transform: uppercase;">${escapeHtml(store.name)}</div>
                 <div style="font-size: 11px; margin-top: 4px;">
-                  ${store.address}<br>
-                  Phone: ${store.phone}
+                  ${escapeHtml(store.address)}<br>
+                  Phone: ${escapeHtml(store.phone)}
                 </div>
               </div>
             </div>
@@ -992,11 +992,11 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
                 </tr>
                 <tr>
                   <td class="meta-label">Payment</td>
-                  <td>: ${PAYMENT_LABEL[sale.paymentMethod] || sale.paymentMethod}</td>
+                  <td>: ${escapeHtml(PAYMENT_LABEL[sale.paymentMethod] || sale.paymentMethod)}</td>
                 </tr>
                 <tr>
                   <td class="meta-label">Cashier</td>
-                  <td>: ${sale.cashier?.name || '-'}</td>
+                  <td>: ${escapeHtml(sale.cashier?.name || '-')}</td>
                 </tr>
               </table>
             </div>
@@ -1044,19 +1044,19 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
                   <b>Terbilang:</b> <i>${terbilangStr}</i>
                 </div>
 
-                ${layout.showPaymentInfo && sale.paymentMethod === 'TRANSFER' ? `
+                ${layout.showPaymentInfo && sale.paymentMethod === 'TRANSFER' && layout.bankAccount ? `
                   <div class="transfer-box">
                     <b>TRANSFER VIA:</b><br>
-                    ${layout.bankName}<br>
-                    A/C: <b>${layout.bankAccount}</b><br>
-                    A/N: <b>${layout.bankHolder}</b>
+                    ${escapeHtml(layout.bankName)}<br>
+                    A/C: <b>${escapeHtml(layout.bankAccount)}</b><br>
+                    A/N: <b>${escapeHtml(layout.bankHolder)}</b>
                   </div>
                 ` : ''}
               </div>
 
               ${layout.showSignature ? `
                 <div class="signature-box">
-                  <div style="font-weight: bold; text-decoration: underline;">${sale.cashier?.name || 'Authorized'}</div>
+                  <div style="font-weight: bold; text-decoration: underline;">${escapeHtml(sale.cashier?.name || 'Authorized')}</div>
                   <div style="font-size: 9px; color: #4B5563; margin-top: 2px;">Authorized Signature</div>
                 </div>
               ` : ''}
@@ -1095,7 +1095,7 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           <!-- ─── TERMS / FOOTER ─── -->
           ${layout.showFooter ? `
             <div class="footer-terms">
-              ${layout.footerTerms}
+              ${escapeHtml(layout.footerTerms)}
             </div>
           ` : ''}
         </div>

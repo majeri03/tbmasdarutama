@@ -20,11 +20,22 @@ export interface SendNotificationOptions {
 export class NotificationService {
   static async send(options: SendNotificationOptions): Promise<void> {
     try {
+      // PENTEST FIX (22 Nov 2026, L15): notifikasi personal (userId)
+      // tidak boleh membawa role — kalau keduanya terisi, baris itu
+      // akan terlihat oleh semua pemegang role tersebut (celah laten
+      // OR di query notifikasi). Paksa role=null untuk notifikasi personal.
+      const effectiveRole = options.userId ? null : (options.role ?? null);
+      if (options.userId && options.role) {
+        console.warn(
+          `[NotificationService] send() dipanggil dengan userId + role sekaligus (type=${options.type}) — role diabaikan, notifikasi dicatat sebagai personal.`,
+        );
+      }
+
       // 1. Simpan ke database
       const saved = await prisma.notification.create({
         data: {
           userId: options.userId ?? null,
-          role: options.role ?? null,
+          role: effectiveRole,
           title: options.title,
           body: options.body,
           type: options.type,

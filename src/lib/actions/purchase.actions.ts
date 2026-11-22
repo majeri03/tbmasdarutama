@@ -47,13 +47,86 @@ async function generatePONumber(): Promise<string> {
   return `PO-${datePrefix}-${String(sequence).padStart(3, "0")}`;
 }
 
+// FIX PENTEST (22 Nov 2026, L24): pesan error mentah Prisma/Zod tidak boleh
+// diteruskan ke klien (membocorkan nama constraint/kolom/skema). Pesan
+// bisnis yang ditulis manual di action tetap boleh tampil.
+function toClientError(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.name === "ZodError") return "Data tidak valid.";
+  if (
+    error instanceof Prisma.PrismaClientKnownRequestError ||
+    error instanceof Prisma.PrismaClientUnknownRequestError ||
+    error instanceof Prisma.PrismaClientValidationError
+  ) {
+    return fallback;
+  }
+  if (error instanceof Error) return error.message;
+  return fallback;
+}
+
+// FIX PENTEST (22 Nov 2026, M25): supplier/produk/unit harus ada, aktif,
+// dan produk belum dihapus — sebelumnya hanya mengandalkan FK Prisma
+// (produk soft-deleted/nonaktif dan supplier nonaktif bisa lolos).
+async function validatePurchaseReferences(
+  supplierId: string,
+  items: Array<{ productId: string; unitId: string }>
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supplier = await prisma.supplier.findUnique({
+    where: { id: supplierId },
+    select: { id: true, isActive: true },
+  });
+  if (!supplier) return { ok: false, error: "Supplier tidak ditemukan" };
+  if (!supplier.isActive) return { ok: false, error: "Supplier sudah nonaktif" };
+
+  const seen = new Set<string>();
+  for (const item of items) {
+    const key = `${item.productId}::${item.unitId}`;
+    if (seen.has(key)) {
+      return { ok: false, error: "Produk dengan satuan yang sama tidak boleh duplikat dalam satu PO" };
+    }
+    seen.add(key);
+  }
+
+  const productIds = Array.from(new Set(items.map((i) => i.productId)));
+  const unitIds = Array.from(new Set(items.map((i) => i.unitId)));
+  const [products, units, productUnits] = await Promise.all([
+    prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, name: true, isActive: true, deletedAt: true },
+    }),
+    prisma.unit.findMany({ where: { id: { in: unitIds } }, select: { id: true } }),
+    prisma.productUnit.findMany({
+      where: { productId: { in: productIds } },
+      select: { productId: true, unitId: true },
+    }),
+  ]);
+  for (const item of items) {
+    const product = products.find((p) => p.id === item.productId);
+    if (!product) return { ok: false, error: `Produk tidak ditemukan: ${item.productId}` };
+    if (!product.isActive || product.deletedAt) {
+      return { ok: false, error: `Produk ${product.name} sudah nonaktif/dihapus` };
+    }
+    if (!units.some((u) => u.id === item.unitId)) {
+      return { ok: false, error: `Satuan tidak ditemukan: ${item.unitId}` };
+    }
+    if (!productUnits.some((pu) => pu.productId === item.productId && pu.unitId === item.unitId)) {
+      return { ok: false, error: `Satuan tidak valid untuk produk: ${product.name}` };
+    }
+  }
+  return { ok: true };
+}
+
 //    CREATE PURCHASE   
-export async function createPurchase(input: CreatePurchaseInput) {
+export async function createPurchase(input: CreatePurchaseInput, externalSession?: AuthSession | null) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
+    // FIX BUILD (22 Nov 2026, z3): id disimpan ke const di sini — di dalam
+    // callback transaksi, TypeScript melupakan hasil cek session.user di
+    // atas, jadi pemakaian session.user.id langsung selalu error.
+    const userId = session.user.id;
 
     if (session.user.role === "KASIR") {
       return {
@@ -63,6 +136,10 @@ export async function createPurchase(input: CreatePurchaseInput) {
     }
     requirePermission(session, "CREATE_PURCHASE");
     const validated = createPurchaseSchema.parse(input);
+
+    // FIX PENTEST (22 Nov 2026, M25): validasi referensi supplier/produk/unit.
+    const refCheck = await validatePurchaseReferences(validated.supplierId, validated.items);
+    if (!refCheck.ok) return { success: false, error: refCheck.error };
 
     // FIX QA (M-1/M-17): hitung ulang aritmetika dari harga & diskon per item
     // (subtotal tidak lagi dipercaya mentah dari klien), tolak bayar lebih.
@@ -89,7 +166,7 @@ export async function createPurchase(input: CreatePurchaseInput) {
         data: {
           poNumber,
           supplierId: validated.supplierId,
-          adminId: session.user.id,
+          adminId: userId,
           purchaseDate: validated.purchaseDate,
           totalAmount,
           discount: totalDiscount,
@@ -169,10 +246,7 @@ export async function createPurchase(input: CreatePurchaseInput) {
     };
   } catch (error) {
     console.error("Error creating purchase:", error);
-    if (error instanceof Error) {
-      return { success: false, error: error.message };
-    }
-    return { success: false, error: "Gagal membuat Purchase Order" };
+    return { success: false, error: toClientError(error, "Gagal membuat Purchase Order") };
   }
 }
 
@@ -190,8 +264,10 @@ export async function getAllPurchases(
   externalSession?: AuthSession | null
 ) {
   const session = externalSession || (await auth());
-  requirePermission(session, "VIEW_PURCHASES");
   try {
+    // FIX PENTEST (22 Nov 2026, L27): requirePermission dipindah ke DALAM
+    // try supaya kegagalan auth tidak lolos sebagai 500 generik.
+    requirePermission(session, "VIEW_PURCHASES");
     const page = filters?.page || 1;
     const limit = filters?.limit || 10;
     const skip = (page - 1) * limit;
@@ -300,6 +376,9 @@ export async function getAllPurchases(
     };
   } catch (error) {
     console.error("Error fetching purchases:", error);
+    if (error instanceof Error && error.message.startsWith("Unauthorized")) {
+      return { success: false, error: error.message };
+    }
     return { success: false, error: "Gagal mengambil data purchase" };
   }
 }
@@ -307,8 +386,10 @@ export async function getAllPurchases(
 //    GET PURCHASE BY ID   
 export async function getPurchaseById(id: string, externalSession?: AuthSession | null) {
   const session = externalSession || (await auth());
-  requirePermission(session, "VIEW_PURCHASES");
   try {
+    // FIX PENTEST (22 Nov 2026, L27): requirePermission dipindah ke DALAM
+    // try supaya kegagalan auth tidak lolos sebagai 500 generik.
+    requirePermission(session, "VIEW_PURCHASES");
     const purchase = await prisma.purchase.findUnique({
       where: { id },
       include: {
@@ -366,17 +447,25 @@ export async function getPurchaseById(id: string, externalSession?: AuthSession 
     };
   } catch (error) {
     console.error("Error fetching purchase:", error);
+    if (error instanceof Error && error.message.startsWith("Unauthorized")) {
+      return { success: false, error: error.message };
+    }
     return { success: false, error: "Gagal mengambil data purchase" };
   }
 }
 
 //    RECEIVE PURCHASE (UPDATE STOCK)   
-export async function receivePurchase(input: ReceivePurchaseInput) {
+export async function receivePurchase(input: ReceivePurchaseInput, externalSession?: AuthSession | null) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
+    // FIX BUILD (22 Nov 2026, z3): id disimpan ke const di sini — di dalam
+    // callback transaksi, TypeScript melupakan hasil cek session.user di
+    // atas, jadi pemakaian session.user.id langsung selalu error.
+    const userId = session.user.id;
 
     if (session.user.role === "KASIR") {
       return {
@@ -478,7 +567,7 @@ export async function receivePurchase(input: ReceivePurchaseInput) {
             referenceType: "Purchase",
             referenceId: purchase.poNumber,
             notes: `Receive from PO: ${purchase.poNumber}`,
-            createdById: session.user.id,
+            createdById: userId,
           },
         });
       }
@@ -504,17 +593,15 @@ export async function receivePurchase(input: ReceivePurchaseInput) {
     };
   } catch (error) {
     console.error("Error receiving purchase:", error);
-    if (error instanceof Error) {
-      return { success: false, error: error.message };
-    }
-    return { success: false, error: "Gagal menerima Purchase Order" };
+    return { success: false, error: toClientError(error, "Gagal menerima Purchase Order") };
   }
 }
 
 //    UPDATE PURCHASE   
-export async function updatePurchase(input: UpdatePurchaseInput) {
+export async function updatePurchase(input: UpdatePurchaseInput, externalSession?: AuthSession | null) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
@@ -527,6 +614,10 @@ export async function updatePurchase(input: UpdatePurchaseInput) {
     }
     requirePermission(session, "EDIT_PURCHASE");
     const validated = updatePurchaseSchema.parse(input);
+
+    // FIX PENTEST (22 Nov 2026, M25): validasi referensi (sama seperti create).
+    const refCheckUpdate = await validatePurchaseReferences(validated.supplierId, validated.items);
+    if (!refCheckUpdate.ok) return { success: false, error: refCheckUpdate.error };
 
     // Check if purchase can be updated
     const existingPurchase = await prisma.purchase.findUnique({
@@ -669,17 +760,15 @@ export async function updatePurchase(input: UpdatePurchaseInput) {
     };
   } catch (error) {
     console.error("Error updating purchase:", error);
-    if (error instanceof Error) {
-      return { success: false, error: error.message };
-    }
-    return { success: false, error: "Gagal update Purchase Order" };
+    return { success: false, error: toClientError(error, "Gagal update Purchase Order") };
   }
 }
 
 //    DELETE PURCHASE   
-export async function deletePurchase(id: string) {
+export async function deletePurchase(id: string, externalSession?: AuthSession | null) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
@@ -700,6 +789,13 @@ export async function deletePurchase(id: string) {
             purchaseItems: true,
           },
         },
+        supplierDebts: {
+          select: {
+            id: true,
+            paidAmount: true,
+            _count: { select: { debtPayments: true } },
+          },
+        },
       },
     });
 
@@ -712,6 +808,26 @@ export async function deletePurchase(id: string) {
       return {
         success: false,
         error: "Purchase Order yang sudah diterima tidak dapat dihapus",
+      };
+    }
+
+    // FIX PENTEST (22 Nov 2026, H9): PO yang sudah dibayar (sebagian/lunas)
+    // tidak boleh dihapus — menghapusnya ikut menghapus utang supplier
+    // beserta jejak pembayarannya tanpa reversal (pola yang sama seperti
+    // cancelSale/deleteSale yang menolak bila hutang sudah ada cicilan).
+    if (Number(purchase.paidAmount) > 0) {
+      return {
+        success: false,
+        error: `Purchase Order ini sudah dibayar Rp ${Number(purchase.paidAmount).toLocaleString("id-ID")} dan tidak dapat dihapus.`,
+      };
+    }
+    const paidSupplierDebt = purchase.supplierDebts.find(
+      (d) => Number(d.paidAmount) > 0 || d._count.debtPayments > 0
+    );
+    if (paidSupplierDebt) {
+      return {
+        success: false,
+        error: "Purchase Order ini sudah ada pembayaran utang supplier dan tidak dapat dihapus.",
       };
     }
 
@@ -745,18 +861,17 @@ export async function deletePurchase(id: string) {
     };
   } catch (error) {
     console.error("Error deleting purchase:", error);
-    if (error instanceof Error) {
-      return { success: false, error: error.message };
-    }
-    return { success: false, error: "Gagal menghapus Purchase Order" };
+    return { success: false, error: toClientError(error, "Gagal menghapus Purchase Order") };
   }
 }
 
 //    GET PURCHASE STATISTICS   
 export async function getPurchaseStatistics() {
   const session = await auth();
-  requirePermission(session, "VIEW_PURCHASES");
   try {
+    // FIX PENTEST (22 Nov 2026, L27): requirePermission dipindah ke DALAM
+    // try supaya kegagalan auth tidak lolos sebagai 500 generik.
+    requirePermission(session, "VIEW_PURCHASES");
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -787,6 +902,9 @@ export async function getPurchaseStatistics() {
     };
   } catch (error) {
     console.error("Error fetching purchase statistics:", error);
+    if (error instanceof Error && error.message.startsWith("Unauthorized")) {
+      return { success: false, error: error.message };
+    }
     return { success: false, error: "Gagal mengambil statistik purchase" };
   }
 }

@@ -61,14 +61,21 @@ async function generateInvoiceNumber(): Promise<string> {
   return `INV-${datePrefix}-${newNumber.toString().padStart(4, "0")}`;
 }
 
-export async function createSale(data: CreateSaleInput) {
+export async function createSale(data: CreateSaleInput, externalSession?: AuthSession | null) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): route meneruskan sesi dari
+    // getAuthenticatedUser() (mendukung token Bearer mobile). auth() hanya
+    // fallback untuk pemanggil server-action lama.
+    const session = externalSession || (await auth());
     requirePermission(session, "CREATE_SALE");
 
     if (!session?.user?.id) {
       return { success: false, error: "Unauthorized. Please login first." };
     }
+    // FIX BUILD (22 Nov 2026, z3): id disimpan ke const di sini — di dalam
+    // callback transaksi, TypeScript melupakan hasil cek session.user di
+    // atas, jadi pemakaian session.user.id langsung selalu error.
+    const userId = session.user.id;
 
     const cashier = await prisma.user.findUnique({
       where: { email: session.user.email || "" },
@@ -186,7 +193,7 @@ export async function createSale(data: CreateSaleInput) {
               notes: `Penjualan ${invoiceNumber}`,
               referenceType: "Sale",
               referenceId: newSale.id,
-              createdById: session.user.id,
+              createdById: userId,
             },
           });
         }
@@ -195,7 +202,7 @@ export async function createSale(data: CreateSaleInput) {
         await recordCashIn(tx, {
           amount: validated.paymentMethod === PaymentMethod.CREDIT ? validated.paidAmount : totals.grandTotal,
           description: `Penjualan ${invoiceNumber}`,
-          userId: session.user.id,
+          userId: userId,
         });
 
         // C. Create Customer Debt (Jika Credit) — hanya kalau ada sisa hutang (m-9).
@@ -273,9 +280,10 @@ export async function createSale(data: CreateSaleInput) {
   }
 }
 
-export async function updateSale(saleId: string, data: CreateSaleInput) {
+export async function updateSale(saleId: string, data: CreateSaleInput, externalSession?: AuthSession | null) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
     // FIX (22 Nov 2026): EDIT_SALE (ADMIN+), bukan CREATE_SALE — KASIR tidak
     // boleh mengedit transaksi penjualan apa pun.
     requirePermission(session, "EDIT_SALE");
@@ -283,6 +291,10 @@ export async function updateSale(saleId: string, data: CreateSaleInput) {
     if (!session?.user?.id) {
       return { success: false, error: "Unauthorized. Please login first." };
     }
+    // FIX BUILD (22 Nov 2026, z3): id disimpan ke const di sini — di dalam
+    // callback transaksi, TypeScript melupakan hasil cek session.user di
+    // atas, jadi pemakaian session.user.id langsung selalu error.
+    const userId = session.user.id;
 
     const cashier = await prisma.user.findUnique({
       where: { email: session.user.email || "" },
@@ -488,7 +500,7 @@ export async function updateSale(saleId: string, data: CreateSaleInput) {
                         notes: `Edit Penjualan ${existingSale.invoiceNumber}`,
                         referenceType: "Sale Edit",
                         referenceId: saleId,
-                        createdById: session.user.id,
+                        createdById: userId,
                     }
                 });
             }
@@ -577,6 +589,11 @@ export async function getSales(params?: SaleFilterInput, externalSession?: AuthS
       };
     }
     requirePermission(session, "VIEW_SALES");
+
+    // KEPUTUSAN PEMILIK (22 Nov 2026, pentest H6 — BY-DESIGN): KASIR BOLEH
+    // membaca SEMUA penjualan toko (tanpa filter cashierId = dirinya
+    // sendiri) karena kasir butuh data itu untuk bertransaksi. Jangan
+    // membatasi ke sale miliknya sendiri.
 
     const validated = saleFilterSchema.parse(params || {});
     const {
@@ -756,6 +773,11 @@ export async function getSales(params?: SaleFilterInput, externalSession?: AuthS
     };
   } catch (error) {
     console.error("Get sales error:", error);
+    // FIX PENTEST (22 Nov 2026, L27): kegagalan auth tetap dikembalikan
+    // sebagai Unauthorized (bukan pesan generik).
+    if (error instanceof Error && error.message.startsWith("Unauthorized")) {
+      return { success: false, error: error.message };
+    }
     return {
       success: false,
       error: "Gagal mengambil data penjualan",
@@ -763,9 +785,10 @@ export async function getSales(params?: SaleFilterInput, externalSession?: AuthS
   }
 }
 
-export async function cancelSale(id: string, reason: string) {
+export async function cancelSale(id: string, reason: string, externalSession?: AuthSession | null) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
     
     if (!session?.user) {
       return {
@@ -773,6 +796,10 @@ export async function cancelSale(id: string, reason: string) {
         error: "Unauthorized",
       };
     }
+    // FIX BUILD (22 Nov 2026, z3): id disimpan ke const di sini — di dalam
+    // callback transaksi, TypeScript melupakan hasil cek session.user di
+    // atas, jadi pemakaian session.user.id langsung selalu error.
+    const userId = session.user.id;
     
     if (session.user.role !== "SUPER_ADMIN" && session.user.role !== "ADMIN") {
       return {
@@ -900,7 +927,7 @@ export async function cancelSale(id: string, reason: string) {
             notes: `Pembatalan penjualan ${sale.invoiceNumber} - ${reason}`,
             referenceType: "Sale Cancellation",
             referenceId: sale.id,
-            createdById: session.user.id,
+            createdById: userId,
           },
         });
       }
@@ -914,7 +941,7 @@ export async function cancelSale(id: string, reason: string) {
       }
 
       // Balikkan kas masuk dari penjualan ini (pasangan M-7).
-      await reverseCashIn(tx, { invoiceNumber: sale.invoiceNumber, userId: session.user.id });
+      await reverseCashIn(tx, { invoiceNumber: sale.invoiceNumber, userId: userId });
 
       // ✅ Update Delivery Order status to CANCELLED if exists
       if (sale.deliveryOrder) {
@@ -1004,8 +1031,12 @@ export async function getSalesStatistics(dateFrom?: Date, dateTo?: Date) {
 // Get sale by ID for invoice preview
 export async function getSaleById(saleId: string, externalSession?: AuthSession | null) {
   const session = externalSession || (await auth());
-  requirePermission(session, "VIEW_SALES");
   try {
+    // FIX PENTEST (22 Nov 2026, L27): requirePermission dipindah ke DALAM
+    // try supaya kegagalan auth tidak lolos sebagai 500 generik.
+    requirePermission(session, "VIEW_SALES");
+    // KEPUTUSAN PEMILIK (22 Nov 2026, pentest H6 — BY-DESIGN): KASIR BOLEH
+    // membaca invoice penjualan mana pun (butuh untuk transaksi). Bukan IDOR.
     const sale = await prisma.sale.findUnique({
       where: { id: saleId },
       include: {
@@ -1124,11 +1155,12 @@ export async function getSaleById(saleId: string, externalSession?: AuthSession 
     };
   } catch (error) {
     console.error("Get sale error:", error);
-    return {
-      success: false,
-      error:
-        error instanceof Error ? error.message : "Gagal mengambil data invoice",
-    };
+    // FIX PENTEST (22 Nov 2026, L27): kegagalan auth tetap dikembalikan
+    // sebagai Unauthorized (bukan pesan generik); error lain generik.
+    if (error instanceof Error && error.message.startsWith("Unauthorized")) {
+      return { success: false, error: error.message };
+    }
+    return { success: false, error: "Gagal mengambil data invoice" };
   }
 }
 
@@ -1225,6 +1257,9 @@ export async function getSalesForTable(params?: SaleFilters) {
     };
   } catch (error) {
     console.error("Get sales error:", error);
+    if (error instanceof Error && error.message.startsWith("Unauthorized")) {
+      return { success: false, error: error.message };
+    }
     return { success: false, error: "Gagal mengambil data penjualan" };
   }
 }
@@ -1273,12 +1308,17 @@ export async function getTodaySalesStats() {
     return { success: false, error: "Gagal mengambil statistik" };
   }
 }
-export async function deleteSale(id: string, passwordInput?: string) {
+export async function deleteSale(id: string, passwordInput?: string, externalSession?: AuthSession | null) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
     if (!session?.user?.id) {
       return { success: false, error: "Unauthorized" };
     }
+    // FIX BUILD (22 Nov 2026, z3): id disimpan ke const di sini — di dalam
+    // callback transaksi, TypeScript melupakan hasil cek session.user di
+    // atas, jadi pemakaian session.user.id langsung selalu error.
+    const userId = session.user.id;
     requirePermission(session, "DELETE_SALE");
 
     if (!passwordInput) {
@@ -1412,7 +1452,7 @@ export async function deleteSale(id: string, passwordInput?: string) {
             notes: `Pembatalan/Penghapusan Transaksi ${sale.invoiceNumber}`,
             referenceType: "Sale Cancellation",
             referenceId: sale.id,
-            createdById: session.user.id,
+            createdById: userId,
           },
         });
       }
@@ -1425,7 +1465,7 @@ export async function deleteSale(id: string, passwordInput?: string) {
       }
 
       // 4b. Balikkan kas masuk dari penjualan ini (pasangan M-7).
-      await reverseCashIn(tx, { invoiceNumber: sale.invoiceNumber, userId: session.user.id });
+      await reverseCashIn(tx, { invoiceNumber: sale.invoiceNumber, userId: userId });
 
       // 5. Update Delivery Order status to CANCELLED if exists
       if (sale.deliveryOrder) {
@@ -1461,22 +1501,44 @@ export async function deleteSale(id: string, passwordInput?: string) {
 /**
  * Update Bukti Transfer / Pembayaran atau Catatan Transaksi
  */
-export async function updateSaleProof(saleId: string, proofUrl: string | null, customNotes?: string) {
+export async function updateSaleProof(
+  saleId: string,
+  proofUrl: string | null,
+  customNotes?: string,
+  externalSession?: AuthSession | null
+) {
   try {
-    const session = await auth();
-    requirePermission(session, "VIEW_SALES");
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
+    if (!session?.user?.id) {
+      return { success: false, error: "Unauthorized" };
+    }
+    // FIX BUILD (22 Nov 2026, z3): id/email disimpan ke const — di dalam
+    // callback, TypeScript melupakan hasil cek session di atas.
+    const userId = session.user.id;
+    const userEmail = session.user.email;
+    // FIX PENTEST (22 Nov 2026, H4): dulu VIEW_SALES — KASIR bisa menimpa
+    // bukti bayar siapa pun. Sekarang EDIT_SALE (ADMIN+).
+    requirePermission(session, "EDIT_SALE");
 
     const sale = await prisma.sale.findUnique({
       where: { id: saleId },
-      select: { id: true, notes: true, invoiceNumber: true },
+      select: { id: true, notes: true, invoiceNumber: true, status: true },
     });
 
     if (!sale) {
       return { success: false, error: "Transaksi tidak ditemukan" };
     }
 
-    // FIX (22 Nov 2026, R2): ganti bukti = hapus file lama DULU. Sebelumnya
-    // tag diganti begitu saja — file lama jadi yatim di R2 selamanya.
+    // FIX PENTEST (22 Nov 2026, H4): transaksi yang sudah dibatalkan /
+    // di-return tidak boleh lagi diubah buktinya.
+    if (sale.status === "CANCELLED" || sale.status === "RETURN") {
+      return { success: false, error: "Tidak dapat mengubah bukti transaksi yang dibatalkan/return" };
+    }
+
+    // FIX (22 Nov 2026, R2): file lama dihapus SETELAH bukti baru
+    // terkonfirmasi (lihat bawah). Sebelumnya tag diganti begitu saja —
+    // file lama jadi yatim di R2 selamanya.
     const oldProofUrls = extractTagUrls(sale.notes, "BUKTI_TF");
 
     let existingNotes = sale.notes || "";
@@ -1498,17 +1560,42 @@ export async function updateSaleProof(saleId: string, proofUrl: string | null, c
       newNotes = `${prefix}${newNotes}`.trim();
     }
 
+    // FIX PENTEST (22 Nov 2026, H4): konfirmasi file baru DULU dan pastikan
+    // tercatat ACTIVE sebelum file lama dihapus. Kalau file baru tidak
+    // tercatat (mis. gagal tulis R2File), file lama DIPERTAHANKAN — bukti
+    // lama tidak boleh hilang sementara bukti baru belum tentu tersimpan.
+    let newFileConfirmed = !proofUrl;
+    if (proofUrl) {
+      await confirmR2File(proofUrl, "PAYMENT_PROOF", saleId);
+      const newRow = await prisma.r2File.findFirst({
+        where: { url: proofUrl },
+        select: { status: true },
+      });
+      newFileConfirmed = newRow?.status === "ACTIVE";
+    }
+
     const updated = await prisma.sale.update({
       where: { id: saleId },
       data: { notes: newNotes },
     });
 
     // Hapus file bukti lama dari R2 (kecuali yang masih dipakai sebagai
-    // bukti baru), lalu konfirmasi file baru sebagai ACTIVE milik penjualan ini.
-    for (const oldUrl of oldProofUrls) {
-      if (oldUrl !== proofUrl) await deleteR2FileByUrl(oldUrl);
+    // bukti baru, dan kecuali bukti baru belum terkonfirmasi).
+    if (newFileConfirmed) {
+      for (const oldUrl of oldProofUrls) {
+        if (oldUrl !== proofUrl) await deleteR2FileByUrl(oldUrl);
+      }
+    } else {
+      console.warn(
+        `[UPDATE_SALE_PROOF_WARN] Bukti baru ${proofUrl} belum terkonfirmasi di R2File — file lama dipertahankan untuk sale ${sale.invoiceNumber}.`
+      );
     }
-    if (proofUrl) await confirmR2File(proofUrl, "PAYMENT_PROOF", saleId);
+
+    // Jejak audit server-side (tidak ada tabel audit di schema): siapa,
+    // kapan, penjualan apa, bukti lama -> bukti baru.
+    console.info(
+      `[AUDIT] Bukti sale ${sale.invoiceNumber} diubah oleh ${userEmail || userId || "unknown"}: ${oldProofUrls.join(", ") || "(tidak ada)"} -> ${proofUrl || "(dihapus)"}`
+    );
 
     revalidatePath("/dashboard/sales");
 

@@ -118,8 +118,8 @@ export async function getStockMovements(
 
 export async function getLowStockProducts() {
   const session = await auth();
-  requireMinimumRole(session, "KASIR");
   try {
+    requireMinimumRole(session, "KASIR");
     const lowStockProducts = await prisma.product.findMany({
       where: {
         AND: [
@@ -230,13 +230,24 @@ export async function createStockAdjustment(input: StockAdjustmentInput) {
         throw new Error("Stock tidak mencukupi untuk adjustment ini");
       }
 
+      // PENTEST FIX (22 Nov 2026, L21): referenceType dari klien tidak
+      // boleh dipercaya — dulu movement manual bisa dilabeli "Purchase" /
+      // "Sale" sehingga lolos dari proteksi hapus di deleteStockMovement
+      // (jejak audit palsu). Hanya dua label sah yang diizinkan: dari
+      // form adjustment ("Manual Adjustment") dan dari halaman Stock
+      // Opname ("Stock Opname"); sisanya dipaksa "Manual Adjustment".
+      const safeReferenceType =
+        validated.referenceType === "Stock Opname"
+          ? "Stock Opname"
+          : "Manual Adjustment";
+
       // Create stock movement
       const movement = await tx.stockMovement.create({
         data: {
           productId: validated.productId,
           type: movementType,
           quantity: movementQty,
-          referenceType: validated.referenceType || "Manual Adjustment",
+          referenceType: safeReferenceType,
           referenceId: validated.referenceId,
           notes: validated.notes,
           createdById: session.user.id,
@@ -277,8 +288,8 @@ export async function createStockAdjustment(input: StockAdjustmentInput) {
 
 export async function getStockStatistics() {
   const session = await auth();
-requireMinimumRole(session, "KASIR");
   try {
+    requireMinimumRole(session, "KASIR");
     // Total products
     const totalProducts = await prisma.product.count({
       where: {
@@ -390,8 +401,8 @@ requireMinimumRole(session, "KASIR");
 
 export async function getStockByProduct(productId: string) {
   const session = await auth();
-requireMinimumRole(session, "KASIR");
   try {
+    requireMinimumRole(session, "KASIR");
     const product = await prisma.product.findUnique({
       where: { id: productId },
       include: {

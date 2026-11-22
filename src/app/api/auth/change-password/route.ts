@@ -8,33 +8,19 @@ import {
   unauthorizedResponse,
   validationErrorResponse,
 } from "@/lib/utils/api";
+import {
+  isRateLimited,
+  recordRateLimitHit,
+} from "@/lib/utils/rate-limit";
 
 // FIX (22 Nov 2026): rate-limit ganti password — 10 percobaan per user
-// dalam 1 jam, lalu 429. In-memory per instance, sama seperti rate-limit
-// login (lihat src/app/api/auth/login/route.ts).
+// dalam 1 jam, lalu 429.
+// SECURITY FIX (22 Nov 2026, pentest M28): hitungan pindah dari Map
+// in-memory per instance ke tabel rate_limits di DB (berlaku
+// antar-instance serverless).
 const CHANGE_PW_WINDOW_MS = 60 * 60 * 1000;
 const CHANGE_PW_MAX_ATTEMPTS = 10;
-const changePwAttempts = new Map<string, { count: number; firstAt: number }>();
-
-function isChangePwRateLimited(userId: string): boolean {
-  const entry = changePwAttempts.get(userId);
-  if (!entry) return false;
-  if (Date.now() - entry.firstAt > CHANGE_PW_WINDOW_MS) {
-    changePwAttempts.delete(userId);
-    return false;
-  }
-  return entry.count >= CHANGE_PW_MAX_ATTEMPTS;
-}
-
-function recordChangePwAttempt(userId: string): void {
-  const now = Date.now();
-  const entry = changePwAttempts.get(userId);
-  if (!entry || now - entry.firstAt > CHANGE_PW_WINDOW_MS) {
-    changePwAttempts.set(userId, { count: 1, firstAt: now });
-  } else {
-    entry.count += 1;
-  }
-}
+const MAX_PASSWORD_LENGTH = 128;
 
 /**
  * POST /api/auth/change-password
@@ -51,24 +37,35 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { currentPassword, newPassword } = body as {
-      currentPassword?: string;
-      newPassword?: string;
+      currentPassword?: unknown;
+      newPassword?: unknown;
     };
 
-    if (!currentPassword || !newPassword) {
+    // SECURITY FIX (22 Nov 2026, pentest L8 API): validasi tipe dulu —
+    // body non-string sebelumnya bisa membuat bcrypt.compare melempar.
+    if (
+      typeof currentPassword !== "string" ||
+      typeof newPassword !== "string" ||
+      !currentPassword ||
+      !newPassword
+    ) {
       return validationErrorResponse("Password lama dan password baru wajib diisi.");
     }
     // Rate-limit: hitung setiap percobaan (berhasil atau gagal).
-    if (isChangePwRateLimited(session.user.id)) {
+    const changePwKey = `changepw:user:${session.user.id}`;
+    if (await isRateLimited(changePwKey, CHANGE_PW_MAX_ATTEMPTS, CHANGE_PW_WINDOW_MS)) {
       return NextResponse.json(
         { success: false, error: "Terlalu banyak percobaan ganti password. Coba lagi 1 jam lagi." },
         { status: 429 }
       );
     }
-    recordChangePwAttempt(session.user.id);
+    await recordRateLimitHit(changePwKey, CHANGE_PW_WINDOW_MS);
     // FIX (22 Nov 2026): minimum password baru naik dari 6 ke 8 karakter.
     if (newPassword.length < 8) {
       return validationErrorResponse("Password baru minimal 8 karakter.");
+    }
+    if (newPassword.length > MAX_PASSWORD_LENGTH) {
+      return validationErrorResponse("Password baru maksimal 128 karakter.");
     }
     if (newPassword === currentPassword) {
       return validationErrorResponse("Password baru tidak boleh sama dengan password lama.");

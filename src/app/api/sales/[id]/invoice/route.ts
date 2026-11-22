@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthenticatedUser, unauthorizedResponse, notFoundResponse, errorResponse } from "@/lib/utils/api";
+import { getAuthenticatedUser, unauthorizedResponse, forbiddenResponse, notFoundResponse, errorResponse } from "@/lib/utils/api";
 import { getSaleById } from "@/lib/actions/sale.actions";
+import { hasPermission } from "@/lib/utils/role";
 import { getStoreSettings, generateInvoiceHtml } from "@/lib/invoicePdfGenerator";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -13,9 +14,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
   try {
     const session = await getAuthenticatedUser();
     if (!session) return unauthorizedResponse();
+    // FIX PENTEST (22 Nov 2026, L10): izin dicek di lapis route (sebelumnya
+    // hanya didelegasikan ke action lewat auth() — sesi Bearer mobile gagal).
+    if (!hasPermission(session, "VIEW_SALES")) return forbiddenResponse();
 
     const { id } = await context.params;
-    const saleResult = await getSaleById(id);
+    const saleResult = await getSaleById(id, session);
 
     if (!saleResult.success || !saleResult.data) {
       return notFoundResponse("Invoice penjualan");

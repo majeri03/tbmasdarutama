@@ -47,11 +47,18 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
+            // Pentest fix (Nov 2026): camera=(self) — scan barcode POS web butuh
+            // kamera (getUserMedia); camera=() sebelumnya mematikan fitur itu.
+            value: "camera=(self), microphone=(), geolocation=()",
           },
           {
             key: "Content-Security-Policy",
-            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://placehold.co https://flat-art-975br2-upload-worker.kirinxe00.workers.dev https://tile.openstreetmap.org; connect-src 'self' https://masdarutama.tech https://api.groq.com; frame-ancestors 'none';",
+            // Pentest fix (Nov 2026): 'unsafe-eval' dihapus; tambah object-src,
+            // base-uri, form-action. 'unsafe-inline' di script-src SENGAJA
+            // dipertahankan — Next.js App Router butuh inline script untuk
+            // hydration; menghapusnya tanpa nonce akan merusak aplikasi.
+            // Lihat a-NOTES.md untuk sisa risiko ini.
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://placehold.co https://flat-art-975br2-upload-worker.kirinxe00.workers.dev https://tile.openstreetmap.org; connect-src 'self' https://masdarutama.tech; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;",
           },
         ],
       },

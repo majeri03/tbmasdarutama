@@ -63,13 +63,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const { id } = await context.params;
     const body = await request.json();
 
-    const result = await addDeliveryPhoto({
-      deliveryOrderId: id,
-      url: body.url,
-      filename: body.filename,
-      sizeBytes: body.sizeBytes,
-      mimeType: body.mimeType,
-    });
+    const result = await addDeliveryPhoto(
+      {
+        deliveryOrderId: id,
+        url: body.url,
+        filename: body.filename,
+        sizeBytes: body.sizeBytes,
+        mimeType: body.mimeType,
+      },
+      session
+    );
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal menambahkan foto", 400);
@@ -92,6 +95,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     if (!session) return unauthorizedResponse();
     if (!hasPermission(session, "UPDATE_DELIVERY_STATUS")) return forbiddenResponse();
 
+    const { id } = await context.params;
     const { searchParams } = new URL(request.url);
     const photoId = searchParams.get("photoId");
 
@@ -99,7 +103,9 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       return errorResponse("Parameter photoId wajib diisi", 400);
     }
 
-    const result = await deleteDeliveryPhoto(photoId);
+    // FIX PENTEST (22 Nov 2026, M7): teruskan [id] dari path supaya action
+    // bisa memastikan foto itu memang milik DO ini.
+    const result = await deleteDeliveryPhoto(photoId, id, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal menghapus foto", 400);

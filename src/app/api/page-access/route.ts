@@ -19,7 +19,7 @@ export async function GET() {
     const allowedPages = await getAllowedPagesForRole(role);
 
     if (role === "SUPER_ADMIN") {
-      const matrixResult = await getPageAccessMatrix();
+      const matrixResult = await getPageAccessMatrix(session);
       return successResponse({
         allowedPages,
         matrix: matrixResult.success ? matrixResult.data : [],
@@ -59,7 +59,7 @@ export async function PUT(request: NextRequest) {
       return errorResponse("Role tidak valid.", 400);
     }
 
-    const result = await updatePageAccess(pageKey, role as Role, enabled);
+    const result = await updatePageAccess(pageKey, role as Role, enabled, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal memperbarui konfigurasi.", 400);

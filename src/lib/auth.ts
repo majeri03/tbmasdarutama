@@ -3,6 +3,13 @@ import type { NextAuthConfig } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
+import { headers } from "next/headers";
+import {
+  getClientIp,
+  isRateLimited,
+  recordRateLimitHit,
+  clearRateLimit,
+} from "@/lib/utils/rate-limit";
 declare module "next-auth" {
   interface Session {
     user: {
@@ -16,6 +23,7 @@ declare module "next-auth" {
   interface User {
     id: string;
     role: string;
+    tokenVersion?: number;
   }
 }
 
@@ -23,26 +31,20 @@ declare module "@auth/core/jwt" {
   interface JWT {
     id: string;
     role: string;
+    /** Versi token (lihat User.tokenVersion). Naik tiap logout / ganti
+     *  password / nonaktifkan akun / ganti role — token lama langsung mati. */
+    tv?: number;
   }
 }
 // Rate-limit login web (dashboard) — samakan dengan login mobile:
-// 10x gagal per email dalam 15 menit, lalu tolak 15 menit.
-// In-memory per instance (catatan yang sama seperti login mobile).
+// 10x gagal per IP+email dalam 15 menit, lalu tolak 15 menit.
+// SECURITY FIX (22 Nov 2026, pentest M28 + M12/L-1): hitungan pindah dari
+// Map in-memory per instance ke tabel rate_limits di DB (berlaku
+// antar-instance serverless), dan kunci sekarang ip:email — sebelumnya
+// kunci email saja, jadi penyerang bisa mengunci akun korban (termasuk
+// SUPER_ADMIN) selama 15 menit tanpa perlu tahu password.
 const WEB_LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const WEB_LOGIN_MAX_FAILED = 10;
-const webFailedLogins = new Map<string, { count: number; firstAt: number }>();
-function webLoginRateLimited(email: string): boolean {
-  const e = webFailedLogins.get(email);
-  if (!e) return false;
-  if (Date.now() - e.firstAt > WEB_LOGIN_WINDOW_MS) { webFailedLogins.delete(email); return false; }
-  return e.count >= WEB_LOGIN_MAX_FAILED;
-}
-function webRecordFailedLogin(email: string): void {
-  const now = Date.now();
-  const e = webFailedLogins.get(email);
-  if (!e || now - e.firstAt > WEB_LOGIN_WINDOW_MS) webFailedLogins.set(email, { count: 1, firstAt: now });
-  else e.count += 1;
-}
 
 export const authConfig: NextAuthConfig = {
   trustHost: true,
@@ -54,65 +56,116 @@ export const authConfig: NextAuthConfig = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Email dan password harus diisi");
+        // SECURITY FIX (22 Nov 2026, pentest L8 API): validasi tipe dulu —
+        // credentials non-string sebelumnya bisa membuat .toLowerCase() /
+        // bcrypt.compare melempar dan berakhir 500.
+        if (
+          !credentials ||
+          typeof credentials.email !== "string" ||
+          typeof credentials.password !== "string" ||
+          !credentials.email ||
+          !credentials.password
+        ) {
+          throw new Error("Email atau password salah");
         }
 
-        const emailKey = String(credentials.email).toLowerCase().trim();
-        if (webLoginRateLimited(emailKey)) {
+        // SECURITY FIX (22 Nov 2026, pentest M12 API): email dinormalisasi
+        // sebelum dipakai — sebelumnya where memakai email mentah, jadi
+        // akun yang sama bisa gagal login web karena kapitalisasi, padahal
+        // login mobile menormalisasi.
+        const email = credentials.email.toLowerCase().trim();
+        const password = credentials.password;
+
+        // Kunci rate limit ip:email (IP = elemen terakhir X-Forwarded-For).
+        // headers() bisa gagal di luar konteks request — kalau gagal, pakai
+        // kunci email saja (perilaku lama, tetap lebih baik daripada tanpa
+        // rate limit).
+        let ip = "unknown";
+        try {
+          ip = getClientIp(await headers());
+        } catch {
+          // Di luar konteks request — pakai "unknown".
+        }
+        const rateKey = `${ip}:${email}`;
+        if (await isRateLimited(rateKey, WEB_LOGIN_MAX_FAILED, WEB_LOGIN_WINDOW_MS)) {
           throw new Error("Terlalu banyak percobaan login. Coba lagi 15 menit lagi.");
         }
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
+          where: { email },
         });
 
+        // SECURITY FIX (22 Nov 2026, pentest M12/L-7): satu pesan generik
+        // untuk SEMUA kegagalan — sebelumnya "Email tidak ditemukan atau
+        // akun tidak aktif" vs "Password salah" membocorkan email mana
+        // yang terdaftar. Keamanan tidak boleh bergantung pada UI yang
+        // menutupi perbedaan ini (LoginForm).
         if (!user || !user.isActive) {
-          webRecordFailedLogin(emailKey);
-          throw new Error("Email tidak ditemukan atau akun tidak aktif");
+          await recordRateLimitHit(rateKey, WEB_LOGIN_WINDOW_MS);
+          throw new Error("Email atau password salah");
         }
 
         const isPasswordValid = await bcrypt.compare(
-          credentials.password as string,
+          password,
           user.password
         );
 
         if (!isPasswordValid) {
-          webRecordFailedLogin(emailKey);
-          throw new Error("Password salah");
+          await recordRateLimitHit(rateKey, WEB_LOGIN_WINDOW_MS);
+          throw new Error("Email atau password salah");
         }
 
-        webFailedLogins.delete(emailKey);
+        await clearRateLimit(rateKey);
 
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
+          tokenVersion: user.tokenVersion,
         };
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user }) {
+      // Login baru: simpan tv = tokenVersion saat ini ke dalam klaim token.
       if (user) {
         token.id = user.id;
         token.role = user.role;
-      } else if (token.id && !token.role) {
-        // Fallback: Jika token.role kosong (misal karena session lama), ambil dari database
-        try {
-          const dbUser = await prisma.user.findUnique({
-            where: { id: token.id as string },
-            select: { role: true },
-          });
-          if (dbUser) {
-            token.role = dbUser.role;
-          }
-        } catch (error) {
-          console.error("Error fetching user role in jwt callback:", error);
-        }
+        token.tv = (user as { tokenVersion?: number }).tokenVersion;
+        return token;
       }
-      return token;
+
+      // SECURITY FIX (22 Nov 2026, pentest H1): sesi web SEKARANG BISA
+      // DICABUT — pola yang sama seperti verifyMobileToken.
+      // - Token TANPA klaim tv (terbit sebelum patch ini) langsung ditolak.
+      //   Akibatnya: SEMUA sesi web lama mati saat deploy patch ini dan
+      //   semua user harus login ulang sekali.
+      // - User harus ada di DB, aktif, dan tv-nya sama dengan tokenVersion
+      //   di DB. Logout / ganti password / nonaktifkan akun / ganti role
+      //   menaikkan tokenVersion, jadi semua sesi web lama langsung mati.
+      if (!token.id || typeof token.tv !== "number") {
+        return null;
+      }
+      try {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true, isActive: true, tokenVersion: true },
+        });
+        if (!dbUser || !dbUser.isActive) return null;
+        if (dbUser.tokenVersion !== token.tv) return null;
+        token.role = dbUser.role;
+        return token;
+      } catch (error) {
+        // Query DB gagal (mis. konteks runtime tanpa akses DB) — JANGAN
+        // kunci semua user keluar: biarkan token lolos di sini. Penegakan
+        // penuh tetap terjadi di route handler / server action (Node)
+        // yang memanggil auth(), karena callback ini jalan lagi di sana
+        // dengan akses DB normal.
+        console.error("Error validating web session in jwt callback:", error);
+        return token;
+      }
     },
     async session({ session, token }) {
       if (session.user) {

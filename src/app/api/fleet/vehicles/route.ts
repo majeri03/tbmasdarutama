@@ -17,6 +17,56 @@ type DriverCheck =
   | { ok: false; message: string };
 
 /**
+ * PENTEST FIX (22 Nov 2026, L17): whitelist jenis & status kendaraan dan
+ * validasi tahun. Sebelumnya `year: "abc"` jadi NaN dan diteruskan ke
+ * Prisma, serta `status`/`vehicleType` bebas diisi apa pun.
+ * Nilai yang dipakai form web: jenis TRUCK/PICKUP/MOTOR/VAN/OTHER,
+ * status ACTIVE/IDLE/MAINTENANCE/OFF (lihat FleetMap.tsx).
+ */
+const VEHICLE_TYPES = ["TRUCK", "PICKUP", "MOTOR", "VAN", "OTHER"];
+const VEHICLE_STATUSES = ["ACTIVE", "IDLE", "MAINTENANCE", "OFF"];
+
+function validateVehicleMeta(
+  vehicleType: unknown,
+  status: unknown,
+  year: unknown
+):
+  | {
+      ok: true;
+      vehicleType?: string;
+      status?: string;
+      year?: number | null;
+    }
+  | { ok: false; message: string } {
+  let normType: string | undefined;
+  if (vehicleType !== undefined && vehicleType !== null && String(vehicleType).trim() !== "") {
+    normType = String(vehicleType).trim().toUpperCase();
+    if (!VEHICLE_TYPES.includes(normType)) {
+      return { ok: false, message: `Jenis kendaraan tidak valid (pilih: ${VEHICLE_TYPES.join(", ")}).` };
+    }
+  }
+  let normStatus: string | undefined;
+  if (status !== undefined && status !== null && String(status).trim() !== "") {
+    normStatus = String(status).trim().toUpperCase();
+    if (!VEHICLE_STATUSES.includes(normStatus)) {
+      return { ok: false, message: `Status kendaraan tidak valid (pilih: ${VEHICLE_STATUSES.join(", ")}).` };
+    }
+  }
+  let normYear: number | null | undefined;
+  if (year !== undefined && year !== null && String(year).trim() !== "") {
+    const n = Number(year);
+    const maxYear = new Date().getFullYear() + 1;
+    if (!Number.isInteger(n) || n < 1950 || n > maxYear) {
+      return { ok: false, message: `Tahun kendaraan tidak valid (1950–${maxYear}).` };
+    }
+    normYear = n;
+  } else if (year !== undefined) {
+    normYear = null;
+  }
+  return { ok: true, vehicleType: normType, status: normStatus, year: normYear };
+}
+
+/**
  * Validasi penugasan sopir: id harus milik user yang ada, dan sopir utama
  * tidak boleh sama dengan sopir pendamping. Id kosong / bukan string
  * dianggap tidak ditugaskan (null).
@@ -70,14 +120,28 @@ async function checkDrivers(
  * itu punya perangkap: count() menghitung baris nonaktif sedangkan DELETE
  * hanya soft-delete, jadi sekali contoh dihapus daftar jadi "Kendaraan (0)"
  * selamanya. Kendaraan sekarang hanya dari pendaftaran (POST).
+ *
+ * PENTEST FIX (22 Nov 2026, M21): dulu tanpa cek role — KASIR mana pun
+ * melihat GPS live + no. HP semua sopir. Sekarang ADMIN+ mendapat daftar
+ * penuh; non-ADMIN hanya kendaraannya sendiri (driver/co-driver) dan
+ * driverPhone disembunyikan.
  */
 export async function GET(_request: NextRequest) {
   try {
     const session = await getAuthenticatedUser();
     if (!session) return unauthorizedResponse();
 
+    const isAdmin = hasMinimumRole(session, "ADMIN");
     const vehicles = await prisma.fleetVehicle.findMany({
-      where: { isActive: true },
+      where: isAdmin
+        ? { isActive: true }
+        : {
+            isActive: true,
+            OR: [
+              { driverUserId: session.user.id },
+              { coDriverUserId: session.user.id },
+            ],
+          },
       orderBy: { updatedAt: "desc" },
       include: {
         driverUser: { select: { id: true, name: true } },
@@ -92,7 +156,8 @@ export async function GET(_request: NextRequest) {
       brand: v.brand,
       year: v.year,
       driverName: v.driverName,
-      driverPhone: v.driverPhone,
+      // PENTEST FIX (M21): no. HP sopir hanya untuk ADMIN+.
+      driverPhone: isAdmin ? v.driverPhone : undefined,
       driverUserId: v.driverUserId,
       coDriverUserId: v.coDriverUserId,
       driverUserName: v.driverUser?.name || undefined,
@@ -136,6 +201,9 @@ export async function POST(request: NextRequest) {
       return validationErrorResponse("Nomor Plat wajib diisi.");
     }
 
+    const meta = validateVehicleMeta(vehicleType, status, year);
+    if (!meta.ok) return validationErrorResponse(meta.message);
+
     const check = await checkDrivers(body.driverUserId, body.coDriverUserId);
     if (!check.ok) return validationErrorResponse(check.message);
 
@@ -168,14 +236,14 @@ export async function POST(request: NextRequest) {
           where: { id: existing.id },
           data: {
             isActive: true,
-            vehicleType: vehicleType || existing.vehicleType,
+            vehicleType: meta.vehicleType ?? existing.vehicleType,
             brand: brand || existing.brand,
-            year: year ? Number(year) : existing.year,
+            year: meta.year !== undefined ? meta.year : existing.year,
             driverName: finalDriverName,
             driverPhone: finalDriverPhone,
             driverUserId: check.driver ? check.driver.id : null,
             coDriverUserId: check.coDriver ? check.coDriver.id : null,
-            status: status || "ACTIVE",
+            status: meta.status ?? "ACTIVE",
           },
         });
         return successResponse(updated, "Armada berhasil diaktifkan kembali.", 200);
@@ -186,14 +254,14 @@ export async function POST(request: NextRequest) {
     const newVehicle = await prisma.fleetVehicle.create({
       data: {
         plateNumber: formattedPlate,
-        vehicleType: vehicleType || "PICKUP",
+        vehicleType: meta.vehicleType ?? "PICKUP",
         brand: brand ? brand.trim() : null,
-        year: year ? Number(year) : null,
+        year: meta.year ?? null,
         driverName: finalDriverName,
         driverPhone: finalDriverPhone,
         driverUserId: check.driver ? check.driver.id : null,
         coDriverUserId: check.coDriver ? check.coDriver.id : null,
-        status: status || "ACTIVE",
+        status: meta.status ?? "ACTIVE",
         // FIX (22 Nov 2026): kendaraan baru TIDAK diberi lokasi palsu
         // Makassar — lokasi hanya muncul setelah HP sopir mengirim GPS.
       },

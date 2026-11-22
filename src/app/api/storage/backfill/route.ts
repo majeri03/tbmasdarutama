@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/utils/api";
+import { hasMinimumRole } from "@/lib/utils/role";
 import { runBackfill } from "@/lib/actions/storage.actions";
 
 /**
@@ -7,6 +8,10 @@ import { runBackfill } from "@/lib/actions/storage.actions";
  * Isi tabel R2File dari data yang sudah ada sebelum patch ini (foto DO,
  * bukti transfer, gambar produk, hero, logo). Wajib dijalankan SEKALI
  * setelah migrasi, supaya statistik kuota & rekonsiliasi mencakup file lama.
+ *
+ * PENTEST FIX (22 Nov 2026, L2): cek role denylist (role === "KASIR")
+ * diganti allowlist hasMinimumRole ADMIN — role tak dikenal di masa
+ * depan tidak boleh lolos.
  */
 export async function POST() {
   try {
@@ -14,7 +19,7 @@ export async function POST() {
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (session.user.role === "KASIR") {
+    if (!hasMinimumRole(session, "ADMIN")) {
       return NextResponse.json({ error: "Hanya Admin / Super Admin." }, { status: 403 });
     }
     const res = await runBackfill();

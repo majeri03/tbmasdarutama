@@ -73,8 +73,13 @@ export async function getAllDeliveryOrders(filters?: {
   limit?: number;
 }, externalSession?: AuthSession | null) {
   const session = externalSession || (await auth());
-  requirePermission(session, "VIEW_DELIVERY_ORDERS");
   try {
+    // FIX PENTEST (22 Nov 2026, L27): requirePermission dipindah ke DALAM
+    // try supaya kegagalan auth tidak lolos sebagai 500 generik.
+    requirePermission(session, "VIEW_DELIVERY_ORDERS");
+    // KEPUTUSAN PEMILIK (22 Nov 2026, pentest H6 — BY-DESIGN): KASIR BOLEH
+    // membaca SEMUA Surat Jalan toko (tanpa filter pemilik) karena kasir
+    // ikut mengerjakan DO. Bukan kebocoran.
     const where: Prisma.DeliveryOrderWhereInput = {};
 
     if (filters?.search) {
@@ -186,6 +191,11 @@ export async function getAllDeliveryOrders(filters?: {
     };
   } catch (error) {
     console.error("Error fetching delivery orders:", error);
+    // FIX PENTEST (22 Nov 2026, L27): kegagalan auth tetap dikembalikan
+    // sebagai Unauthorized (bukan pesan generik).
+    if (error instanceof Error && error.message.startsWith("Unauthorized")) {
+      return { success: false, error: error.message };
+    }
     return { success: false, error: "Failed to fetch delivery orders" };
   }
 }
@@ -193,8 +203,10 @@ export async function getAllDeliveryOrders(filters?: {
 //    GET DELIVERY ORDER STATISTICS   
 export async function getDeliveryOrderStatistics() {
   const session = await auth();
-requirePermission(session, "VIEW_DELIVERY_ORDERS");
   try {
+    // FIX PENTEST (22 Nov 2026, L27): requirePermission dipindah ke DALAM
+    // try supaya kegagalan auth tidak lolos sebagai 500 generik.
+    requirePermission(session, "VIEW_DELIVERY_ORDERS");
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
@@ -231,6 +243,9 @@ requirePermission(session, "VIEW_DELIVERY_ORDERS");
     };
   } catch (error) {
     console.error("Error fetching delivery statistics:", error);
+    if (error instanceof Error && error.message.startsWith("Unauthorized")) {
+      return { success: false, error: error.message };
+    }
     return { success: false, error: "Failed to fetch statistics" };
   }
 }
@@ -238,8 +253,12 @@ requirePermission(session, "VIEW_DELIVERY_ORDERS");
 //    GET DELIVERY ORDER BY ID   
 export async function getDeliveryOrderById(id: string, externalSession?: AuthSession | null) {
   const session = externalSession || (await auth());
-  requirePermission(session, "VIEW_DELIVERY_ORDERS");
   try {
+    // FIX PENTEST (22 Nov 2026, L27): requirePermission dipindah ke DALAM
+    // try supaya kegagalan auth tidak lolos sebagai 500 generik.
+    requirePermission(session, "VIEW_DELIVERY_ORDERS");
+    // KEPUTUSAN PEMILIK (22 Nov 2026, pentest H6 — BY-DESIGN): KASIR BOLEH
+    // membaca detail Surat Jalan mana pun (ikut mengerjakan DO). Bukan IDOR.
     const deliveryOrder = await prisma.deliveryOrder.findUnique({
       where: { id },
       include: {
@@ -300,6 +319,9 @@ export async function getDeliveryOrderById(id: string, externalSession?: AuthSes
     return { success: true, data: serialized };
   } catch (error) {
     console.error("Error fetching delivery order:", error);
+    if (error instanceof Error && error.message.startsWith("Unauthorized")) {
+      return { success: false, error: error.message };
+    }
     return { success: false, error: "Failed to fetch delivery order" };
   }
 }
@@ -348,13 +370,18 @@ async function generateInvoiceNumber(tx: Prisma.TransactionClient) {
 // Pastikan import PaymentMethod ada di paling atas file
 // import { DeliveryStatus, Prisma, PaymentMethod } from "@prisma/client";
 
-export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
+export async function createDeliveryOrder(input: CreateDeliveryOrderInput, externalSession?: AuthSession | null) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
     requirePermission(session, "CREATE_DELIVERY_ORDER");
+    // FIX BUILD (22 Nov 2026, z3): id disimpan ke const di sini — di dalam
+    // callback transaksi, TypeScript melupakan hasil cek session.user di
+    // atas, jadi pemakaian session.user.id langsung selalu error.
+    const userId = session.user.id;
 
     // 1. Validasi Input Zod
     const validated = createDeliveryOrderSchema.parse(input);
@@ -511,7 +538,7 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
           data: {
             invoiceNumber,
             customerId: validated.customerId,
-            cashierId: session.user.id,
+            cashierId: userId,
             paymentMethod: PaymentMethod.CREDIT, // Default Hutang
             status: "PENDING",
             totalAmount: grandTotal,
@@ -560,7 +587,7 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
           notes: validated.notes,
           proofImage: validated.proofImage || resolveProofImage(undefined, validated.notes),
           status: "PENDING",
-          createdById: session.user.id,
+          createdById: userId,
           deliveryItems: {
             create: validated.items.map((item) => ({
               productId: item.productId,
@@ -638,14 +665,29 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
 }
 
 //    UPDATE DELIVERY STATUS   
-export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
+export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput, externalSession?: AuthSession | null) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
     requirePermission(session, "UPDATE_DELIVERY_STATUS");
+    // FIX BUILD (22 Nov 2026, z3): id disimpan ke const di sini — di dalam
+    // callback transaksi, TypeScript melupakan hasil cek session.user di
+    // atas, jadi pemakaian session.user.id langsung selalu error.
+    const userId = session.user.id;
     const validated = updateDeliveryStatusSchema.parse(input);
+
+    // FIX PENTEST (22 Nov 2026, H5): KASIR hanya boleh mengubah status ke
+    // IN_TRANSIT. CANCELLED (menghapus hutang auto-DO) dan DELIVERED
+    // (memotong stok) khusus ADMIN+ — dicek di sini, bukan hanya di route,
+    // supaya pemanggil server-action langsung juga tertahan.
+    if (validated.status === "CANCELLED") {
+      requirePermission(session, "CANCEL_DELIVERY_ORDER");
+    } else if (validated.status === "DELIVERED") {
+      requirePermission(session, "CONFIRM_DELIVERY_ORDER");
+    }
 
     const deliveryOrder = await prisma.deliveryOrder.findUnique({
       where: { id: validated.id },
@@ -808,7 +850,7 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
                 referenceType: "DELIVERY_ORDER",
                 referenceId: deliveryOrder.id,
                 notes: `Pengiriman ke ${deliveryOrder.customer.name}`,
-                createdById: session.user.id,
+                createdById: userId,
               },
             });
           }
@@ -999,9 +1041,10 @@ export async function updateDeliveryOrder(
 
 
 //    DELETE DELIVERY ORDER   
-export async function deleteDeliveryOrder(id: string) {
+export async function deleteDeliveryOrder(id: string, externalSession?: AuthSession | null) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
@@ -1132,13 +1175,15 @@ export async function deleteDeliveryOrder(id: string) {
 }
 
 //                  CANCEL DELIVERY ORDER (BATALKAN TRANSAKSI)
-export async function cancelDeliveryOrder(id: string) {
+export async function cancelDeliveryOrder(id: string, externalSession?: AuthSession | null) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
     if (!session?.user) return { success: false, error: "Unauthorized" };
-    
-    // Sesuaikan permission jika perlu
-    requirePermission(session, "UPDATE_DELIVERY_STATUS"); 
+
+    // FIX PENTEST (22 Nov 2026, H5): pembatalan DO khusus ADMIN+ (efek
+    // hutang auto-DO) — sebelumnya UPDATE_DELIVERY_STATUS (KASIR lolos).
+    requirePermission(session, "CANCEL_DELIVERY_ORDER");
 
     // 1. Ambil Data DO
     const deliveryOrder = await prisma.deliveryOrder.findUnique({
@@ -1238,21 +1283,86 @@ export async function cancelDeliveryOrder(id: string) {
 /**
  * Tambah foto ke DeliveryOrder dengan pelacakan ukuran file & sinkronisasi
  */
-export async function addDeliveryPhoto(input: {
-  deliveryOrderId: string;
-  url: string;
-  filename: string;
-  sizeBytes?: number;
-  mimeType?: string;
-}) {
+export async function addDeliveryPhoto(
+  input: {
+    deliveryOrderId: string;
+    url: string;
+    filename: string;
+    sizeBytes?: number;
+    mimeType?: string;
+  },
+  externalSession?: AuthSession | null
+) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
     requirePermission(session, "UPDATE_DELIVERY_STATUS");
 
     const { deliveryOrderId, url, filename, sizeBytes = 0, mimeType = "image/jpeg" } = input;
+
+    // FIX PENTEST (22 Nov 2026, M8): URL bukti harus berasal dari host
+    // upload resmi (Cloudflare Worker) — sebelumnya URL arbitrer apa pun
+    // bisa ditempel sebagai bukti kirim. Nama file juga tidak boleh
+    // mengandung path.
+    if (!url || typeof url !== "string") {
+      return { success: false, error: "URL foto wajib diisi" };
+    }
+    let photoUrl: URL;
+    try {
+      photoUrl = new URL(url);
+    } catch {
+      return { success: false, error: "URL foto tidak valid" };
+    }
+    if (photoUrl.protocol !== "https:") {
+      return { success: false, error: "URL foto harus HTTPS" };
+    }
+    const workerUrl = process.env.CLOUDFLARE_WORKER_URL;
+    if (workerUrl) {
+      try {
+        if (photoUrl.origin !== new URL(workerUrl).origin) {
+          return { success: false, error: "URL foto harus berasal dari layanan upload resmi" };
+        }
+      } catch {
+        // CLOUDFLARE_WORKER_URL tidak valid — lewati cek host (upload
+        // resmi sendiri akan gagal tanpa env ini).
+      }
+    }
+    if (!filename || filename.includes("/") || filename.includes("\\") || filename.includes("..")) {
+      return { success: false, error: "Nama file tidak valid" };
+    }
+
+    // DO harus ada dan belum selesai/dibatalkan.
+    const deliveryOrder = await prisma.deliveryOrder.findUnique({
+      where: { id: deliveryOrderId },
+      select: { id: true, status: true },
+    });
+    if (!deliveryOrder) {
+      return { success: false, error: "Surat Jalan tidak ditemukan" };
+    }
+    if (deliveryOrder.status === "DELIVERED" || deliveryOrder.status === "CANCELLED") {
+      return { success: false, error: "Surat Jalan yang sudah DITERIMA / dibatalkan tidak bisa ditambah foto." };
+    }
+
+    // FIX PENTEST (22 Nov 2026, M8): ukuran & tipe file diambil dari
+    // catatan upload resmi (R2File) bila ada — angka dari klien hanya
+    // dipakai sebagai fallback dan dibatasi (maks 5 MB, hanya gambar).
+    let finalSizeBytes = 0;
+    let finalMimeType = "image/jpeg";
+    const tracked = await prisma.r2File.findFirst({
+      where: { url },
+      select: { sizeBytes: true, mimeType: true },
+    });
+    if (tracked) {
+      finalSizeBytes = tracked.sizeBytes;
+      finalMimeType = tracked.mimeType;
+    } else {
+      const allowedMime = ["image/jpeg", "image/png", "image/webp"];
+      finalMimeType = allowedMime.includes(mimeType) ? mimeType : "image/jpeg";
+      finalSizeBytes = Math.min(Math.max(Math.floor(Number(sizeBytes) || 0), 0), 5_000_000);
+    }
 
     // Batasi maks 5 foto per DO
     const existingCount = await prisma.deliveryPhoto.count({
@@ -1268,8 +1378,8 @@ export async function addDeliveryPhoto(input: {
         deliveryOrderId,
         url,
         filename,
-        sizeBytes,
-        mimeType,
+        sizeBytes: finalSizeBytes,
+        mimeType: finalMimeType,
         uploadedById: session.user.id,
       },
     });
@@ -1299,9 +1409,14 @@ export async function addDeliveryPhoto(input: {
 /**
  * Hapus foto dari DeliveryOrder (Hapus fisik R2 dan record DB bersamaan)
  */
-export async function deleteDeliveryPhoto(photoId: string) {
+export async function deleteDeliveryPhoto(
+  photoId: string,
+  deliveryOrderId?: string,
+  externalSession?: AuthSession | null
+) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
@@ -1313,6 +1428,13 @@ export async function deleteDeliveryPhoto(photoId: string) {
 
     if (!photo) {
       return { success: false, error: "Foto tidak ditemukan" };
+    }
+
+    // FIX PENTEST (22 Nov 2026, M7): pastikan foto ini memang milik DO di
+    // path — sebelumnya [id] diabaikan, jadi foto DO lain bisa dihapus
+    // hanya dengan menebak photoId.
+    if (deliveryOrderId && photo.deliveryOrderId !== deliveryOrderId) {
+      return { success: false, error: "Foto ini bukan milik Surat Jalan tersebut" };
     }
 
     // FIX (22 Nov 2026, R2): hapus R2 DULU, baru baris DB. Sebelumnya

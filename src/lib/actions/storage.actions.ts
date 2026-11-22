@@ -15,6 +15,39 @@ import {
 // Kuota gratis Cloudflare R2: 10 GB penyimpanan.
 const R2_QUOTA_BYTES = 10 * 1024 * 1024 * 1024;
 
+// PENTEST FIX (22 Nov 2026, L4): pola key R2 yang sama seperti DELETE
+// /api/upload — tolak traversal (../) dan key di luar folder/nama.ext.
+const R2_KEY_RE = /^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+(?:-[a-zA-Z0-9_-]+)*\.(jpg|jpeg|png|webp)$/;
+const MAX_RECONCILE_KEYS = 100;
+
+/** Normalisasi key R2 (terima URL penuh juga); null kalau polanya tidak valid. */
+function normalizeR2Key(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const key = extractR2Filename(raw.trim()) || raw.trim();
+  return R2_KEY_RE.test(key) ? key : null;
+}
+
+/** Validasi daftar key: maks 100, tiap key harus pola folder/nama.ext. */
+function validateR2KeyList(
+  keys: unknown[]
+): { ok: true; keys: string[] } | { ok: false; error: string } {
+  if (!Array.isArray(keys) || keys.length === 0) {
+    return { ok: false, error: "Tidak ada file yang dipilih." };
+  }
+  if (keys.length > MAX_RECONCILE_KEYS) {
+    return { ok: false, error: `Maksimal ${MAX_RECONCILE_KEYS} key sekaligus.` };
+  }
+  const out: string[] = [];
+  for (const k of keys) {
+    const norm = normalizeR2Key(k);
+    if (!norm) {
+      return { ok: false, error: "Ada key file yang tidak valid (harus pola folder/nama.jpg|jpeg|png|webp)." };
+    }
+    out.push(norm);
+  }
+  return { ok: true, keys: Array.from(new Set(out)) };
+}
+
 async function requireStorageAdmin() {
   const session = await auth();
   requirePermission(session, "MANAGE_STORE_SETTINGS");
@@ -213,9 +246,9 @@ export async function deleteR2FileAction(r2Key: string, force = false) {
 export async function deleteOrphanR2Files(keys: string[]) {
   try {
     await requireStorageAdmin();
-    const uniq = Array.from(new Set((keys || []).filter(Boolean)));
-    if (uniq.length === 0) return { success: false, error: "Tidak ada file yang dipilih." };
-    const res = await deleteR2FilesByKeys(uniq);
+    const checked = validateR2KeyList(keys);
+    if (!checked.ok) return { success: false, error: checked.error };
+    const res = await deleteR2FilesByKeys(checked.keys);
     revalidatePath("/dashboard/storage");
     return {
       success: true,
@@ -484,15 +517,33 @@ export async function reconcileWithKeyList(
 ) {
   try {
     await requireStorageAdmin();
-    const r2Keys = Array.from(
-      new Set((keys || []).map((k) => (k.key || "").trim()).filter(Boolean))
-    );
+    // PENTEST FIX (L4): validasi tiap key (pola folder/nama.ext, maks 100)
+    // + sizeBytes harus angka wajar (yang tidak valid jadi 0).
+    if (!Array.isArray(keys) || keys.length === 0) {
+      return { success: false, error: "Daftar key R2 kosong." };
+    }
+    if (keys.length > MAX_RECONCILE_KEYS) {
+      return { success: false, error: `Maksimal ${MAX_RECONCILE_KEYS} key sekaligus.` };
+    }
+    const entries: Array<{ key: string; sizeBytes: number }> = [];
+    for (const k of keys) {
+      const norm = normalizeR2Key(k.key);
+      if (!norm) {
+        return { success: false, error: "Ada key R2 yang tidak valid (harus pola folder/nama.jpg|jpeg|png|webp)." };
+      }
+      const size =
+        typeof k.sizeBytes === "number" && Number.isFinite(k.sizeBytes) && k.sizeBytes >= 0
+          ? Math.floor(k.sizeBytes)
+          : 0;
+      entries.push({ key: norm, sizeBytes: size });
+    }
+    const r2Keys = Array.from(new Set(entries.map((e) => e.key)));
     if (r2Keys.length === 0) {
       return { success: false, error: "Daftar key R2 kosong." };
     }
     const sizeByKey = new Map<string, number>();
-    for (const k of keys || []) {
-      if (k.key) sizeByKey.set(k.key.trim(), k.sizeBytes ?? 0);
+    for (const e of entries) {
+      if (!sizeByKey.has(e.key)) sizeByKey.set(e.key, e.sizeBytes);
     }
 
     const dbRows = await prisma.r2File.findMany({

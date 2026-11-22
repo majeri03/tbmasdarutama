@@ -14,7 +14,10 @@ const supplierServerSchema = z.object({
   city: z.string().trim().nullable().default(null),
   province: z.string().trim().nullable().default(null),
   description: z.string().trim().nullable().default(null),
-  isActive: z.boolean().default(true),
+  // PENTEST FIX (22 Nov 2026, L25): isActive DIHAPUS dari skema create/
+  // update — status supplier hanya boleh diubah lewat toggleSupplierStatus
+  // (jalur khusus). Sebelumnya pembuat/pengubah supplier bisa langsung
+  // membuat supplier nonaktif atau menonaktifkannya via PUT.
 });
 
 export type SupplierFormData = z.infer<typeof supplierServerSchema>;
@@ -37,8 +40,8 @@ async function generateSupplierCode(): Promise<string> {
 
 export async function createSupplier(data: SupplierFormData) {
   const session = await auth();
-requireMinimumRole(session, "ADMIN");
   try {
+    requireMinimumRole(session, "ADMIN");
     const validatedData = supplierServerSchema.parse(data);
 
     // Check duplicate phone
@@ -111,8 +114,8 @@ export async function getSuppliers(
   externalSession?: AuthSession | null
 ) {
   const session = externalSession || (await auth());
-  requirePermission(session, "VIEW_SUPPLIERS");
   try {
+    requirePermission(session, "VIEW_SUPPLIERS");
     const { search = "", page = 1, limit = 10, isActive = null } = params || {};
     const skip = (page - 1) * limit;
 
@@ -174,8 +177,8 @@ export async function getSuppliers(
 
 export async function getSupplierById(id: string) {
   const session = await auth();
-requireMinimumRole(session, "ADMIN");
   try {
+    requireMinimumRole(session, "ADMIN");
     const supplier = await prisma.supplier.findUnique({
       where: { id },
       include: {
@@ -210,8 +213,8 @@ requireMinimumRole(session, "ADMIN");
 
 export async function updateSupplier(id: string, data: SupplierFormData) {
   const session = await auth();
-requireMinimumRole(session, "ADMIN");
   try {
+    requireMinimumRole(session, "ADMIN");
     const validatedData = supplierServerSchema.parse(data);
 
     const existingSupplier = await prisma.supplier.findUnique({
@@ -290,8 +293,8 @@ requireMinimumRole(session, "ADMIN");
 
 export async function deleteSupplier(id: string) {
   const session = await auth();
-requireMinimumRole(session, "ADMIN");
   try {
+    requireMinimumRole(session, "ADMIN");
     const supplier = await prisma.supplier.findUnique({
       where: { id },
       include: {
@@ -347,8 +350,8 @@ requireMinimumRole(session, "ADMIN");
 
 export async function toggleSupplierStatus(id: string) {
   const session = await auth();
-requireMinimumRole(session, "ADMIN");
   try {
+    requireMinimumRole(session, "ADMIN");
     const supplier = await prisma.supplier.findUnique({
       where: { id },
     });
@@ -387,8 +390,8 @@ requireMinimumRole(session, "ADMIN");
 
 export async function getSuppliersForSelect(externalSession?: AuthSession | null) {
   const session = externalSession || (await auth());
-  requirePermission(session, "VIEW_SUPPLIERS");
   try {
+    requirePermission(session, "VIEW_SUPPLIERS");
     const suppliers = await prisma.supplier.findMany({
       where: { isActive: true },
       select: {

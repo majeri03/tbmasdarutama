@@ -78,6 +78,12 @@ export function extractTagKeys(
  * Catat upload baru sebagai PENDING. Dipanggil dari POST /api/upload
  * SETELAH Worker mengonfirmasi file tersimpan. Kalau baris sudah ada
  * (upload ganda / retry), dibiarkan apa adanya.
+ *
+ * FIX (22 Nov 2026, pentest L9): pencatatan diulang sampai 3x dengan jeda
+ * singkat (kegagalan sesaat DB tidak langsung membuat file yatim).
+ * Mengembalikan true kalau baris berhasil tercatat, false kalau semua
+ * percobaan gagal — pemanggil TIDAK menggagalkan upload, tapi menandai
+ * respons sebagai `untracked` supaya operator tahu file itu tidak terlacak.
  */
 export async function trackUpload(input: {
   r2Key: string;
@@ -86,25 +92,57 @@ export async function trackUpload(input: {
   mimeType: string;
   folder: string;
   uploadedById?: string | null;
-}) {
+}): Promise<boolean> {
+  const MAX_ATTEMPTS = 3;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      await prisma.r2File.upsert({
+        where: { r2Key: input.r2Key },
+        update: {},
+        create: {
+          r2Key: input.r2Key,
+          url: input.url,
+          sizeBytes: input.sizeBytes,
+          mimeType: input.mimeType,
+          folder: input.folder,
+          ownerType: ownerTypeFromFolder(input.folder),
+          uploadedById: input.uploadedById ?? null,
+          status: "PENDING",
+        },
+      });
+      return true;
+    } catch (e) {
+      console.warn(
+        `[R2_TRACK_WARN] Gagal mencatat upload (percobaan ${attempt}/${MAX_ATTEMPTS}):`,
+        e
+      );
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, 150 * attempt));
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Hitung berapa file yang diunggah satu user sejak awal hari ini (UTC).
+ * Dipakai batas harian upload di POST /api/upload (pentest M15).
+ * Kalau query gagal, mengembalikan 0 (fail-open) supaya upload bukti
+ * bayar/kirim tidak mati hanya karena hitungan kuota bermasalah —
+ * kegagalannya tetap dicatat di log server.
+ */
+export async function countUserUploadsToday(
+  userId: string
+): Promise<number> {
+  const startOfDay = new Date();
+  startOfDay.setUTCHours(0, 0, 0, 0);
   try {
-    await prisma.r2File.upsert({
-      where: { r2Key: input.r2Key },
-      update: {},
-      create: {
-        r2Key: input.r2Key,
-        url: input.url,
-        sizeBytes: input.sizeBytes,
-        mimeType: input.mimeType,
-        folder: input.folder,
-        ownerType: ownerTypeFromFolder(input.folder),
-        uploadedById: input.uploadedById ?? null,
-        status: "PENDING",
-      },
+    return await prisma.r2File.count({
+      where: { uploadedById: userId, createdAt: { gte: startOfDay } },
     });
   } catch (e) {
-    // Pelacakan tidak boleh menggagalkan upload — catat saja.
-    console.warn("[R2_TRACK_WARN] Gagal mencatat upload:", e);
+    console.warn("[R2_QUOTA_WARN] Gagal menghitung kuota upload harian:", e);
+    return 0;
   }
 }
 

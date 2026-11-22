@@ -58,10 +58,19 @@ export async function createUser(data: UserFormValues) {
     if (existing)
       return { success: false, error: "Email sudah digunakan user lain" };
 
-    if (!data.password || data.password.length < 6) {
+    // SECURITY FIX (22 Nov 2026, pentest L-2): minimum password user baru
+    // disamakan 8 karakter seperti ganti password di tempat lain (dulu 6 —
+    // "123456" bisa lolos). Maksimal 128 (bcrypt memotong di 72 byte).
+    if (!data.password || data.password.length < 8) {
       return {
         success: false,
-        error: "Password wajib diisi minimal 6 karakter untuk user baru",
+        error: "Password wajib diisi minimal 8 karakter untuk user baru",
+      };
+    }
+    if (data.password.length > 128) {
+      return {
+        success: false,
+        error: "Password maksimal 128 karakter",
       };
     }
 
@@ -123,8 +132,12 @@ export async function updateUser(id: string, data: UserFormValues) {
     // Hanya update password jika input tidak kosong
     let passwordChanged = false;
     if (data.password && data.password.trim() !== "") {
-      if (data.password.length < 6)
-        return { success: false, error: "Password minimal 6 karakter" };
+      // SECURITY FIX (22 Nov 2026, pentest L-2): samakan minimal 8 karakter
+      // (dulu 6) + maksimal 128.
+      if (data.password.length < 8)
+        return { success: false, error: "Password minimal 8 karakter" };
+      if (data.password.length > 128)
+        return { success: false, error: "Password maksimal 128 karakter" };
       updateData.password = await bcrypt.hash(data.password, 10);
       passwordChanged = true;
     }

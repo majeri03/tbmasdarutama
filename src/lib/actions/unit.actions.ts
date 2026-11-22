@@ -71,8 +71,8 @@ export async function getUnits(
   externalSession?: AuthSession | null
 ) {
   const session = externalSession || (await auth());
-  requirePermission(session, "VIEW_UNITS");
   try {
+    requirePermission(session, "VIEW_UNITS");
     const { search = "", page = 1, limit = 10 } = params || {};
     const skip = (page - 1) * limit;
 
@@ -127,8 +127,8 @@ export async function getUnits(
 
 export async function getUnitById(id: string) {
   const session = await auth();
-  requireMinimumRole(session, "ADMIN");
   try {
+    requireMinimumRole(session, "ADMIN");
     const unit = await prisma.unit.findUnique({
       where: { id },
       include: {
@@ -162,8 +162,8 @@ export async function getUnitById(id: string) {
 
 export async function updateUnit(id: string, data: UnitFormData) {
   const session = await auth();
-  requireMinimumRole(session, "ADMIN");
   try {
+    requireMinimumRole(session, "ADMIN");
     // Validate input
     const validatedData = unitServerSchema.parse(data);
 
@@ -225,8 +225,8 @@ export async function updateUnit(id: string, data: UnitFormData) {
 
 export async function deleteUnit(id: string) {
   const session = await auth();
-  requireMinimumRole(session, "ADMIN");
   try {
+    requireMinimumRole(session, "ADMIN");
     // Check if unit exists and has relations
     const unit = await prisma.unit.findUnique({
       where: { id },
@@ -283,8 +283,8 @@ export async function deleteUnit(id: string) {
 
 export async function getUnitsForSelect(externalSession?: AuthSession | null) {
   const session = externalSession || (await auth());
-  requirePermission(session, "VIEW_UNITS");
   try {
+    requirePermission(session, "VIEW_UNITS");
     const units = await prisma.unit.findMany({
       select: {
         id: true,

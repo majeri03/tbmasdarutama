@@ -10,7 +10,7 @@ import {
   type UpdateCustomerInput,
 } from "@/lib/validations/customer.schema";
 import { Prisma } from "@prisma/client";
-import { requireMinimumRole, type AuthSession } from "../utils/role";
+import { requireMinimumRole, requirePermission, type AuthSession } from "../utils/role";
 
 //GENERATE CUSTOMER CODE
 async function generateCustomerCode(): Promise<string> {
@@ -29,9 +29,10 @@ async function generateCustomerCode(): Promise<string> {
 }
 
 //   CREATE CUSTOMER  
-export async function createCustomer(data: CreateCustomerInput) {
+export async function createCustomer(data: CreateCustomerInput, externalSession?: AuthSession | null) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
 
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
@@ -79,10 +80,8 @@ export async function createCustomer(data: CreateCustomerInput) {
   } catch (error) {
     console.error("[CREATE_CUSTOMER_ERROR]", error);
 
-    if (error instanceof Error) {
-      return { success: false, error: error.message };
-    }
-
+    // FIX PENTEST (22 Nov 2026, L24): jangan teruskan error.message mentah
+    // (bisa berisi pesan Prisma/Zod) ke klien — pakai pesan generik.
     return {
       success: false,
       error: "Gagal menambahkan customer. Silakan coba lagi.",
@@ -91,14 +90,18 @@ export async function createCustomer(data: CreateCustomerInput) {
 }
 
 //   UPDATE CUSTOMER  
-export async function updateCustomer(id: string, data: UpdateCustomerInput) {
+export async function updateCustomer(id: string, data: UpdateCustomerInput, externalSession?: AuthSession | null) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
 
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
-    requireMinimumRole(session, "ADMIN");
+    // FIX PENTEST (22 Nov 2026, M24): EDIT_CUSTOMER (KASIR+) — konsisten
+    // dengan route dan PERMISSIONS. Sebelumnya ADMIN saja di action
+    // sementara route bilang KASIR boleh.
+    requirePermission(session, "EDIT_CUSTOMER");
     // Validate input
     const validatedData = updateCustomerSchema.parse(data);
 
@@ -151,10 +154,8 @@ export async function updateCustomer(id: string, data: UpdateCustomerInput) {
   } catch (error) {
     console.error("[UPDATE_CUSTOMER_ERROR]", error);
 
-    if (error instanceof Error) {
-      return { success: false, error: error.message };
-    }
-
+    // FIX PENTEST (22 Nov 2026, L24): jangan teruskan error.message mentah
+    // (bisa berisi pesan Prisma/Zod) ke klien — pakai pesan generik.
     return {
       success: false,
       error: "Gagal memperbarui customer. Silakan coba lagi.",
@@ -163,14 +164,17 @@ export async function updateCustomer(id: string, data: UpdateCustomerInput) {
 }
 
 //   DELETE CUSTOMER  
-export async function deleteCustomer(id: string) {
+export async function deleteCustomer(id: string, externalSession?: AuthSession | null) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
 
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
-    requireMinimumRole(session, "ADMIN");
+    // FIX PENTEST (22 Nov 2026, M24): DELETE_CUSTOMER (ADMIN+) — konsisten
+    // dengan route dan PERMISSIONS.
+    requirePermission(session, "DELETE_CUSTOMER");
     const customer = await prisma.customer.findUnique({
       where: { id },
       include: {
@@ -178,6 +182,7 @@ export async function deleteCustomer(id: string) {
           select: {
             sales: true,
             customerDebts: true,
+            deliveryOrders: true,
           },
         },
       },
@@ -201,6 +206,16 @@ export async function deleteCustomer(id: string) {
       };
     }
 
+    // FIX PENTEST (22 Nov 2026, L24): sebelumnya hanya sale + utang yang
+    // dicek — customer yang masih punya Surat Jalan juga tidak boleh dihapus
+    // (menghindari DO yatim tanpa customer).
+    if (customer._count.deliveryOrders > 0) {
+      return {
+        success: false,
+        error: `Customer "${customer.name}" tidak dapat dihapus karena memiliki ${customer._count.deliveryOrders} Surat Jalan. Hapus Surat Jalan terkait terlebih dahulu.`,
+      };
+    }
+
     // Delete customer
     await prisma.customer.delete({
       where: { id },
@@ -215,10 +230,8 @@ export async function deleteCustomer(id: string) {
   } catch (error) {
     console.error("[DELETE_CUSTOMER_ERROR]", error);
 
-    if (error instanceof Error) {
-      return { success: false, error: error.message };
-    }
-
+    // FIX PENTEST (22 Nov 2026, L24): jangan teruskan error.message mentah
+    // (bisa berisi pesan Prisma/Zod) ke klien — pakai pesan generik.
     return {
       success: false,
       error: "Gagal menghapus customer. Silakan coba lagi.",
@@ -227,9 +240,10 @@ export async function deleteCustomer(id: string) {
 }
 
 //   TOGGLE ACTIVE STATUS  
-export async function toggleCustomerStatus(id: string) {
+export async function toggleCustomerStatus(id: string, externalSession?: AuthSession | null) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
 
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
@@ -267,8 +281,10 @@ export async function toggleCustomerStatus(id: string) {
 //   GET ALL CUSTOMERS  
 export async function getCustomers(filters?: { status?: "ACTIVE" | "INACTIVE" }, externalSession?: AuthSession | null) {
   const session = externalSession || (await auth());
-  requireMinimumRole(session, "KASIR"); // All roles can view
   try {
+    // FIX PENTEST (22 Nov 2026, L27): requireMinimumRole dipindah ke DALAM
+    // try supaya kegagalan auth tidak lolos sebagai 500 generik.
+    requireMinimumRole(session, "KASIR"); // All roles can view
     const where: Prisma.CustomerWhereInput = {};
 
     if (filters?.status === "ACTIVE") {
@@ -300,6 +316,9 @@ export async function getCustomers(filters?: { status?: "ACTIVE" | "INACTIVE" },
     return { success: true, data: customers };
   } catch (error) {
     console.error("[GET_CUSTOMERS_ERROR]", error);
+    if (error instanceof Error && error.message.startsWith("Unauthorized")) {
+      return { success: false, error: error.message };
+    }
     return {
       success: false,
       error: "Gagal mengambil data customer.",

@@ -1,6 +1,11 @@
 import { DeliveryOrderData } from "@/types/delivery-order";
 import { getStoreSetting } from "@/lib/actions/store-setting.actions"; // Import Action
 
+// XSS fix (Nov 2026): semua teks dari database (nama customer, sopir,
+// kendaraan, produk, catatan) di-escape sebelum ditempel ke HTML Surat Jalan.
+const escapeHtml = (s: unknown): string =>
+  String(s ?? "").replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"} as Record<string, string>)[c]);
+
 // Interface untuk Setting Toko
 export interface StoreSetting {
   name: string;
@@ -21,7 +26,7 @@ export function generateDeliveryOrderHTML(
 
   // Logika Logo
   const storeLogo = storeSetting?.logoUrl
-    ? `<img src="${storeSetting.logoUrl}" alt="Logo" style="height: 60px; width: auto; object-fit: contain;" />`
+    ? `<img src="${escapeHtml(storeSetting.logoUrl)}" alt="Logo" style="height: 60px; width: auto; object-fit: contain;" />`
     : "";
 
   const deliveryDate = new Date(deliveryOrder.deliveryDate).toLocaleDateString("id-ID", {
@@ -33,7 +38,7 @@ export function generateDeliveryOrderHTML(
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Surat Jalan - ${deliveryOrder.doNumber}</title>
+    <title>Surat Jalan - ${escapeHtml(deliveryOrder.doNumber)}</title>
     <style>
         @page { size: A4 portrait; margin: 10mm; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -79,27 +84,27 @@ export function generateDeliveryOrderHTML(
                 ${storeLogo}
             </div>
             <div class="store-info">
-                <h1>${storeName}</h1>
-                <p>${storeAddress}</p>
-                <p>${storePhone}</p>
+                <h1>${escapeHtml(storeName)}</h1>
+                <p>${escapeHtml(storeAddress)}</p>
+                <p>${escapeHtml(storePhone)}</p>
             </div>
         </div>
 
         <div class="title-section">
             <h2>SURAT JALAN</h2>
-            <p>NO: ${deliveryOrder.doNumber}</p>
+            <p>NO: ${escapeHtml(deliveryOrder.doNumber)}</p>
         </div>
 
         <div class="info-grid">
             <div class="info-col">
-                <div class="info-row"><div class="info-label">Kepada Yth:</div><div class="info-val">${deliveryOrder.customer.name}</div></div>
-                <div class="info-row"><div class="info-label">Alamat:</div><div class="info-val">${deliveryOrder.customer.address || "-"}</div></div>
-                <div class="info-row"><div class="info-label">Telepon:</div><div class="info-val">${deliveryOrder.customer.phone || "-"}</div></div>
+                <div class="info-row"><div class="info-label">Kepada Yth:</div><div class="info-val">${escapeHtml(deliveryOrder.customer.name)}</div></div>
+                <div class="info-row"><div class="info-label">Alamat:</div><div class="info-val">${escapeHtml(deliveryOrder.customer.address || "-")}</div></div>
+                <div class="info-row"><div class="info-label">Telepon:</div><div class="info-val">${escapeHtml(deliveryOrder.customer.phone || "-")}</div></div>
             </div>
             <div class="info-col">
                 <div class="info-row"><div class="info-label">Tanggal Kirim:</div><div class="info-val">${deliveryDate}</div></div>
-                <div class="info-row"><div class="info-label">Pengemudi:</div><div class="info-val">${deliveryOrder.driver || "-"}</div></div>
-                <div class="info-row"><div class="info-label">Kendaraan:</div><div class="info-val">${deliveryOrder.vehicle || "-"}</div></div>
+                <div class="info-row"><div class="info-label">Pengemudi:</div><div class="info-val">${escapeHtml(deliveryOrder.driver || "-")}</div></div>
+                <div class="info-row"><div class="info-label">Kendaraan:</div><div class="info-val">${escapeHtml(deliveryOrder.vehicle || "-")}</div></div>
             </div>
         </div>
 
@@ -118,11 +123,11 @@ export function generateDeliveryOrderHTML(
                 ${deliveryOrder.deliveryItems.map((item, i) => `
                 <tr>
                     <td style="text-align: center;">${i + 1}</td>
-                    <td>${item.product.code}</td>
-                    <td>${item.product.name}</td>
+                    <td>${escapeHtml(item.product.code)}</td>
+                    <td>${escapeHtml(item.product.name)}</td>
                     <td style="text-align: center;">${item.quantity}</td>
-                    <td style="text-align: center;">${item.unit.name}</td>
-                    <td>${item.notes || ""}</td>
+                    <td style="text-align: center;">${escapeHtml(item.unit.name)}</td>
+                    <td>${escapeHtml(item.notes || "")}</td>
                 </tr>
                 `).join("")}
             </tbody>
@@ -132,17 +137,17 @@ export function generateDeliveryOrderHTML(
             <div class="sig-box">
                 <p>Penerima,</p>
                 <div class="sig-line"></div>
-                <p>${deliveryOrder.receivedBy || "( ........................... )"}</p>
+                <p>${escapeHtml(deliveryOrder.receivedBy || "( ........................... )")}</p>
             </div>
             <div class="sig-box">
                 <p>Pengemudi,</p>
                 <div class="sig-line"></div>
-                <p>${deliveryOrder.driver || "( ........................... )"}</p>
+                <p>${escapeHtml(deliveryOrder.driver || "( ........................... )")}</p>
             </div>
             <div class="sig-box">
                 <p>Hormat Kami,</p>
                 <div class="sig-line"></div>
-                <p>${storeName}</p>
+                <p>${escapeHtml(storeName)}</p>
             </div>
         </div>
 

@@ -58,6 +58,53 @@ async function checkDrivers(
   return { ok: true, driver, coDriver };
 }
 
+/**
+ * PENTEST FIX (22 Nov 2026, L17): whitelist jenis & status kendaraan dan
+ * validasi tahun — sama seperti POST (lihat vehicles/route.ts).
+ */
+const VEHICLE_TYPES = ["TRUCK", "PICKUP", "MOTOR", "VAN", "OTHER"];
+const VEHICLE_STATUSES = ["ACTIVE", "IDLE", "MAINTENANCE", "OFF"];
+
+function validateVehicleMeta(
+  vehicleType: unknown,
+  status: unknown,
+  year: unknown
+):
+  | {
+      ok: true;
+      vehicleType?: string;
+      status?: string;
+      year?: number | null;
+    }
+  | { ok: false; message: string } {
+  let normType: string | undefined;
+  if (vehicleType !== undefined && vehicleType !== null && String(vehicleType).trim() !== "") {
+    normType = String(vehicleType).trim().toUpperCase();
+    if (!VEHICLE_TYPES.includes(normType)) {
+      return { ok: false, message: `Jenis kendaraan tidak valid (pilih: ${VEHICLE_TYPES.join(", ")}).` };
+    }
+  }
+  let normStatus: string | undefined;
+  if (status !== undefined && status !== null && String(status).trim() !== "") {
+    normStatus = String(status).trim().toUpperCase();
+    if (!VEHICLE_STATUSES.includes(normStatus)) {
+      return { ok: false, message: `Status kendaraan tidak valid (pilih: ${VEHICLE_STATUSES.join(", ")}).` };
+    }
+  }
+  let normYear: number | null | undefined;
+  if (year !== undefined && year !== null && String(year).trim() !== "") {
+    const n = Number(year);
+    const maxYear = new Date().getFullYear() + 1;
+    if (!Number.isInteger(n) || n < 1950 || n > maxYear) {
+      return { ok: false, message: `Tahun kendaraan tidak valid (1950–${maxYear}).` };
+    }
+    normYear = n;
+  } else if (year !== undefined) {
+    normYear = null;
+  }
+  return { ok: true, vehicleType: normType, status: normStatus, year: normYear };
+}
+
 /** Normalisasi id sopir dari body: undefined = tidak diubah, "" = hapus (null). */
 function normalizeDriverId(value: unknown): string | null | undefined {
   if (value === undefined) return undefined;
@@ -90,6 +137,21 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
     if (!existing) {
       return notFoundResponse("Armada");
+    }
+
+    const meta = validateVehicleMeta(vehicleType, status, year);
+    if (!meta.ok) return validationErrorResponse(meta.message);
+
+    // PENTEST FIX (L17): PUT dulu tidak memeriksa duplikat plat — plat
+    // kendaraan lain bisa ditimpa (hanya berakhir 500 dari constraint unik).
+    const newPlate = plateNumber ? String(plateNumber).trim().toUpperCase() : existing.plateNumber;
+    if (newPlate !== existing.plateNumber) {
+      const plateTaken = await prisma.fleetVehicle.findUnique({
+        where: { plateNumber: newPlate },
+      });
+      if (plateTaken) {
+        return errorResponse(`Nomor Plat ${newPlate} sudah terdaftar pada kendaraan lain!`, 400);
+      }
     }
 
     // Nilai penugasan hasil akhir (baru vs yang sudah ada), untuk validasi.
@@ -126,15 +188,15 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     const updated = await prisma.fleetVehicle.update({
       where: { id },
       data: {
-        plateNumber: plateNumber ? plateNumber.trim().toUpperCase() : existing.plateNumber,
-        vehicleType: vehicleType || existing.vehicleType,
+        plateNumber: newPlate,
+        vehicleType: meta.vehicleType ?? existing.vehicleType,
         brand: brand !== undefined ? (brand ? brand.trim() : null) : existing.brand,
-        year: year !== undefined ? (year ? Number(year) : null) : existing.year,
+        year: meta.year !== undefined ? meta.year : existing.year,
         driverName: finalDriverName,
         driverPhone: driverPhone !== undefined ? (driverPhone ? driverPhone.trim() : null) : existing.driverPhone,
         driverUserId: newDriverId,
         coDriverUserId: newCoDriverId,
-        status: status || existing.status,
+        status: meta.status ?? existing.status,
       },
     });
 

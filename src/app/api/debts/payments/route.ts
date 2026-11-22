@@ -55,9 +55,9 @@ export async function POST(request: NextRequest) {
     let result;
 
     if (type === "customer") {
-      result = await addCustomerDebtPayment(paymentData);
+      result = await addCustomerDebtPayment(paymentData, session);
     } else {
-      result = await addSupplierDebtPayment(paymentData);
+      result = await addSupplierDebtPayment(paymentData, session);
     }
 
     if (!result.success) {

@@ -36,13 +36,25 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const params = parseSearchParams(searchParams);
 
+    // PENTEST FIX (22 Nov 2026, M20/L12): type tidak valid dulu di-cast
+    // mentah ke Prisma (-> 500). Sekarang ditolak 400. Tanggal tidak
+    // valid sudah diubah jadi undefined oleh parseSearchParams.
+    const typeRaw = searchParams.get("type");
+    const movementType =
+      typeRaw && (Object.values(MovementType) as string[]).includes(typeRaw)
+        ? (typeRaw as MovementType)
+        : undefined;
+    if (typeRaw && !movementType) {
+      return errorResponse("type pergerakan tidak valid.", 400);
+    }
+
     const result = await getStockMovements({
       search: params.search,
       productId: params.productId,
-      movementType: searchParams.get("type") as MovementType | undefined,
-      dateFrom: searchParams.get("dateFrom") ? new Date(searchParams.get("dateFrom")!) : undefined,
+      movementType,
+      dateFrom: params.dateFrom,
       // M-31: dateTo harus akhir hari, bukan tengah malam.
-      dateTo: searchParams.get("dateTo") ? endOfDay(new Date(searchParams.get("dateTo")!)) : undefined,
+      dateTo: params.dateTo ? endOfDay(params.dateTo) : undefined,
       page: params.page,
       limit: params.limit,
     }, session);

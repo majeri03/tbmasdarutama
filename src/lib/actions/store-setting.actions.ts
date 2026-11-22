@@ -4,12 +4,13 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { storeSettingSchema } from "@/lib/validations/store-setting.schema";
 import { revalidatePath } from "next/cache";
-import { requirePermission } from "../utils/role";
+import { requirePermission, type AuthSession } from "../utils/role";
 import { confirmR2File, deleteR2FileByUrl } from "@/lib/utils/r2-tracking";
 
-export async function getStoreSetting() {
+export async function getStoreSetting(externalSession?: AuthSession | null) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
     requirePermission(session, "VIEW_SETTINGS");
     const setting = await prisma.storeSetting.findFirst();
     return { success: true, data: setting };
@@ -22,9 +23,10 @@ export async function getStoreSetting() {
   }
 }
 
-export async function updateStoreSetting(formData: unknown) {
+export async function updateStoreSetting(formData: unknown, externalSession?: AuthSession | null) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
     requirePermission(session, "MANAGE_STORE_SETTINGS");
 
     const validated = storeSettingSchema.parse(formData);

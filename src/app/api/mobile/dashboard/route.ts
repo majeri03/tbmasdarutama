@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedUser } from "@/lib/utils/api";
+import { getAuthenticatedUser, forbiddenResponse } from "@/lib/utils/api";
+import { hasPermission } from "@/lib/utils/role";
 import { db } from "@/lib/db";
 import { SaleStatus } from "@prisma/client";
 
@@ -7,11 +8,19 @@ import { SaleStatus } from "@prisma/client";
  * GET /api/mobile/dashboard
  * Mengembalikan ringkasan satu-request untuk halaman Beranda Flutter
  * Tidak membutuhkan param apapun — berdasarkan hari ini
+ *
+ * PENTEST FIX (22 Nov 2026, H8): dulu tanpa cek role — KASIR mana pun
+ * mendapat omzet harian, total piutang & piutang jatuh tempo seluruh
+ * toko. Sekarang ADMIN+ saja (VIEW_DASHBOARD). KASIR yang memanggil
+ * endpoint ini mendapat 403.
  */
 export async function GET() {
   const session = await getAuthenticatedUser();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!hasPermission(session, "VIEW_DASHBOARD")) {
+    return forbiddenResponse("Hanya admin yang bisa melihat ringkasan toko.");
   }
 
   const today = new Date();

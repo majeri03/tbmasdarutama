@@ -1,7 +1,32 @@
 import { NextRequest } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 import { getAuthenticatedUser, successResponse, errorResponse } from "@/lib/utils/api";
 import { NotificationService } from "@/lib/services/notification.service";
 import { updateAllOverdueDebts } from "@/lib/actions/customer-debt.actions";
+import {
+  isRateLimited,
+  recordRateLimitHit,
+} from "@/lib/utils/rate-limit";
+
+// SECURITY FIX (22 Nov 2026, pentest L13 API): rate limit pemicu cron —
+// tiap panggilan menjalankan updateAllOverdueDebts + cek stok rendah
+// (beban DB penuh) walau dedup 24 jam membatasi push ganda. 30x/jam
+// per pemanggil (cron atau admin) sudah sangat longgar untuk cron harian.
+const CHECK_OVERDUE_WINDOW_MS = 60 * 60 * 1000;
+const CHECK_OVERDUE_MAX_CALLS = 30;
+
+/**
+ * Perbandingan secret yang aman terhadap timing attack.
+ * timingSafeEqual butuh buffer sama panjang — panjang berbeda langsung
+ * false tanpa membocorkan apa pun lewat waktu.
+ */
+function secretsEqual(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  const ba = Buffer.from(a, "utf8");
+  const bb = Buffer.from(b, "utf8");
+  if (ba.length !== bb.length) return false;
+  return timingSafeEqual(ba, bb);
+}
 
 /**
  * GET /api/notifications/check-overdue
@@ -26,16 +51,33 @@ import { updateAllOverdueDebts } from "@/lib/actions/customer-debt.actions";
 async function handler(request: NextRequest) {
   try {
     const cronSecret = process.env.NOTIFICATION_CRON_SECRET;
+    // SECURITY FIX (22 Nov 2026, pentest L13 API): perbandingan secret
+    // pakai timingSafeEqual, bukan === (mencegah timing attack).
     const keyOk =
-      !!cronSecret && request.headers.get("x-cron-secret") === cronSecret;
+      !!cronSecret &&
+      secretsEqual(request.headers.get("x-cron-secret") ?? "", cronSecret);
 
+    let rateKey: string | null = null;
     if (!keyOk) {
       const session = await getAuthenticatedUser();
       const role = (session?.user as { role?: string } | undefined)?.role;
       if (!session?.user || (role !== "SUPER_ADMIN" && role !== "ADMIN")) {
         return errorResponse("Unauthorized", 401);
       }
+      rateKey = `check-overdue:user:${session.user.id}`;
+    } else {
+      rateKey = "check-overdue:cron";
     }
+
+    if (
+      await isRateLimited(rateKey, CHECK_OVERDUE_MAX_CALLS, CHECK_OVERDUE_WINDOW_MS)
+    ) {
+      return errorResponse(
+        "Terlalu banyak permintaan cek hutang jatuh tempo. Coba lagi 1 jam lagi.",
+        429
+      );
+    }
+    await recordRateLimitHit(rateKey, CHECK_OVERDUE_WINDOW_MS);
 
     // QA FIX (M-18, Nov 2026): sebelum mengirim notifikasi, balik dulu status
     // hutang yang sudah lewat jatuh tempo jadi OVERDUE (pelanggan + supplier).

@@ -47,7 +47,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     if (!session) return unauthorizedResponse();
     if (!hasMinimumRole(session, "ADMIN")) return forbiddenResponse();
     const { id } = await context.params;
-    const result = await deletePurchase(id);
+    const result = await deletePurchase(id, session);
     if (!result.success) {
       return errorResponse(result.error || "Gagal menghapus Purchase Order.", 400);
     }

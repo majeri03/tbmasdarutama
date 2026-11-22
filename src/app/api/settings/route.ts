@@ -23,7 +23,7 @@ export async function GET() {
     if (!session) return unauthorizedResponse();
     if (!hasPermission(session, "VIEW_SETTINGS")) return forbiddenResponse();
 
-    const result = await getStoreSetting();
+    const result = await getStoreSetting(session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal mengambil pengaturan toko.", 400);
@@ -80,7 +80,7 @@ export async function PUT(request: NextRequest) {
     if (!hasPermission(session, "MANAGE_STORE_SETTINGS")) return forbiddenResponse();
 
     const body = await request.json();
-    const result = await updateStoreSetting(body);
+    const result = await updateStoreSetting(body, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal menyimpan pengaturan toko.", 400);

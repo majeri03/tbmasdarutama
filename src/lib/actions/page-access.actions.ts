@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { Role } from "@prisma/client";
+import type { AuthSession } from "@/lib/utils/role";
 import { revalidatePath } from "next/cache";
 import { PAGE_KEYS } from "@/lib/constants/page-access";
 
@@ -40,9 +41,10 @@ export async function initializePageAccess() {
 /**
  * Reads the full PageAccess matrix (Only for SUPER_ADMIN).
  */
-export async function getPageAccessMatrix() {
+export async function getPageAccessMatrix(externalSession?: AuthSession | null) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
     const role = (session?.user?.role || "").toUpperCase().replace(/[\s-]+/g, "_");
     if (!session?.user || role !== "SUPER_ADMIN") {
       return { success: false, error: "Unauthorized. Hanya SUPER_ADMIN yang diizinkan." };
@@ -64,9 +66,10 @@ export async function getPageAccessMatrix() {
 /**
  * Updates a specific PageAccess rule (Only for SUPER_ADMIN).
  */
-export async function updatePageAccess(pageKey: string, role: Role, enabled: boolean) {
+export async function updatePageAccess(pageKey: string, role: Role, enabled: boolean, externalSession?: AuthSession | null) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
     const userRole = (session?.user?.role || "").toUpperCase().replace(/[\s-]+/g, "_");
     if (!session?.user || userRole !== "SUPER_ADMIN") {
       return { success: false, error: "Unauthorized. Hanya SUPER_ADMIN yang diizinkan." };

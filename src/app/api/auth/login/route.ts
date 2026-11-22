@@ -1,43 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { z } from "zod";
 import { signMobileToken } from "@/lib/utils/jwt";
-import { errorResponse, validationErrorResponse } from "@/lib/utils/api";
+import { errorResponse } from "@/lib/utils/api";
+import {
+  getClientIp,
+  isRateLimited,
+  recordRateLimitHit,
+  clearRateLimit,
+} from "@/lib/utils/rate-limit";
 
 // SECURITY FIX (Nov 2026, H1): rate-limit login mobile. Sebelumnya tidak ada
 // batas percobaan sama sekali — password bisa ditebak berkali-kali.
-// Sederhana dan in-memory: 10 kegagalan per email+IP dalam 15 menit, lalu 429.
-// Catatan: di serverless (Vercel) tiap instance punya hitungannya sendiri,
-// jadi ini memperlambat brute-force, bukan menghilangkannya sepenuhnya.
-// Untuk perlindungan penuh, tambahkan rate-limit di edge (mis. Vercel /
-// Cloudflare) atau simpan hitungan di Redis/DB.
+// SECURITY FIX (22 Nov 2026, pentest M28): hitungan pindah dari Map
+// in-memory per instance ke tabel rate_limits di DB (berlaku antar-instance
+// serverless). SECURITY FIX (pentest M2): IP dari elemen TERAKHIR
+// X-Forwarded-For (ditambahkan proxy tepercaya) — elemen pertama bisa
+// dipalsukan penyerang untuk membuat kunci rate limit baru tiap percobaan.
+// 10 kegagalan per IP+email dalam 15 menit, lalu 429.
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_FAILED = 10;
-const failedLogins = new Map<string, { count: number; firstAt: number }>();
+
+// SECURITY FIX (22 Nov 2026, pentest L8 API): validasi tipe input dengan
+// zod SEBELUM dipakai — email non-string sebelumnya membuat
+// .toLowerCase() melempar dan berakhir 500. Batas panjang juga melindungi
+// bcrypt (memotong di 72 byte).
+const loginBodySchema = z.object({
+  email: z.string().min(1).max(254),
+  password: z.string().min(1).max(128),
+});
 
 function loginRateKey(request: NextRequest, email: string): string {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const ip = getClientIp(request.headers);
   return `${ip}:${email.toLowerCase().trim()}`;
-}
-
-function isLoginRateLimited(key: string): boolean {
-  const entry = failedLogins.get(key);
-  if (!entry) return false;
-  if (Date.now() - entry.firstAt > LOGIN_WINDOW_MS) {
-    failedLogins.delete(key);
-    return false;
-  }
-  return entry.count >= LOGIN_MAX_FAILED;
-}
-
-function recordFailedLogin(key: string): void {
-  const now = Date.now();
-  const entry = failedLogins.get(key);
-  if (!entry || now - entry.firstAt > LOGIN_WINDOW_MS) {
-    failedLogins.set(key, { count: 1, firstAt: now });
-  } else {
-    entry.count += 1;
-  }
 }
 
 /**
@@ -48,16 +44,21 @@ function recordFailedLogin(key: string): void {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password } = body;
+    const parsed = loginBodySchema.safeParse(body);
 
-    // 1. Validasi input
-    if (!email || !password) {
-      return validationErrorResponse("Email dan password wajib diisi.");
+    // 1. Validasi input — bentuk body tidak valid dijawab generik 401
+    // (bukan 400 dengan rincian) supaya tidak membocorkan apa pun.
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: "Email atau password salah." },
+        { status: 401 }
+      );
     }
+    const { email, password } = parsed.data;
 
     // 1b. Rate-limit: tolak sebelum cek password kalau sudah terlalu banyak gagal.
-    const rateKey = loginRateKey(request, String(email));
-    if (isLoginRateLimited(rateKey)) {
+    const rateKey = loginRateKey(request, email);
+    if (await isRateLimited(rateKey, LOGIN_MAX_FAILED, LOGIN_WINDOW_MS)) {
       return NextResponse.json(
         { success: false, error: "Terlalu banyak percobaan login. Coba lagi 15 menit lagi." },
         { status: 429 }
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
-      recordFailedLogin(rateKey);
+      await recordRateLimitHit(rateKey, LOGIN_WINDOW_MS);
       return NextResponse.json(
         { success: false, error: "Email atau password salah." },
         { status: 401 }
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
     // akun nonaktif) membocorkan akun mana yang nonaktif. Sekarang jawabannya
     // sama seperti password salah — admin yang memberitahu pengguna langsung.
     if (!user.isActive) {
-      recordFailedLogin(rateKey);
+      await recordRateLimitHit(rateKey, LOGIN_WINDOW_MS);
       return NextResponse.json(
         { success: false, error: "Email atau password salah." },
         { status: 401 }
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
     // 4. Verifikasi password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      recordFailedLogin(rateKey);
+      await recordRateLimitHit(rateKey, LOGIN_WINDOW_MS);
       return NextResponse.json(
         { success: false, error: "Email atau password salah." },
         { status: 401 }
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Login berhasil: bersihkan hitungan gagal untuk kunci ini.
-    failedLogins.delete(rateKey);
+    await clearRateLimit(rateKey);
 
     // 5. Generate mobile token yang terverifikasi.
     // FIX (22 Nov 2026): sertakan tv = tokenVersion saat ini, supaya token
@@ -122,7 +123,16 @@ export async function POST(request: NextRequest) {
       tv: user.tokenVersion,
     });
 
-    const cookieName = "authjs.session-token";
+    // SECURITY FIX (22 Nov 2026, pentest L-6): di production cookie memakai
+    // prefix __Secure- supaya browser mengikatnya ke HTTPS secara paksa.
+    // Nama ini sama dengan yang dipakai middleware untuk memetakan Bearer
+    // token (middleware.ts) dan yang dihapus route logout — dan dikembalikan
+    // di field cookieName supaya APK menyesuaikan. Di development tetap
+    // tanpa prefix supaya login lokal tetap jalan lewat HTTP.
+    const cookieName =
+      process.env.NODE_ENV === "production"
+        ? "__Secure-authjs.session-token"
+        : "authjs.session-token";
 
     // 6. Return response dengan session token dan Set-Cookie
     const response = NextResponse.json(

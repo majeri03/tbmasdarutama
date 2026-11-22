@@ -23,8 +23,8 @@ export type SubCategoryFormData = z.infer<typeof subCategoryServerSchema>;
 //CREATE CATEGORY
 export async function createCategory(data: CategoryFormData) {
   const session = await auth();
-requireMinimumRole(session, "ADMIN");
   try {
+    requireMinimumRole(session, "ADMIN");
     const validatedData = categoryServerSchema.parse(data);
 
     const existingCategory = await prisma.category.findUnique({
@@ -77,8 +77,8 @@ export async function getCategories(
   externalSession?: AuthSession | null
 ) {
   const session = externalSession || (await auth());
-  requirePermission(session, "VIEW_CATEGORIES");
   try {
+    requirePermission(session, "VIEW_CATEGORIES");
     const { 
       search = "", 
       page = 1, 
@@ -150,8 +150,8 @@ export async function getCategories(
 //GET CATEGORY BY ID
 export async function getCategoryById(id: string) {
   const session = await auth();
-requireMinimumRole(session, "ADMIN");
   try {
+    requireMinimumRole(session, "ADMIN");
     const category = await prisma.category.findUnique({
       where: { id },
       include: {
@@ -197,8 +197,8 @@ requireMinimumRole(session, "ADMIN");
 //UPDATE CATEGORY
 export async function updateCategory(id: string, data: CategoryFormData) {
   const session = await auth();
-requireMinimumRole(session, "ADMIN");
   try {
+    requireMinimumRole(session, "ADMIN");
     const validatedData = categoryServerSchema.parse(data);
 
     const existingCategory = await prisma.category.findUnique({
@@ -258,8 +258,8 @@ requireMinimumRole(session, "ADMIN");
 //DELETE CATEGORY
 export async function deleteCategory(id: string) {
   const session = await auth();
-requireMinimumRole(session, "ADMIN");
   try {
+    requireMinimumRole(session, "ADMIN");
     const category = await prisma.category.findUnique({
       where: { id },
       include: {
@@ -315,8 +315,8 @@ requireMinimumRole(session, "ADMIN");
 //CREATE SUB-CATEGORY
 export async function createSubCategory(data: SubCategoryFormData) {
   const session = await auth();
-requireMinimumRole(session, "ADMIN");
   try {
+    requireMinimumRole(session, "ADMIN");
     const validatedData = subCategoryServerSchema.parse(data);
 
     const category = await prisma.category.findUnique({
@@ -375,8 +375,8 @@ requireMinimumRole(session, "ADMIN");
 //UPDATE SUB-CATEGORY
 export async function updateSubCategory(id: string, data: SubCategoryFormData) {
   const session = await auth();
-requireMinimumRole(session, "ADMIN");
   try {
+    requireMinimumRole(session, "ADMIN");
     const validatedData = subCategoryServerSchema.parse(data);
 
     const existingSubCategory = await prisma.subCategory.findUnique({
@@ -442,8 +442,8 @@ requireMinimumRole(session, "ADMIN");
 //DELETE SUB-CATEGORY
 export async function deleteSubCategory(id: string) {
   const session = await auth();
-requireMinimumRole(session, "ADMIN");
   try {
+    requireMinimumRole(session, "ADMIN");
     const subCategory = await prisma.subCategory.findUnique({
       where: { id },
       include: {
@@ -492,8 +492,8 @@ requireMinimumRole(session, "ADMIN");
 //GET CATEGORIES FOR SELECT
 export async function getCategoriesForSelect(externalSession?: AuthSession | null) {
   const session = externalSession || (await auth());
-  requirePermission(session, "VIEW_CATEGORIES");
   try {
+    requirePermission(session, "VIEW_CATEGORIES");
     const categories = await prisma.category.findMany({
       select: {
         id: true,

@@ -29,6 +29,10 @@ export type ReportFilters = DateRangeFilter & {
   categoryId?: string;
   productId?: string;
   status?: string;
+  // PENTEST FIX (22 Nov 2026, M20): paging untuk laporan utang (dulu
+  // tanpa take/skip — seluruh piutang+utang + riwayat bayar dimuat).
+  page?: number;
+  limit?: number;
 };
 
 export async function getSalesReport(filters: ReportFilters, externalSession?: AuthSession | null) {
@@ -271,56 +275,82 @@ export async function getDebtsReport(filters: ReportFilters, externalSession?: A
     }
     requirePermission(session, "VIEW_REPORTS");
     const { customerId, supplierId, status } = filters;
+    // PENTEST FIX (M20): paging di-clamp (1-100, default 100) supaya
+    // laporan tidak bisa dipakai dump massal.
+    const page = Number.isFinite(filters.page) ? Math.min(10000, Math.max(1, filters.page!)) : 1;
+    const limit = Number.isFinite(filters.limit) ? Math.min(100, Math.max(1, filters.limit!)) : 100;
+    const skip = (page - 1) * limit;
 
-    const customerDebts = await prisma.customerDebt.findMany({
-      where: {
-        AND: [
-          customerId ? { customerId } : {},
-          status ? { status: status as DebtStatus } : {},
-        ],
-      },
-      include: {
-        customer: true,
-        sale: true,
-        debtPayments: {
-          orderBy: { paymentDate: "desc" },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const customerWhere = {
+      AND: [
+        customerId ? { customerId } : {},
+        status ? { status: status as DebtStatus } : {},
+      ],
+    };
+    const supplierWhere = {
+      AND: [
+        supplierId ? { supplierId } : {},
+        status ? { status: status as DebtStatus } : {},
+      ],
+    };
 
-    const supplierDebts = await prisma.supplierDebt.findMany({
-      where: {
-        AND: [
-          supplierId ? { supplierId } : {},
-          status ? { status: status as DebtStatus } : {},
-        ],
-      },
-      include: {
-        supplier: true,
-        purchase: true,
-        debtPayments: {
-          orderBy: { paymentDate: "desc" },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const [customerDebts, supplierDebts, customerCount, supplierCount, customerAgg, supplierAgg] =
+      await Promise.all([
+        prisma.customerDebt.findMany({
+          where: customerWhere,
+          include: {
+            customer: true,
+            sale: true,
+            debtPayments: {
+              orderBy: { paymentDate: "desc" },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limit,
+        }),
+        prisma.supplierDebt.findMany({
+          where: supplierWhere,
+          include: {
+            supplier: true,
+            purchase: true,
+            debtPayments: {
+              orderBy: { paymentDate: "desc" },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limit,
+        }),
+        prisma.customerDebt.count({ where: customerWhere }),
+        prisma.supplierDebt.count({ where: supplierWhere }),
+        // Ringkasan dihitung dari AGREGAT (bukan dari baris halaman ini)
+        // supaya total tetap benar walau daftarnya dipaging.
+        prisma.customerDebt.aggregate({
+          where: customerWhere,
+          _sum: { totalDebt: true, paidAmount: true, remainingDebt: true },
+        }),
+        prisma.supplierDebt.aggregate({
+          where: supplierWhere,
+          _sum: { totalDebt: true, paidAmount: true, remainingDebt: true },
+        }),
+      ]);
 
     const serializedCustomerDebts = serializePrismaData(customerDebts);
     const serializedSupplierDebts = serializePrismaData(supplierDebts);
 
     const customerDebtSummary = {
-      totalDebt: serializedCustomerDebts.reduce((sum: number, debt: any) => sum + Number(debt.totalDebt), 0),
-      totalPaid: serializedCustomerDebts.reduce((sum: number, debt: any) => sum + Number(debt.paidAmount), 0),
-      totalRemaining: serializedCustomerDebts.reduce((sum: number, debt: any) => sum + Number(debt.remainingDebt), 0),
-      count: serializedCustomerDebts.length,
+      totalDebt: Number(customerAgg._sum.totalDebt ?? 0),
+      totalPaid: Number(customerAgg._sum.paidAmount ?? 0),
+      totalRemaining: Number(customerAgg._sum.remainingDebt ?? 0),
+      count: customerCount,
     };
 
     const supplierDebtSummary = {
-      totalDebt: serializedSupplierDebts.reduce((sum: number, debt: any) => sum + Number(debt.totalDebt), 0),
-      totalPaid: serializedSupplierDebts.reduce((sum: number, debt: any) => sum + Number(debt.paidAmount), 0),
-      totalRemaining: serializedSupplierDebts.reduce((sum: number, debt: any) => sum + Number(debt.remainingDebt), 0),
-      count: serializedSupplierDebts.length,
+      totalDebt: Number(supplierAgg._sum.totalDebt ?? 0),
+      totalPaid: Number(supplierAgg._sum.paidAmount ?? 0),
+      totalRemaining: Number(supplierAgg._sum.remainingDebt ?? 0),
+      count: supplierCount,
     };
 
     return {
@@ -330,6 +360,13 @@ export async function getDebtsReport(filters: ReportFilters, externalSession?: A
         supplierDebts: serializedSupplierDebts,
         customerDebtSummary,
         supplierDebtSummary,
+        pagination: {
+          page,
+          limit,
+          totalCustomerDebts: customerCount,
+          totalSupplierDebts: supplierCount,
+          totalPages: Math.ceil(Math.max(customerCount, supplierCount) / limit),
+        },
       },
     };
   } catch (error) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/utils/api";
+import { hasMinimumRole } from "@/lib/utils/role";
 import {
   getReconcileInfo,
   reconcileWithKeyList,
@@ -11,6 +12,9 @@ import {
  * Info rekonsiliasi: jumlah yatim di DB + status env untuk listing R2
  * langsung (butuh R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY,
  * R2_BUCKET_NAME — saat ini tidak ada di env, lihat getReconcileInfo).
+ *
+ * PENTEST FIX (22 Nov 2026, L2): cek role denylist diganti allowlist
+ * hasMinimumRole ADMIN.
  */
 export async function GET() {
   try {
@@ -18,7 +22,7 @@ export async function GET() {
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (session.user.role === "KASIR") {
+    if (!hasMinimumRole(session, "ADMIN")) {
       return NextResponse.json({ error: "Hanya Admin / Super Admin." }, { status: 403 });
     }
     const res = await getReconcileInfo();
@@ -45,7 +49,7 @@ export async function POST(request: NextRequest) {
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (session.user.role === "KASIR") {
+    if (!hasMinimumRole(session, "ADMIN")) {
       return NextResponse.json({ error: "Hanya Admin / Super Admin." }, { status: 403 });
     }
     const body = await request.json();

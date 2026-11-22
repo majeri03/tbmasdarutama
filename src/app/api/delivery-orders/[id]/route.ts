@@ -74,11 +74,23 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
     // Default: update status pengiriman
     if (!hasPermission(session, "UPDATE_DELIVERY_STATUS")) return forbiddenResponse();
+    // FIX PENTEST (22 Nov 2026, H5): CANCELLED dan DELIVERED (efek stok &
+    // hutang) khusus ADMIN+ — KASIR hanya boleh ke IN_TRANSIT. Action
+    // updateDeliveryStatus mengecek ulang, ini supaya responsnya 403.
+    if (body.status === "CANCELLED" && !hasPermission(session, "CANCEL_DELIVERY_ORDER")) {
+      return forbiddenResponse("Hanya Admin/Superadmin yang dapat membatalkan Surat Jalan.");
+    }
+    if (body.status === "DELIVERED" && !hasPermission(session, "CONFIRM_DELIVERY_ORDER")) {
+      return forbiddenResponse("Hanya Admin/Superadmin yang dapat menandai Surat Jalan diterima.");
+    }
 
-    const result = await updateDeliveryStatus({
-      id,
-      ...body,
-    });
+    const result = await updateDeliveryStatus(
+      {
+        id,
+        ...body,
+      },
+      session
+    );
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal memperbarui status pengiriman.", 400);
@@ -133,7 +145,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     if (!session) return unauthorizedResponse();
     if (!hasPermission(session, "DELETE_DELIVERY_ORDER")) return forbiddenResponse();
     const { id } = await context.params;
-    const result = await deleteDeliveryOrder(id);
+    const result = await deleteDeliveryOrder(id, session);
     if (!result.success) {
       return errorResponse(result.error || "Gagal menghapus Surat Jalan.", 400);
     }

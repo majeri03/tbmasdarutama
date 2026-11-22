@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     if (!hasMinimumRole(session, "KASIR")) return forbiddenResponse();
 
     const body = await request.json();
-    const result = await createCustomer(body);
+    const result = await createCustomer(body, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal membuat customer.", 400);

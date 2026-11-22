@@ -12,20 +12,22 @@ import {
   updateUnit,
   deleteUnit,
 } from "@/lib/actions/unit.actions";
-import { hasMinimumRole } from "@/lib/utils/role";
+import { hasMinimumRole, hasPermission } from "@/lib/utils/role";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
  * GET /api/units/[id]
  * Detail satuan.
- * Role: ADMIN+
+ * PENTEST FIX (22 Nov 2026, L23): dulu ADMIN+ padahal izin lihatnya
+ * (VIEW_UNITS, dipakai list) mencakup KASIR. Disamakan dengan list.
+ * Role: KASIR+
  */
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
     const session = await getAuthenticatedUser();
     if (!session) return unauthorizedResponse();
-    if (!hasMinimumRole(session, "ADMIN")) return forbiddenResponse();
+    if (!hasPermission(session, "VIEW_UNITS")) return forbiddenResponse();
 
     const { id } = await context.params;
     const result = await getUnitById(id);

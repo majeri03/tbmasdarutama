@@ -53,6 +53,8 @@ export const createProductSchema = z
     units: z
       .array(productUnitSchema)
       .min(1, "Minimal harus ada 1 satuan")
+      // PENTEST FIX (22 Nov 2026, M18/M26): batasi jumlah satuan per produk.
+      .max(20, "Maksimal 20 satuan per produk")
       .refine(
         (units) => units.filter((u) => u.isPrimary).length === 1,
         "Harus ada tepat 1 satuan utama (primary)"
@@ -132,6 +134,8 @@ export const updateProductSchema = z
     units: z
       .array(productUnitSchema)
       .min(1, "Minimal harus ada 1 satuan")
+      // PENTEST FIX (22 Nov 2026, M18/M26): batasi jumlah satuan per produk.
+      .max(20, "Maksimal 20 satuan per produk")
       .refine(
         (units) => units.filter((u) => u.isPrimary).length === 1,
         "Harus ada tepat 1 satuan utama (primary)"

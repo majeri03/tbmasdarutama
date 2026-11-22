@@ -12,20 +12,22 @@ import {
   updateCategory,
   deleteCategory,
 } from "@/lib/actions/category.actions";
-import { hasMinimumRole } from "@/lib/utils/role";
+import { hasMinimumRole, hasPermission } from "@/lib/utils/role";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
  * GET /api/categories/[id]
  * Detail kategori beserta sub-kategori.
- * Role: ADMIN+
+ * PENTEST FIX (22 Nov 2026, L23): dulu ADMIN+ padahal izin lihatnya
+ * (VIEW_CATEGORIES, dipakai list) mencakup KASIR. Disamakan dengan list.
+ * Role: KASIR+
  */
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
     const session = await getAuthenticatedUser();
     if (!session) return unauthorizedResponse();
-    if (!hasMinimumRole(session, "ADMIN")) return forbiddenResponse();
+    if (!hasPermission(session, "VIEW_CATEGORIES")) return forbiddenResponse();
 
     const { id } = await context.params;
     const result = await getCategoryById(id);

@@ -27,7 +27,8 @@ export const stockFilterSchema = z.object({
   dateFrom: z.coerce.date().optional(),
   dateTo: z.coerce.date().optional(),
   page: z.number().int().positive().default(1),
-  limit: z.number().int().positive().default(10),
+  // PENTEST FIX (22 Nov 2026, M11): batasi limit supaya tidak bisa dump massal.
+  limit: z.number().int().positive().max(100).default(10),
 });
 
 export type StockAdjustmentInput = z.infer<typeof stockAdjustmentSchema>;

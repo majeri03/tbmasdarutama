@@ -702,6 +702,21 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
+// ==================== RATE LIMIT (DB-BACKED) ===================
+// SECURITY FIX (22 Nov 2026, pentest M28): hitungan rate limit pindah
+// dari Map in-memory per instance (tidak berlaku antar-instance serverless
+// Vercel) ke tabel ini, supaya batas percobaan login / ganti password /
+// reset password benar-benar mengikat. Satu baris per kunci
+// (mis. "login:1.2.3.4:user@mail.com"), count direset tiap jendela baru.
+// Baris kedaluwarsa (>24 jam) disapu oportunistik saat mencatat hit baru.
+model RateLimit {
+  key         String   @id
+  count       Int      @default(0)
+  windowStart DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("rate_limits")
+}
 
 // ==================== PAGE ACCESS MATRIX ====================
 model PageAccess {

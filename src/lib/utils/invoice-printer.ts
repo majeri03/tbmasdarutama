@@ -115,6 +115,11 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
     const defaultDocSize = storeSetting?.invoiceDocumentPaperSize || "A4";
     const defaultThermalSize = storeSetting?.invoicePaperSize || "58mm";
     const paperSize = customLayout?.paperSize || (isThermal ? defaultThermalSize : defaultDocSize);
+    // XSS/CSS fix (Nov 2026): paperSize dari setting toko tidak boleh ditempel
+    // mentah ke CSS — hanya nilai kertas yang dikenal yang dipakai.
+    const safePaperSize = /^(58mm|80mm|a4|a5|f4|hvs|letter)$/i.test(paperSize)
+        ? paperSize
+        : (isThermal ? "58mm" : "A4");
     
     const showHeader = customLayout?.showHeader ?? storeSetting?.invoiceShowHeader ?? true;
     const showLogo = customLayout?.showLogo ?? storeSetting?.invoiceShowLogo ?? true;
@@ -125,7 +130,7 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
     const footerTerms = customLayout?.footerTerms ?? storeSetting?.invoiceFooterTerms ?? "BARANG YANG SUDAH DIBELI TIDAK DAPAT DITUKAR/DIKEMBALIKAN KECUALI ADA PERJANJIAN.";
     
     const logoUrl = storeSetting?.logoUrl ? (storeSetting.logoUrl.startsWith('http') ? storeSetting.logoUrl : `${storeSetting.logoUrl}`) : null;
-    const logoImg = showLogo && logoUrl ? `<img src="${logoUrl}" style="width: 44px; height: 44px; object-fit: contain; margin-right: 10px; border-radius: 4px;" />` : 
+    const logoImg = showLogo && logoUrl ? `<img src="${escapeHtml(logoUrl)}" style="width: 44px; height: 44px; object-fit: contain; margin-right: 10px; border-radius: 4px;" />` :
                     showLogo ? `<div style="width: 36px; height: 36px; background-color: #DC2626; display: flex; align-items: center; justify-content: center; margin-right: 10px; color: white; font-weight: bold;">MU</div>` : '';
 
     // STRUK KECIL (THERMAL)
@@ -133,13 +138,13 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
         let widthCss = "48mm";
         let fontSize = "11px";
         if (paperSize === "80mm") { widthCss = "72mm"; fontSize = "12px"; }
-        else if (paperSize !== "58mm") { widthCss = `calc(${paperSize} - 10mm)`; fontSize = "12px"; }
+        else if (paperSize !== "58mm") { widthCss = `calc(${safePaperSize} - 10mm)`; fontSize = "12px"; }
         
         const itemsHtml = sale.saleItems.map(item => `
             <div style="margin-bottom: 6px;">
                 <div style="font-weight: bold;">${escapeHtml(item.product.name)}</div>
                 <div style="display: flex; justify-content: space-between;">
-                    <div>${item.quantity} ${item.unit.symbol || item.unit.name} x ${formatCurrency(item.unitPrice).replace('Rp ','')}</div>
+                    <div>${item.quantity} ${escapeHtml(item.unit.symbol || item.unit.name)} x ${formatCurrency(item.unitPrice).replace('Rp ','')}</div>
                     <div style="font-weight: bold;">${formatCurrency(item.subtotal).replace('Rp ','')}</div>
                 </div>
                 ${item.discount > 0 ? `<div style="text-align: right; font-size: 0.9em; color: #444;">Disc: -${formatCurrency(item.discount).replace('Rp ','')}</div>` : ''}
@@ -151,7 +156,7 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                 <head>
                     <title>Struk - ${sale.invoiceNumber}</title>
                     <style>
-                        @page { margin: 0; size: ${paperSize} auto; }
+                        @page { margin: 0; size: ${safePaperSize} auto; }
                         body { 
                             font-family: 'Courier New', Courier, monospace; 
                             font-size: ${fontSize}; 
@@ -195,7 +200,7 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                         <span>TOTAL</span><span>${formatCurrency(sale.grandTotal).replace('Rp ','')}</span>
                     </div>
                     <div class="divider"></div>
-                    <div class="row"><span>Bayar (${sale.paymentMethod})</span><span>${formatCurrency(sale.paidAmount).replace('Rp ','')}</span></div>
+                    <div class="row"><span>Bayar (${escapeHtml(sale.paymentMethod)})</span><span>${formatCurrency(sale.paidAmount).replace('Rp ','')}</span></div>
                     <div class="row bold"><span>Kembali</span><span>${formatCurrency(sale.changeAmount).replace('Rp ','')}</span></div>
                     
                     ${showFooter ? `
@@ -229,9 +234,9 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                 <td style="text-align:center;">${index + 1}</td>
                 <td>
                     <b>${escapeHtml(item.product.name)}</b><br/>
-                    <span style="font-size:10px; color:#555;">${item.product.code}</span>
+                    <span style="font-size:10px; color:#555;">${escapeHtml(item.product.code)}</span>
                 </td>
-                <td style="text-align:center;">${item.quantity} ${item.unit.symbol || item.unit.name}</td>
+                <td style="text-align:center;">${item.quantity} ${escapeHtml(item.unit.symbol || item.unit.name)}</td>
                 ${showPrices ? `
                 <td style="text-align:right;">${formatCurrency(item.unitPrice).replace("Rp ","")}</td>
                 <td style="text-align:right;">${formatCurrency(gross).replace("Rp ","")}</td>
@@ -260,7 +265,7 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
         pageConfig = "@page { size: letter portrait; margin: 12mm; }";
         bodyWidth = "max-width: 216mm;";
     } else if (pLower !== "a4") {
-        bodyWidth = `max-width: ${paperSize};`;
+        bodyWidth = `max-width: ${safePaperSize};`;
     }
 
     return `
@@ -306,7 +311,7 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                         <table class="no-border" style="margin-top:10px; width:auto; margin-left:auto;">
                             <tr><td>Number</td><td>: <b>${layoutType === 'SURAT_JALAN' ? 'DO-' : ''}${sale.invoiceNumber}</b></td></tr>
                             <tr><td>Date</td><td>: ${dateStr}</td></tr>
-                            ${layoutType !== 'SURAT_JALAN' ? `<tr><td>Payment</td><td>: ${sale.paymentMethod}</td></tr>` : ''}
+                            ${layoutType !== 'SURAT_JALAN' ? `<tr><td>Payment</td><td>: ${escapeHtml(sale.paymentMethod)}</td></tr>` : ''}
                             <tr><td>Cashier</td><td>: ${escapeHtml(sale.cashier?.name || '-')}</td></tr>
                         </table>
                     </div>
@@ -317,9 +322,9 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                 <div style="border: 1px solid #000; padding: 10px; margin-bottom: 20px; width: 50%;">
                     <strong style="border-bottom:1px solid #000; display:block; margin-bottom:5px;">CUSTOMER INFO</strong>
                     <table class="no-border">
-                        <tr><td style="width:60px;">Name</td><td>: <b>${sale.customer?.name || 'Umum'}</b></td></tr>
-                        <tr><td>Phone</td><td>: ${sale.customer?.phone || '-'}</td></tr>
-                        <tr><td>Address</td><td>: ${sale.customer?.address || '-'}</td></tr>
+                        <tr><td style="width:60px;">Name</td><td>: <b>${escapeHtml(sale.customer?.name || 'Umum')}</b></td></tr>
+                        <tr><td>Phone</td><td>: ${escapeHtml(sale.customer?.phone || '-')}</td></tr>
+                        <tr><td>Address</td><td>: ${escapeHtml(sale.customer?.address || '-')}</td></tr>
                     </table>
                 </div>
                 ` : ''}
@@ -358,8 +363,8 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                         
                         ${showPaymentInfo && showPrices && sale.paymentMethod === 'TRANSFER' && storeSetting?.bankName ? `
                         <div style="border:1px solid #000; padding:10px; margin-bottom:10px; display:inline-block;">
-                            <b>TRANSFER:</b> ${storeSetting.bankName} - ${storeSetting.bankAccount}<br/>
-                            a/n ${storeSetting.bankHolder}
+                            <b>TRANSFER:</b> ${escapeHtml(storeSetting.bankName)} - ${escapeHtml(storeSetting.bankAccount)}<br/>
+                            a/n ${escapeHtml(storeSetting.bankHolder)}
                         </div>
                         ` : ''}
                         
@@ -368,12 +373,12 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                             <div style="width:30%;">
                                 <p>Penerima,</p>
                                 <br/><br/><br/>
-                                <p style="border-top:1px solid #000; display:inline-block; width:80%;">(${sale.customer?.name || 'Customer'})</p>
+                                <p style="border-top:1px solid #000; display:inline-block; width:80%;">(${escapeHtml(sale.customer?.name || 'Customer')})</p>
                             </div>
                             <div style="width:30%;">
                                 <p>Hormat Kami,</p>
                                 <br/><br/><br/>
-                                <p style="border-top:1px solid #000; display:inline-block; width:80%;">(${sale.cashier?.name || 'Admin'})</p>
+                                <p style="border-top:1px solid #000; display:inline-block; width:80%;">(${escapeHtml(sale.cashier?.name || 'Admin')})</p>
                             </div>
                         </div>
                         ` : ''}

@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     if (!hasMinimumRole(session, "ADMIN")) return forbiddenResponse();
 
     const body = await request.json();
-    const result = await receivePurchase(body);
+    const result = await receivePurchase(body, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal menerima Purchase Order.", 400);

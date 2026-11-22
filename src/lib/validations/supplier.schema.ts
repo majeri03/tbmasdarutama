@@ -48,9 +48,8 @@ export const supplierSchema = z.object({
     .optional()
     .nullable()
     .transform((val) => val || null),
-  isActive: z
-    .boolean()
-    .default(true),
+  // PENTEST FIX (22 Nov 2026, L25): isActive tidak ada di skema ini —
+  // status supplier hanya lewat toggleSupplierStatus.
 });
 
 export type SupplierFormData = z.infer<typeof supplierSchema>;

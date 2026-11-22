@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     if (!hasPermission(session, "CREATE_DELIVERY_ORDER")) return forbiddenResponse();
 
     const body = await request.json();
-    const result = await createDeliveryOrder(body);
+    const result = await createDeliveryOrder(body, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal membuat surat jalan.", 400);

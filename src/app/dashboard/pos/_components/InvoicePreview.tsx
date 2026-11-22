@@ -252,9 +252,15 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                         </div>
                     ) : (
                         // Iframe ini menampilkan HTML yang digenerate oleh utils
-                        <iframe 
+                        // XSS fix (Nov 2026): sandbox="allow-same-origin" — script di dalam
+                        // iframe TIDAK boleh jalan, tapi iframe tetap satu origin supaya
+                        // download PDF (html2canvas baca iframeRef.contentDocument) tetap jalan.
+                        // sandbox="" polos akan merusak download PDF; allow-scripts akan
+                        // membiarkan script injeksi jalan — keduanya jangan dipakai.
+                        <iframe
                             ref={iframeRef}
-                            srcDoc={htmlContent} 
+                            srcDoc={htmlContent}
+                            sandbox="allow-same-origin"
                             className="w-full h-full border-0 bg-white shadow-sm"
                             title="Invoice Preview"
                         />

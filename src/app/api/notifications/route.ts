@@ -1,7 +1,29 @@
 import { NextRequest } from "next/server";
-import { getAuthenticatedUser, unauthorizedResponse, successResponse, errorResponse } from "@/lib/utils/api";
+import { getAuthenticatedUser, unauthorizedResponse, successResponse, errorResponse, parsePageLimit } from "@/lib/utils/api";
 import prisma from "@/lib/prisma";
 import { Prisma, Role } from "@prisma/client";
+
+/**
+ * PENTEST FIX (22 Nov 2026, L15): satu definisi scope notifikasi yang
+ * dipakai keempat handler (GET, PATCH id, PATCH readAll, DELETE).
+ * Sebelumnya definisinya beda-beda: broadcast ({role: null}) ikut di GET
+ * dan PATCH id untuk semua role, tapi tidak di readAll/DELETE kecuali
+ * ADMIN+ — kasir bisa membaca/menandai broadcast satu-per-satu tapi
+ * tidak bisa readAll/menghapusnya. Sekarang konsisten: notifikasi milik
+ * user, notifikasi role-nya, broadcast umum, plus ADMIN-role untuk
+ * SUPER_ADMIN.
+ */
+function notificationScopeWhere(session: { user: { id: string; role: string } }): Prisma.NotificationWhereInput {
+  const userRole = session.user.role as Role;
+  return {
+    OR: [
+      { userId: session.user.id },
+      { role: userRole },
+      { role: null }, // broadcast umum selalu terlihat oleh semua staff
+      ...(userRole === "SUPER_ADMIN" ? [{ role: "ADMIN" as Role }] : []),
+    ],
+  };
+}
 
 /**
  * GET /api/notifications
@@ -13,21 +35,14 @@ export async function GET(request: NextRequest) {
     if (!session?.user) return unauthorizedResponse();
 
     const { searchParams } = new URL(request.url);
-    const limit = Math.min(parseInt(searchParams.get("limit") || "30", 10), 100);
-    const page = Math.max(parseInt(searchParams.get("page") || "1", 10), 1);
+    // PENTEST FIX (L16): parseInt("abc") = NaN dulu diteruskan ke Prisma
+    // (take/skip NaN -> 500). Sekarang pakai helper yang fallback ke default.
+    const { page, limit } = parsePageLimit(searchParams);
     const unreadOnly = searchParams.get("unread") === "true";
-
-    const userRole = session.user.role as Role;
-    const userId = session.user.id;
 
     // Filter notifikasi milik user atau role-nya
     const whereClause: Prisma.NotificationWhereInput = {
-      OR: [
-        { userId: userId },
-        { role: userRole },
-        { role: null }, // broadcast umum selalu terlihat oleh semua staff
-        ...(userRole === "SUPER_ADMIN" ? [{ role: "ADMIN" as Role }] : []),
-      ],
+      ...notificationScopeWhere(session),
       ...(unreadOnly ? { isRead: false } : {}),
     };
 
@@ -76,14 +91,9 @@ export async function PATCH(request: NextRequest) {
     const { id, readAll } = body;
 
     if (readAll) {
-      const userRole = session.user.role as Role;
       await prisma.notification.updateMany({
         where: {
-          OR: [
-            { userId: session.user.id },
-            { role: userRole },
-            ...(userRole === "SUPER_ADMIN" || userRole === "ADMIN" ? [{ role: "ADMIN" as Role }, { role: null }] : []),
-          ],
+          ...notificationScopeWhere(session),
           isRead: false,
         },
         data: { isRead: true },
@@ -95,15 +105,9 @@ export async function PATCH(request: NextRequest) {
       // SECURITY FIX (Nov 2026, H5): sebelumnya update by id tanpa batasan —
       // kasir mana pun bisa menandai notifikasi admin sebagai dibaca.
       // Sekarang hanya notifikasi milik user / role-nya yang bisa diubah.
-      const userRole = session.user.role as Role;
       const scopedWhere: Prisma.NotificationWhereInput = {
         id,
-        OR: [
-          { userId: session.user.id },
-          { role: userRole },
-          { role: null },
-          ...(userRole === "SUPER_ADMIN" ? [{ role: "ADMIN" as Role }] : []),
-        ],
+        ...notificationScopeWhere(session),
       };
       const res = await prisma.notification.updateMany({
         where: scopedWhere,
@@ -137,14 +141,7 @@ export async function DELETE(request: NextRequest) {
     const clearRead = searchParams.get("clearRead") === "true";
     const olderThanDays = searchParams.get("olderThanDays");
 
-    const userRole = session.user.role as Role;
-    const baseWhere: Prisma.NotificationWhereInput = {
-      OR: [
-        { userId: session.user.id },
-        { role: userRole },
-        ...(userRole === "SUPER_ADMIN" || userRole === "ADMIN" ? [{ role: "ADMIN" as Role }, { role: null }] : []),
-      ],
-    };
+    const baseWhere: Prisma.NotificationWhereInput = notificationScopeWhere(session);
 
     if (id) {
       // SECURITY FIX (Nov 2026, H5): sama seperti PATCH — hapus hanya kalau
@@ -168,7 +165,13 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (olderThanDays) {
-      const days = parseInt(olderThanDays, 10) || 3;
+      // PENTEST FIX (L16/M14): dulu parseInt("-5") lolos -> cutoff di masa
+      // depan -> SEMUA notifikasi dalam scope ikut terhapus. Sekarang
+      // wajib bilangan bulat 1-365.
+      const days = Number(olderThanDays);
+      if (!Number.isInteger(days) || days < 1 || days > 365) {
+        return errorResponse("olderThanDays harus bilangan bulat 1–365", 400);
+      }
       const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
       const res = await prisma.notification.deleteMany({
         where: {

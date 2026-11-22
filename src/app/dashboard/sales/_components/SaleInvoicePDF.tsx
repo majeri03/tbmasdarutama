@@ -211,9 +211,15 @@ export function SaleInvoicePDF({ isOpen, onClose, saleId }: SaleInvoicePDFProps)
             </div>
           ) : (
             // Iframe untuk menampilkan HTML dari Utils
-            <iframe 
+            // XSS fix (Nov 2026): sandbox="allow-same-origin" — script di dalam
+            // iframe TIDAK boleh jalan, tapi iframe tetap satu origin supaya
+            // download PDF (html2canvas baca iframeRef.contentDocument) tetap jalan.
+            // sandbox="" polos akan merusak download PDF; allow-scripts akan
+            // membiarkan script injeksi jalan — keduanya jangan dipakai.
+            <iframe
                 ref={iframeRef}
-                srcDoc={htmlContent} 
+                srcDoc={htmlContent}
+                sandbox="allow-same-origin"
                 className="w-full h-full border-0 bg-white shadow-sm"
                 title="Invoice Preview"
             />

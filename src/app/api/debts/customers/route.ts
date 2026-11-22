@@ -14,6 +14,8 @@ import { DebtStatus } from "@prisma/client";
  * GET /api/debts/customers
  * Mengambil daftar piutang customer.
  * Role: KASIR+ (VIEW_CUSTOMER_DEBTS)
+ * BY-DESIGN (22 Nov 2026, pentest H6): KASIR BOLEH melihat semua piutang
+ * customer — kasir butuh data itu untuk menerima pembayaran cicilan.
  */
 export async function GET(request: NextRequest) {
   try {

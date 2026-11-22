@@ -15,12 +15,65 @@ const getAllowedOrigins = () => {
   if (process.env.NODE_ENV !== "production") {
     origins.push("http://localhost");
   }
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    origins.push(process.env.NEXT_PUBLIC_APP_URL);
+  // Pentest fix (Nov 2026): NEXT_PUBLIC_APP_URL hanya diterima kalau
+  // benar-benar URL aplikasi sendiri (https + host masdarutama.tech).
+  // Sebelumnya nilai apa pun dari env langsung masuk daftar izin — satu
+  // salah ketik di Vercel bisa membuka CORS berkredensial ke domain penyerang.
+  if (isOwnAppUrl(process.env.NEXT_PUBLIC_APP_URL)) {
+    origins.push(process.env.NEXT_PUBLIC_APP_URL as string);
   } else if (process.env.NODE_ENV === "development") {
     origins.push("http://localhost:3000");
   }
   return origins;
+};
+
+// Pentest fix (Nov 2026): validasi NEXT_PUBLIC_APP_URL — hanya https +
+// host masdarutama.tech (atau subdomainnya). Di development, http://localhost
+// juga diterima. Nilai lain diabaikan diam-diam (fail-closed).
+const isOwnAppUrl = (value: string | undefined): value is string => {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    if (
+      url.protocol === "https:" &&
+      (url.hostname === "masdarutama.tech" || url.hostname.endsWith(".masdarutama.tech"))
+    ) {
+      return true;
+    }
+    if (
+      process.env.NODE_ENV !== "production" &&
+      url.protocol === "http:" &&
+      (url.hostname === "localhost" || url.hostname === "127.0.0.1")
+    ) {
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+};
+
+const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+// Pentest fix (Nov 2026, CSRF): mutasi /api dari origin browser yang tidak
+// dikenal ditolak. Request TANPA header Origin (APK native, server-to-server,
+// curl, cron Vercel) tetap lolos — yang dicegah adalah situs jahat yang
+// memancing browser korban mengirim form/fetch lintas situs dengan cookie.
+// Kalau Origin tidak ada tapi Referer ada dan lintas situs, ikut ditolak.
+const isCrossSiteMutation = (req: NextRequest): boolean => {
+  if (!MUTATION_METHODS.has(req.method)) return false;
+  const allowedOrigins = getAllowedOrigins();
+  const origin = req.headers.get("origin");
+  if (origin) return !allowedOrigins.includes(origin);
+  const referer = req.headers.get("referer");
+  if (referer) {
+    try {
+      return !allowedOrigins.includes(new URL(referer).origin);
+    } catch {
+      return false;
+    }
+  }
+  return false;
 };
 
 export default auth((req: NextRequest & { auth: Session | null }) => {
@@ -40,6 +93,16 @@ export default auth((req: NextRequest & { auth: Session | null }) => {
       response.headers.set("Access-Control-Allow-Headers", "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Cookie, Authorization");
       response.headers.set("Access-Control-Expose-Headers", "Set-Cookie");
       return response;
+    }
+
+    // Pentest fix (Nov 2026, CSRF): tolak mutasi /api dari origin yang tidak
+    // dikenal (lihat isCrossSiteMutation di atas). Ditempatkan setelah
+    // preflight OPTIONS supaya CORS preflight tetap dijawab.
+    if (isCrossSiteMutation(req)) {
+      return NextResponse.json(
+        { success: false, error: "Origin tidak diizinkan." },
+        { status: 403 }
+      );
     }
 
     // Map Authorization Bearer to Cookie for API routes

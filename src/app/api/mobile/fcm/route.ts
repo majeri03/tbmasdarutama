@@ -174,7 +174,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden: hanya admin yang bisa mengirim push manual" }, { status: 403 });
   }
 
-  const { topic, title, body, data } = await req.json();
+  const { topic, title, body, data, channelId, type } = await req.json();
 
   if (!topic || !title || !body) {
     return NextResponse.json({ error: "topic, title, body wajib diisi" }, { status: 400 });
@@ -185,6 +185,39 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "topic tidak diizinkan" }, { status: 400 });
   }
 
-  await sendToTopic({ topic, title, body, data: data ?? {} });
+  // PENTEST FIX (22 Nov 2026, L18): batasi panjang + data hanya
+  // string→string + larang channelId/type dari klien. channelId dipakai
+  // sendToTopic untuk memilih channel notifikasi Android dan type untuk
+  // routing di APK — keduanya urusan server (helper Notif), bukan klien.
+  if (typeof title !== "string" || title.length > 100) {
+    return NextResponse.json({ error: "title maksimal 100 karakter" }, { status: 400 });
+  }
+  if (typeof body !== "string" || body.length > 500) {
+    return NextResponse.json({ error: "body maksimal 500 karakter" }, { status: 400 });
+  }
+  if (typeof channelId !== "undefined" || typeof type !== "undefined") {
+    return NextResponse.json({ error: "Field channelId/type tidak diizinkan" }, { status: 400 });
+  }
+  const safeData: Record<string, string> = {};
+  if (typeof data !== "undefined") {
+    if (typeof data !== "object" || data === null || Array.isArray(data)) {
+      return NextResponse.json({ error: "data harus berupa object string→string" }, { status: 400 });
+    }
+    const entries = Object.entries(data);
+    if (entries.length > 20) {
+      return NextResponse.json({ error: "data maksimal 20 entri" }, { status: 400 });
+    }
+    for (const [k, v] of entries) {
+      if (k === "channelId" || k === "type") {
+        return NextResponse.json({ error: "Kunci channelId/type tidak diizinkan di data" }, { status: 400 });
+      }
+      if (typeof v !== "string" || v.length > 500) {
+        return NextResponse.json({ error: "Nilai data harus string dan maksimal 500 karakter" }, { status: 400 });
+      }
+      safeData[k] = v;
+    }
+  }
+
+  await sendToTopic({ topic, title, body, data: safeData });
   return NextResponse.json({ success: true });
 }

@@ -26,7 +26,8 @@ const envSchema = z.object({
   R2_ACCESS_KEY_ID: z.string().optional(),
   R2_SECRET_ACCESS_KEY: z.string().optional(),
   R2_BUCKET_NAME: z.string().optional(),
-  GROQ_API_KEYS: z.string().optional(),
+  // HAPUS (22 Nov 2026, pentest H7): fitur AI dihapus total atas permintaan
+  // pemilik — kunci API AI tidak lagi dipakai di mana pun.
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 });
 
@@ -52,7 +53,6 @@ const getParsedEnv = () => {
     R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
     R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
     R2_BUCKET_NAME: process.env.R2_BUCKET_NAME,
-    GROQ_API_KEYS: process.env.GROQ_API_KEYS,
     NODE_ENV: process.env.NODE_ENV,
   });
 
@@ -66,6 +66,26 @@ const getParsedEnv = () => {
     // Di production, lempar error keras untuk mencegah bypass keamanan
     console.error("❌ [ENV CRITICAL ERROR] Konfigurasi environment tidak valid untuk PRODUCTION:", result.error.format());
     throw new Error("Konfigurasi environment tidak valid untuk production.");
+  }
+
+  // PERINGATAN (22 Nov 2026, pentest M9/L-4): secret di bawah 32 karakter
+  // masih DIIZINKAN (bukan hard-fail) — panjang secret produksi saat ini
+  // tidak diketahui, dan hard-fail bisa mematikan aplikasi saat deploy.
+  // Tapi secret pendek (apalagi 8 karakter) bisa di-brute-force offline
+  // kalau satu token bocor. PEMILIK WAJIB mengganti ketiganya di Vercel
+  // dengan string acak minimal 32 karakter; setelah itu minimum di schema
+  // di atas bisa dinaikkan ke 32.
+  const shortSecretNames: Array<[string, string | undefined]> = [
+    ["NEXTAUTH_SECRET", result.data.NEXTAUTH_SECRET],
+    ["MOBILE_JWT_SECRET", result.data.MOBILE_JWT_SECRET],
+    ["NOTIFICATION_CRON_SECRET", result.data.NOTIFICATION_CRON_SECRET],
+  ];
+  for (const [name, value] of shortSecretNames) {
+    if (value && value.length < 32) {
+      console.warn(
+        `⚠️ [ENV WARNING] ${name} hanya ${value.length} karakter — ganti dengan string acak minimal 32 karakter di Vercel (Settings → Environment Variables).`
+      );
+    }
   }
 
   return result.data;

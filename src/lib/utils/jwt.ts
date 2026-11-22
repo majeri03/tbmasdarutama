@@ -137,7 +137,11 @@ export async function verifyMobileToken(token: string): Promise<TokenPayload | n
     }
 
     // Cek ke database: user harus ada + aktif + role sama + tv sama.
-    // Token lama (tanpa klaim tv, terbit sebelum patch ini) dianggap tv=0.
+    // SECURITY FIX (22 Nov 2026, pentest L-3): token TANPA klaim tv
+    // (terbit sebelum patch 22 Nov) SEKARANG DITOLAK. Sebelumnya token
+    // lama tanpa tv dianggap tv=0 dan tetap berlaku selama tokenVersion
+    // user masih 0 — jendela token curian pra-patch. Token yang diterbitkan
+    // login mobile saat ini selalu membawa tv (lihat login/route.ts).
     const { default: prisma } = await import("@/lib/prisma");
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
@@ -146,7 +150,7 @@ export async function verifyMobileToken(token: string): Promise<TokenPayload | n
     if (!user) return null;
     if (!user.isActive) return null;
     if (user.role !== decoded.role) return null;
-    if ((decoded.tv ?? 0) !== user.tokenVersion) return null;
+    if (decoded.tv === undefined || decoded.tv !== user.tokenVersion) return null;
 
     return decoded;
   } catch {

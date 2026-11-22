@@ -22,8 +22,10 @@ export async function getAllSupplierDebts(filters?: {
   limit?: number;
 }, externalSession?: AuthSession | null) {
   const session = externalSession || (await auth());
-  requirePermission(session, "VIEW_SUPPLIER_DEBTS");
   try {
+    // FIX PENTEST (22 Nov 2026, L27): requirePermission dipindah ke DALAM
+    // try supaya kegagalan auth tidak lolos sebagai 500 generik.
+    requirePermission(session, "VIEW_SUPPLIER_DEBTS");
     const where: Prisma.SupplierDebtWhereInput = {};
 
     if (filters?.search) {
@@ -146,14 +148,19 @@ export async function getAllSupplierDebts(filters?: {
     };
   } catch (error) {
     console.error("Error fetching supplier debts:", error);
+    if (error instanceof Error && error.message.startsWith("Unauthorized")) {
+      return { success: false, error: error.message };
+    }
     return { success: false, error: "Failed to fetch supplier debts" };
   }
 }
 
 export async function getSupplierDebtStatistics() {
   const session = await auth();
-  requirePermission(session, "VIEW_SUPPLIER_DEBTS");
   try {
+    // FIX PENTEST (22 Nov 2026, L27): requirePermission dipindah ke DALAM
+    // try supaya kegagalan auth tidak lolos sebagai 500 generik.
+    requirePermission(session, "VIEW_SUPPLIER_DEBTS");
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -198,14 +205,19 @@ export async function getSupplierDebtStatistics() {
     };
   } catch (error) {
     console.error("Error fetching supplier debt statistics:", error);
+    if (error instanceof Error && error.message.startsWith("Unauthorized")) {
+      return { success: false, error: error.message };
+    }
     return { success: false, error: "Failed to fetch statistics" };
   }
 }
 
 export async function getSupplierDebtById(id: string, externalSession?: AuthSession | null) {
   const session = externalSession || (await auth());
-  requirePermission(session, "VIEW_SUPPLIER_DEBTS");
   try {
+    // FIX PENTEST (22 Nov 2026, L27): requirePermission dipindah ke DALAM
+    // try supaya kegagalan auth tidak lolos sebagai 500 generik.
+    requirePermission(session, "VIEW_SUPPLIER_DEBTS");
     const debt = await prisma.supplierDebt.findUnique({
       where: { id },
       include: {
@@ -273,17 +285,25 @@ export async function getSupplierDebtById(id: string, externalSession?: AuthSess
     return { success: true, data: serializedDebt };
   } catch (error) {
     console.error("Error fetching supplier debt:", error);
+    if (error instanceof Error && error.message.startsWith("Unauthorized")) {
+      return { success: false, error: error.message };
+    }
     return { success: false, error: "Failed to fetch debt" };
   }
 }
 
-export async function addSupplierDebtPayment(input: AddSupplierPaymentInput) {
+export async function addSupplierDebtPayment(input: AddSupplierPaymentInput, externalSession?: AuthSession | null) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }
     requirePermission(session, "MANAGE_SUPPLIER_DEBTS");
+    // FIX BUILD (22 Nov 2026, z3): id disimpan ke const di sini — di dalam
+    // callback transaksi, TypeScript melupakan hasil cek session.user di
+    // atas, jadi pemakaian session.user.id langsung selalu error.
+    const userId = session.user.id;
     const validated = addSupplierPaymentSchema.parse(input);
 
     // Get debt
@@ -362,7 +382,7 @@ export async function addSupplierDebtPayment(input: AddSupplierPaymentInput) {
           paymentMethod: validated.paymentMethod,
           paymentDate: validated.paymentDate,
           notes: validated.notes,
-          adminId: session.user.id,
+          adminId: userId,
         },
       });
 
@@ -403,9 +423,10 @@ export async function addSupplierDebtPayment(input: AddSupplierPaymentInput) {
   }
 }
 
-export async function deleteSupplierDebt(id: string) {
+export async function deleteSupplierDebt(id: string, externalSession?: AuthSession | null) {
   try {
-    const session = await auth();
+    // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
+    const session = externalSession || (await auth());
     if (!session?.user) {
       return { success: false, error: "Unauthorized" };
     }

@@ -54,7 +54,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     const { id } = await context.params;
     const body = await request.json();
 
-    const result = await updateSale(id, body);
+    const result = await updateSale(id, body, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal mengedit transaksi", 400);
@@ -70,20 +70,22 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 /**
  * PATCH /api/sales/[id]
  * Update bukti transfer/pembayaran atau catatan pada transaksi penjualan.
- * Role: KASIR+ (VIEW_SALES)
+ * Role: ADMIN+ (EDIT_SALE).
+ * FIX PENTEST (22 Nov 2026, H4): dulu hanya VIEW_SALES, jadi KASIR mana pun
+ * bisa menimpa bukti bayar sale orang lain.
  */
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
     const session = await getAuthenticatedUser();
     if (!session) return unauthorizedResponse();
-    if (!hasPermission(session, "VIEW_SALES")) return forbiddenResponse();
+    if (!hasPermission(session, "EDIT_SALE")) return forbiddenResponse();
 
     const { id } = await context.params;
     const body = await request.json();
     const { proofUrl, notes } = body;
 
     const { updateSaleProof } = await import("@/lib/actions/sale.actions");
-    const result = await updateSaleProof(id, proofUrl, notes);
+    const result = await updateSaleProof(id, proofUrl, notes, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal memperbarui bukti pembayaran", 400);

@@ -22,7 +22,15 @@ export async function GET() {
 
   try {
     const info = JSON.parse(versionJson);
-    return NextResponse.json(info);
+    // PENTEST FIX (22 Nov 2026, L19): jangan kembalikan isi env mentah —
+    // hanya field yang dibutuhkan APK. Field lain yang kelak ditambah ke
+    // APP_LATEST_VERSION_JSON sengaja tidak bocor.
+    return NextResponse.json({
+      version: typeof info.version === "string" ? info.version : null,
+      versionCode: typeof info.versionCode === "number" ? info.versionCode : null,
+      forceUpdate: info.forceUpdate === true,
+      downloadUrl: typeof info.downloadUrl === "string" ? info.downloadUrl : null,
+    });
   } catch {
     return NextResponse.json({ error: "Format versi tidak valid" }, { status: 500 });
   }

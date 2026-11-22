@@ -23,6 +23,8 @@ function endOfDay(d: Date): Date {
  * GET /api/sales
  * Mengambil riwayat penjualan dengan filter lengkap.
  * Role: KASIR+ (semua role terautentikasi)
+ * BY-DESIGN (22 Nov 2026, pentest H6): KASIR BOLEH melihat semua penjualan
+ * toko — kasir butuh data itu untuk bertransaksi. Bukan kebocoran.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -78,7 +80,7 @@ export async function POST(request: NextRequest) {
     if (!hasPermission(session, "CREATE_SALE")) return forbiddenResponse();
 
     const body = await request.json();
-    const result = await createSale(body);
+    const result = await createSale(body, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal menyimpan transaksi.", 400);
