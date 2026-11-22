@@ -7,6 +7,7 @@ import { StoreSettingFormData } from "@/types/settings";
 import { useToast } from "@/components/ui/toast";
 import Image from "next/image";
 import { Toast } from "@/components/ui/toast";
+import { compressImageFile } from "@/lib/utils/image-compress";
 export default function StoreSettingsTab() {
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -61,8 +62,13 @@ export default function StoreSettingsTab() {
         setUploading(true);
 
         try {
+            // FIX (22 Nov 2026, R2): kompres seperti APK + kirim folder
+            // "logos" (sebelumnya tanpa folder -> jatuh ke folder products).
+            const fileToUpload = await compressImageFile(file);
+
             const formData = new FormData();
-            formData.append("file", file);
+            formData.append("file", fileToUpload);
+            formData.append("folder", "logos");
 
             const res = await fetch("/api/upload", {
                 method: "POST",

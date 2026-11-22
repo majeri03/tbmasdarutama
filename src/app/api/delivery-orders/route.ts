@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import {
   getAuthenticatedUser,
   successResponse,
@@ -48,19 +48,33 @@ export async function GET(request: NextRequest) {
       (searchParams.get("endDate") ? new Date(searchParams.get("endDate")!) : undefined);
     const dateTo = dateToRaw ? endOfDay(dateToRaw) : undefined;
 
+    // FIX (22 Nov 2026): teruskan page/limit hanya kalau diminta eksplisit
+    // di query — parseSearchParams memberi default limit 10, dan itu akan
+    // memotong daftar jadi 10 baris kalau diteruskan mentah-mentah.
+    const pageParam = searchParams.get("page");
+    const limitParam = searchParams.get("limit");
+
     const result = await getAllDeliveryOrders({
       search: params.search,
       customerId: params.customerId,
       status: params.status as DeliveryStatus | undefined,
       dateFrom,
       dateTo,
+      page: pageParam ? parseInt(pageParam) : undefined,
+      limit: limitParam ? parseInt(limitParam) : undefined,
     }, session);
 
     if (!result.success) {
       return errorResponse(result.error || "Gagal mengambil data surat jalan.", 400);
     }
 
-    return successResponse(result.data);
+    // `data` tetap array (APK mengharapkan array) — info paginasi ada di
+    // field `pagination` tingkat atas (lihat tipe ApiResponse).
+    return NextResponse.json({
+      success: true,
+      data: result.data,
+      pagination: result.pagination,
+    });
   } catch (error) {
     console.error("[API_DELIVERY_ORDERS_GET_ERROR]", error);
     return errorResponse("Terjadi kesalahan internal server.");

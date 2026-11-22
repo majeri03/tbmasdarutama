@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/utils/api";
+import { hasMinimumRole } from "@/lib/utils/role";
 import prisma from "@/lib/prisma";
 import fs from "fs";
 import path from "path";
@@ -119,12 +120,20 @@ export async function GET() {
  * POST /api/mobile/driver-tracking
  * 1. Mendaftarkan mobil baru dengan Plat DD, Nama Sopir, dan Jenis Mobil
  * 2. ATAU memperbarui lokasi GPS live sopir
+ * Role: ADMIN+ (SUPER_ADMIN/ADMIN).
+ * FIX (22 Nov 2026): sebelumnya user login mana pun (termasuk KASIR) bisa
+ * mengubah armada/DO apa pun — termasuk menimpa kolom driver/vehicle di
+ * Surat Jalan lewat deliveryOrderId. Tidak ada model kepemilikan sopir
+ * (driver hanya nama bebas), jadi dibatasi ke ADMIN+.
  */
 export async function POST(req: NextRequest) {
   try {
     const session = await getAuthenticatedUser();
     if (!session?.user) {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    }
+    if (!hasMinimumRole(session, "ADMIN")) {
+      return NextResponse.json({ success: false, message: "Forbidden. Hanya ADMIN yang boleh mengubah data armada." }, { status: 403 });
     }
 
     const body = await req.json();

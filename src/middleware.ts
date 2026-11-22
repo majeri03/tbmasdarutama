@@ -5,9 +5,16 @@ import type { Session } from "next-auth";
 const getAllowedOrigins = () => {
   const origins = [
     "https://masdarutama.tech",
+    // Origin aplikasi Capacitor (APK) — bukan http, jadi aman di produksi.
     "capacitor://localhost",
-    "http://localhost"
   ];
+  // FIX (22 Nov 2026): http://localhost HANYA di development. Sebelumnya
+  // diizinkan tanpa syarat di produksi juga — situs web mana pun yang jalan
+  // di localhost (mis. lewat terowongan/redirect) bisa memanggil API dengan
+  // kredensial. "http://localhost:3000" di bawah memang sudah dev-only.
+  if (process.env.NODE_ENV !== "production") {
+    origins.push("http://localhost");
+  }
   if (process.env.NEXT_PUBLIC_APP_URL) {
     origins.push(process.env.NEXT_PUBLIC_APP_URL);
   } else if (process.env.NODE_ENV === "development") {

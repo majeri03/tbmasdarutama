@@ -10,11 +10,18 @@ import { QuickAddCustomer } from "./_components/QuickAddCustomer";
 import { PaymentModal } from "./_components/PaymentModal";
 import { InvoicePreview } from "./_components/InvoicePreview";
 import { POSKeyboardShortcuts } from "./_components/POSKeyboardShortcuts";
+import { HoldCartPanel } from "./_components/HoldCartPanel";
 import { POSProduct, CartItem, POSCustomer } from "@/types/pos";
 import { getPOSProducts, getProductByBarcode, getPOSCustomers } from "@/lib/actions/pos.actions";
 import { validateStock, getCustomerDiscount } from "@/lib/utils/pos-helpers";
+import {
+    loadParkedCarts,
+    parkCart,
+    removeParkedCart,
+    type ParkedCart,
+} from "@/lib/utils/hold-cart";
 import { Toast, useToast } from "@/components/ui/toast";
-import { X } from "lucide-react";
+import { X, Pause } from "lucide-react";
 import PageGuard from "@/components/PageGuard";
 export default function POSPage() {
     // States
@@ -27,6 +34,9 @@ export default function POSPage() {
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [showInvoicePreview, setShowInvoicePreview] = useState(false);
     const [lastInvoice, setLastInvoice] = useState({ number: "", saleId: "" });
+    // Hold cart — keranjang ditahan tersimpan di localStorage saja.
+    const [parkedCarts, setParkedCarts] = useState<ParkedCart[]>([]);
+    const [showHoldPanel, setShowHoldPanel] = useState(false);
 
     const searchRef = useRef<ProductSearchHandle>(null);
     const [showMobileCart, setShowMobileCart] = useState(false);
@@ -74,8 +84,34 @@ export default function POSPage() {
     useEffect(() => {
         loadDefaultCustomer();
         loadProducts();
+        setParkedCarts(loadParkedCarts());
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // Hold cart: tahan keranjang saat ini, lanjutkan yang ditahan, hapus.
+    const handleParkCart = () => {
+        if (cartItems.length === 0) {
+            showToast("Keranjang masih kosong", "error");
+            return;
+        }
+        parkCart(cartItems, selectedCustomer, discount);
+        setParkedCarts(loadParkedCarts());
+        handleClearCart();
+        showToast("Keranjang ditahan — bisa dilanjutkan nanti", "success");
+    };
+
+    const handleResumeParked = (parked: ParkedCart) => {
+        setCartItems(parked.items);
+        if (parked.customer) setSelectedCustomer(parked.customer);
+        setDiscount(parked.discount);
+        setParkedCarts(removeParkedCart(parked.id));
+        setShowHoldPanel(false);
+        showToast("Keranjang ditahan dilanjutkan", "success");
+    };
+
+    const handleDeleteParked = (id: string) => {
+        setParkedCarts(removeParkedCart(id));
+    };
 
     // Handle search
     const handleSearch = useCallback((query: string) => {
@@ -322,9 +358,17 @@ export default function POSPage() {
                         />
                     </div>
 
-                    {/* Checkout Button (Floating) */}
+                    {/* Checkout + Hold Cart Buttons (Floating) */}
                     {cartItems.length > 0 && (
-                        <div className="fixed bottom-6 right-[25rem] z-40">
+                        <div className="fixed bottom-6 right-[25rem] z-40 flex items-center gap-2">
+                            <button
+                                onClick={handleParkCart}
+                                className="px-5 py-4 bg-white text-gray-800 border border-gray-200 rounded-full shadow-lg hover:bg-gray-50 transition-all flex items-center gap-2 text-base font-semibold"
+                                title="Tahan keranjang ini dan layani pelanggan berikutnya"
+                            >
+                                <Pause className="w-5 h-5" />
+                                <span>Tahan</span>
+                            </button>
                             <button
                                 onClick={handleCheckout}
                                 className="px-8 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-full shadow-lg hover:from-green-700 hover:to-green-800 transition-all transform hover:scale-105 flex items-center gap-2 text-lg font-semibold"
@@ -334,6 +378,22 @@ export default function POSPage() {
                             </button>
                         </div>
                     )}
+                    {parkedCarts.length > 0 && (
+                        <button
+                            onClick={() => setShowHoldPanel(true)}
+                            className="fixed bottom-6 left-6 z-40 px-4 py-3 bg-amber-500 text-white rounded-full shadow-lg hover:bg-amber-600 transition-all flex items-center gap-2 font-semibold"
+                        >
+                            <Pause className="w-5 h-5" />
+                            <span>Ditahan ({parkedCarts.length})</span>
+                        </button>
+                    )}
+                    <HoldCartPanel
+                        isOpen={showHoldPanel}
+                        carts={parkedCarts}
+                        onClose={() => setShowHoldPanel(false)}
+                        onResume={handleResumeParked}
+                        onDelete={handleDeleteParked}
+                    />
                 </POSLayout>
 
                 {/* Modals */}

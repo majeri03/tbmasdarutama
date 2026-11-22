@@ -18,6 +18,10 @@ export const PERMISSIONS = {
   // Sales
   VIEW_SALES: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
   CREATE_SALE: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
+  // FIX (22 Nov 2026): edit penjualan sebelumnya memakai CREATE_SALE, jadi
+  // KASIR mana pun bisa mengedit transaksi apa pun. Sekarang izin sendiri,
+  // ADMIN+ saja (pola yang sama seperti EDIT_PRODUCT / EDIT_PURCHASE).
+  EDIT_SALE: ["SUPER_ADMIN", "ADMIN"] as Role[],
   CANCEL_SALE: ["SUPER_ADMIN", "ADMIN"] as Role[],
   DELETE_SALE: ["SUPER_ADMIN"] as Role[],
 

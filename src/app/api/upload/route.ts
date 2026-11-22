@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/utils/api";
+import { trackUpload, markR2FilesDeletedByKeys } from "@/lib/utils/r2-tracking";
+import { extractR2Filename } from "@/lib/utils/storage";
 
 // ✅ Only need Worker URL
 const WORKER_URL = process.env.CLOUDFLARE_WORKER_URL;
@@ -78,6 +80,20 @@ export async function POST(request: NextRequest) {
 
     const result = await uploadResponse.json();
 
+    // FIX (22 Nov 2026, R2): catat SETIAP upload ke tabel R2File sebagai
+    // PENDING. Sebelumnya file langsung ada di R2 tanpa jejak DB — batal
+    // simpan / ganti / hapus diam-diam menciptakan file yatim yang tidak
+    // terdeteksi. Baris dikonfirmasi ACTIVE saat entitas pemilik disimpan
+    // (confirmR2File); PENDING > 24 jam disapu jadi ORPHANED.
+    await trackUpload({
+      r2Key: filename,
+      url: result.url,
+      sizeBytes: file.size,
+      mimeType: file.type,
+      folder: cleanFolder,
+      uploadedById: session.user.id,
+    });
+
     // ✅ Worker returns full URL with /files/ endpoint
     return NextResponse.json({
       success: true,
@@ -128,22 +144,39 @@ export async function DELETE(request: NextRequest) {
         { status: 403 }
       );
     }
-    if (!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+(?:-[a-zA-Z0-9_-]+)*\.(jpg|jpeg|png|webp)$/.test(filename)) {
+    // FIX (22 Nov 2026, R2): terima URL penuh juga, bukan cuma key.
+    // Pemanggil APK mengirim URL penuh (https://.../files/folder/x.jpg)
+    // atau nama tanpa folder — keduanya dulu ditolak regex (400) sehingga
+    // hapus dari APK TIDAK PERNAH berhasil, tapi UI sudah bilang "terhapus".
+    // extractR2Filename dulu, baru validasi key hasilnya.
+    const r2Key = extractR2Filename(filename) || filename;
+    if (!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+(?:-[a-zA-Z0-9_-]+)*\.(jpg|jpeg|png|webp)$/.test(r2Key)) {
       return NextResponse.json({ error: "Nama file tidak valid" }, { status: 400 });
     }
+    filename = r2Key;
 
     // Call Cloudflare Worker delete endpoint
+    let workerOk = false;
     if (WORKER_URL) {
       try {
-        await fetch(`${WORKER_URL}/delete`, {
+        const res = await fetch(`${WORKER_URL}/delete`, {
           method: "DELETE",
           headers: {
             "X-Filename": filename,
           },
         });
+        workerOk = res.ok;
+        if (!workerOk) {
+          console.warn(`[WORKER_DELETE_WARN] Status ${res.status} saat menghapus ${filename}`);
+        }
       } catch (err) {
         console.warn("[WORKER_DELETE_WARN] Could not delete from worker:", err);
       }
+    }
+
+    // Tandai baris pelacakan sebagai DELETED hanya kalau Worker berhasil.
+    if (workerOk) {
+      await markR2FilesDeletedByKeys([filename]);
     }
 
     return NextResponse.json({

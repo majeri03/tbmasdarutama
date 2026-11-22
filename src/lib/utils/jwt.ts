@@ -28,6 +28,9 @@ export type TokenPayload = {
   email: string;
   name: string;
   role: string;
+  /** Versi token (lihat User.tokenVersion). Naik tiap ganti password /
+   *  nonaktifkan akun / ganti role / logout — token lama langsung mati. */
+  tv?: number;
   exp?: number;
 };
 
@@ -94,6 +97,18 @@ export async function signMobileToken(payload: Omit<TokenPayload, "exp">): Promi
 
 /**
  * Verifies and decodes a mobile auth token.
+ *
+ * SECURITY FIX (22 Nov 2026): dulu hanya cek signature + expiry — token
+ * akun yang dinonaktifkan atau token yang dicuri tetap berlaku sampai 30
+ * hari. Sekarang token juga dicek ke database: user harus ada, aktif,
+ * role-nya sama dengan payload, dan `tv` sama dengan User.tokenVersion.
+ * Ganti password / nonaktifkan akun / ganti role / logout menaikkan
+ * tokenVersion, jadi semua token lama langsung ditolak.
+ *
+ * Catatan: prisma di-import dinamis di sini (bukan import statis di atas)
+ * supaya file ini tetap aman di-import dari Edge Runtime — Prisma Client
+ * hanya bisa jalan di Node, dan modul ini sebelumnya memang dirancang
+ * Edge-safe. Kalau import dinamis ini gagal, token ditolak (fail-closed).
  */
 export async function verifyMobileToken(token: string): Promise<TokenPayload | null> {
   try {
@@ -120,6 +135,18 @@ export async function verifyMobileToken(token: string): Promise<TokenPayload | n
     if (decoded.exp && Date.now() > decoded.exp) {
       return null;
     }
+
+    // Cek ke database: user harus ada + aktif + role sama + tv sama.
+    // Token lama (tanpa klaim tv, terbit sebelum patch ini) dianggap tv=0.
+    const { default: prisma } = await import("@/lib/prisma");
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { isActive: true, role: true, tokenVersion: true },
+    });
+    if (!user) return null;
+    if (!user.isActive) return null;
+    if (user.role !== decoded.role) return null;
+    if ((decoded.tv ?? 0) !== user.tokenVersion) return null;
 
     return decoded;
   } catch {

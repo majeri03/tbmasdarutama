@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import {
@@ -8,6 +8,33 @@ import {
   unauthorizedResponse,
   validationErrorResponse,
 } from "@/lib/utils/api";
+
+// FIX (22 Nov 2026): rate-limit ganti password — 10 percobaan per user
+// dalam 1 jam, lalu 429. In-memory per instance, sama seperti rate-limit
+// login (lihat src/app/api/auth/login/route.ts).
+const CHANGE_PW_WINDOW_MS = 60 * 60 * 1000;
+const CHANGE_PW_MAX_ATTEMPTS = 10;
+const changePwAttempts = new Map<string, { count: number; firstAt: number }>();
+
+function isChangePwRateLimited(userId: string): boolean {
+  const entry = changePwAttempts.get(userId);
+  if (!entry) return false;
+  if (Date.now() - entry.firstAt > CHANGE_PW_WINDOW_MS) {
+    changePwAttempts.delete(userId);
+    return false;
+  }
+  return entry.count >= CHANGE_PW_MAX_ATTEMPTS;
+}
+
+function recordChangePwAttempt(userId: string): void {
+  const now = Date.now();
+  const entry = changePwAttempts.get(userId);
+  if (!entry || now - entry.firstAt > CHANGE_PW_WINDOW_MS) {
+    changePwAttempts.set(userId, { count: 1, firstAt: now });
+  } else {
+    entry.count += 1;
+  }
+}
 
 /**
  * POST /api/auth/change-password
@@ -31,8 +58,17 @@ export async function POST(request: NextRequest) {
     if (!currentPassword || !newPassword) {
       return validationErrorResponse("Password lama dan password baru wajib diisi.");
     }
-    if (newPassword.length < 6) {
-      return validationErrorResponse("Password baru minimal 6 karakter.");
+    // Rate-limit: hitung setiap percobaan (berhasil atau gagal).
+    if (isChangePwRateLimited(session.user.id)) {
+      return NextResponse.json(
+        { success: false, error: "Terlalu banyak percobaan ganti password. Coba lagi 1 jam lagi." },
+        { status: 429 }
+      );
+    }
+    recordChangePwAttempt(session.user.id);
+    // FIX (22 Nov 2026): minimum password baru naik dari 6 ke 8 karakter.
+    if (newPassword.length < 8) {
+      return validationErrorResponse("Password baru minimal 8 karakter.");
     }
     if (newPassword === currentPassword) {
       return validationErrorResponse("Password baru tidak boleh sama dengan password lama.");
@@ -50,9 +86,12 @@ export async function POST(request: NextRequest) {
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
+    // FIX (22 Nov 2026): naikkan tokenVersion — semua token mobile lama
+    // (termasuk yang mungkin dicuri) langsung tidak berlaku. Pengguna harus
+    // login ulang di semua perangkat, termasuk HP ini.
     await prisma.user.update({
       where: { id: user.id },
-      data: { password: hashedPassword },
+      data: { password: hashedPassword, tokenVersion: { increment: 1 } },
     });
 
     return successResponse(null, "Password berhasil diubah. Silakan login ulang.");

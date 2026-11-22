@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
-import { Search, Barcode, Loader2 } from "lucide-react";
+import { Search, Barcode, Loader2, ScanBarcode } from "lucide-react";
+import { BarcodeScannerModal } from "./BarcodeScannerModal";
 
 interface ProductSearchProps {
   onSearch: (query: string) => void;
@@ -15,6 +16,7 @@ export const ProductSearch = forwardRef<ProductSearchHandle, ProductSearchProps>
   function ProductSearch({ onSearch, onBarcodeScanned, isLoading }, ref) {
   const [searchQuery, setSearchQuery] = useState("");
   const [barcodeBuffer, setBarcodeBuffer] = useState("");
+  const [showScanner, setShowScanner] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const barcodeTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
@@ -84,13 +86,22 @@ export const ProductSearch = forwardRef<ProductSearchHandle, ProductSearchProps>
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Cari produk (nama/kode) atau scan barcode..."
-          className="w-full pl-10 md:pl-12 pr-10 md:pr-12 py-2 md:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base"
+          className="w-full pl-10 md:pl-12 pr-24 py-2 md:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base"
         />
         {isLoading ? (
-          <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-600 animate-spin" />
+          <Loader2 className="absolute right-14 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-600 animate-spin" />
         ) : (
-          <Barcode className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Barcode className="absolute right-14 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
         )}
+        <button
+          type="button"
+          onClick={() => setShowScanner(true)}
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-blue-600 hover:bg-blue-50"
+          title="Scan barcode pakai kamera"
+          aria-label="Scan barcode pakai kamera"
+        >
+          <ScanBarcode className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Search Tips */}
@@ -103,7 +114,17 @@ export const ProductSearch = forwardRef<ProductSearchHandle, ProductSearchProps>
           <Barcode className="w-3 h-3" />
           <span>Scan barcode otomatis terdeteksi</span>
         </div>
+        <div className="flex items-center gap-1">
+          <ScanBarcode className="w-3 h-3" />
+          <span>atau scan pakai kamera</span>
+        </div>
       </div>
+
+      <BarcodeScannerModal
+        isOpen={showScanner}
+        onClose={() => setShowScanner(false)}
+        onScanned={onBarcodeScanned}
+      />
     </div>
   );
 }

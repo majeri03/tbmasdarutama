@@ -11,6 +11,10 @@ import {
 } from "@/lib/validations/product.schema";
 import { auth } from "../auth";
 import { requireMinimumRole, requirePermission, type AuthSession } from "@/lib/utils/role";
+import {
+  confirmR2Files,
+  deleteR2FileByUrl,
+} from "@/lib/utils/r2-tracking";
 
 //    GENERATE PRODUCT CODE   
 async function generateProductCode(tx: Prisma.TransactionClient = prisma): Promise<string> {
@@ -174,6 +178,15 @@ export async function createProduct(data: CreateProductInput) {
 
       return newProduct;
     });
+
+    // FIX (22 Nov 2026, R2): gambar produk baru dikonfirmasi ACTIVE.
+    if (validatedData.images && validatedData.images.length > 0) {
+      await confirmR2Files(
+        validatedData.images.map((i) => i.imageUrl),
+        "PRODUCT",
+        product.id
+      );
+    }
 
     revalidatePath("/dashboard/products");
 
@@ -491,6 +504,11 @@ export async function updateProduct(id: string, data: UpdateProductInput) {
       }
     }
 
+    // FIX (22 Nov 2026, R2): catat gambar lama SEBELUM diganti — update
+    // produk dulu deleteMany baris ProductImage lalu createMany baru tanpa
+    // pernah menyentuh R2, jadi file lama yatim selamanya.
+    const oldImageUrls = existingProduct.productImages.map((i) => i.imageUrl);
+
     const product = await prisma.$transaction(async (tx) => {
       // 1. Update main product data
       const updatedProduct = await tx.product.update({
@@ -546,6 +564,16 @@ export async function updateProduct(id: string, data: UpdateProductInput) {
 
       return updatedProduct;
     });
+
+    // FIX (22 Nov 2026, R2): gambar yang tidak lagi dipakai dihapus dari
+    // R2; gambar baru dikonfirmasi ACTIVE milik produk ini.
+    if (validatedData.images) {
+      const newUrls = validatedData.images.map((i) => i.imageUrl);
+      for (const oldUrl of oldImageUrls) {
+        if (!newUrls.includes(oldUrl)) await deleteR2FileByUrl(oldUrl);
+      }
+      await confirmR2Files(newUrls, "PRODUCT", id);
+    }
 
     revalidatePath("/dashboard/products");
 
@@ -613,6 +641,10 @@ export async function deleteProduct(id: string) {
     }
 
     //Soft delete: Set deletedAt timestamp
+    // CATATAN R2 (22 Nov 2026): gambar produk SENGAJA tidak dihapus dari R2
+    // di sini — produk bisa di-restore (restoreProduct) dan butuh gambarnya
+    // kembali. File milik produk nonaktif tetap tercatat di tabel R2File dan
+    // bisa dihapus manual dari halaman Penyimpanan (/dashboard/storage).
     await prisma.product.update({
       where: { id },
       data: {

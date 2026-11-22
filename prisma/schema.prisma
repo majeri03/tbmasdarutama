@@ -18,6 +18,10 @@ model User {
   address       String?
   expoPushToken String?   // NEW: Untuk Push Notification
   isActive      Boolean   @default(true)
+  // FIX (22 Nov 2026): versi token mobile — dinaikkan setiap ganti password /
+  // nonaktifkan akun / ganti role / logout, supaya token lama langsung mati.
+  // verifyMobileToken menolak token yang tv-nya tidak sama dengan ini.
+  tokenVersion  Int       @default(0)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   
@@ -33,7 +37,8 @@ model User {
   deviceTokens        DeviceToken[]
   notifications       Notification[]
   deliveryPhotos      DeliveryPhoto[]
-  
+  r2Files             R2File[]
+
   @@map("users")
 }
 
@@ -500,6 +505,53 @@ model DeliveryPhoto {
 
   @@index([deliveryOrderId])
   @@map("delivery_photos")
+}
+
+// ==================== PELACAKAN FILE R2 (22 Nov 2026) ====================
+// Satu baris untuk SETIAP objek di Cloudflare R2. Sebelumnya upload lewat
+// POST /api/upload langsung membuat objek R2 tanpa jejak DB apa pun —
+// file yatim (batal simpan, ganti tanpa hapus, hapus data tanpa hapus
+// file) tidak terdeteksi dan statistik kuota hanya tebakan (jumlah x 45KB).
+// Alur: upload -> baris PENDING -> dikonfirmasi ACTIVE saat entitas
+// pemilik disimpan (confirmR2File). Baris PENDING > 24 jam = kandidat
+// yatim. Status DELETED dipertahankan sebagai jejak audit.
+enum R2FileStatus {
+  PENDING
+  ACTIVE
+  ORPHANED
+  DELETED
+  DELETE_FAILED
+}
+
+enum R2FileOwnerType {
+  PRODUCT
+  DELIVERY_PROOF
+  PAYMENT_PROOF
+  HERO
+  LOGO
+  UNKNOWN
+}
+
+model R2File {
+  id           String         @id @default(cuid())
+  r2Key        String         @unique // Key di R2, contoh: proofs_delivery/123.jpg
+  url          String         // URL penuh yang dikembalikan Worker
+  sizeBytes    Int            @default(0)
+  mimeType     String         @default("image/jpeg")
+  folder       String         // Folder R2: products / proofs_delivery / proofs_payment / heroes / logos
+  ownerType    R2FileOwnerType @default(UNKNOWN)
+  ownerId      String?        // ID entitas pemilik (productId / doId / saleId / heroId / storeSettingId)
+  uploadedById String?
+  status       R2FileStatus   @default(PENDING)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  uploadedBy User? @relation(fields: [uploadedById], references: [id])
+
+  @@index([status])
+  @@index([folder])
+  @@index([ownerType, ownerId])
+  @@map("r2_files")
 }
 
 model DeliveryItem {

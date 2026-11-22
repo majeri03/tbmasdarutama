@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Sidebar from "./_components/Sidebar";
 import { SessionProvider } from "next-auth/react";
+import { NotificationBell } from "./notifications/_components/NotificationBell";
 
 export default function DashboardLayout({
   children,
@@ -28,6 +29,7 @@ export default function DashboardLayout({
                 <rect y="17" width="24" height="2" rx="1" fill="#2563eb" />
               </svg>
             </button>
+            <NotificationBell />
           </div>
           <main className="p-4 md:p-6 lg:p-8 max-w-full">{children}</main>
         </div>

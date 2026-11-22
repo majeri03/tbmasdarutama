@@ -2,12 +2,16 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";  // ✅ tambah useCallback
-import { ShoppingCart, Filter, FileText } from "lucide-react";  // ✅ hapus Download
+import { ShoppingCart, Filter, FileText, Pencil } from "lucide-react";  // ✅ hapus Download
+import { useSession } from "next-auth/react";
+import { hasPermission } from "@/lib/utils/role";
 import { getSales } from "@/lib/actions/sale.actions";
 import { SalesStats } from "./_components/SalesStats";
 import { SaleFormModal } from "./_components/SaleFormModal";
 import { SaleViewModal } from "./_components/SaleViewModal";
 import { SaleInvoicePDF } from "./_components/SaleInvoicePDF";
+import { EditSaleModal } from "./_components/EditSaleModal";
+import { ShareInvoiceWhatsApp } from "./_components/ShareInvoiceWhatsApp";
 import { SaleStatusBadge } from "./_components/SaleStatusBadge";
 import { PaymentMethodBadge } from "./_components/PaymentMethodBadge";
 import { format } from "date-fns";
@@ -45,6 +49,18 @@ export default function SalesPage() {
     // Invoice Modal
     const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
     const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+
+    // Edit Modal (izin EDIT_SALE = ADMIN+, dicek juga di server)
+    const [editSaleId, setEditSaleId] = useState<string | null>(null);
+    const { data: session } = useSession();
+    const canEdit = hasPermission(session, "EDIT_SALE");
+
+    // Prefill pencarian dari URL (?search=INV-...) — dipakai saat ketuk
+    // notifikasi (pusat notifikasi mengarah ke sini dengan nomor invoice).
+    useEffect(() => {
+        const q = new URLSearchParams(window.location.search).get("search");
+        if (q) setSearchTerm(q);
+    }, []);
 
 
     const loadSales = useCallback(async () => {
@@ -272,6 +288,16 @@ export default function SalesPage() {
                                                 >
                                                     <FileText className="w-4 h-4" />
                                                 </button>
+                                                <ShareInvoiceWhatsApp saleId={sale.id} label="" />
+                                                {canEdit && sale.status !== "CANCELLED" && sale.status !== "RETURN" && (
+                                                    <button
+                                                        onClick={() => setEditSaleId(sale.id)}
+                                                        className="btn-icon"
+                                                        title="Edit transaksi (ADMIN)"
+                                                    >
+                                                        <Pencil className="w-4 h-4" />
+                                                    </button>
+                                                )}
                                                 <DeleteSaleDialog sale={sale} onSuccess={loadSales} />
                                             </div>
                                         </td>
@@ -289,6 +315,18 @@ export default function SalesPage() {
                     isOpen={showInvoiceModal}
                     onClose={handleCloseInvoice}
                     saleId={selectedSaleId}
+                />
+            )}
+
+            {/* Edit Modal */}
+            {editSaleId && (
+                <EditSaleModal
+                    saleId={editSaleId}
+                    onClose={() => setEditSaleId(null)}
+                    onSuccess={() => {
+                        setEditSaleId(null);
+                        loadSales();
+                    }}
                 />
             )}
         </div>

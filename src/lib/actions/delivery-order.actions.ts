@@ -13,7 +13,12 @@ import {
   UpdateDeliveryOrderInput,
 } from "@/lib/validations/delivery-order.schema";
 import { requirePermission, type AuthSession } from "../utils/role";
-import { deleteFromR2, extractR2Filename } from "../utils/storage";
+import {
+  confirmR2File,
+  deleteR2FileByUrl,
+  deleteR2FilesByKeys,
+  extractTagKeys,
+} from "../utils/r2-tracking";
 import {
   loadUnitNames,
   primaryQuantityOrThrow,
@@ -63,6 +68,9 @@ export async function getAllDeliveryOrders(filters?: {
   status?: DeliveryStatus;
   dateFrom?: Date;
   dateTo?: Date;
+  // FIX (22 Nov 2026): paginasi — sebelumnya seluruh tabel dikembalikan.
+  page?: number;
+  limit?: number;
 }, externalSession?: AuthSession | null) {
   const session = externalSession || (await auth());
   requirePermission(session, "VIEW_DELIVERY_ORDERS");
@@ -94,7 +102,14 @@ export async function getAllDeliveryOrders(filters?: {
       if (filters.dateTo) where.deliveryDate.lte = filters.dateTo;
     }
 
-    const deliveryOrders = await prisma.deliveryOrder.findMany({
+    // Default 50 baris terbaru (dashboard web tidak punya pager UI);
+    // API bisa minta page/limit eksplisit. Maksimal 100 per halaman.
+    const page = Math.max(1, Math.floor(filters?.page ?? 1) || 1);
+    const limit = Math.min(100, Math.max(1, Math.floor(filters?.limit ?? 50) || 50));
+    const skip = (page - 1) * limit;
+
+    const [deliveryOrders, total] = await Promise.all([
+      prisma.deliveryOrder.findMany({
       where,
       include: {
         customer: {
@@ -143,7 +158,11 @@ export async function getAllDeliveryOrders(filters?: {
       orderBy: {
         createdAt: "desc",
       },
-    });
+      take: limit,
+      skip,
+    }),
+      prisma.deliveryOrder.count({ where }),
+    ]);
 
     // Serialize Decimal & resolve proofImage
     const serialized = deliveryOrders.map((order) => ({
@@ -155,7 +174,16 @@ export async function getAllDeliveryOrders(filters?: {
       })),
     }));
 
-    return { success: true, data: serialized };
+    return {
+      success: true,
+      data: serialized,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   } catch (error) {
     console.error("Error fetching delivery orders:", error);
     return { success: false, error: "Failed to fetch delivery orders" };
@@ -560,6 +588,14 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput) {
 
     const { deliveryOrder: result, autoInvoiceNumber } = txResult;
 
+    // FIX (22 Nov 2026, R2): bukti pengiriman di DO baru dikonfirmasi
+    // ACTIVE milik DO ini (proofImage + tag di notes).
+    const createdProof = resolveProofImage(result.proofImage, result.notes);
+    if (createdProof) await confirmR2File(createdProof, "DELIVERY_PROOF", result.id);
+    for (const key of extractTagKeys(result.notes, ["BUKTI_KIRIM", "FOTO_LOKASI"])) {
+      await confirmR2File(key, "DELIVERY_PROOF", result.id);
+    }
+
     // Revalidate semua halaman terkait
     revalidatePath("/dashboard/delivery-orders");
     revalidatePath("/dashboard/sales");
@@ -684,6 +720,17 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
         });
       });
       revalidatePath("/dashboard/delivery-orders");
+      // FIX (22 Nov 2026): pembatalan DO sebelumnya senyap total — cabang
+      // CANCELLED tidak pernah memanggil onDeliveryUpdate. Sekarang
+      // ternotifikasi seperti IN_TRANSIT / DELIVERED (fire-and-forget).
+      try {
+        const { NotificationService } = await import("@/lib/services/notification.service");
+        NotificationService.onDeliveryUpdate(deliveryOrder.id, deliveryOrder.doNumber, "CANCELLED").catch((e) =>
+          console.error("[Notif] Error notifying delivery cancellation:", e),
+        );
+      } catch (e) {
+        console.error("[Notif] Delivery cancellation notification dispatch error:", e);
+      }
       // Dulu tanpa `data`, padahal route PUT memanggil
       // successResponse(result.data, ...) — type error di build.
       return {
@@ -793,6 +840,15 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput) {
       });
     });
 
+    // FIX (22 Nov 2026, R2): bukti baru saat ubah status dikonfirmasi
+    // ACTIVE; bukti lama yang tertimpa dihapus dari R2.
+    const oldStatusProof = resolveProofImage(deliveryOrder.proofImage, deliveryOrder.notes);
+    const statusProof = resolveProofImage(updated.proofImage, updated.notes);
+    if (oldStatusProof && oldStatusProof !== statusProof) {
+      await deleteR2FileByUrl(oldStatusProof);
+    }
+    if (statusProof) await confirmR2File(statusProof, "DELIVERY_PROOF", updated.id);
+
     revalidatePath("/dashboard/delivery-orders");
 
     // Notifikasi perubahan status DO — SATU sistem saja (Sistem A).
@@ -862,6 +918,11 @@ export async function updateDeliveryOrder(
       return { success: false, error: "Surat Jalan yang sudah DITERIMA / dibatalkan tidak bisa diedit." };
     }
 
+    // FIX (22 Nov 2026, R2): catat bukti lama SEBELUM ditimpa — ganti bukti
+    // tanpa hapus yang lama adalah kebocoran terbesar (file lama yatim).
+    const oldProofImage = existingDO.proofImage;
+    const oldNoteKeys = extractTagKeys(existingDO.notes, ["BUKTI_KIRIM", "FOTO_LOKASI"]);
+
     // Siapkan data update
     const updateData: Prisma.DeliveryOrderUpdateInput = {};
     if (validated.deliveryDate !== undefined && validated.deliveryDate !== null) {
@@ -899,6 +960,19 @@ export async function updateDeliveryOrder(
         },
       },
     });
+
+    // FIX (22 Nov 2026, R2): bukti diganti -> hapus file lama dari R2;
+    // bukti baru dikonfirmasi ACTIVE milik DO ini. Tag di notes yang
+    // hilang ikut dibersihkan filenya.
+    const newProofImage = resolveProofImage(updated.proofImage, updated.notes);
+    if (oldProofImage && oldProofImage !== newProofImage) {
+      await deleteR2FileByUrl(oldProofImage);
+    }
+    const newNoteKeys = extractTagKeys(updated.notes, ["BUKTI_KIRIM", "FOTO_LOKASI"]);
+    for (const oldKey of oldNoteKeys) {
+      if (!newNoteKeys.includes(oldKey)) await deleteR2FileByUrl(oldKey);
+    }
+    if (newProofImage) await confirmR2File(newProofImage, "DELIVERY_PROOF", updated.id);
 
     revalidatePath("/dashboard/delivery-orders");
 
@@ -952,6 +1026,9 @@ export async function deleteDeliveryOrder(id: string) {
     }
 
     // 2. Kumpulkan file gambar untuk dihapus dari Cloudflare R2
+    // FIX (22 Nov 2026, R2): tag [BUKTI_KIRIM] / [FOTO_LOKASI] di notes
+    // ikut dikumpulkan — sebelumnya tidak pernah, jadi file tag legacy
+    // yatim setiap DO dihapus.
     const photosToDelete: string[] = [];
     if (deliveryOrder.proofImage) photosToDelete.push(deliveryOrder.proofImage);
     if (deliveryOrder.deliveryPhotos && deliveryOrder.deliveryPhotos.length > 0) {
@@ -960,6 +1037,7 @@ export async function deleteDeliveryOrder(id: string) {
         else if (p.url) photosToDelete.push(p.url);
       });
     }
+    photosToDelete.push(...extractTagKeys(deliveryOrder.notes, ["BUKTI_KIRIM", "FOTO_LOKASI"]));
 
     // 3. PROTEKSI: Cek Status Pengiriman
     // Jika barang sudah sampai (DELIVERED) mungkin tidak boleh dihapus sembarangan
@@ -1013,9 +1091,11 @@ export async function deleteDeliveryOrder(id: string) {
         });
     });
 
-    // 6. Hapus file fisik di Cloudflare R2 secara asinkron tanpa menahan respon
+    // 6. Hapus file fisik di Cloudflare R2 secara asinkron tanpa menahan
+    // respon. FIX (22 Nov 2026, R2): lewat deleteR2FilesByKeys supaya
+    // baris pelacakan ikut ditandai DELETED (bukan cuma file dihapus).
     if (photosToDelete.length > 0) {
-      Promise.allSettled(photosToDelete.map((file) => deleteFromR2(file))).catch((err) => {
+      void deleteR2FilesByKeys(photosToDelete).catch((err) => {
         console.warn("[R2_CLEANUP_WARN] Gagal menghapus file R2 setelah DO dihapus:", err);
       });
     }
@@ -1025,6 +1105,17 @@ export async function deleteDeliveryOrder(id: string) {
     revalidatePath("/dashboard/sales");          // Sale hilang dari list
     revalidatePath("/dashboard/customer-debts"); // Hutang hilang dari list
     revalidatePath("/dashboard/products");       // Stok kembali
+
+    // FIX (22 Nov 2026): hapus DO juga ternotifikasi (sebagai pembatalan),
+    // supaya tim tahu surat jalan itu tidak jadi dikirim.
+    try {
+      const { NotificationService } = await import("@/lib/services/notification.service");
+      NotificationService.onDeliveryUpdate(id, deliveryOrder.doNumber, "CANCELLED").catch((e) =>
+        console.error("[Notif] Error notifying delivery deletion:", e),
+      );
+    } catch (e) {
+      console.error("[Notif] Delivery deletion notification dispatch error:", e);
+    }
 
     // Dulu tanpa `data`, padahal route DELETE memanggil
     // successResponse(result.data, ...) — type error di build.
@@ -1124,6 +1215,17 @@ export async function cancelDeliveryOrder(id: string) {
     revalidatePath("/dashboard/customer-debts");
     revalidatePath("/dashboard/products");
 
+    // FIX (22 Nov 2026): pembatalan DO ternotifikasi (lihat CANCELLED di
+    // updateDeliveryStatus — sebelumnya senyap).
+    try {
+      const { NotificationService } = await import("@/lib/services/notification.service");
+      NotificationService.onDeliveryUpdate(id, deliveryOrder.doNumber, "CANCELLED").catch((e) =>
+        console.error("[Notif] Error notifying delivery cancellation:", e),
+      );
+    } catch (e) {
+      console.error("[Notif] Delivery cancellation notification dispatch error:", e);
+    }
+
     return { success: true, message: "Pengiriman berhasil dibatalkan." };
 
   } catch (error: unknown) {
@@ -1178,6 +1280,9 @@ export async function addDeliveryPhoto(input: {
       data: { proofImage: url },
     });
 
+    // FIX (22 Nov 2026, R2): foto lampiran dikonfirmasi ACTIVE milik DO ini.
+    await confirmR2File(url, "DELIVERY_PROOF", deliveryOrderId);
+
     revalidatePath("/dashboard/delivery-orders");
 
     return {
@@ -1210,13 +1315,22 @@ export async function deleteDeliveryPhoto(photoId: string) {
       return { success: false, error: "Foto tidak ditemukan" };
     }
 
-    // 1. Hapus dari DB
+    // FIX (22 Nov 2026, R2): hapus R2 DULU, baru baris DB. Sebelumnya
+    // baris dihapus dulu — kalau hapus R2 gagal, file jadi yatim tanpa
+    // jejak apa pun. Kalau R2 gagal, baris DIPERTAHANKAN dan ditandai
+    // DELETE_FAILED supaya bisa di-retry dari halaman Penyimpanan.
+    const r2Ok = await deleteR2FileByUrl(photo.filename || photo.url);
+    if (!r2Ok) {
+      return {
+        success: false,
+        error: "Gagal menghapus file dari Cloudflare R2. Foto masih tersimpan — coba lagi atau hapus dari halaman Penyimpanan.",
+      };
+    }
+
+    // 2. Hapus dari DB (file sudah pasti hilang dari R2)
     await prisma.deliveryPhoto.delete({
       where: { id: photoId },
     });
-
-    // 2. Hapus fisik dari Cloudflare R2
-    await deleteFromR2(photo.filename || photo.url);
 
     // 3. Update proofImage jika foto yang dihapus adalah foto utama
     const remainingPhotos = await prisma.deliveryPhoto.findMany({

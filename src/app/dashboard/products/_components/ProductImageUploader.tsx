@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import Image from "next/image";
 import { Upload, X, Star, Image as ImageIcon, AlertCircle } from "lucide-react";
+import { compressImageFile } from "@/lib/utils/image-compress";
 
 interface ProductImageForm {
   imageUrl: string;
@@ -56,9 +57,14 @@ export function ProductImageUploader({
           continue;
         }
 
+        // FIX (22 Nov 2026, R2): kompres dulu seperti APK (maks 900px,
+        // kualitas 0.6) — sebelumnya file asli sampai 5MB diunggah mentah.
+        const fileToUpload = await compressImageFile(file);
+
         // ✅ Upload to Cloudflare R2 via API
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("file", fileToUpload);
+        formData.append("folder", "products");
 
         const uploadResponse = await fetch("/api/upload", {
           method: "POST",
@@ -112,6 +118,18 @@ export function ProductImageUploader({
   const handleDelete = (index: number) => {
     const imageToDelete = images[index];
     const remainingImages = images.filter((_, i) => i !== index);
+
+    // FIX (22 Nov 2026, R2): gambar sudah terunggah ke R2 saat dipilih —
+    // hapus dari form saja membuatnya yatim. Coba hapus dari R2 juga
+    // (best-effort; DELETE /api/upload sekarang menerima URL penuh).
+    // Kalau gagal (mis. bukan admin), file lama tetap tercatat di R2File
+    // dan bisa dibersihkan dari halaman Penyimpanan.
+    if (imageToDelete?.imageUrl) {
+      fetch(
+        `/api/upload?filename=${encodeURIComponent(imageToDelete.imageUrl)}`,
+        { method: "DELETE" }
+      ).catch(() => undefined);
+    }
 
     // If deleting primary image, make first remaining image primary
     if (imageToDelete.isPrimary && remainingImages.length > 0) {

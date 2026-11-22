@@ -23,16 +23,23 @@ import {
   DollarSign,
   BarChart3,
   Shield,
+  MapPin,
+  ClipboardCheck,
+  HardDrive,
 } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { useSession } from "next-auth/react";
 import { hasPermission } from "@/lib/utils/role";
+import { NotificationBellIcon } from "@/app/dashboard/notifications/_components/NotificationBell";
 const menuGroups = [
   {
     label: "Main",
     items: [
       { href: "/dashboard", icon: <Home />, label: "Dashboard", permission: "VIEW_MENU_DASHBOARD" as const },
+      // Tanpa permission — semua role yang login bisa melihat notifikasi
+      // miliknya (API sudah memfilter per user/role).
+      { href: "/dashboard/notifications", icon: <NotificationBellIcon />, label: "Notifikasi" },
     ],
   },
   {
@@ -44,12 +51,14 @@ const menuGroups = [
       { href: "/dashboard/suppliers", icon: <Truck />, label: "Supplier", permission: "VIEW_SUPPLIERS" as const },
       { href: "/dashboard/customers", icon: <Users />, label: "Customer", permission: "VIEW_CUSTOMERS" as const },
       { href: "/dashboard/stocks", icon: <ShoppingCart />, label: "Stock", permission: "VIEW_MENU_STOCK" as const, pageKey: "stock_opname" },
+      { href: "/dashboard/stocks/opname", icon: <ClipboardCheck />, label: "Stock Opname", permission: "VIEW_MENU_STOCK" as const, pageKey: "stock_opname" },
     ],
   },
   {
     label: "Transactions",
     items: [
       { href: "/dashboard/delivery-orders", icon: <Send />, label: "Pengiriman", permission: "VIEW_DELIVERY_ORDERS" as const, },
+      { href: "/dashboard/fleet", icon: <MapPin />, label: "Armada & GPS", permission: "VIEW_DELIVERY_ORDERS" as const, },
       { href: "/dashboard/purchases", icon: <ShoppingBag />, label: "Purchase Orders", permission: "VIEW_PURCHASES" as const, pageKey: "po" },
       { href: "/dashboard/sales", icon: <DollarSign />, label: "Penjualan", permission: "VIEW_MENU_SALES" as const },
       { href: "/dashboard/pos", icon: <CreditCard />, label: "Point of Sale", permission: "ACCESS_POS" as const, pageKey: "pos" },
@@ -69,6 +78,7 @@ const menuGroups = [
       { href: "/dashboard/users", icon: <Shield />, label: "Manajemen Akun", permission: "MANAGE_USERS" as const },
       { href: "/dashboard/page-access", icon: <Shield />, label: "Akses Halaman", role: "SUPER_ADMIN" as const },
       { href: "/dashboard/settings", icon: <Settings />, label: "Pengaturan", permission: "VIEW_MENU_SETTINGS" as const, pageKey: "reports_settings" },
+      { href: "/dashboard/storage", icon: <HardDrive />, label: "Penyimpanan", permission: "VIEW_MENU_SETTINGS" as const },
     ],
   },
 ];

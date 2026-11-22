@@ -26,6 +26,11 @@ import {
   primaryQuantityOrThrow,
   withUniqueRetry,
 } from "@/lib/utils/stock-units";
+import {
+  confirmR2File,
+  deleteR2FileByUrl,
+  extractTagUrls,
+} from "@/lib/utils/r2-tracking";
 
 async function generateInvoiceNumber(): Promise<string> {
   const today = new Date();
@@ -45,12 +50,15 @@ async function generateInvoiceNumber(): Promise<string> {
   });
 
   if (!lastSale) {
-    return `INV-${datePrefix}-001`;
+    return `INV-${datePrefix}-0001`;
   }
 
   const lastNumber = parseInt(lastSale.invoiceNumber.split("-")[2]);
   const newNumber = lastNumber + 1;
-  return `INV-${datePrefix}-${newNumber.toString().padStart(3, "0")}`;
+  // FIX (22 Nov 2026): 4 digit seperti generator lain (DO, hutang). Format
+  // 3 digit memecah urutan string di atas 999 penjualan/hari ("999" >
+  // "1000") sehingga bisa tabrakan nomor. Nomor lama tidak diubah.
+  return `INV-${datePrefix}-${newNumber.toString().padStart(4, "0")}`;
 }
 
 export async function createSale(data: CreateSaleInput) {
@@ -268,7 +276,9 @@ export async function createSale(data: CreateSaleInput) {
 export async function updateSale(saleId: string, data: CreateSaleInput) {
   try {
     const session = await auth();
-    requirePermission(session, "CREATE_SALE");
+    // FIX (22 Nov 2026): EDIT_SALE (ADMIN+), bukan CREATE_SALE — KASIR tidak
+    // boleh mengedit transaksi penjualan apa pun.
+    requirePermission(session, "EDIT_SALE");
 
     if (!session?.user?.id) {
       return { success: false, error: "Unauthorized. Please login first." };
@@ -396,8 +406,22 @@ export async function updateSale(saleId: string, data: CreateSaleInput) {
       subtotal: item.subtotal,
     }));
 
+    // FIX (22 Nov 2026): penjualan otomatis DO dikenali dari prefix
+    // "Auto-Invoice DO:" di notes. Edit TIDAK BOLEH menghapus prefix itu —
+    // kalau hilang, guard stok hantu & guard hapus DO tidak lagi mengenali
+    // penjualan ini sebagai auto-sale.
+    const isAutoSaleEdit = !!existingSale.notes?.startsWith("Auto-Invoice DO:");
+    const autoSalePrefix = isAutoSaleEdit
+      ? (existingSale.notes!.match(/^Auto-Invoice DO:\s*\S+\.\s*/)?.[0] ?? "Auto-Invoice DO: ")
+      : "";
+    const finalNotes = !isAutoSaleEdit
+      ? (validated.notes || existingSale.notes)
+      : validated.notes
+        ? (validated.notes.startsWith("Auto-Invoice DO:") ? validated.notes : `${autoSalePrefix}${validated.notes}`)
+        : existingSale.notes;
+
     // 4. TRANSACTION
-    const updatedSale = await prisma.$transaction(async (tx) => {
+    const updatedSale = await withUniqueRetry(() => prisma.$transaction(async (tx) => {
         // A. Delete old Sale Items & Delivery Items
         await tx.saleItem.deleteMany({ where: { saleId } });
         if (existingSale.deliveryOrder) {
@@ -421,7 +445,7 @@ export async function updateSale(saleId: string, data: CreateSaleInput) {
                 paidAmount: effectivePaid,
                 changeAmount,
                 status,
-                notes: validated.notes || existingSale.notes,
+                notes: finalNotes,
                 saleItems: { create: saleItemsData }
             }
         });
@@ -517,7 +541,16 @@ export async function updateSale(saleId: string, data: CreateSaleInput) {
         }
 
         return sale;
-    }, { maxWait: 10000, timeout: 30000 });
+    // FIX (22 Nov 2026): bungkus transaksi dengan withUniqueRetry seperti
+    // createSale/pos/createDeliveryOrder — tabrakan nomor hutang yang jarang
+    // terjadi tidak lagi melempar P2002 mentah, tapi dicoba ulang.
+    }, { maxWait: 10000, timeout: 30000 }));
+
+    // FIX (22 Nov 2026, R2): kalau edit menghilangkan tag bukti transfer
+    // lama, file lamanya harus ikut dihapus — kalau tidak, file itu yatim.
+    for (const oldUrl of extractTagUrls(existingSale.notes, "BUKTI_TF")) {
+      if (!finalNotes?.includes(oldUrl)) await deleteR2FileByUrl(oldUrl);
+    }
 
     revalidatePath("/dashboard/pos");
     revalidatePath("/dashboard/sales");
@@ -796,9 +829,17 @@ export async function cancelSale(id: string, reason: string) {
       };
     }
 
+    // FIX (22 Nov 2026, stok hantu): penjualan otomatis DO TIDAK PERNAH
+    // memotong stok (stok baru dipotong saat DO DELIVERED), jadi
+    // membatalkannya tidak boleh mengembalikan stok — itu menciptakan stok
+    // dari nol. Guard yang sama seperti di updateDeliveryStatus /
+    // deleteDeliveryOrder. restoreItems dibiarkan kosong untuk auto-sale,
+    // sehingga loop pengembalian di transaksi di bawah tidak jalan.
+    const isAutoSale = !!sale.notes?.startsWith("Auto-Invoice DO:");
+
     // Hitung pengembalian stok dalam satuan utama (FIX QA B-1).
     const restoreItems: Array<{ productId: string; qtyPrimary: number; productName: string }> = [];
-    {
+    if (!isAutoSale) {
       const productIds = Array.from(new Set(sale.saleItems.map((i) => i.productId)));
       const checkoutProducts = await loadCheckoutProducts(productIds);
       const unitNames = await loadUnitNames();
@@ -839,7 +880,8 @@ export async function cancelSale(id: string, reason: string) {
         },
       });
 
-      // Kembalikan stok (satuan utama) + catat log
+      // Kembalikan stok (satuan utama) + catat log. Untuk auto-sale
+      // restoreItems kosong (lihat guard di atas), jadi loop ini tidak jalan.
       for (const item of restoreItems) {
         await tx.product.update({
           where: { id: item.productId },
@@ -1299,9 +1341,15 @@ export async function deleteSale(id: string, passwordInput?: string) {
       };
     }
 
+    // FIX (22 Nov 2026, stok hantu): sama seperti cancelSale di atas —
+    // penjualan otomatis DO tidak pernah memotong stok, jadi menghapusnya
+    // tidak boleh mengembalikan stok. restoreItems dibiarkan kosong untuk
+    // auto-sale, sehingga loop pengembalian di transaksi tidak jalan.
+    const isAutoSale = !!sale.notes?.startsWith("Auto-Invoice DO:");
+
     // Hitung pengembalian stok dalam satuan utama (FIX QA B-1).
     const restoreItems: Array<{ productId: string; qtyPrimary: number }> = [];
-    {
+    if (!isAutoSale) {
       const productIds = Array.from(new Set(sale.saleItems.map((i) => i.productId)));
       const checkoutProducts = await loadCheckoutProducts(productIds);
       const unitNames = await loadUnitNames();
@@ -1343,7 +1391,8 @@ export async function deleteSale(id: string, passwordInput?: string) {
         },
       });
 
-      // 2. Restore stock for each item (satuan utama)
+      // 2. Restore stock for each item (satuan utama). Untuk auto-sale
+      // restoreItems kosong (lihat guard di atas), jadi loop ini tidak jalan.
       for (const item of restoreItems) {
         await tx.product.update({
           where: { id: item.productId },
@@ -1390,6 +1439,12 @@ export async function deleteSale(id: string, passwordInput?: string) {
       }
     });
 
+    // FIX (22 Nov 2026, R2): hapus penjualan = hapus juga file bukti
+    // transfernya. Sebelumnya file [BUKTI_TF] dibiarkan yatim di R2.
+    for (const proofUrl of extractTagUrls(sale.notes, "BUKTI_TF")) {
+      await deleteR2FileByUrl(proofUrl);
+    }
+
     revalidatePath("/dashboard/sales");
     revalidatePath("/dashboard/delivery-orders");
 
@@ -1420,6 +1475,10 @@ export async function updateSaleProof(saleId: string, proofUrl: string | null, c
       return { success: false, error: "Transaksi tidak ditemukan" };
     }
 
+    // FIX (22 Nov 2026, R2): ganti bukti = hapus file lama DULU. Sebelumnya
+    // tag diganti begitu saja — file lama jadi yatim di R2 selamanya.
+    const oldProofUrls = extractTagUrls(sale.notes, "BUKTI_TF");
+
     let existingNotes = sale.notes || "";
     // Hapus tag bukti lama jika ada
     existingNotes = existingNotes.replace(/\[BUKTI_TF\]:\s*[^\s\]\n]+/g, "").trim();
@@ -1428,12 +1487,28 @@ export async function updateSaleProof(saleId: string, proofUrl: string | null, c
       existingNotes = customNotes.trim();
     }
 
-    const newNotes = proofUrl ? `${existingNotes} [BUKTI_TF]: ${proofUrl}`.trim() : existingNotes;
+    let newNotes = proofUrl ? `${existingNotes} [BUKTI_TF]: ${proofUrl}`.trim() : existingNotes;
+
+    // FIX (22 Nov 2026): jangan biarkan edit catatan menghapus prefix
+    // "Auto-Invoice DO:" — prefix itu yang menandai penjualan otomatis DO
+    // (guard stok hantu & hapus DO). Kalau catatan baru tidak membawa
+    // prefix, tempel kembali prefix aslinya.
+    if (sale.notes?.startsWith("Auto-Invoice DO:") && !newNotes.startsWith("Auto-Invoice DO:")) {
+      const prefix = sale.notes.match(/^Auto-Invoice DO:\s*\S+\.\s*/)?.[0] ?? "Auto-Invoice DO: ";
+      newNotes = `${prefix}${newNotes}`.trim();
+    }
 
     const updated = await prisma.sale.update({
       where: { id: saleId },
       data: { notes: newNotes },
     });
+
+    // Hapus file bukti lama dari R2 (kecuali yang masih dipakai sebagai
+    // bukti baru), lalu konfirmasi file baru sebagai ACTIVE milik penjualan ini.
+    for (const oldUrl of oldProofUrls) {
+      if (oldUrl !== proofUrl) await deleteR2FileByUrl(oldUrl);
+    }
+    if (proofUrl) await confirmR2File(proofUrl, "PAYMENT_PROOF", saleId);
 
     revalidatePath("/dashboard/sales");
 

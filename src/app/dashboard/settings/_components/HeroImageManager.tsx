@@ -6,6 +6,7 @@ import { getLandingPageSettings, addHeroImage, deleteHeroImage, reorderHeroImage
 import { HeroImage } from "@/types/settings";
 import { Toast, useToast } from "@/components/ui/toast";
 import Image from "next/image";
+import { compressImageFile } from "@/lib/utils/image-compress";
 
 interface Props {
     landingId: string;
@@ -54,9 +55,15 @@ export default function HeroImageManager({ landingId, onUpdate }: Props) {
         setUploading(true);
 
         try {
+            // FIX (22 Nov 2026, R2): kompres seperti APK + kirim folder
+            // "heroes" (sebelumnya tanpa folder -> jatuh ke folder products
+            // dan bercampur dengan foto produk).
+            const fileToUpload = await compressImageFile(file);
+
             // Upload to R2
             const formData = new FormData();
-            formData.append("file", file);
+            formData.append("file", fileToUpload);
+            formData.append("folder", "heroes");
 
             const uploadRes = await fetch("/api/upload", {
                 method: "POST",

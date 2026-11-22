@@ -312,7 +312,13 @@ export async function createPosTransaction(data: CreateSaleInput) {
                 status: (validated.paymentMethod === PaymentMethod.CREDIT && validated.paidAmount < totals.grandTotal)
                     ? SaleStatus.PENDING
                     : SaleStatus.COMPLETED,
-                notes: "POS Transaction",
+                // FIX (22 Nov 2026): notes dari klien sebelumnya dibuang dan
+                // selalu ditimpa "POS Transaction" — tag bukti transfer
+                // [BUKTI_TF] dari POS web hilang. Pakai notes klien kalau ada.
+                notes:
+                  validated.notes && validated.notes.trim()
+                    ? validated.notes.trim()
+                    : "POS Transaction",
                 saleItems: {
                     create: prepared.lines.map((item) => ({
                         productId: item.productId,

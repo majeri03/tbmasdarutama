@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CartItem, POSCustomer } from "@/types/pos";
 import { PaymentMethod } from "@prisma/client";
 import { createPosTransaction } from "@/lib/actions/pos.actions";
 import { formatCurrency, calculateCart, calculateChange } from "@/lib/utils/pos-helpers";
-import { X, Loader2, CreditCard, Banknote, Wallet } from "lucide-react";
+import { X, Loader2, CreditCard, Banknote, Wallet, QrCode, Landmark, ImagePlus, Trash2 } from "lucide-react";
 
 interface PaymentModalProps {
     isOpen: boolean;
@@ -21,15 +21,50 @@ export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuc
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
     const [paidAmount, setPaidAmount] = useState<number>(0);
     const [isLoading, setIsLoading] = useState(false);
+    // Bukti transfer/QRIS — disimpan sebagai tag [BUKTI_TF]: <url> di notes,
+    // sama seperti APK (folder proofs_payment di R2).
+    const [proofUrl, setProofUrl] = useState<string | null>(null);
+    const [proofUploading, setProofUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const calculation = calculateCart(items, customer, discount);
     const changeAmount = calculateChange(paidAmount, calculation.grandTotal);
+    const isTransferOrQris = paymentMethod === "TRANSFER" || paymentMethod === "QRIS";
 
     // Reset paid amount when modal opens
     useEffect(() => {
         if (isOpen) {
             setPaidAmount(calculation.grandTotal);
+            setProofUrl(null);
         }
     }, [isOpen, calculation.grandTotal]);
+
+    // Transfer/QRIS selalu lunas persis — jumlah bayar = grand total.
+    useEffect(() => {
+        if (isTransferOrQris) {
+            setPaidAmount(calculation.grandTotal);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [paymentMethod]);
+
+    const handleProofUpload = async (file: File) => {
+        setProofUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("folder", "proofs_payment");
+            const res = await fetch("/api/upload", { method: "POST", body: formData });
+            const json = await res.json();
+            if (res.ok && json.url) {
+                setProofUrl(json.url);
+            } else {
+                showToast(json.error || "Gagal mengunggah bukti", "error");
+            }
+        } catch {
+            showToast("Gagal mengunggah bukti", "error");
+        } finally {
+            setProofUploading(false);
+        }
+    };
 
     if (!isOpen) return null;
 
@@ -60,6 +95,12 @@ export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuc
             return;
         }
 
+        // Transfer wajib foto bukti (seperti APK); QRIS opsional.
+        if (paymentMethod === "TRANSFER" && !proofUrl) {
+            showToast("Upload foto bukti transfer dulu", "error");
+            return;
+        }
+
         setIsLoading(true);
 
         try {
@@ -82,7 +123,8 @@ export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuc
                 paymentMethod,
                 paidAmount: paymentMethod === "CREDIT" ? 0 : paidAmount,
                 changeAmount: paymentMethod === "CREDIT" ? 0 : changeAmount,
-                notes: null,
+                // Tag bukti dipakai APK + laporan keuangan untuk menemukan foto.
+                notes: proofUrl ? `[BUKTI_TF]: ${proofUrl}` : null,
             });
             console.log("✅ Payment result:", result); 
             if (result.success && result.data) {
@@ -101,6 +143,8 @@ export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuc
 
     const paymentMethods = [
         { value: "CASH", label: "Cash", icon: Banknote, color: "from-green-500 to-green-600" },
+        { value: "TRANSFER", label: "Transfer", icon: Landmark, color: "from-teal-500 to-teal-600" },
+        { value: "QRIS", label: "QRIS", icon: QrCode, color: "from-purple-500 to-purple-600" },
         { value: "DEBIT_CARD", label: "Debit", icon: CreditCard, color: "from-blue-500 to-blue-600" },
         { value: "CREDIT", label: "Kredit", icon: Wallet, color: "from-orange-500 to-orange-600" },
     ];
@@ -167,6 +211,65 @@ export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuc
                             </div>
                         </div>
 
+                        {/* Bukti transfer / QRIS */}
+                        {isTransferOrQris && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Foto Bukti Pembayaran
+                                    {paymentMethod === "TRANSFER" ? " (wajib)" : " (opsional)"}
+                                </label>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) void handleProofUpload(file);
+                                        e.target.value = "";
+                                    }}
+                                />
+                                {proofUrl ? (
+                                    <div className="relative">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                            src={proofUrl}
+                                            alt="Bukti pembayaran"
+                                            className="w-full max-h-48 object-contain rounded-lg border border-gray-200 bg-gray-50"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setProofUrl(null)}
+                                            disabled={isLoading}
+                                            className="absolute top-2 right-2 p-2 bg-white rounded-full shadow text-red-600 hover:bg-red-50"
+                                            aria-label="Hapus bukti"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={isLoading || proofUploading}
+                                        className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-400 hover:text-blue-600 flex items-center justify-center gap-2 disabled:opacity-50"
+                                    >
+                                        {proofUploading ? (
+                                            <>
+                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                                Mengunggah...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <ImagePlus className="w-5 h-5" />
+                                                Upload Foto Bukti
+                                            </>
+                                        )}
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
                         {/* Paid Amount (only for CASH/DEBIT) */}
                         {paymentMethod !== "CREDIT" && (
                             <>
@@ -180,8 +283,8 @@ export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuc
                                             type="number"
                                             value={paidAmount}
                                             onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
-                                            disabled={isLoading}
-                                            className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-lg text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            disabled={isLoading || isTransferOrQris}
+                                            className="w-full pl-10 pr-3 py-3 border border-gray-200 rounded-lg text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                                         />
                                     </div>
                                     {/* Quick Amount Buttons */}

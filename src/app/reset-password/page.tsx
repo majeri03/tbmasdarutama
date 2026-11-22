@@ -33,8 +33,8 @@ function ResetPasswordForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (formData.newPassword.length < 6) {
-      showToast("Password minimal 6 karakter", "error");
+    if (formData.newPassword.length < 8) {
+      showToast("Password minimal 8 karakter", "error");
       return;
     }
 

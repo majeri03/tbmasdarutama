@@ -96,7 +96,8 @@ NEXTAUTH_SECRET="sesuaikan"
 NODE_ENV="sesuaikan"
 #  Cloudflare R2 Configuration
 CLOUDFLARE_WORKER_URL="sesuaikan"
-NODE_TLS_REJECT_UNAUTHORIZED=0
+# JANGAN tambahkan NODE_TLS_REJECT_UNAUTHORIZED=0 — itu mematikan verifikasi
+# sertifikat TLS untuk semua HTTPS dari proses Node ini (SMTP, DB, API).
 
 # ==================== EMAIL CONFIGURATION ====================
 EMAIL_HOST=smtp.gmail.com

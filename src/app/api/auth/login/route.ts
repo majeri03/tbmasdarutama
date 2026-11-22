@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
         role: true,
         password: true,
         isActive: true,
+        tokenVersion: true,
       },
     });
 
@@ -110,12 +111,15 @@ export async function POST(request: NextRequest) {
     // Login berhasil: bersihkan hitungan gagal untuk kunci ini.
     failedLogins.delete(rateKey);
 
-    // 5. Generate mobile token yang terverifikasi
+    // 5. Generate mobile token yang terverifikasi.
+    // FIX (22 Nov 2026): sertakan tv = tokenVersion saat ini, supaya token
+    // ini mati begitu tokenVersion dinaikkan (ganti password / logout / dll).
     const sessionToken = await signMobileToken({
       id: user.id,
       email: user.email,
       name: user.name,
       role: user.role,
+      tv: user.tokenVersion,
     });
 
     const cookieName = "authjs.session-token";

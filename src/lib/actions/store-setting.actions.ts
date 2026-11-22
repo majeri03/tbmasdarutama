@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { storeSettingSchema } from "@/lib/validations/store-setting.schema";
 import { revalidatePath } from "next/cache";
 import { requirePermission } from "../utils/role";
+import { confirmR2File, deleteR2FileByUrl } from "@/lib/utils/r2-tracking";
 
 export async function getStoreSetting() {
   try {
@@ -29,6 +30,8 @@ export async function updateStoreSetting(formData: unknown) {
     const validated = storeSettingSchema.parse(formData);
 
     const existing = await prisma.storeSetting.findFirst();
+    // FIX (22 Nov 2026, R2): catat logo lama SEBELUM ditimpa.
+    const oldLogoUrl = existing?.logoUrl ?? null;
 
     let result;
 
@@ -74,6 +77,16 @@ export async function updateStoreSetting(formData: unknown) {
       result = await prisma.storeSetting.create({
         data: createData as { [key: string]: string | boolean },
       });
+    }
+
+    // FIX (22 Nov 2026, R2): logo diganti -> hapus file lama dari R2;
+    // logo baru dikonfirmasi ACTIVE milik pengaturan toko ini.
+    const newLogoUrl = (result as { logoUrl?: string | null }).logoUrl ?? null;
+    if (oldLogoUrl && oldLogoUrl !== newLogoUrl) {
+      await deleteR2FileByUrl(oldLogoUrl);
+    }
+    if (newLogoUrl) {
+      await confirmR2File(newLogoUrl, "LOGO", (result as { id: string }).id);
     }
 
     revalidatePath("/dashboard/settings");

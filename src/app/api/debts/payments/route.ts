@@ -64,14 +64,28 @@ export async function POST(request: NextRequest) {
       return errorResponse(result.error || "Gagal mencatat pembayaran.", 400);
     }
 
-    // Kirim notifikasi saat cicilan/pelunasan berhasil (customer)
-    if (type === "customer" && result.data) {
-      const data = result.data as { customerName?: string; customerId?: string; amount?: number };
-      if (data.customerName) {
-        const { NotificationService } = await import("@/lib/services/notification.service");
+    // Kirim notifikasi saat cicilan/pelunasan berhasil.
+    // FIX (22 Nov 2026): (1) notifikasi customer sebelumnya TIDAK PERNAH
+    // terkirim — route membaca data.customerName, padahal action
+    // mengembalikan data.customer.name (objek relasi). (2) Pembayaran
+    // utang supplier sekarang juga ternotifikasi.
+    if (result.data) {
+      const data = result.data as {
+        customer?: { name?: string };
+        supplier?: { name?: string };
+      };
+      const { NotificationService } = await import("@/lib/services/notification.service");
+      if (type === "customer" && data.customer?.name) {
         NotificationService.onPaymentReceived(
-          data.customerName,
-          paymentData.amount
+          data.customer.name,
+          paymentData.amount,
+          "customer"
+        ).catch(console.error);
+      } else if (type === "supplier" && data.supplier?.name) {
+        NotificationService.onPaymentReceived(
+          data.supplier.name,
+          paymentData.amount,
+          "supplier"
         ).catch(console.error);
       }
     }

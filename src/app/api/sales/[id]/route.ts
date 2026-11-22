@@ -40,13 +40,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
 /**
  * PUT /api/sales/[id]
  * Edit transaksi penjualan. Memerlukan validasi biometrik dari sisi client.
- * Role: KASIR+ (CREATE_SALE)
+ * Role: ADMIN+ (EDIT_SALE).
+ * FIX (22 Nov 2026): sebelumnya memakai CREATE_SALE, jadi KASIR mana pun
+ * bisa mengedit transaksi penjualan apa pun. Server tidak boleh percaya
+ * "biometrik" dari klien — yang dicek di sini adalah izin EDIT_SALE.
  */
 export async function PUT(request: NextRequest, context: RouteContext) {
   try {
     const session = await getAuthenticatedUser();
     if (!session) return unauthorizedResponse();
-    if (!hasPermission(session, "CREATE_SALE")) return forbiddenResponse();
+    if (!hasPermission(session, "EDIT_SALE")) return forbiddenResponse();
 
     const { id } = await context.params;
     const body = await request.json();

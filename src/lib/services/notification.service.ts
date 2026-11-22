@@ -150,18 +150,27 @@ export class NotificationService {
   // (src/app/api/wa-orders dihapus — pemilik tidak memakai order WA / bot).
   // Satu-satunya pemanggil method ini adalah route WA yang sudah dihapus.
 
-  static async onDeliveryUpdate(doId: string, doNumber: string, status: string, driverUserId?: string) {
+  static async onDeliveryUpdate(doId: string, doNumber: string, status: string) {
     const statusLabel: Record<string, string> = {
       IN_TRANSIT: '🚛 Barang Sedang Diantar',
       DELIVERED: '✅ Pengiriman Selesai / Terkirim',
       PENDING: '📦 Surat Jalan Baru Siap Muat',
+      // FIX (22 Nov 2026): label CANCELLED — sebelumnya pembatalan DO jatuh
+      // ke judul generik 'Update Pengiriman'.
+      CANCELLED: '❌ Pengiriman Dibatalkan',
     };
     const title = statusLabel[status] ?? 'Update Pengiriman';
+    const body = `Surat Jalan #${doNumber} status: ${status}`;
+
+    // FIX (22 Nov 2026): dedup backend 5 menit (DO + status yang sama),
+    // seperti onNewOrder. Sebelumnya kalau dipanggil 2x, backend menulis
+    // 2 baris DB + 2 push dan hanya mengandalkan dedup di APK.
+    if (await this.alreadyNotifiedRecently('DELIVERY_UPDATE', title, body, 5 / 60)) return;
 
     await this.send({
       role: 'ADMIN',
       title,
-      body: `Surat Jalan #${doNumber} status: ${status}`,
+      body,
       type: 'DELIVERY_UPDATE',
       screen: 'Delivery',
       // doNumber dibaca DeliveryScreen untuk auto-filter saat diketuk.
@@ -170,30 +179,36 @@ export class NotificationService {
       dedupKey: `do-${doId}-${status}`,
     });
 
-    if (driverUserId) {
-      await this.send({
-        userId: driverUserId,
-        title,
-        body: `Tugas #${doNumber}: status diperbarui menjadi ${status}`,
-        type: 'DELIVERY_UPDATE',
-        screen: 'Delivery',
-        params: { doId, doNumber },
-        channelId: 'masdar_channel_v3',
-        dedupKey: `do-${doId}-${status}-driver`,
-      });
-    }
+    // NOTE (22 Nov 2026): cabang kirim ke sopir (parameter driverUserId)
+    // DIHAPUS — tidak ada kaitan sopir↔akun di model data (DeliveryOrder
+    // .driver dan FleetVehicle.driverName hanya nama bebas), dan kedua
+    // pemanggil memang selalu mengoper undefined, jadi cabang itu mati.
+    // Kalau nanti ada akun sopir yang terikat ke DO, hidupkan lagi dengan
+    // userId sopir yang benar.
   }
 
-  static async onPaymentReceived(customerName: string, amount: number) {
+  static async onPaymentReceived(
+    name: string,
+    amount: number,
+    // FIX (22 Nov 2026): pembayaran utang SUPPLIER sebelumnya tidak pernah
+    // ternotifikasi. Parameter kind membedakan piutang customer vs utang
+    // supplier; default 'customer' supaya pemanggil lama tidak berubah.
+    kind: 'customer' | 'supplier' = 'customer',
+  ) {
+    const isSupplier = kind === 'supplier';
     await this.send({
       role: 'ADMIN',
-      title: '💰 Pembayaran Piutang Masuk',
-      body: `${customerName} membayar cicilan/pelunasan Rp ${amount.toLocaleString('id-ID')}`,
+      title: isSupplier ? '💰 Pembayaran Utang Supplier' : '💰 Pembayaran Piutang Masuk',
+      body: isSupplier
+        ? `Utang ke ${name} dibayar Rp ${amount.toLocaleString('id-ID')}`
+        : `${name} membayar cicilan/pelunasan Rp ${amount.toLocaleString('id-ID')}`,
       type: 'PAYMENT_RECEIVED',
       screen: 'Debt',
-      // customerName dibaca DebtScreen untuk auto-filter saat diketuk.
-      params: { customerName },
+      // Nama dibaca DebtScreen untuk auto-filter saat diketuk.
+      params: isSupplier ? { supplierName: name } : { customerName: name },
       channelId: 'masdar_channel_v3',
+      // Sengaja tanpa dedupKey: dua pembayaran sah yang sama (nama +
+      // jumlah sama) dalam waktu berdekatan harus tetap terkirim dua-duanya.
     });
   }
 
@@ -271,30 +286,52 @@ export class NotificationService {
    * Dipakai cron harian — dedup 24 jam ada di onDebtOverdue / onLowStock.
    */
   static async checkOverdueAndLowStock(): Promise<{ debtSent: number; stockSent: number }> {
+    // FIX (22 Nov 2026): proses per halaman sampai habis, bukan cap 50
+    // hutang / 200 produk. Hutang ke-51+ sebelumnya tidak pernah
+    // ternotifikasi pada run itu. Dedup 24 jam di onDebtOverdue /
+    // onLowStock tetap membatasi spam.
     let debtSent = 0;
-    const overdue = await prisma.customerDebt.findMany({
-      where: {
-        dueDate: { lt: new Date() },
-        remainingDebt: { gt: 0 },
-        status: { in: [DebtStatus.UNPAID, DebtStatus.PARTIAL, DebtStatus.OVERDUE] },
-      },
-      include: { customer: { select: { name: true } } },
-      take: 50,
-    });
-    for (const d of overdue) {
-      if (await this.onDebtOverdue(d.customer?.name ?? 'Pelanggan', Number(d.remainingDebt))) debtSent++;
+    const DEBT_PAGE = 50;
+    let debtSkip = 0;
+    for (;;) {
+      const page = await prisma.customerDebt.findMany({
+        where: {
+          dueDate: { lt: new Date() },
+          remainingDebt: { gt: 0 },
+          status: { in: [DebtStatus.UNPAID, DebtStatus.PARTIAL, DebtStatus.OVERDUE] },
+        },
+        include: { customer: { select: { name: true } } },
+        orderBy: { dueDate: 'asc' },
+        take: DEBT_PAGE,
+        skip: debtSkip,
+      });
+      if (page.length === 0) break;
+      for (const d of page) {
+        if (await this.onDebtOverdue(d.customer?.name ?? 'Pelanggan', Number(d.remainingDebt))) debtSent++;
+      }
+      debtSkip += page.length;
+      if (page.length < DEBT_PAGE) break;
     }
 
     let stockSent = 0;
-    const products = await prisma.product.findMany({
-      where: { isActive: true },
-      select: { name: true, currentStock: true, minStock: true },
-      take: 200,
-    });
-    for (const p of products) {
-      if (p.minStock > 0 && p.currentStock <= p.minStock) {
-        if (await this.onLowStock(p.name, p.currentStock, p.minStock)) stockSent++;
+    const STOCK_PAGE = 200;
+    let stockSkip = 0;
+    for (;;) {
+      const page = await prisma.product.findMany({
+        where: { isActive: true },
+        select: { name: true, currentStock: true, minStock: true },
+        orderBy: { name: 'asc' },
+        take: STOCK_PAGE,
+        skip: stockSkip,
+      });
+      if (page.length === 0) break;
+      for (const p of page) {
+        if (p.minStock > 0 && p.currentStock <= p.minStock) {
+          if (await this.onLowStock(p.name, p.currentStock, p.minStock)) stockSent++;
+        }
       }
+      stockSkip += page.length;
+      if (page.length < STOCK_PAGE) break;
     }
     return { debtSent, stockSent };
   }

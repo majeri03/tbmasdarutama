@@ -39,7 +39,11 @@ export function DeliveryOrderClient() {
     const [selectedOrder, setSelectedOrder] = useState<DeliveryOrderData | null>(null);
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
     const { toast, showToast, hideToast } = useToast();
+    // Prefill pencarian dari URL (?search=DO-...) — dipakai saat ketuk
+    // notifikasi pengiriman (pusat notifikasi mengarah ke sini dengan nomor DO).
     useEffect(() => {
+        const q = new URLSearchParams(window.location.search).get("search");
+        if (q) setSearchQuery(q);
         loadData();
     }, []);
 

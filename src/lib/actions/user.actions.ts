@@ -103,6 +103,14 @@ export async function updateUser(id: string, data: UserFormValues) {
     if (existing)
       return { success: false, error: "Email sudah digunakan user lain" };
 
+    // Ambil kondisi akun saat ini — dipakai untuk memutuskan apakah semua
+    // token mobile user ini harus dicabut (lihat bawah).
+    const current = await prisma.user.findUnique({
+      where: { id },
+      select: { isActive: true, role: true },
+    });
+    if (!current) return { success: false, error: "User tidak ditemukan" };
+
     const updateData: Prisma.UserUpdateInput = {
       name: data.name,
       email: data.email,
@@ -113,10 +121,23 @@ export async function updateUser(id: string, data: UserFormValues) {
     };
 
     // Hanya update password jika input tidak kosong
+    let passwordChanged = false;
     if (data.password && data.password.trim() !== "") {
       if (data.password.length < 6)
         return { success: false, error: "Password minimal 6 karakter" };
       updateData.password = await bcrypt.hash(data.password, 10);
+      passwordChanged = true;
+    }
+
+    // FIX (22 Nov 2026): kalau akun dinonaktifkan, role diubah, atau
+    // password diganti admin — cabut semua token mobile user ini dengan
+    // menaikkan tokenVersion. Token lama langsung ditolak verifyMobileToken.
+    const revokeSessions =
+      (current.isActive && !data.isActive) ||
+      current.role !== (data.role as Role) ||
+      passwordChanged;
+    if (revokeSessions) {
+      updateData.tokenVersion = { increment: 1 };
     }
 
     await prisma.user.update({

@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { landingPageSchema } from "@/lib/validations/landing-page.schema";
 import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/lib/utils/role";
+import { confirmR2File, deleteR2FileByUrl } from "@/lib/utils/r2-tracking";
 export async function getLandingPageSettings() {
   const session = await auth();
 requirePermission(session, "VIEW_SETTINGS");
@@ -105,6 +106,9 @@ export async function addHeroImage(imageUrl: string) {
       },
     });
 
+    // FIX (22 Nov 2026, R2): gambar hero baru dikonfirmasi ACTIVE.
+    await confirmR2File(imageUrl, "HERO", heroImage.id);
+
     revalidatePath("/dashboard/settings");
     revalidatePath("/");
 
@@ -126,9 +130,16 @@ export async function deleteHeroImage(id: string) {
       return { success: false, error: "Unauthorized" };
     }
     requirePermission(session, "MANAGE_LANDING_PAGE");
+    // FIX (22 Nov 2026, R2): hapus hero = hapus juga file R2-nya.
+    // Sebelumnya hanya baris DB yang dihapus — file jadi yatim.
+    const hero = await prisma.heroImage.findUnique({
+      where: { id },
+      select: { imageUrl: true },
+    });
     await prisma.heroImage.delete({
       where: { id },
     });
+    if (hero?.imageUrl) await deleteR2FileByUrl(hero.imageUrl);
 
     revalidatePath("/dashboard/settings");
     revalidatePath("/");

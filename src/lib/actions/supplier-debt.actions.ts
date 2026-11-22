@@ -17,6 +17,9 @@ export async function getAllSupplierDebts(filters?: {
   status?: DebtStatus;
   dateFrom?: Date;
   dateTo?: Date;
+  // FIX (22 Nov 2026): paginasi — sebelumnya seluruh tabel dikembalikan.
+  page?: number;
+  limit?: number;
 }, externalSession?: AuthSession | null) {
   const session = externalSession || (await auth());
   requirePermission(session, "VIEW_SUPPLIER_DEBTS");
@@ -51,7 +54,14 @@ export async function getAllSupplierDebts(filters?: {
       if (filters.dateTo) where.createdAt.lte = filters.dateTo;
     }
 
-    const debts = await prisma.supplierDebt.findMany({
+    // Default 50 baris terbaru (dashboard web tidak punya pager UI);
+    // API bisa minta page/limit eksplisit. Maksimal 100 per halaman.
+    const page = Math.max(1, Math.floor(filters?.page ?? 1) || 1);
+    const limit = Math.min(100, Math.max(1, Math.floor(filters?.limit ?? 50) || 50));
+    const skip = (page - 1) * limit;
+
+    const [debts, total] = await Promise.all([
+      prisma.supplierDebt.findMany({
       where,
       include: {
         supplier: {
@@ -74,7 +84,11 @@ export async function getAllSupplierDebts(filters?: {
       orderBy: {
         createdAt: "desc",
       },
-    });
+      take: limit,
+      skip,
+    }),
+      prisma.supplierDebt.count({ where }),
+    ]);
 
     // Get payment counts separately
     const debtsWithPayments = await Promise.all(
@@ -120,7 +134,16 @@ export async function getAllSupplierDebts(filters?: {
       })),
     }));
 
-    return { success: true, data: serializedDebts };
+    return {
+      success: true,
+      data: serializedDebts,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   } catch (error) {
     console.error("Error fetching supplier debts:", error);
     return { success: false, error: "Failed to fetch supplier debts" };

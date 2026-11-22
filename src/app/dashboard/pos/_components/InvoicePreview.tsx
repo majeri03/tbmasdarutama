@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Printer, Download, Loader2 } from "lucide-react";
+import { X, Printer, Download, Loader2, Bluetooth } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { getSaleById } from "@/lib/actions/sale.actions";
 import { getStoreSetting } from "@/lib/actions/store-setting.actions";
@@ -11,6 +11,11 @@ import {
   InvoiceData, 
   StoreSetting 
 } from "@/lib/utils/invoice-printer";
+import {
+  isWebBluetoothSupported,
+  printThermalReceipt,
+} from "@/lib/utils/bluetooth-printer";
+import { ShareInvoiceWhatsApp } from "@/app/dashboard/sales/_components/ShareInvoiceWhatsApp";
 
 // Import library untuk Direct Download PDF
 import jsPDF from "jspdf";
@@ -26,6 +31,7 @@ interface InvoicePreviewProps {
 export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: InvoicePreviewProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [isProcessingPdf, setIsProcessingPdf] = useState(false);
+    const [isPrintingThermal, setIsPrintingThermal] = useState(false);
     const [htmlContent, setHtmlContent] = useState<string>("");
     
     // State data menggunakan tipe dari utils
@@ -95,6 +101,31 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
     const handlePrint = () => {
         if (saleData) {
             printInvoice(saleData, storeSetting || {} as StoreSetting, { layoutType: activeLayout });
+        }
+    };
+
+    // Cetak struk ke printer thermal via Web Bluetooth (Chrome/Edge).
+    const handleThermalPrint = async () => {
+        if (!saleData) return;
+        if (!isWebBluetoothSupported()) {
+            showToast("Browser ini tidak mendukung Web Bluetooth. Pakai Chrome/Edge terbaru.", "error");
+            return;
+        }
+        setIsPrintingThermal(true);
+        try {
+            await printThermalReceipt(saleData, storeSetting);
+            showToast("Struk dikirim ke printer thermal", "success");
+        } catch (err) {
+            const message =
+                err instanceof Error ? err.message : "Gagal mencetak ke printer thermal";
+            // Batal pilih perangkat (NotFoundError) bukan error — diam saja.
+            if (err instanceof DOMException && err.name === "NotFoundError") {
+                // pengguna menutup pemilih perangkat
+            } else {
+                showToast(message, "error");
+            }
+        } finally {
+            setIsPrintingThermal(false);
         }
     };
 
@@ -231,7 +262,32 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                 </div>
 
                 {/* Actions */}
-                <div className="p-4 border-t border-gray-200 flex gap-2 bg-white">
+                <div className="p-4 border-t border-gray-200 flex flex-wrap gap-2 bg-white">
+                    <button
+                        onClick={handleThermalPrint}
+                        disabled={isPrintingThermal || isLoading || !saleData}
+                        className="flex-1 px-4 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Cetak struk ke printer thermal Bluetooth (Chrome/Edge)"
+                    >
+                        {isPrintingThermal ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <span>Mengirim...</span>
+                            </>
+                        ) : (
+                            <>
+                                <Bluetooth className="w-4 h-4" />
+                                <span>Thermal (Bluetooth)</span>
+                            </>
+                        )}
+                    </button>
+                    {saleData && (
+                        <ShareInvoiceWhatsApp
+                            saleId={saleId}
+                            label="WhatsApp"
+                            className="flex-1 px-4 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 text-green-700"
+                        />
+                    )}
                     <button
                         onClick={handleDownload}
                         disabled={isProcessingPdf || isLoading || !saleData}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/utils/api";
 import prisma from "@/lib/prisma";
 import { deleteFromR2, extractR2Filename } from "@/lib/utils/storage";
+import { markR2FilesDeletedByKeys } from "@/lib/utils/r2-tracking";
 
 // Alias helper for consistency
 const extractFilenameFromUrl = extractR2Filename;
@@ -38,17 +39,32 @@ export async function GET() {
       orderBy: { name: "asc" },
     });
 
+    // FIX (22 Nov 2026, R2): ukuran ASLI dari tabel R2File, bukan tebakan
+    // jumlah x 45KB. R2File diisi oleh upload baru + backfill untuk file lama.
+    const r2ProductFiles = await prisma.r2File.findMany({
+      where: { ownerType: "PRODUCT", status: "ACTIVE" },
+      select: { ownerId: true, sizeBytes: true },
+    });
+    const productSizeById = new Map<string, number>();
+    for (const f of r2ProductFiles) {
+      if (!f.ownerId) continue;
+      productSizeById.set(f.ownerId, (productSizeById.get(f.ownerId) ?? 0) + f.sizeBytes);
+    }
+
     const categoryStats = categories.map((cat: any) => {
       let imageCount = 0;
+      let sizeBytes = 0;
       cat.products.forEach((p: any) => {
         imageCount += p.productImages.length;
+        sizeBytes += productSizeById.get(p.id) ?? 0;
       });
       return {
         id: cat.id,
         name: cat.name,
         productCount: cat.products.length,
         imageCount,
-        estimatedSizeKB: imageCount * 45, // Rata-rata ~45KB setelah optimasi
+        estimatedSizeKB: Math.round(sizeBytes / 1024),
+        realSizeBytes: sizeBytes,
       };
     });
 
@@ -126,9 +142,39 @@ export async function GET() {
     // 5. Hero / Banner Images
     const heroImageCount = await prisma.heroImage.count();
 
+    // 5b. Tag [FOTO_LOKASI] di notes DO — sebelumnya TIDAK PERNAH dihitung.
+    const fotoLokasiCount = await prisma.deliveryOrder.count({
+      where: { notes: { contains: "[FOTO_LOKASI]" } },
+    });
+
+    // 5c. FIX (22 Nov 2026, R2): total ukuran ASLI dari tabel R2File.
+    // File yang belum ter-backfill menyumbang 0 di sini — jalankan backfill
+    // dulu supaya angkanya lengkap (lihat halaman Penyimpanan).
+    const r2Agg = await prisma.r2File.aggregate({
+      _sum: { sizeBytes: true },
+      where: { status: "ACTIVE" },
+    });
+    const r2ByFolder = await prisma.r2File.groupBy({
+      by: ["folder"],
+      _sum: { sizeBytes: true },
+      _count: { _all: true },
+      where: { status: "ACTIVE" },
+    });
+    const orphanAgg = await prisma.r2File.aggregate({
+      _sum: { sizeBytes: true },
+      _count: { _all: true },
+      where: { status: { in: ["ORPHANED", "DELETE_FAILED"] } },
+    });
+    const pendingAgg = await prisma.r2File.aggregate({
+      _sum: { sizeBytes: true },
+      _count: { _all: true },
+      where: { status: "PENDING" },
+    });
+
     const totalDetectedImages =
       totalProductImages + deliveryProofTotal + paymentProofTotal + heroImageCount;
-    const estimatedTotalKB = totalDetectedImages * 50;
+    const realTotalBytes = r2Agg._sum.sizeBytes ?? 0;
+    const estimatedTotalKB = Math.round(realTotalBytes / 1024);
     const estimatedTotalMB = Number((estimatedTotalKB / 1024).toFixed(2));
     const r2QuotaGB = 10;
     const r2QuotaMB = 10 * 1024;
@@ -151,12 +197,30 @@ export async function GET() {
             total: deliveryProofTotal,
             olderThan30Days: deliveryProofOlder30Days,
             olderThan60Days: deliveryProofOlder60Days,
+            fotoLokasi: fotoLokasiCount,
           },
           paymentProofs: {
             total: paymentProofTotal,
             olderThan30Days: paymentProofOlder30Days,
           },
           heroImages: heroImageCount,
+        },
+        // FIX (22 Nov 2026, R2): angka jujur dari tabel pelacakan.
+        r2Files: {
+          realUsedBytes: realTotalBytes,
+          byFolder: r2ByFolder.map((f: any) => ({
+            folder: f.folder,
+            count: f._count._all,
+            sizeKB: Math.round((f._sum.sizeBytes ?? 0) / 1024),
+          })),
+          orphans: {
+            count: orphanAgg._count._all,
+            sizeMB: Number((((orphanAgg._sum.sizeBytes ?? 0) / 1024 / 1024)).toFixed(2)),
+          },
+          pending: {
+            count: pendingAgg._count._all,
+            sizeMB: Number((((pendingAgg._sum.sizeBytes ?? 0) / 1024 / 1024)).toFixed(2)),
+          },
         },
       },
     });
@@ -209,20 +273,26 @@ export async function POST(request: NextRequest) {
         select: { id: true, imageUrl: true },
       });
 
+      // FIX (22 Nov 2026, R2): deletedCount hanya naik kalau hapus R2
+      // benar-benar berhasil; baris pelacakan ikut ditandai DELETED.
       for (const img of images) {
         const filename = extractFilenameFromUrl(img.imageUrl);
-        if (filename) await deleteFromWorker(filename);
+        if (filename) {
+          const ok = await deleteFromWorker(filename);
+          if (ok) {
+            deletedCount++;
+            await markR2FilesDeletedByKeys([filename]);
+          }
+        }
       }
 
-      const res = await prisma.productImage.deleteMany({
+      await prisma.productImage.deleteMany({
         where: {
           product: {
             categoryId: categoryId,
           },
         },
       });
-
-      deletedCount = res.count;
 
       return NextResponse.json({
         success: true,
@@ -239,11 +309,16 @@ export async function POST(request: NextRequest) {
 
       for (const img of images) {
         const filename = extractFilenameFromUrl(img.imageUrl);
-        if (filename) await deleteFromWorker(filename);
+        if (filename) {
+          const ok = await deleteFromWorker(filename);
+          if (ok) {
+            deletedCount++;
+            await markR2FilesDeletedByKeys([filename]);
+          }
+        }
       }
 
-      const res = await prisma.productImage.deleteMany();
-      deletedCount = res.count;
+      await prisma.productImage.deleteMany();
 
       return NextResponse.json({
         success: true,
@@ -267,10 +342,17 @@ export async function POST(request: NextRequest) {
         select: { id: true, filename: true, url: true },
       });
 
+      // FIX (22 Nov 2026, R2): deletedCount hanya naik kalau hapus R2
+      // benar-benar berhasil (sebelumnya naik walau gagal / filename null).
       for (const p of photos) {
         const fileToDelete = p.filename || extractFilenameFromUrl(p.url);
-        if (fileToDelete) await deleteFromWorker(fileToDelete);
-        deletedCount++;
+        if (fileToDelete) {
+          const ok = await deleteFromWorker(fileToDelete);
+          if (ok) {
+            deletedCount++;
+            await markR2FilesDeletedByKeys([fileToDelete]);
+          }
+        }
       }
 
       await prisma.deliveryPhoto.deleteMany({
@@ -289,8 +371,13 @@ export async function POST(request: NextRequest) {
       for (const d of dosWithProof) {
         if (d.proofImage) {
           const fn = extractFilenameFromUrl(d.proofImage);
-          if (fn) await deleteFromWorker(fn);
-          deletedCount++;
+          if (fn) {
+            const ok = await deleteFromWorker(fn);
+            if (ok) {
+              deletedCount++;
+              await markR2FilesDeletedByKeys([fn]);
+            }
+          }
         }
       }
 
@@ -299,11 +386,14 @@ export async function POST(request: NextRequest) {
         data: { proofImage: null },
       });
 
-      // 3. Bersihkan legacy tag [BUKTI_KIRIM] dari notes
+      // 3. Bersihkan legacy tag [BUKTI_KIRIM] DAN [FOTO_LOKASI] dari notes.
+      // FIX (22 Nov 2026, R2): hapus SEMUA tag dalam satu note (dulu hanya
+      // match pertama), dan [FOTO_LOKASI] yang dulu tidak pernah dibersihkan.
       const notesWhere: any = {
-        notes: {
-          contains: "[BUKTI_KIRIM]",
-        },
+        OR: [
+          { notes: { contains: "[BUKTI_KIRIM]" } },
+          { notes: { contains: "[FOTO_LOKASI]" } },
+        ],
       };
       if (cutoffDate) notesWhere.createdAt = { lt: cutoffDate };
 
@@ -314,15 +404,26 @@ export async function POST(request: NextRequest) {
 
       for (const item of dosWithNotes) {
         if (!item.notes) continue;
-        const match = item.notes.match(/\[BUKTI_KIRIM\]:\s*([^\s\]\n]+)/);
-        if (match && match[1]) {
-          const filename = extractFilenameFromUrl(match[1]);
-          if (filename) await deleteFromWorker(filename);
-          deletedCount++;
+        for (const tag of ["BUKTI_KIRIM", "FOTO_LOKASI"]) {
+          const re = new RegExp(`\\[${tag}\\]:\\s*([^\\s\\]\\n]+)`, "g");
+          let m: RegExpExecArray | null;
+          while ((m = re.exec(item.notes)) !== null) {
+            if (m[1]) {
+              const filename = extractFilenameFromUrl(m[1]);
+              if (filename) {
+                const ok = await deleteFromWorker(filename);
+                if (ok) {
+                  deletedCount++;
+                  await markR2FilesDeletedByKeys([filename]);
+                }
+              }
+            }
+          }
         }
 
         const cleanedNotes = item.notes
           .replace(/\[BUKTI_KIRIM\]:\s*[^\s\]\n]+/g, "")
+          .replace(/\[FOTO_LOKASI\]:\s*[^\s\]\n]+/g, "")
           .trim();
 
         await prisma.deliveryOrder.update({
@@ -357,13 +458,23 @@ export async function POST(request: NextRequest) {
         select: { id: true, notes: true },
       });
 
+      // FIX (22 Nov 2026, R2): hapus SEMUA tag dalam satu note (dulu hanya
+      // match pertama) dan hitung hanya kalau hapus R2 benar-benar berhasil.
       for (const sale of sales) {
         if (!sale.notes) continue;
-        const match = sale.notes.match(/\[BUKTI_TF\]:\s*([^\s\]\n]+)/);
-        if (match && match[1]) {
-          const filename = extractFilenameFromUrl(match[1]);
-          if (filename) await deleteFromWorker(filename);
-          deletedCount++;
+        const re = /\[BUKTI_TF\]:\s*([^\s\]\n]+)/g;
+        let m: RegExpExecArray | null;
+        while ((m = re.exec(sale.notes)) !== null) {
+          if (m[1]) {
+            const filename = extractFilenameFromUrl(m[1]);
+            if (filename) {
+              const ok = await deleteFromWorker(filename);
+              if (ok) {
+                deletedCount++;
+                await markR2FilesDeletedByKeys([filename]);
+              }
+            }
+          }
         }
 
         const cleanedNotes = sale.notes
@@ -391,11 +502,19 @@ export async function POST(request: NextRequest) {
 
       for (const p of payments) {
         if (!p.notes) continue;
-        const match = p.notes.match(/\[BUKTI_TF\]:\s*([^\s\]\n]+)/);
-        if (match && match[1]) {
-          const filename = extractFilenameFromUrl(match[1]);
-          if (filename) await deleteFromWorker(filename);
-          deletedCount++;
+        const re = /\[BUKTI_TF\]:\s*([^\s\]\n]+)/g;
+        let m: RegExpExecArray | null;
+        while ((m = re.exec(p.notes)) !== null) {
+          if (m[1]) {
+            const filename = extractFilenameFromUrl(m[1]);
+            if (filename) {
+              const ok = await deleteFromWorker(filename);
+              if (ok) {
+                deletedCount++;
+                await markR2FilesDeletedByKeys([filename]);
+              }
+            }
+          }
         }
 
         const cleanedNotes = p.notes
@@ -412,6 +531,42 @@ export async function POST(request: NextRequest) {
         success: true,
         deletedCount,
         message: `Berhasil membersihkan ${deletedCount} foto bukti transfer dari Cloudflare R2.`,
+      });
+    }
+
+    // TARGET 5: Hapus Gambar Hero / Banner
+    // FIX (22 Nov 2026, R2): cabang ini dideklarasikan di tipe APK
+    // (storage.service.ts) tapi TIDAK ADA di backend — ditekan selalu 400.
+    if (target === "HERO_IMAGES") {
+      const cutoffDate = olderThanDays
+        ? new Date(Date.now() - Number(olderThanDays) * 24 * 60 * 60 * 1000)
+        : null;
+
+      const heroWhere: any = {};
+      if (cutoffDate) heroWhere.createdAt = { lt: cutoffDate };
+
+      const heroes = await prisma.heroImage.findMany({
+        where: heroWhere,
+        select: { id: true, imageUrl: true },
+      });
+
+      for (const h of heroes) {
+        const filename = extractFilenameFromUrl(h.imageUrl);
+        if (filename) {
+          const ok = await deleteFromWorker(filename);
+          if (ok) {
+            deletedCount++;
+            await markR2FilesDeletedByKeys([filename]);
+          }
+        }
+      }
+
+      await prisma.heroImage.deleteMany({ where: heroWhere });
+
+      return NextResponse.json({
+        success: true,
+        deletedCount,
+        message: `Berhasil menghapus ${deletedCount} gambar hero dari Cloudflare R2 & database.`,
       });
     }
 
