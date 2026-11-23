@@ -7,6 +7,12 @@ const envSchema = z.object({
   // FIX (22 Nov 2026): secret cron untuk endpoint /api/notifications/
   // check-overdue — sebelumnya tidak divalidasi di schema sama sekali.
   NOTIFICATION_CRON_SECRET: z.string().min(8, "NOTIFICATION_CRON_SECRET minimal harus 8 karakter").optional(),
+  // PKG-H (23 Nov 2026, cron Vercel): CRON_SECRET dibuat OTOMATIS oleh
+  // Vercel saat cron terpasang (vercel.json) — tidak perlu diisi manual.
+  // Endpoint check-overdue menerimanya lewat header
+  // `Authorization: Bearer <CRON_SECRET>` karena Vercel Cron tidak bisa
+  // mengirim header kustom.
+  CRON_SECRET: z.string().min(8, "CRON_SECRET minimal harus 8 karakter").optional(),
   NEXT_PUBLIC_APP_URL: z.string().url("NEXT_PUBLIC_APP_URL harus berupa URL valid").optional(),
   // SECURITY FIX (Nov 2026, M6): kunci bot sebelumnya tidak divalidasi sama
   // sekali, jadi ketiadaannya diam-diam mematikan auth (fail-open). Kunci
@@ -47,6 +53,7 @@ const getParsedEnv = () => {
     // manual di Vercel dengan yang panjang & acak.)
     MOBILE_JWT_SECRET: process.env.MOBILE_JWT_SECRET,
     NOTIFICATION_CRON_SECRET: process.env.NOTIFICATION_CRON_SECRET,
+    CRON_SECRET: process.env.CRON_SECRET,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     CLOUDFLARE_WORKER_URL: process.env.CLOUDFLARE_WORKER_URL,
     R2_ACCOUNT_ID: process.env.R2_ACCOUNT_ID,
@@ -79,6 +86,7 @@ const getParsedEnv = () => {
     ["NEXTAUTH_SECRET", result.data.NEXTAUTH_SECRET],
     ["MOBILE_JWT_SECRET", result.data.MOBILE_JWT_SECRET],
     ["NOTIFICATION_CRON_SECRET", result.data.NOTIFICATION_CRON_SECRET],
+    ["CRON_SECRET", result.data.CRON_SECRET],
   ];
   for (const [name, value] of shortSecretNames) {
     if (value && value.length < 32) {

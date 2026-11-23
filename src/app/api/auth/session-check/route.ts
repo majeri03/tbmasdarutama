@@ -2,9 +2,16 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser, unauthorizedResponse } from "@/lib/utils/api";
 
 /**
- * GET /api/auth/session
+ * GET /api/auth/session-check
  * Verifikasi status login perangkat mobile.
  * Digunakan Flutter/Expo untuk cek apakah token/cookie masih valid.
+ *
+ * PENTING: path ini sengaja BUKAN /api/auth/session. Di Next.js App Router
+ * segmen statis menang atas catch-all [...nextauth], jadi route kustom di
+ * /api/auth/session membayangi endpoint session bawaan NextAuth dan membuat
+ * useSession() di web menerima bentuk session yang salah (session.user
+ * undefined) — akibatnya tab Sales & Poin kosong dan tab Profil berkata
+ * "Sesi tidak ditemukan". Jangan pindahkan kembali ke /api/auth/session.
  */
 export async function GET() {
   try {

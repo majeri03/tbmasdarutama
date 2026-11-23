@@ -86,11 +86,15 @@ export async function getAllCustomerDebts(filters?: {
       prisma.customerDebt.count({ where }),
     ]);
 
-    // Get payment counts separately
-    const debtsWithPayments = await Promise.all(
-      debts.map(async (debt) => {
-        const payments = await prisma.debtPayment.findMany({
-          where: { customerDebtId: debt.id },
+    // FIX OPT-B (23 Nov 2026, N+1): dulu satu query pembayaran PER utang
+    // (sampai 100 query per halaman). Sekarang satu query untuk semua
+    // utang di halaman ini (customerDebtId IN ...), lalu dikelompokkan
+    // di memori. Hasil sama persis: tiap utang tetap dapat daftar
+    // pembayarannya terurut paymentDate desc + _count yang sama.
+    const debtIds = debts.map((d) => d.id);
+    const allPayments = debtIds.length > 0
+      ? await prisma.debtPayment.findMany({
+          where: { customerDebtId: { in: debtIds } },
           include: {
             admin: {
               select: {
@@ -102,17 +106,24 @@ export async function getAllCustomerDebts(filters?: {
           orderBy: {
             paymentDate: "desc",
           },
-        });
-
-        return {
-          ...debt,
-          payments,
-          _count: {
-            payments: payments.length,
-          },
-        };
-      })
-    );
+        })
+      : [];
+    const paymentsByDebt = new Map<string, typeof allPayments>();
+    for (const p of allPayments) {
+      const list = paymentsByDebt.get(p.customerDebtId!);
+      if (list) list.push(p);
+      else paymentsByDebt.set(p.customerDebtId!, [p]);
+    }
+    const debtsWithPayments = debts.map((debt) => {
+      const payments = paymentsByDebt.get(debt.id) ?? [];
+      return {
+        ...debt,
+        payments,
+        _count: {
+          payments: payments.length,
+        },
+      };
+    });
 
     const serializedDebts = debtsWithPayments.map((debt) => ({
       ...debt,
@@ -516,9 +527,17 @@ export async function updateOverdueDebts() {
 // harus memanggil updateAllOverdueDebts() ini, atau cron-job.org memanggil
 // endpoint yang memanggilnya. Sebelumnya status OVERDUE hanya berubah saat
 // admin membuka halaman daftar hutang — tidak pernah ada pemicu berkala.
-export async function updateAllOverdueDebts() {
+//
+// PKG-H (23 Nov 2026): `force: true` — route cron memanggil fungsi ini
+// TANPA sesi web (cron secret, bukan cookie), jadi cek `auth()` di bawah
+// selalu gagal dan fungsi ini diam-diam mengembalikan `skipped: true`:
+// status OVERDUE tidak pernah dibalik oleh cron. Route sudah
+// mengautentikasi pemanggilnya sendiri (cron secret / ADMIN+), jadi
+// route boleh memaksa dengan force. Pemanggil halaman biasa tetap
+// memakai jalur sesi (tanpa force).
+export async function updateAllOverdueDebts(options?: { force?: boolean }) {
   const session = await auth();
-  if (!hasMinimumRole(session, "ADMIN")) {
+  if (!options?.force && !hasMinimumRole(session, "ADMIN")) {
     return { success: true, skipped: true, message: "Overdue update dilewati (butuh ADMIN)" };
   }
   try {

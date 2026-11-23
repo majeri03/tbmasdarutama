@@ -188,18 +188,28 @@ export function UserFormModal({ isOpen, onClose, initialData }: Props) {
             />
           </div>
 
-          {/* Status Checkbox */}
-          <div className="flex items-center gap-2 pt-2">
-            <input
-                type="checkbox"
-                id="isActive"
-                {...form.register("isActive")}
-                className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-            />
-            <label htmlFor="isActive" className="text-sm text-gray-700 cursor-pointer select-none">
-                Akun Aktif (Dapat Login)
-            </label>
-          </div>
+          {/* Status: akun baru wajib verifikasi email dulu (PKG-I, 23 Nov 2026) */}
+          {initialData ? (
+            <div className="flex items-center gap-2 pt-2">
+              <input
+                  type="checkbox"
+                  id="isActive"
+                  {...form.register("isActive")}
+                  className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+              />
+              <label htmlFor="isActive" className="text-sm text-gray-700 cursor-pointer select-none">
+                  Akun Aktif (Dapat Login)
+              </label>
+            </div>
+          ) : (
+            <div className="flex items-start gap-2 pt-2 p-3 rounded-lg bg-blue-50 border border-blue-200">
+              <p className="text-sm text-blue-800">
+                Akun baru dibuat nonaktif dan harus verifikasi email dulu: kode OTP 6 digit
+                dikirim ke email di atas. Akun baru bisa login setelah kodenya dimasukkan
+                di halaman verifikasi.
+              </p>
+            </div>
+          )}
 
           <div className="pt-4 flex justify-end gap-3 border-t border-gray-100 mt-4">
             <button

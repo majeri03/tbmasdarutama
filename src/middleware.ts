@@ -4,7 +4,11 @@ import type { Session } from "next-auth";
 
 const getAllowedOrigins = () => {
   const origins = [
+    // PKG-J (23 Nov 2026, migrasi domain): domain lama masih diterima
+    // selama masa transisi. Hapus baris masdarutama.tech setelah domain
+    // lama mati/expired — domain baru sudah cukup.
     "https://masdarutama.tech",
+    "https://tbmasdarutama.vercel.app",
     // Origin aplikasi Capacitor (APK) — bukan http, jadi aman di produksi.
     "capacitor://localhost",
   ];
@@ -16,7 +20,8 @@ const getAllowedOrigins = () => {
     origins.push("http://localhost");
   }
   // Pentest fix (Nov 2026): NEXT_PUBLIC_APP_URL hanya diterima kalau
-  // benar-benar URL aplikasi sendiri (https + host masdarutama.tech).
+  // benar-benar URL aplikasi sendiri (https + host masdarutama.tech atau
+  // tbmasdarutama.vercel.app — lihat isOwnAppUrl di bawah).
   // Sebelumnya nilai apa pun dari env langsung masuk daftar izin — satu
   // salah ketik di Vercel bisa membuka CORS berkredensial ke domain penyerang.
   if (isOwnAppUrl(process.env.NEXT_PUBLIC_APP_URL)) {
@@ -28,15 +33,23 @@ const getAllowedOrigins = () => {
 };
 
 // Pentest fix (Nov 2026): validasi NEXT_PUBLIC_APP_URL — hanya https +
-// host masdarutama.tech (atau subdomainnya). Di development, http://localhost
-// juga diterima. Nilai lain diabaikan diam-diam (fail-closed).
+// host masdarutama.tech atau tbmasdarutama.vercel.app (atau subdomainnya).
+// Di development, http://localhost juga diterima. Nilai lain diabaikan
+// diam-diam (fail-closed).
+// PKG-J (23 Nov 2026, migrasi domain): domain lama (masdarutama.tech,
+// gratisan, mau expired) masih diterima selama masa transisi supaya
+// deploy lama + baru sama-sama jalan. Setelah domain lama mati, hapus
+// cabang masdarutama.tech di bawah — domain baru sudah cukup.
 const isOwnAppUrl = (value: string | undefined): value is string => {
   if (!value) return false;
   try {
     const url = new URL(value);
     if (
       url.protocol === "https:" &&
-      (url.hostname === "masdarutama.tech" || url.hostname.endsWith(".masdarutama.tech"))
+      (url.hostname === "masdarutama.tech" ||
+        url.hostname.endsWith(".masdarutama.tech") ||
+        url.hostname === "tbmasdarutama.vercel.app" ||
+        url.hostname.endsWith(".tbmasdarutama.vercel.app"))
     ) {
       return true;
     }

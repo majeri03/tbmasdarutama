@@ -14,6 +14,9 @@ interface UserData {
   phone: string | null;
   address: string | null;
   isActive: boolean;
+  emailVerifiedAt: Date | null;
+  // PKG-I: true kalau akun nonaktif DAN ada token OTP yang masih berlaku.
+  hasPendingVerification: boolean;
   createdAt: Date;
 }
 

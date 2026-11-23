@@ -35,6 +35,12 @@ export const storeSettingSchema = z.object({
   // Hanya SUPER_ADMIN (updateStoreSetting memakai MANAGE_STORE_SETTINGS).
   pointsEnabled: z.boolean().optional(),
   pointsRupiahPerPoint: z.number().int().min(1, "Nilai rupiah per poin minimal Rp 1").max(1_000_000_000, "Nilai rupiah per poin terlalu besar").optional(),
+  // PKG-H (23 Nov 2026, email pengingat utang): saklar email, jadwal
+  // pengingat (hari lewat jatuh tempo, dipisah koma, maks 5 tonggak)
+  // dan jendela "akan jatuh tempo" (hari sebelum jatuh tempo).
+  debtEmailEnabled: z.boolean().optional(),
+  debtReminderDays: z.string().regex(/^(\d{1,3})(,\d{1,3}){0,4}$/, "Jadwal pengingat harus angka hari dipisah koma, mis. 3,7,30").max(50).optional(),
+  debtEmailDaysBefore: z.number().int().min(0, "Jendela 'akan jatuh tempo' minimal 0 hari").max(30, "Jendela 'akan jatuh tempo' maksimal 30 hari").optional(),
 });
 
 export type StoreSettingFormValues = z.infer<typeof storeSettingSchema>;

@@ -18,6 +18,10 @@ model User {
   address       String?
   expoPushToken String?   // NEW: Untuk Push Notification
   isActive      Boolean   @default(true)
+  // PKG-I (23 Nov 2026, OTP verifikasi email): dicatat saat akun baru
+  // berhasil verifikasi email. Akun lama (sudah aktif) tidak punya nilai
+  // ini — hanya akun yang dibuat setelah fitur OTP rilis.
+  emailVerifiedAt DateTime?
   // FIX (22 Nov 2026): versi token mobile — dinaikkan setiap ganti password /
   // nonaktifkan akun / ganti role / logout, supaya token lama langsung mati.
   // verifyMobileToken menolak token yang tv-nya tidak sama dengan ini.
@@ -33,6 +37,7 @@ model User {
   deliveryOrders  DeliveryOrder[]
   stockMovements     StockMovement[] 
   passwordResetTokens PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
   waOrdersConfirmed   WaOrder[]
   deviceTokens        DeviceToken[]
   notifications       Notification[]
@@ -42,6 +47,8 @@ model User {
   // sebagai sopir utama / pendamping (dipilih SUPER_ADMIN/ADMIN saat mendaftar).
   drivenVehicles   FleetVehicle[] @relation("VehicleDriver")
   coDrivenVehicles FleetVehicle[] @relation("VehicleCoDriver")
+
+  @@index([role, isActive])
 
   @@map("users")
 }
@@ -155,6 +162,8 @@ model Product {
   @@index([deletedAt])
   @@index([name])
   @@index([code])
+  @@index([createdAt])
+
   @@map("products")
 }
 
@@ -189,6 +198,8 @@ model ProductImage {
   // Relations
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   
+  @@index([productId])
+
   @@map("product_images")
 }
 
@@ -218,6 +229,8 @@ model Customer {
 
   @@index([name])
   @@index([phone])
+  @@index([type])
+
   @@map("customers")
 }
 
@@ -263,6 +276,10 @@ model Sale {
   @@index([saleDate])
   @@index([customerId])
   @@index([salesmanId])
+  @@index([createdAt])
+  @@index([status, createdAt])
+  @@index([cashierId])
+
   @@map("sales")
 }
 
@@ -282,6 +299,9 @@ model SaleItem {
   product Product @relation(fields: [productId], references: [id])
   unit    Unit    @relation("SaleItemUnit", fields: [unitId], references: [id])
   
+  @@index([saleId])
+  @@index([productId])
+
   @@map("sale_items")
 }
 
@@ -342,6 +362,9 @@ model Purchase {
   purchaseItems  PurchaseItem[]
   supplierDebts  SupplierDebt[]
   
+  @@index([supplierId])
+  @@index([purchaseDate])
+
   @@map("purchases")
 }
 
@@ -361,6 +384,9 @@ model PurchaseItem {
   product  Product  @relation(fields: [productId], references: [id])
   unit     Unit     @relation("PurchaseItemUnit", fields: [unitId], references: [id])
   
+  @@index([purchaseId])
+  @@index([productId])
+
   @@map("purchase_items")
 }
 
@@ -391,6 +417,10 @@ model CustomerDebt {
   customer        Customer        @relation(fields: [customerId], references: [id])
   debtPayments    DebtPayment[]
   
+  @@index([status, dueDate])
+  @@index([customerId])
+  @@index([createdAt])
+
   @@map("customer_debts")
 }
 
@@ -414,6 +444,10 @@ model SupplierDebt {
   supplier        Supplier        @relation(fields: [supplierId], references: [id])
   debtPayments    DebtPayment[]
   
+  @@index([status, dueDate])
+  @@index([supplierId])
+  @@index([createdAt])
+
   @@map("supplier_debts")
 }
 
@@ -434,6 +468,12 @@ model DebtPayment {
   customerDebt CustomerDebt? @relation(fields: [customerDebtId], references: [id])
   supplierDebt SupplierDebt? @relation(fields: [supplierDebtId], references: [id])
   admin           User           @relation(fields: [adminId], references: [id])
+
+  @@index([customerDebtId])
+  @@index([supplierDebtId])
+  @@index([paymentDate])
+  @@index([createdAt])
+
   @@map("debt_payments")
 }
 
@@ -461,6 +501,11 @@ model StockMovement {
   product Product @relation(fields: [productId], references: [id])
   createdBy User    @relation(fields: [createdById], references: [id])
   
+  @@index([productId])
+  @@index([createdAt])
+  @@index([type, createdAt])
+  @@index([referenceId])
+
   @@map("stock_movements")
 }
 
@@ -484,6 +529,8 @@ model CashMovement {
   // Relations
   user User @relation(fields: [userId], references: [id])
   
+  @@index([createdAt])
+
   @@map("cash_movements")
 }
 
@@ -517,6 +564,10 @@ model DeliveryOrder {
   deliveryItems   DeliveryItem[]
   deliveryPhotos  DeliveryPhoto[]
   
+  @@index([customerId])
+  @@index([createdAt])
+  @@index([status])
+
   @@map("delivery_orders")
 }
 
@@ -599,6 +650,8 @@ model DeliveryItem {
   product       Product       @relation(fields: [productId], references: [id])
   unit          Unit          @relation(fields: [unitId], references: [id])
   
+  @@index([deliveryOrderId])
+
   @@map("delivery_items")
 }
 
@@ -672,6 +725,13 @@ model StoreSetting {
   // SUPER_ADMIN yang mengatur bebas dari tab Sales di Pengaturan.
   pointsEnabled       Boolean @default(true)
   pointsRupiahPerPoint Int    @default(10000)
+
+  // PKG-H (23 Nov 2026, email pengingat utang): saklar email ringkasan,
+  // jadwal pengingat (hari lewat jatuh tempo, dipisah koma, default 3,7,30)
+  // dan jendela "akan jatuh tempo" (hari sebelum jatuh tempo).
+  debtEmailEnabled   Boolean @default(true)
+  debtReminderDays   String  @default("3,7,30")
+  debtEmailDaysBefore Int    @default(3)
   
   // Invoice Global Settings
   invoiceLayoutType       String   @default("STRUK_KECIL") // STRUK_KECIL, INVOICE_BESAR, SURAT_JALAN, FAKTUR_NCR
@@ -689,6 +749,41 @@ model StoreSetting {
   updatedAt   DateTime @updatedAt
   
   @@map("store_settings")
+}
+
+// PKG-H (23 Nov 2026, email pengingat utang): daftar email penerima
+// ringkasan utang jatuh tempo — dikelola SUPER_ADMIN dari tab
+// "Notifikasi Utang" di Pengaturan. Satu baris per alamat supaya bisa
+// diaktifkan/dinonaktifkan dan dicatat siapa yang menambahkan.
+model DebtNotificationRecipient {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  isActive  Boolean  @default(true)
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("debt_notification_recipients")
+}
+
+// PKG-H: jejak pengiriman email ringkasan utang — dipakai dedup harian
+// (cron terpanggil 2x dalam sehari tidak boleh mengirim 2x) dan untuk
+// info "terakhir terkirim" di tab Notifikasi Utang.
+model DebtEmailLog {
+  id              String   @id @default(cuid())
+  sentAt          DateTime @default(now())
+  customerOverdue Int      @default(0)
+  customerDueSoon Int      @default(0)
+  supplierOverdue Int      @default(0)
+  supplierDueSoon Int      @default(0)
+  recipientCount  Int      @default(0)
+  totalCustomer   Decimal  @db.Decimal(15, 2) @default(0)
+  totalSupplier   Decimal  @db.Decimal(15, 2) @default(0)
+
+  @@index([sentAt])
+
+  @@map("debt_email_logs")
 }
 
 model LandingPageSetting {
@@ -734,6 +829,24 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
+// PKG-I (23 Nov 2026, OTP verifikasi email akun baru): kode OTP 6 digit
+// disimpan sebagai hash SHA-256 (bukan mentah — meniru pola
+// PasswordResetToken), berlaku 15 menit, maks 5 percobaan salah.
+// Satu user hanya punya satu token aktif — OTP baru menggugurkan yang lama.
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  otpHash   String   @unique
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
+
 // ==================== RATE LIMIT (DB-BACKED) ===================
 // SECURITY FIX (22 Nov 2026, pentest M28): hitungan rate limit pindah
 // dari Map in-memory per instance (tidak berlaku antar-instance serverless
@@ -746,6 +859,8 @@ model RateLimit {
   count       Int      @default(0)
   windowStart DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([windowStart])
 
   @@map("rate_limits")
 }
@@ -797,6 +912,8 @@ model Notification {
 
   @@index([userId, isRead])
   @@index([role, isRead])
+  @@index([type, createdAt])
+
   @@map("notifications")
 }
 
@@ -835,6 +952,9 @@ model FleetVehicle {
   isActive       Boolean   @default(true)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+
+  @@index([driverUserId])
+  @@index([coDriverUserId])
 
   @@map("fleet_vehicles")
 }

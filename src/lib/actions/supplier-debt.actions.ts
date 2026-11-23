@@ -92,11 +92,15 @@ export async function getAllSupplierDebts(filters?: {
       prisma.supplierDebt.count({ where }),
     ]);
 
-    // Get payment counts separately
-    const debtsWithPayments = await Promise.all(
-      debts.map(async (debt) => {
-        const payments = await prisma.debtPayment.findMany({
-          where: { supplierDebtId: debt.id },
+    // FIX OPT-B (23 Nov 2026, N+1): dulu satu query pembayaran PER utang
+    // (sampai 100 query per halaman). Sekarang satu query untuk semua
+    // utang di halaman ini (supplierDebtId IN ...), lalu dikelompokkan
+    // di memori. Hasil sama persis: tiap utang tetap dapat daftar
+    // pembayarannya terurut paymentDate desc + _count yang sama.
+    const debtIds = debts.map((d) => d.id);
+    const allPayments = debtIds.length > 0
+      ? await prisma.debtPayment.findMany({
+          where: { supplierDebtId: { in: debtIds } },
           include: {
             admin: {
               select: {
@@ -108,17 +112,24 @@ export async function getAllSupplierDebts(filters?: {
           orderBy: {
             paymentDate: "desc",
           },
-        });
-
-        return {
-          ...debt,
-          payments,
-          _count: {
-            payments: payments.length,
-          },
-        };
-      })
-    );
+        })
+      : [];
+    const paymentsByDebt = new Map<string, typeof allPayments>();
+    for (const p of allPayments) {
+      const list = paymentsByDebt.get(p.supplierDebtId!);
+      if (list) list.push(p);
+      else paymentsByDebt.set(p.supplierDebtId!, [p]);
+    }
+    const debtsWithPayments = debts.map((debt) => {
+      const payments = paymentsByDebt.get(debt.id) ?? [];
+      return {
+        ...debt,
+        payments,
+        _count: {
+          payments: payments.length,
+        },
+      };
+    });
 
     // Serialize Decimal to number
     const serializedDebts = debtsWithPayments.map((debt) => ({

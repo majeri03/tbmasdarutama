@@ -294,7 +294,9 @@ export async function downloadDeliveryOrderPDF(deliveryOrder: DeliveryOrderData)
             windowWidth: DO_RENDER_WIDTH_PX,
         });
 
-        const imgData = canvas.toDataURL("image/png");
+        // OPT-C (23 Nov 2026): JPEG q0.85, bukan PNG — PDF 1 halaman turun
+        // dari ~8,5 MB jadi ratusan KB. Teks tetap tajam karena scale 2.
+        const imgData = canvas.toDataURL("image/jpeg", 0.85);
         const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
         const pdfWidth = 210;
         const pageHeight = 297;
@@ -302,12 +304,12 @@ export async function downloadDeliveryOrderPDF(deliveryOrder: DeliveryOrderData)
 
         let heightLeft = imgHeight;
         let position = 0;
-        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, imgHeight);
+        pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, imgHeight);
         heightLeft -= pageHeight;
         while (heightLeft > 0) {
             position = heightLeft - imgHeight;
             pdf.addPage();
-            pdf.addImage(imgData, "PNG", 0, position, pdfWidth, imgHeight);
+            pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, imgHeight);
             heightLeft -= pageHeight;
         }
 

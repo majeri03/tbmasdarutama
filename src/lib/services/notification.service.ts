@@ -1,6 +1,7 @@
 import { Expo, ExpoPushMessage, ExpoPushTicket } from 'expo-server-sdk';
 import prisma from '@/lib/prisma';
 import { DebtStatus, NotificationType, Prisma, Role } from '@prisma/client';
+import { sendEmail, generateDebtDueEmail, type DebtDueEmailRow } from '@/lib/utils/email';
 
 const expo = new Expo();
 
@@ -345,5 +346,315 @@ export class NotificationService {
       if (page.length < STOCK_PAGE) break;
     }
     return { debtSent, stockSent };
+  }
+
+  // ── PKG-H (23 Nov 2026): email ringkasan utang jatuh tempo ─────────────
+  // Dipanggil endpoint /api/notifications/check-overdue (cron harian
+  // 08:00 WITA) setelah push. Satu email ringkasan per hari ke semua
+  // penerima aktif — BUKAN satu email per utang.
+  //
+  // Jadwal pengingat (keputusan pemilik 23 Nov 2026): satu utang
+  // mengingatkan 3x — tepat 3 hari, 1 minggu (7 hari), dan 1 bulan
+  // (30 hari) SETELAH jatuh tempo. Jadwal ini bisa diubah SUPER_ADMIN
+  // di Pengaturan → Notifikasi Utang (disimpan di StoreSetting
+  // debtReminderDays, dipisah koma). Email HANYA dikirim pada hari
+  // ketika ada utang yang tepat mencapai salah satu tonggak itu;
+  // isinya ringkasan SEMUA utang yang sedang jatuh tempo + yang akan
+  // jatuh tempo dalam N hari (debtEmailDaysBefore).
+  // Dedup: tabel debt_email_logs — kalau hari ini (WITA) sudah ada
+  // baris log, lewati. Kalau tidak ada utang yang mencapai tonggak,
+  // tidak ada email sama sekali (inbox tidak di-spam).
+  // UTANG SUPPLIER ikut diperiksa di sini — sebelumnya tidak pernah
+  // ternotifikasi (celah yang ditemukan saat desain).
+
+  /** Nomor hari kalender (WITA) dari sebuah DateTime. */
+  private static witaDayNumber(d: Date): number {
+    const w = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+    return Date.UTC(w.getUTCFullYear(), w.getUTCMonth(), w.getUTCDate()) / 86400000;
+  }
+
+  /** Awal hari ini (WITA) sebagai Date UTC — batas dedup harian. */
+  private static witaTodayStart(): Date {
+    const nowWita = new Date(Date.now() + 7 * 60 * 60 * 1000);
+    return new Date(Date.UTC(nowWita.getUTCFullYear(), nowWita.getUTCMonth(), nowWita.getUTCDate()));
+  }
+
+  /** Uraikan "3,7,30" jadi [3, 7, 30]. Rusak/kosong -> default [3, 7, 30]. */
+  static parseReminderDays(value?: string | null): number[] {
+    const fallback = [3, 7, 30];
+    if (!value) return fallback;
+    const days = value
+      .split(",")
+      .map((s) => Number(s.trim()))
+      .filter((n) => Number.isInteger(n) && n >= 1 && n <= 365);
+    const unique = [...new Set(days)].sort((a, b) => a - b);
+    return unique.length > 0 ? unique : fallback;
+  }
+
+  /** Alamat dasar web dari env (PKG-J: domain baru tbmasdarutama.vercel.app). */
+  private static appBaseUrl(): string {
+    const raw = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
+    // Fallback domain BARU — JANGAN hardcode domain lama (masdarutama.tech).
+    // NEXT_PUBLIC_APP_URL di Vercel wajib diganti ke domain baru + redeploy.
+    return raw || "https://tbmasdarutama.vercel.app";
+  }
+
+  /**
+   * Deep link aplikasi (skema tbmasdarutama://) untuk tombol "Buka di Aplikasi"
+   * di email. Ini BUKAN URL web — skemanya tetap dan tidak memakai domain,
+   * jadi tidak terpengaruh migrasi domain (PKG-J).
+   */
+  private static appDebtLink(kind: "customer" | "supplier"): string {
+    return `tbmasdarutama://utang?jenis=${kind}`;
+  }
+
+  /** Ambil + kelompokkan semua utang terbuka (piutang + supplier). */
+  static async getDebtDueSummary(): Promise<{
+    settings: { debtEmailEnabled: boolean; reminderDays: number[]; daysBefore: number };
+    customerOverdue: DebtDueEmailRow[];
+    customerDueSoon: DebtDueEmailRow[];
+    supplierOverdue: DebtDueEmailRow[];
+    supplierDueSoon: DebtDueEmailRow[];
+    triggeredCount: number;
+    totalCustomerOverdue: number;
+    totalSupplierOverdue: number;
+  }> {
+    const setting = await prisma.storeSetting.findFirst();
+    const reminderDays = this.parseReminderDays(setting?.debtReminderDays);
+    const daysBefore = setting?.debtEmailDaysBefore ?? 3;
+    const enabled = setting?.debtEmailEnabled ?? true;
+    const todayNum = this.witaDayNumber(new Date());
+
+    const toRow = (name: string, ref: string, dueDate: Date, remaining: number): DebtDueEmailRow => ({
+      name,
+      ref,
+      dueDateLabel: dueDate.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+      remaining,
+      daysOverdue: todayNum - this.witaDayNumber(dueDate),
+    });
+
+    const customerOverdue: DebtDueEmailRow[] = [];
+    const customerDueSoon: DebtDueEmailRow[] = [];
+    const PAGE = 50;
+    let skip = 0;
+    for (;;) {
+      const page = await prisma.customerDebt.findMany({
+        where: { remainingDebt: { gt: 0 }, status: { in: [DebtStatus.UNPAID, DebtStatus.PARTIAL, DebtStatus.OVERDUE] } },
+        include: { customer: { select: { name: true } }, sale: { select: { invoiceNumber: true } } },
+        orderBy: { dueDate: "asc" },
+        take: PAGE,
+        skip,
+      });
+      if (page.length === 0) break;
+      for (const d of page) {
+        const row = toRow(d.customer?.name ?? "Pelanggan", d.sale?.invoiceNumber ?? d.debtNumber, d.dueDate, Number(d.remainingDebt));
+        if (row.daysOverdue >= 0) customerOverdue.push(row);
+        else if (-row.daysOverdue <= daysBefore) customerDueSoon.push(row);
+      }
+      skip += page.length;
+      if (page.length < PAGE) break;
+    }
+
+    const supplierOverdue: DebtDueEmailRow[] = [];
+    const supplierDueSoon: DebtDueEmailRow[] = [];
+    skip = 0;
+    for (;;) {
+      const page = await prisma.supplierDebt.findMany({
+        where: { remainingDebt: { gt: 0 }, status: { in: [DebtStatus.UNPAID, DebtStatus.PARTIAL, DebtStatus.OVERDUE] } },
+        include: { supplier: { select: { name: true } }, purchase: { select: { poNumber: true } } },
+        orderBy: { dueDate: "asc" },
+        take: PAGE,
+        skip,
+      });
+      if (page.length === 0) break;
+      for (const d of page) {
+        const row = toRow(d.supplier?.name ?? "Supplier", d.purchase?.poNumber ?? d.debtNumber, d.dueDate, Number(d.remainingDebt));
+        if (row.daysOverdue >= 0) supplierOverdue.push(row);
+        else if (-row.daysOverdue <= daysBefore) supplierDueSoon.push(row);
+      }
+      skip += page.length;
+      if (page.length < PAGE) break;
+    }
+
+    const triggeredCount =
+      [...customerOverdue, ...supplierOverdue].filter((r) => reminderDays.includes(r.daysOverdue)).length;
+
+    return {
+      settings: { debtEmailEnabled: enabled, reminderDays, daysBefore },
+      customerOverdue,
+      customerDueSoon,
+      supplierOverdue,
+      supplierDueSoon,
+      triggeredCount,
+      totalCustomerOverdue: customerOverdue.reduce((s, r) => s + r.remaining, 0),
+      totalSupplierOverdue: supplierOverdue.reduce((s, r) => s + r.remaining, 0),
+    };
+  }
+
+  /**
+   * Kirim email ringkasan utang (cron harian). Return menjelaskan kenapa
+   * tidak terkirim kalau sent=false — dipakai endpoint untuk log/respons.
+   * Satu email per penerima (alamat penerima lain tidak saling terlihat).
+   */
+  static async sendDebtDueEmails(): Promise<{
+    sent: boolean;
+    reason: string;
+    recipientCount: number;
+    customerOverdue: number;
+    customerDueSoon: number;
+    supplierOverdue: number;
+    supplierDueSoon: number;
+    totalCustomerOverdue: number;
+    totalSupplierOverdue: number;
+    triggeredCount: number;
+  }> {
+    const empty = (reason: string) => ({
+      sent: false,
+      reason,
+      recipientCount: 0,
+      customerOverdue: 0,
+      customerDueSoon: 0,
+      supplierOverdue: 0,
+      supplierDueSoon: 0,
+      totalCustomerOverdue: 0,
+      totalSupplierOverdue: 0,
+      triggeredCount: 0,
+    });
+    try {
+      const summary = await this.getDebtDueSummary();
+      if (!summary.settings.debtEmailEnabled) return empty("disabled");
+      if (summary.triggeredCount === 0) return empty("no-milestone");
+      // Dedup harian (WITA): sudah terkirim hari ini -> lewati.
+      const todayStart = this.witaTodayStart();
+      const alreadySent = await prisma.debtEmailLog.findFirst({
+        where: { sentAt: { gte: todayStart } },
+        select: { id: true },
+      });
+      if (alreadySent) return empty("already-sent-today");
+
+      const recipients = await prisma.debtNotificationRecipient.findMany({
+        where: { isActive: true },
+        orderBy: { createdAt: "asc" },
+        select: { email: true },
+      });
+      if (recipients.length === 0) return empty("no-recipients");
+
+      const baseUrl = this.appBaseUrl();
+      const dateLabel = new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+      const html = generateDebtDueEmail({
+        dateLabel,
+        customerOverdue: summary.customerOverdue,
+        customerDueSoon: summary.customerDueSoon,
+        supplierOverdue: summary.supplierOverdue,
+        supplierDueSoon: summary.supplierDueSoon,
+        totalCustomerOverdue: summary.totalCustomerOverdue,
+        totalSupplierOverdue: summary.totalSupplierOverdue,
+        customerDebtsUrl: `${baseUrl}/dashboard/customer-debts`,
+        supplierDebtsUrl: `${baseUrl}/dashboard/supplier-debts`,
+        customerDebtsAppUrl: this.appDebtLink("customer"),
+        supplierDebtsAppUrl: this.appDebtLink("supplier"),
+      });
+
+      let sentCount = 0;
+      for (const r of recipients) {
+        const res = await sendEmail({
+          to: r.email,
+          subject: `Ringkasan Utang Jatuh Tempo — ${dateLabel} — TB Masdar Utama`,
+          html,
+        });
+        if (res.success) sentCount++;
+        else console.error("[DEBT_EMAIL_FAILED]", r.email, res.error);
+      }
+      if (sentCount === 0) return empty("send-failed");
+
+      await prisma.debtEmailLog.create({
+        data: {
+          customerOverdue: summary.customerOverdue.length,
+          customerDueSoon: summary.customerDueSoon.length,
+          supplierOverdue: summary.supplierOverdue.length,
+          supplierDueSoon: summary.supplierDueSoon.length,
+          recipientCount: sentCount,
+          totalCustomer: summary.totalCustomerOverdue,
+          totalSupplier: summary.totalSupplierOverdue,
+        },
+      });
+
+      return {
+        sent: true,
+        reason: "ok",
+        recipientCount: sentCount,
+        customerOverdue: summary.customerOverdue.length,
+        customerDueSoon: summary.customerDueSoon.length,
+        supplierOverdue: summary.supplierOverdue.length,
+        supplierDueSoon: summary.supplierDueSoon.length,
+        totalCustomerOverdue: summary.totalCustomerOverdue,
+        totalSupplierOverdue: summary.totalSupplierOverdue,
+        triggeredCount: summary.triggeredCount,
+      };
+    } catch (error) {
+      console.error("[DEBT_EMAIL_ERROR]", error);
+      return empty("error");
+    }
+  }
+
+  /**
+   * Kirim email TES dari tab Pengaturan — ke semua penerima aktif (kalau
+   * belum ada penerima, ke email SUPER_ADMIN yang menekan tombol).
+   * Isi: ringkasan nyata saat ini; kalau kosong, satu baris contoh supaya
+   * formatnya bisa dicek. TIDAK menulis DebtEmailLog (tes tidak boleh
+   * memengaruhi dedup harian).
+   */
+  static async sendTestDebtEmail(adminEmail?: string): Promise<{ sent: boolean; recipientCount: number; error?: string }> {
+    try {
+      const summary = await this.getDebtDueSummary();
+      const recipients = await prisma.debtNotificationRecipient.findMany({
+        where: { isActive: true },
+        orderBy: { createdAt: "asc" },
+        select: { email: true },
+      });
+      const targets = recipients.map((r) => r.email);
+      if (targets.length === 0 && adminEmail) targets.push(adminEmail);
+      if (targets.length === 0) {
+        return { sent: false, recipientCount: 0, error: "Belum ada penerima aktif. Tambahkan dulu email penerima, atau pastikan email akun Anda terisi." };
+      }
+      const baseUrl = this.appBaseUrl();
+      const dateLabel = new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+      const sampleRow = (name: string, ref: string): DebtDueEmailRow => ({
+        name,
+        ref,
+        dueDateLabel: dateLabel,
+        remaining: 1500000,
+        daysOverdue: 3,
+      });
+      const hasData =
+        summary.customerOverdue.length + summary.customerDueSoon.length + summary.supplierOverdue.length + summary.supplierDueSoon.length > 0;
+      const html = generateDebtDueEmail({
+        isTest: true,
+        dateLabel,
+        customerOverdue: hasData ? summary.customerOverdue : [sampleRow("CONTOH — Toko Maju Jaya", "INV/CONTOH-0001")],
+        customerDueSoon: summary.customerDueSoon,
+        supplierOverdue: hasData ? summary.supplierOverdue : [sampleRow("CONTOH — PT Semen Jaya", "PO/CONTOH-0001")],
+        supplierDueSoon: summary.supplierDueSoon,
+        totalCustomerOverdue: hasData ? summary.totalCustomerOverdue : 1500000,
+        totalSupplierOverdue: hasData ? summary.totalSupplierOverdue : 1500000,
+        customerDebtsUrl: `${baseUrl}/dashboard/customer-debts`,
+        supplierDebtsUrl: `${baseUrl}/dashboard/supplier-debts`,
+        customerDebtsAppUrl: this.appDebtLink("customer"),
+        supplierDebtsAppUrl: this.appDebtLink("supplier"),
+      });
+      let sentCount = 0;
+      for (const to of targets) {
+        const res = await sendEmail({ to, subject: `[TES] Ringkasan Utang Jatuh Tempo — TB Masdar Utama`, html });
+        if (res.success) sentCount++;
+        else console.error("[DEBT_TEST_EMAIL_FAILED]", to, res.error);
+      }
+      if (sentCount === 0) {
+        return { sent: false, recipientCount: 0, error: "Gagal mengirim email tes. Cek pengaturan SMTP (EMAIL_USER / EMAIL_PASSWORD) di Vercel dan log server." };
+      }
+      return { sent: true, recipientCount: sentCount };
+    } catch (error) {
+      console.error("[DEBT_TEST_EMAIL_ERROR]", error);
+      return { sent: false, recipientCount: 0, error: "Gagal mengirim email tes." };
+    }
   }
 }

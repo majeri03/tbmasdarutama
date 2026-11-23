@@ -38,15 +38,25 @@ function secretsEqual(a: string, b: string): boolean {
  * dengan dedup 24 jam di NotificationService supaya tidak spam.
  *
  * Cara pakai (pilih satu):
- * 1. Cron eksternal (mis. cron-job.org, tiap hari 08:00 WITA):
- *    GET https://masdarutama.tech/api/notifications/check-overdue
+ * 1. Cron Vercel (vercel.json, tiap hari 01:00 UTC = 08:00 WITA):
+ *    Vercel mengirim header `Authorization: Bearer <CRON_SECRET>`
+ *    (CRON_SECRET dibuat otomatis oleh Vercel saat cron terpasang).
+ * 2. Cron eksternal (mis. cron-job.org, tiap hari 08:00 WITA):
+ *    GET https://tbmasdarutama.vercel.app/api/notifications/check-overdue
  *    dengan header `x-cron-secret: <NOTIFICATION_CRON_SECRET>`
  *    + set env NOTIFICATION_CRON_SECRET di hosting.
  *    (SECURITY FIX Nov 2026, M7: secret TIDAK BOLEH lagi dikirim lewat
  *    query `?key=` — URL tercatat di log akses & riwayat browser. Hanya
  *    lewat header.)
- * 2. Login sebagai ADMIN / SUPER_ADMIN lalu buka URL yang sama tanpa header
+ * 3. Login sebagai ADMIN / SUPER_ADMIN lalu buka URL yang sama tanpa header
  *    (dipakai untuk tes manual).
+ *
+ * PKG-H (23 Nov 2026): setelah push, endpoint ini juga mengirim email
+ * ringkasan utang jatuh tempo (piutang pelanggan + utang supplier) ke
+ * penerima yang diatur SUPER_ADMIN — lihat
+ * NotificationService.sendDebtDueEmails(). Satu email per hari, hanya
+ * kalau ada utang yang mencapai jadwal pengingat (default 3/7/30 hari
+ * lewat jatuh tempo).
  */
 async function handler(request: NextRequest) {
   try {
@@ -57,8 +67,20 @@ async function handler(request: NextRequest) {
       !!cronSecret &&
       secretsEqual(request.headers.get("x-cron-secret") ?? "", cronSecret);
 
+    // PKG-H (23 Nov 2026, cron Vercel): Vercel Cron TIDAK BISA mengirim
+    // header kustom — ia mengirim `Authorization: Bearer <CRON_SECRET>`,
+    // dan CRON_SECRET dibuat otomatis oleh Vercel saat cron terpasang
+    // (vercel.json). Terima itu sebagai cara kedua, dengan perbandingan
+    // yang sama amannya. Secret TIDAK PERNAH lewat query string.
+    const vercelCronSecret = process.env.CRON_SECRET;
+    const authHeader = request.headers.get("authorization") ?? "";
+    const vercelCronOk =
+      !!vercelCronSecret &&
+      authHeader.startsWith("Bearer ") &&
+      secretsEqual(authHeader.slice("Bearer ".length), vercelCronSecret);
+
     let rateKey: string | null = null;
-    if (!keyOk) {
+    if (!keyOk && !vercelCronOk) {
       const session = await getAuthenticatedUser();
       const role = (session?.user as { role?: string } | undefined)?.role;
       if (!session?.user || (role !== "SUPER_ADMIN" && role !== "ADMIN")) {
@@ -84,11 +106,17 @@ async function handler(request: NextRequest) {
     // Fungsi ini dari patch QA backend (customer-debt.actions.ts).
     // Kalau patch QA belum dipasang, baris ini gagal di-build — pasang patch
     // QA dulu, atau hapus 2 baris ini sementara (notifikasi tetap jalan).
-    const overdue = await updateAllOverdueDebts();
+    // PKG-H: force=true — route sudah mengautentikasi pemanggilnya (cron
+    // secret / ADMIN+), sementara updateAllOverdueDebts tanpa force akan
+    // mengembalikan `skipped` karena cron tidak membawa sesi web.
+    const overdue = await updateAllOverdueDebts({ force: true });
     const result = await NotificationService.checkOverdueAndLowStock();
+    // PKG-H: email ringkasan utang jatuh tempo (piutang + utang supplier)
+    // ke penerima yang diatur SUPER_ADMIN. Dedup harian di dalam fungsi.
+    const email = await NotificationService.sendDebtDueEmails();
     return successResponse(
-      { ...result, overdueUpdated: overdue.count },
-      `Cek selesai: ${overdue.count} hutang jadi OVERDUE, ${result.debtSent} notifikasi hutang, ${result.stockSent} notifikasi stok rendah dikirim.`
+      { ...result, overdueUpdated: overdue.count, email },
+      `Cek selesai: ${overdue.count} hutang jadi OVERDUE, ${result.debtSent} notifikasi hutang, ${result.stockSent} notifikasi stok rendah dikirim. Email utang: ${email.sent ? `terkirim ke ${email.recipientCount} penerima` : `tidak dikirim (${email.reason})`}.`
     );
   } catch (error) {
     console.error("[CHECK_OVERDUE_ERROR]", error);

@@ -148,7 +148,7 @@ export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
         </form>
 
         {/* ✅ TAMBAHKAN INI - Forgot Password Link */}
-        <div className="mt-6 text-center">
+        <div className="mt-6 text-center space-y-3">
           <Link
             href="/forgot-password"
             className="text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors inline-flex items-center gap-1"
@@ -156,6 +156,16 @@ export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
             <Lock className="w-4 h-4" />
             Lupa Password?
           </Link>
+          <div>
+            {/* PKG-I (23 Nov 2026, OTP): akun baru harus verifikasi email dulu. */}
+            <Link
+              href="/verify-email"
+              className="text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors inline-flex items-center gap-1"
+            >
+              <Mail className="w-4 h-4" />
+              Belum terima kode? Verifikasi email
+            </Link>
+          </div>
         </div>
 
         {/* Footer */}

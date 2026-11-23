@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { UserFormValues } from "../validations/user.schema";
 import { Prisma, Role } from "@prisma/client";
+import { sendVerificationOtp } from "@/lib/services/email-verification.service";
 // Helper: Security Check
 async function requireSuperAdmin() {
   const user = await getCurrentUser();
@@ -32,12 +33,34 @@ export async function getUsers() {
         phone: true,
         address: true,
         isActive: true,
+        emailVerifiedAt: true,
         createdAt: true,
+        // Token OTP yang masih berlaku — dipakai tabel untuk badge
+        // "Menunggu verifikasi" (akun nonaktif + ada token aktif).
+        emailVerificationTokens: {
+          where: { expiresAt: { gt: new Date() } },
+          select: { id: true },
+        },
         // Password TIDAK kita ambil demi keamanan
       },
     });
 
-    return { success: true, data: users };
+    // Serialisasi ringan: token -> boolean, supaya client tidak perlu
+    // tahu bentuk tokennya.
+    const data = users.map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      phone: u.phone,
+      address: u.address,
+      isActive: u.isActive,
+      emailVerifiedAt: u.emailVerifiedAt,
+      createdAt: u.createdAt,
+      hasPendingVerification: u.emailVerificationTokens.length > 0,
+    }));
+
+    return { success: true, data };
   } catch (error) {
     // Cek apakah error adalah instance dari Error javascript
     const message =
@@ -76,7 +99,12 @@ export async function createUser(data: UserFormValues) {
 
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
-    await prisma.user.create({
+    // PKG-I (23 Nov 2026, OTP verifikasi email): akun baru SELALU dibuat
+    // nonaktif dulu (toggle "Akun Aktif" di form diabaikan untuk akun
+    // baru) dan kode OTP 6 digit dikirim ke emailnya. Akun baru bisa
+    // dipakai setelah pemiliknya memasukkan kode di /verify-email.
+    // Login sudah menolak akun nonaktif (auth.ts + jwt.ts tidak diubah).
+    const user = await prisma.user.create({
       data: {
         name: data.name,
         email: data.email,
@@ -84,12 +112,25 @@ export async function createUser(data: UserFormValues) {
         role: data.role as Role,
         phone: data.phone,
         address: data.address,
-        isActive: data.isActive,
+        isActive: false,
       },
     });
 
     revalidatePath("/dashboard/users");
-    return { success: true, message: "User berhasil dibuat" };
+
+    // Kegagalan kirim email TIDAK menggagalkan pembuatan akun — token
+    // OTP sudah tersimpan, jadi SUPER_ADMIN bisa kirim ulang dari tabel.
+    const otp = await sendVerificationOtp(user.id);
+    if (!otp.success) {
+      return {
+        success: true,
+        message: `Akun dibuat, tetapi kode verifikasi gagal dikirim ke ${data.email}. Gunakan tombol "Kirim ulang OTP" di tabel akun.`,
+      };
+    }
+    return {
+      success: true,
+      message: `Akun dibuat. Kode verifikasi 6 digit telah dikirim ke ${data.email} — akun baru bisa dipakai setelah email diverifikasi.`,
+    };
   } catch (error) {
     // Cek apakah error adalah instance dari Error javascript
     const message = error instanceof Error ? error.message : "Terjadi kesalahan";
@@ -116,9 +157,15 @@ export async function updateUser(id: string, data: UserFormValues) {
     // token mobile user ini harus dicabut (lihat bawah).
     const current = await prisma.user.findUnique({
       where: { id },
-      select: { isActive: true, role: true },
+      select: { isActive: true, role: true, email: true },
     });
     if (!current) return { success: false, error: "User tidak ditemukan" };
+
+    // PKG-I: email akun yang BELUM terverifikasi diganti -> kirim OTP baru
+    // ke alamat yang benar (OTP lama ikut gugur). Akun yang sudah aktif
+    // tidak kena aturan ini.
+    const emailChangedOnPendingAccount =
+      !current.isActive && current.email !== data.email;
 
     const updateData: Prisma.UserUpdateInput = {
       name: data.name,
@@ -157,6 +204,30 @@ export async function updateUser(id: string, data: UserFormValues) {
       where: { id },
       data: updateData,
     });
+
+    // PKG-I: email akun yang belum terverifikasi diganti -> kirim OTP baru
+    // ke alamat yang benar (OTP lama gugur karena sendVerificationOtp
+    // menghapus token lama). Kalau SUPER_ADMIN mengaktifkan akun yang
+    // belum terverifikasi secara manual (toggle di form), hapus token OTP
+    // yang menggantung — itu keputusan admin yang sadar, bukan bypass
+    // diam-diam.
+    if (emailChangedOnPendingAccount) {
+      const otp = await sendVerificationOtp(id);
+      revalidatePath("/dashboard/users");
+      if (!otp.success) {
+        return {
+          success: true,
+          message: "User berhasil diperbarui, tetapi kode verifikasi baru gagal dikirim ke email baru. Gunakan tombol \"Kirim ulang OTP\" di tabel akun.",
+        };
+      }
+      return {
+        success: true,
+        message: `User berhasil diperbarui. Kode verifikasi baru dikirim ke ${data.email}.`,
+      };
+    }
+    if (!current.isActive && data.isActive) {
+      await prisma.emailVerificationToken.deleteMany({ where: { userId: id } });
+    }
 
     revalidatePath("/dashboard/users");
     return { success: true, message: "User berhasil diperbarui" };

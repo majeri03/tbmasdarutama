@@ -30,7 +30,9 @@ export default function ReportDownloadButton({
         backgroundColor: "#ffffff",
       });
 
-      const imgData = canvas.toDataURL("image/png");
+      // OPT-C (23 Nov 2026): JPEG q0.85, bukan PNG — PDF 1 halaman turun
+      // dari ~8,5 MB jadi ratusan KB. Teks tetap tajam karena scale 2.
+      const imgData = canvas.toDataURL("image/jpeg", 0.85);
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
@@ -44,14 +46,14 @@ export default function ReportDownloadButton({
       let position = 0;
 
       // Add first page
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
 
       // Add additional pages if content is longer
       while (heightLeft > 0) {
         position = heightLeft - imgHeight;
         pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+        pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
       }
 
