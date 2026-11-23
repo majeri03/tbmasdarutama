@@ -114,7 +114,10 @@ export async function verifyMobileToken(token: string): Promise<TokenPayload | n
   try {
     const secret = getJwtSecret();
     const parts = token.split(".");
-    if (parts.length !== 3) return null;
+    if (parts.length !== 3) {
+      console.warn("[MOBILE_TOKEN_REJECT] bad_format");
+      return null;
+    }
 
     const [header, data, signature] = parts;
 
@@ -124,15 +127,23 @@ export async function verifyMobileToken(token: string): Promise<TokenPayload | n
     try {
       headerObj = JSON.parse(new TextDecoder().decode(base64urlDecode(header))) as { alg?: string };
     } catch {
+      console.warn("[MOBILE_TOKEN_REJECT] bad_header");
       return null;
     }
-    if (headerObj.alg !== "HS256") return null;
+    if (headerObj.alg !== "HS256") {
+      console.warn("[MOBILE_TOKEN_REJECT] bad_alg", headerObj.alg);
+      return null;
+    }
 
     const valid = await hmacVerify(secret, `${header}.${data}`, signature);
-    if (!valid) return null;
+    if (!valid) {
+      console.warn("[MOBILE_TOKEN_REJECT] bad_signature");
+      return null;
+    }
 
     const decoded = JSON.parse(new TextDecoder().decode(base64urlDecode(data))) as TokenPayload;
     if (decoded.exp && Date.now() > decoded.exp) {
+      console.warn("[MOBILE_TOKEN_REJECT] expired", { id: decoded.id });
       return null;
     }
 
@@ -147,13 +158,38 @@ export async function verifyMobileToken(token: string): Promise<TokenPayload | n
       where: { id: decoded.id },
       select: { isActive: true, role: true, tokenVersion: true },
     });
-    if (!user) return null;
-    if (!user.isActive) return null;
-    if (user.role !== decoded.role) return null;
-    if (decoded.tv === undefined || decoded.tv !== user.tokenVersion) return null;
+    if (!user) {
+      console.warn("[MOBILE_TOKEN_REJECT] no_user", { id: decoded.id });
+      return null;
+    }
+    if (!user.isActive) {
+      console.warn("[MOBILE_TOKEN_REJECT] inactive", { id: decoded.id });
+      return null;
+    }
+    if (user.role !== decoded.role) {
+      console.warn("[MOBILE_TOKEN_REJECT] role_mismatch", {
+        id: decoded.id,
+        tokenRole: decoded.role,
+        dbRole: user.role,
+      });
+      return null;
+    }
+    if (decoded.tv === undefined || decoded.tv !== user.tokenVersion) {
+      console.warn("[MOBILE_TOKEN_REJECT] tv_mismatch", {
+        id: decoded.id,
+        tokenTv: decoded.tv,
+        dbTv: user.tokenVersion,
+      });
+      return null;
+    }
 
+    console.log("[MOBILE_TOKEN_OK]", { id: decoded.id, tv: decoded.tv });
     return decoded;
-  } catch {
+  } catch (error) {
+    console.warn(
+      "[MOBILE_TOKEN_REJECT] exception",
+      error instanceof Error ? error.message : "unknown"
+    );
     return null;
   }
 }
