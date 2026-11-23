@@ -105,9 +105,14 @@ function numberToWords(num: number): string {
 }
 
 export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSetting | null, customLayout?: CustomLayout): string => {
-    const storeName = storeSetting?.name || "TB MASDAR UTAMA";
-    const storeAddress = storeSetting?.address || "-";
-    const storePhone = storeSetting?.phone ? `${storeSetting.phone}` : "-";
+    // Nama toko dari DB; kalau kosong tampilkan catatan jelas, bukan nama rekaan.
+    const storeName = (storeSetting?.name || "").trim() || "Data toko belum diisi";
+    const storeAddress = (storeSetting?.address || "").trim();
+    const storePhone = (storeSetting?.phone || "").trim();
+    // Blok bank tampil kapan pun toko sudah menyimpan nomor rekening (metode
+    // bayar apa pun) — bukan hanya TRANSFER. Surat jalan tidak pernah memakai
+    // ini karena showPrices = false untuk SURAT_JALAN.
+    const hasBankInfo = Boolean((storeSetting?.bankAccount || "").trim());
     const dateStr = format(new Date(sale.saleDate), "dd/MM/yyyy HH:mm");
     
     const layoutType = customLayout?.layoutType || storeSetting?.invoiceLayoutType || "STRUK_KECIL";
@@ -155,6 +160,7 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
             <html>
                 <head>
                     <title>Struk - ${sale.invoiceNumber}</title>
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
                     <style>
                         @page { margin: 0; size: ${safePaperSize} auto; }
                         body { 
@@ -164,6 +170,9 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                             margin: 0; 
                             padding: 4mm;
                             width: ${widthCss};
+                            max-width: 100%;
+                            box-sizing: border-box;
+                            overflow-x: hidden;
                             background: white;
                         }
                         .center { text-align: center; }
@@ -177,8 +186,8 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                     <div style="display:flex; justify-content:center; align-items:center; flex-direction:column; margin-bottom: 4px;">
                         ${logoImg}
                         <div class="center bold" style="font-size: 1.2em; margin-top: 4px;">${escapeHtml(storeName)}</div>
-                        <div class="center">${escapeHtml(storeAddress)}</div>
-                        <div class="center">Telp: ${escapeHtml(storePhone)}</div>
+                        ${storeAddress ? `<div class="center">${escapeHtml(storeAddress)}</div>` : ''}
+                        ${storePhone ? `<div class="center">Telp: ${escapeHtml(storePhone)}</div>` : ''}
                     </div>
                     <div class="divider"></div>
                     ` : ''}
@@ -202,6 +211,15 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                     <div class="divider"></div>
                     <div class="row"><span>Bayar (${escapeHtml(sale.paymentMethod)})</span><span>${formatCurrency(sale.paidAmount).replace('Rp ','')}</span></div>
                     <div class="row bold"><span>Kembali</span><span>${formatCurrency(sale.changeAmount).replace('Rp ','')}</span></div>
+
+                    ${showPaymentInfo && hasBankInfo ? `
+                    <div class="divider"></div>
+                    <div class="center" style="font-size: 0.9em;">
+                        <div class="bold">REKENING BANK:</div>
+                        <div>${escapeHtml(storeSetting?.bankName || '')} - ${escapeHtml(storeSetting?.bankAccount || '')}</div>
+                        <div>a/n ${escapeHtml(storeSetting?.bankHolder || '')}</div>
+                    </div>
+                    ` : ''}
                     
                     ${showFooter ? `
                     <div class="divider"></div>
@@ -272,6 +290,7 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
         <html>
             <head>
                 <title>${docTitle} - ${sale.invoiceNumber}</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1">
                 <style>
                     ${pageConfig}
                     body {
@@ -284,8 +303,10 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                         padding: 12mm 15mm;
                         background: #ffffff;
                         box-sizing: border-box;
+                        overflow-x: hidden;
                         ${bodyWidth}
                     }
+                    img { max-width: 100%; height: auto; }
                     table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
                     th, td { border: 1px solid #000; padding: 6px 8px; }
                     th { background: #f3f4f6; }
@@ -302,8 +323,8 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                         ${logoImg}
                         <div>
                             <h1 style="margin:0; font-size:20px;">${escapeHtml(storeName)}</h1>
-                            <p style="margin:4px 0 0 0;">${escapeHtml(storeAddress)}</p>
-                            <p style="margin:2px 0 0 0;">Phone: ${escapeHtml(storePhone)}</p>
+                            ${storeAddress ? `<p style="margin:4px 0 0 0;">${escapeHtml(storeAddress)}</p>` : ''}
+                            ${storePhone ? `<p style="margin:2px 0 0 0;">Phone: ${escapeHtml(storePhone)}</p>` : ''}
                         </div>
                     </div>
                     <div style="text-align:right;">
@@ -361,10 +382,10 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                         </div>
                         ` : ''}
                         
-                        ${showPaymentInfo && showPrices && sale.paymentMethod === 'TRANSFER' && storeSetting?.bankName ? `
+                        ${showPaymentInfo && showPrices && hasBankInfo ? `
                         <div style="border:1px solid #000; padding:10px; margin-bottom:10px; display:inline-block;">
-                            <b>TRANSFER:</b> ${escapeHtml(storeSetting.bankName)} - ${escapeHtml(storeSetting.bankAccount)}<br/>
-                            a/n ${escapeHtml(storeSetting.bankHolder)}
+                            <b>REKENING BANK:</b> ${escapeHtml(storeSetting?.bankName || '')} - ${escapeHtml(storeSetting?.bankAccount || '')}<br/>
+                            a/n ${escapeHtml(storeSetting?.bankHolder || '')}
                         </div>
                         ` : ''}
                         
@@ -408,15 +429,51 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
     `;
 };
 
-export const printInvoice = (sale: InvoiceData, storeSetting: StoreSetting, customLayout?: CustomLayout) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-        alert("Pop-up diblokir. Izinkan pop-up untuk mencetak invoice.");
+/**
+ * Cetak lewat iframe tersembunyi — dipakai kalau window.open() diblokir
+ * (umum di browser HP). Iframe dibuat selebar A4 supaya hasil cetak di HP
+ * sama dengan di desktop, lalu dihapus setelah print selesai.
+ */
+const printViaHiddenIframe = (htmlContent: string) => {
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.left = "-9999px";
+    iframe.style.top = "0";
+    iframe.style.width = "210mm";
+    iframe.style.height = "100px";
+    iframe.style.border = "0";
+    document.body.appendChild(iframe);
+
+    const cleanup = () => {
+        window.setTimeout(() => {
+            if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+        }, 1000);
+    };
+
+    const doc = iframe.contentDocument;
+    if (!doc) {
+        document.body.removeChild(iframe);
+        alert("Gagal membuka cetakan. Coba lagi.");
         return;
     }
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+    const win = iframe.contentWindow;
+    if (!win) {
+        cleanup();
+        return;
+    }
+    window.setTimeout(() => {
+        win.focus();
+        win.print();
+        cleanup();
+    }, 500);
+};
 
+export const printInvoice = (sale: InvoiceData, storeSetting: StoreSetting, customLayout?: CustomLayout) => {
     const htmlContent = generateInvoiceHtml(sale, storeSetting, customLayout);
-    
+
     const htmlWithScript = htmlContent.replace('</body>', `
         <script>
             window.onload = function() {
@@ -430,6 +487,13 @@ export const printInvoice = (sale: InvoiceData, storeSetting: StoreSetting, cust
         </script>
         </body>
     `);
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        // Pop-up diblokir (umum di HP): cetak lewat iframe tersembunyi.
+        printViaHiddenIframe(htmlWithScript);
+        return;
+    }
 
     printWindow.document.write(htmlWithScript);
     printWindow.document.close();

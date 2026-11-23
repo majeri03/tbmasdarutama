@@ -1,4 +1,7 @@
-import { COMPANY_INFO } from "@/lib/constants/company";
+"use client";
+
+import { useEffect, useState } from "react";
+import { getStoreSetting } from "@/lib/actions/store-setting.actions";
 import { getCurrentDateTime } from "@/lib/utils/pdf-helpers";
 
 interface ReportHeaderProps {
@@ -6,14 +9,45 @@ interface ReportHeaderProps {
   period?: string;
 }
 
+/**
+ * Kop laporan — nama/alamat/telepon toko dibaca dari DB (StoreSetting),
+ * BUKAN dari konstanta hardcode (dulu: COMPANY_INFO di
+ * src/lib/constants/company.ts). Kalau DB belum punya data toko, tampil
+ * "Data toko belum diisi" dan baris alamat/telepon disembunyikan — tidak
+ * ada lagi data toko rekaan di laporan (PKG-E, perbaikan 7 item #1).
+ */
 export default function ReportHeader({ title, period }: ReportHeaderProps) {
+  const [storeName, setStoreName] = useState("");
+  const [storeAddress, setStoreAddress] = useState("");
+  const [storePhone, setStorePhone] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    getStoreSetting()
+      .then((res) => {
+        if (!cancelled && res.success && res.data) {
+          setStoreName(res.data.name || "");
+          setStoreAddress(res.data.address || "");
+          setStorePhone(res.data.phone || "");
+        }
+      })
+      .catch(() => {
+        // Gagal memuat: kop tetap tampil tanpa data toko.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="mb-8">
       {/* Kop perusahaan */}
       <div className="text-center">
-        <h1 className="text-2xl font-bold tracking-wide text-[#111111]">{COMPANY_INFO.name}</h1>
-        <p className="mt-1 text-sm text-[#6B7280]">{COMPANY_INFO.address}</p>
-        <p className="text-sm text-[#6B7280]">Telp: {COMPANY_INFO.phone}</p>
+        <h1 className="text-2xl font-bold tracking-wide text-[#111111]">
+          {storeName || "Data toko belum diisi"}
+        </h1>
+        {storeAddress && <p className="mt-1 text-sm text-[#6B7280]">{storeAddress}</p>}
+        {storePhone && <p className="text-sm text-[#6B7280]">Telp: {storePhone}</p>}
       </div>
 
       {/* Garis merah tua */}

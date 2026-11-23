@@ -1,69 +1,70 @@
 "use client";
 
-import { useState } from "react";
-import { User, Mail } from "lucide-react";
 import { useSession } from "next-auth/react";
 
+/**
+ * Tab Profil Akun — tampilan minimalis: daftar baris label + nilai saja,
+ * tanpa kotak input dan dekorasi. Data nama/email/role berasal dari sesi
+ * (diisi callback jwt/session di src/lib/auth.ts).
+ */
 export default function ProfileSettingsTab() {
-  const { data: session } = useSession();
-  
-  return (
-    <div className="space-y-6 max-w-2xl">
-      <div>
+  const { data: session, status } = useSession();
+
+  if (status === "loading") {
+    return (
+      <div className="max-w-2xl">
         <h2 className="text-lg font-semibold text-gray-900">Profil Akun</h2>
-        <p className="text-sm text-gray-500">
-          Informasi profil Anda. (Saat ini hanya untuk melihat data).
+        <p className="mt-1 text-sm text-gray-500">Memuat data akun…</p>
+        <div className="mt-6 space-y-4" aria-busy="true">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="border-b border-gray-100 pb-4">
+              <div className="h-3 w-20 animate-pulse rounded bg-gray-200" />
+              <div className="mt-2 h-4 w-56 animate-pulse rounded bg-gray-200" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated" || !session?.user) {
+    return (
+      <div className="max-w-2xl">
+        <h2 className="text-lg font-semibold text-gray-900">Profil Akun</h2>
+        <p className="mt-1 text-sm text-gray-500">
+          Sesi tidak ditemukan. Silakan login ulang untuk melihat profil Anda.
         </p>
       </div>
+    );
+  }
 
-      <div className="space-y-4">
-        {/* Name */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Nama Lengkap
-          </label>
-          <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              readOnly
-              value={session?.user?.name || ""}
-              className="glass-input pl-10 bg-gray-50 text-gray-500 cursor-not-allowed"
-            />
-          </div>
-        </div>
+  const rows: Array<{ label: string; value: string }> = [
+    { label: "Nama Lengkap", value: session.user.name || "—" },
+    { label: "Alamat Email", value: session.user.email || "—" },
+    { label: "Peran (Role)", value: session.user.role || "—" },
+  ];
 
-        {/* Email */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Alamat Email
-          </label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="email"
-              readOnly
-              value={session?.user?.email || ""}
-              className="glass-input pl-10 bg-gray-50 text-gray-500 cursor-not-allowed"
-            />
-          </div>
-        </div>
+  return (
+    <div className="max-w-2xl">
+      <h2 className="text-lg font-semibold text-gray-900">Profil Akun</h2>
+      <p className="mt-1 text-sm text-gray-500">
+        Informasi akun Anda. Data ini hanya untuk dilihat.
+      </p>
 
-        {/* Role */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Peran (Role)
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              readOnly
-              value={session?.user?.role || ""}
-              className="glass-input bg-gray-50 text-gray-500 cursor-not-allowed uppercase font-semibold"
-            />
+      <dl className="mt-6 divide-y divide-gray-100 border-y border-gray-100">
+        {rows.map((row) => (
+          <div key={row.label} className="py-3">
+            <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">
+              {row.label}
+            </dt>
+            <dd className="mt-1 text-sm text-gray-900">{row.value}</dd>
           </div>
-        </div>
-      </div>
+        ))}
+      </dl>
+
+      <p className="mt-4 text-xs text-gray-400">
+        Untuk mengubah nama atau email, hubungi admin toko.
+      </p>
     </div>
   );
 }

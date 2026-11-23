@@ -204,6 +204,10 @@ model Customer {
   province    String?
   type        CustomerType @default(UMUM)
   isActive    Boolean  @default(true)
+  // PKG-A (23 Nov 2026, perbaikan 7 item #5/#6): poin loyalitas customer.
+  // Hanya bertambah dari penjualan lunas non-UMUM (lihat createSale);
+  // penyesuaian manual hanya lewat adjustCustomerPoints (SUPER_ADMIN).
+  points      Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
@@ -240,12 +244,17 @@ model Sale {
   changeAmount    Decimal  @default(0) @db.Decimal(15, 2)
   notes           String?
   status          SaleStatus @default(COMPLETED)
+  // PKG-A (23 Nov 2026, perbaikan 7 item #5): salesperson yang menangani
+  // penjualan ini. Dicatat internal saja — TIDAK PERNAH dicetak di
+  // invoice/struk/surat jalan.
+  salesmanId      String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
   // Relations
   customer      Customer?  @relation(fields: [customerId], references: [id])
   cashier       User       @relation(fields: [cashierId], references: [id])
+  salesman      Salesman?  @relation(fields: [salesmanId], references: [id])
   saleItems     SaleItem[]
   customerDebts CustomerDebt[]
   deliveryOrder   DeliveryOrder?
@@ -253,6 +262,7 @@ model Sale {
   @@index([invoiceNumber])
   @@index([saleDate])
   @@index([customerId])
+  @@index([salesmanId])
   @@map("sales")
 }
 
@@ -273,6 +283,23 @@ model SaleItem {
   unit    Unit    @relation("SaleItemUnit", fields: [unitId], references: [id])
   
   @@map("sale_items")
+}
+
+// PKG-A (23 Nov 2026, perbaikan 7 item #5): salesperson toko.
+// CRUD penuh + dipilih per transaksi di POS; tercatat internal di Sale,
+// TIDAK PERNAH dicetak di invoice/struk/surat jalan.
+model Salesman {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  sales     Sale[]
+
+  @@map("salesmen")
 }
 
 enum PaymentMethod {
@@ -640,6 +667,11 @@ model StoreSetting {
   bankName    String?
   bankAccount String?
   bankHolder  String?
+
+  // PKG-A (23 Nov 2026, perbaikan 7 item #6): pengaturan poin loyalitas.
+  // SUPER_ADMIN yang mengatur bebas dari tab Sales di Pengaturan.
+  pointsEnabled       Boolean @default(true)
+  pointsRupiahPerPoint Int    @default(10000)
   
   // Invoice Global Settings
   invoiceLayoutType       String   @default("STRUK_KECIL") // STRUK_KECIL, INVOICE_BESAR, SURAT_JALAN, FAKTUR_NCR

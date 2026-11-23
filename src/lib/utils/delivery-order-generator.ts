@@ -1,5 +1,7 @@
 import { DeliveryOrderData } from "@/types/delivery-order";
 import { getStoreSetting } from "@/lib/actions/store-setting.actions"; // Import Action
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 // XSS fix (Nov 2026): semua teks dari database (nama customer, sopir,
 // kendaraan, produk, catatan) di-escape sebelum ditempel ke HTML Surat Jalan.
@@ -20,8 +22,10 @@ export function generateDeliveryOrderHTML(
   storeSetting: StoreSetting | null
 ): string {
   
-  const storeName = storeSetting?.name || "TB Masdar Utama";
-  const storeAddress = storeSetting?.address || "Alamat belum diatur";
+  // Nama toko dari DB; kalau kosong tampilkan catatan jelas, bukan nama rekaan.
+  // Surat jalan TIDAK PERNAH menampilkan info bank (bukan dokumen pembayaran).
+  const storeName = (storeSetting?.name || "").trim() || "Data toko belum diisi";
+  const storeAddress = (storeSetting?.address || "").trim();
   const storePhone = storeSetting?.phone ? `Telp: ${storeSetting.phone}` : "";
 
   // Logika Logo
@@ -85,8 +89,8 @@ export function generateDeliveryOrderHTML(
             </div>
             <div class="store-info">
                 <h1>${escapeHtml(storeName)}</h1>
-                <p>${escapeHtml(storeAddress)}</p>
-                <p>${escapeHtml(storePhone)}</p>
+                ${storeAddress ? `<p>${escapeHtml(storeAddress)}</p>` : ''}
+                ${storePhone ? `<p>${escapeHtml(storePhone)}</p>` : ''}
             </div>
         </div>
 
@@ -160,27 +164,76 @@ export function generateDeliveryOrderHTML(
   `;
 }
 
+// Lebar render A4 di layar (96 dpi) — dipakai supaya hasil di HP sama
+// dengan di desktop, tidak menyempit mengikuti lebar layar HP.
+const DO_RENDER_WIDTH_PX = 794;
+
+/** Ambil data toko dari server action; null kalau belum ada / gagal. */
+async function loadStoreSetting(): Promise<StoreSetting | null> {
+    try {
+        const res = await getStoreSetting();
+        if (res.success && res.data) {
+            return {
+                name: res.data.name,
+                address: res.data.address,
+                phone: res.data.phone,
+                logoUrl: res.data.logoUrl,
+            };
+        }
+    } catch (error) {
+        console.error("Gagal memuat data toko:", error);
+    }
+    return null;
+}
+
+/** Render HTML surat jalan ke iframe tersembunyi selebar A4. */
+function renderToHiddenIframe(html: string): Promise<HTMLIFrameElement> {
+    return new Promise((resolve, reject) => {
+        const iframe = document.createElement("iframe");
+        iframe.style.position = "fixed";
+        iframe.style.left = "-9999px";
+        iframe.style.top = "0";
+        iframe.style.width = `${DO_RENDER_WIDTH_PX}px`;
+        iframe.style.height = "100px";
+        iframe.style.border = "0";
+        document.body.appendChild(iframe);
+        const doc = iframe.contentDocument;
+        if (!doc) {
+            iframe.remove();
+            reject(new Error("Gagal membuat iframe"));
+            return;
+        }
+        // Tunggu gambar logo selesai dimuat supaya ikut tercetak / ter-capture.
+        let settled = false;
+        const done = () => {
+            if (settled) return;
+            settled = true;
+            resolve(iframe);
+        };
+        iframe.onload = () => window.setTimeout(done, 300);
+        doc.open();
+        doc.write(html);
+        doc.close();
+        // Fallback kalau onload tidak jalan (mis. tanpa gambar eksternal).
+        window.setTimeout(done, 1500);
+    });
+}
+
+function removeIframe(iframe: HTMLIFrameElement) {
+    if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+}
+
 // 2. Fungsi Print (ASYNC: Mengambil Data Toko Dulu Baru Print)
 export async function printDeliveryOrder(deliveryOrder: DeliveryOrderData) {
   // Buka window kosong dulu agar tidak kena popup blocker
   const printWindow = window.open("", "_blank");
-  
+
   if (printWindow) {
     printWindow.document.write("<p>Memuat data toko...</p>");
-    
+
     try {
         // FETCH DATA SETTING DARI SERVER ACTION
-        const res = await getStoreSetting();
-        let settings: StoreSetting | null = null;
-        
-        if (res.success && res.data) {
-            settings = {
-                name: res.data.name,
-                address: res.data.address,
-                phone: res.data.phone,
-                logoUrl: res.data.logoUrl
-            };
-        }
+        const settings = await loadStoreSetting();
 
         // GENERATE HTML DENGAN DATA YANG BARU DIAMBIL
         const html = generateDeliveryOrderHTML(deliveryOrder, settings);
@@ -189,7 +242,7 @@ export async function printDeliveryOrder(deliveryOrder: DeliveryOrderData) {
         printWindow.document.open();
         printWindow.document.write(html);
         printWindow.document.close();
-        
+
         // Tunggu sebentar untuk load gambar logo jika ada
         printWindow.onload = () => {
             setTimeout(() => {
@@ -203,37 +256,66 @@ export async function printDeliveryOrder(deliveryOrder: DeliveryOrderData) {
         printWindow.document.write("<p>Gagal memuat surat jalan.</p>");
     }
   } else {
-    alert("Pop-up diblokir. Izinkan pop-up untuk mencetak.");
+    // Pop-up diblokir (umum di HP): cetak lewat iframe tersembunyi.
+    try {
+        const settings = await loadStoreSetting();
+        const html = generateDeliveryOrderHTML(deliveryOrder, settings);
+        const iframe = await renderToHiddenIframe(html);
+        const win = iframe.contentWindow;
+        if (win) {
+            win.focus();
+            win.print();
+        }
+        window.setTimeout(() => removeIframe(iframe), 1000);
+    } catch (error) {
+        console.error("Gagal print:", error);
+        alert("Gagal mencetak surat jalan.");
+    }
   }
 }
 
-// 3. Fungsi Download PDF (ASYNC JUGA)
+// 3. Fungsi Download PDF — PDF ASLI (jsPDF + html2canvas, A4 multi-halaman),
+//    bukan lagi file .html. Surat jalan panjang mengalir ke halaman 2 dst.
 export async function downloadDeliveryOrderPDF(deliveryOrder: DeliveryOrderData) {
+    let iframe: HTMLIFrameElement | null = null;
     try {
-        const res = await getStoreSetting();
-        let settings: StoreSetting | null = null;
-        
-        if (res.success && res.data) {
-            settings = {
-                name: res.data.name,
-                address: res.data.address,
-                phone: res.data.phone,
-                logoUrl: res.data.logoUrl
-            };
+        const settings = await loadStoreSetting();
+        const html = generateDeliveryOrderHTML(deliveryOrder, settings);
+
+        iframe = await renderToHiddenIframe(html);
+        const doc = iframe.contentDocument;
+        if (!doc || !doc.body) throw new Error("Isi surat jalan tidak bisa dibaca");
+
+        const canvas = await html2canvas(doc.body, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: "#ffffff",
+            windowWidth: DO_RENDER_WIDTH_PX,
+        });
+
+        const imgData = canvas.toDataURL("image/png");
+        const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+        const pdfWidth = 210;
+        const pageHeight = 297;
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+        let heightLeft = imgHeight;
+        let position = 0;
+        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, imgHeight);
+        heightLeft -= pageHeight;
+        while (heightLeft > 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, "PNG", 0, position, pdfWidth, imgHeight);
+            heightLeft -= pageHeight;
         }
 
-        const html = generateDeliveryOrderHTML(deliveryOrder, settings);
-        
-        const blob = new Blob([html], { type: "text/html" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `SJ-${deliveryOrder.doNumber}.html`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        pdf.save(`SJ-${deliveryOrder.doNumber}.pdf`);
     } catch (error) {
         console.error("Gagal download:", error);
         alert("Gagal mendownload surat jalan.");
+    } finally {
+        if (iframe) removeIframe(iframe);
     }
 }

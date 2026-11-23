@@ -32,6 +32,11 @@ interface Sale {
     cashier: {
         name: string;
     };
+    // Salesman ditambahkan PKG-A (Sale.salesmanId + relasi + getSales include).
+    // Opsional supaya halaman tetap jalan sebelum PKG-A: tanpa data, tampil "-".
+    salesman?: {
+        name: string;
+    } | null;
 }
 
 export default function SalesPage() {
@@ -243,6 +248,7 @@ export default function SalesPage() {
                                     <th>Tanggal</th>
                                     <th>Customer</th>
                                     <th>Kasir</th>
+                                    <th>Sales</th>
                                     <th>Status</th>
                                     <th>Pembayaran</th>
                                     <th className="text-right">Total</th>
@@ -269,6 +275,7 @@ export default function SalesPage() {
                                             </div>
                                         </td>
                                         <td>{sale.cashier.name}</td>
+                                        <td>{sale.salesman?.name || "-"}</td>
                                         <td>
                                             <SaleStatusBadge status={sale.status} />
                                         </td>

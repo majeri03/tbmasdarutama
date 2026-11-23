@@ -42,6 +42,10 @@ export const createSaleSchema = z.object({
   paidAmount: z.number().min(0, "Jumlah bayar tidak boleh negatif").max(1_000_000_000, "Jumlah bayar terlalu besar"),
   changeAmount: z.number().min(0, "Kembalian tidak boleh negatif").max(1_000_000_000, "Kembalian terlalu besar").default(0),
   notes: z.string().trim().max(500, "Catatan maksimal 500 karakter").optional().nullable(),
+  // PKG-A (23 Nov 2026, perbaikan 7 item #5): salesperson yang menangani
+  // penjualan ini (opsional). Harus ada + aktif — dicek di createSale.
+  // Dicatat internal saja, TIDAK PERNAH dicetak di invoice/struk/surat jalan.
+  salesmanId: z.string().min(1, "Salesman tidak valid").max(100).optional().nullable(),
 })
   // FIX PENTEST (22 Nov 2026, L11): pajak maksimal 25% dari total
   // (PPN 11% — 25% sudah longgar). Tanpa ini, tax: 999999999999 lolos
@@ -75,19 +79,11 @@ export const paymentValidationSchema = z
     grandTotal: z.number().min(0),
     paidAmount: z.number().min(0),
   })
-  .refine(
-    (data) => {
-      // Jika CREDIT, customer tidak boleh "Customer Umum"
-      if (data.paymentMethod === "CREDIT") {
-        return data.customerId !== "customer-umum-id"; // Nanti diganti dengan ID real
-      }
-      return true;
-    },
-    {
-      message: "Pembayaran CREDIT tidak tersedia untuk Customer Umum",
-      path: ["paymentMethod"],
-    }
-  )
+  // PKG-A (23 Nov 2026, perbaikan 7 item #7): cek CREDIT-untuk-Umum yang
+  // menolak id hardcoded "customer-umum-id" DIHAPUS — id itu tidak pernah
+  // ada di database, jadi ceknya mati. Aturan yang benar sudah ada dan
+  // tetap dipakai: validatePaymentAndChange di stock-units.ts menolak
+  // CREDIT kalau customerType === "UMUM" (dipakai createSale/updateSale).
   .refine(
     (data) => {
       // Jika bukan CREDIT, paidAmount harus >= grandTotal

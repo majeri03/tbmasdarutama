@@ -52,7 +52,9 @@ export async function updateStoreSetting(formData: unknown, externalSession?: Au
 
       result = await prisma.storeSetting.update({
         where: { id: existing.id },
-        data: updateData as { [key: string]: string | boolean | null },
+        // PKG-A: cast diperluas dengan number supaya field numerik baru
+        // (pointsRupiahPerPoint) tersimpan dengan tipe yang benar.
+        data: updateData as { [key: string]: string | boolean | number | null },
       });
     } else {
       const createData: Record<string, unknown> = {
@@ -77,7 +79,8 @@ export async function updateStoreSetting(formData: unknown, externalSession?: Au
         }
       }
       result = await prisma.storeSetting.create({
-        data: createData as { [key: string]: string | boolean },
+        // PKG-A: cast diperluas dengan number (pointsRupiahPerPoint).
+        data: createData as { [key: string]: string | boolean | number },
       });
     }
 

@@ -29,21 +29,23 @@ export async function GET() {
       return errorResponse(result.error || "Gagal mengambil pengaturan toko.", 400);
     }
 
-    // Jika belum ada data, kembalikan default lengkap agar tidak error di client
+    // Jika belum ada data, kembalikan string kosong — JANGAN isi data toko
+    // palsu (nama/bank/alamat rekaan). Client menampilkan "data toko belum
+    // diisi" dan pemilik toko melengkapinya di Pengaturan.
     const data = result.data ?? {
       id: null,
-      name: "TB Masdar Utama",
-      tagline: "Distributor Bahan Bangunan Terpercaya",
+      name: "",
+      tagline: "",
       logoUrl: null,
-      phone: "6285398346677",
+      phone: "",
       email: null,
-      address: "Jl. Poros Maros - Pangkep, Maccini Baji, Kec. Lau, Kabupaten Maros, Sulawesi Selatan",
-      city: "Maros",
-      province: "Sulawesi Selatan",
+      address: "",
+      city: "",
+      province: "",
       postalCode: null,
-      bankName: "BCA",
-      bankAccount: "1234567890",
-      bankHolder: "TB Masdar Utama",
+      bankName: "",
+      bankAccount: "",
+      bankHolder: "",
       taxRate: 0,
       receiptFooter: null,
       currency: "IDR",

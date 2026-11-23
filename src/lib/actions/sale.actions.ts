@@ -31,6 +31,7 @@ import {
   deleteR2FileByUrl,
   extractTagUrls,
 } from "@/lib/utils/r2-tracking";
+import { ensureUmumCustomer } from "@/lib/actions/customer.actions";
 
 async function generateInvoiceNumber(): Promise<string> {
   const today = new Date();
@@ -97,6 +98,32 @@ export async function createSale(data: CreateSaleInput, externalSession?: AuthSe
     if (!customer) {
       return { success: false, error: "Customer tidak ditemukan" };
     }
+
+    // PKG-A (23 Nov 2026, perbaikan 7 item #5): salesman wajib ada +
+    // aktif kalau diisi. Dicatat internal saja — TIDAK PERNAH dicetak di
+    // invoice/struk/surat jalan.
+    if (validated.salesmanId) {
+      const salesman = await prisma.salesman.findUnique({
+        where: { id: validated.salesmanId },
+        select: { id: true, isActive: true },
+      });
+      if (!salesman) {
+        return { success: false, error: "Salesman tidak ditemukan" };
+      }
+      if (!salesman.isActive) {
+        return { success: false, error: "Salesman sudah nonaktif, pilih salesman lain" };
+      }
+    }
+
+    // PKG-A (23 Nov 2026, perbaikan 7 item #7): pastikan SATU customer
+    // Umum selalu ada supaya POS bisa auto-select untuk penjualan cepat.
+    // Best-effort — kalau gagal, penjualan tetap jalan (POS akan
+    // menanganinya saat getPOSCustomers dipanggil).
+    const umumResult = await ensureUmumCustomer(session);
+    if (!umumResult.success) {
+      console.error("[CREATE_SALE] ensureUmumCustomer gagal:", umumResult.error);
+    }
+
     const productIds = validated.items.map((i) => i.productId);
     const checkoutProducts = await loadCheckoutProducts(productIds);
     const unitNames = await loadUnitNames();
@@ -164,6 +191,9 @@ export async function createSale(data: CreateSaleInput, externalSession?: AuthSe
                   : SaleStatus.PENDING
                 : SaleStatus.COMPLETED,
             notes: validated.notes || null,
+            // PKG-A (23 Nov 2026, perbaikan 7 item #5): salesman tercatat
+            // internal saja — TIDAK PERNAH dicetak di invoice/struk/DO.
+            salesmanId: validated.salesmanId || null,
             // OPTIMASI: Simpan item langsung di sini (Nested Create)
             saleItems: {
               create: saleItemsData
@@ -175,6 +205,9 @@ export async function createSale(data: CreateSaleInput, externalSession?: AuthSe
             },
             cashier: {
               select: { name: true, email: true },
+            },
+            salesman: {
+              select: { id: true, name: true },
             },
           },
         });
@@ -224,6 +257,33 @@ export async function createSale(data: CreateSaleInput, externalSession?: AuthSe
                 notes: `Utang dari penjualan ${invoiceNumber}`,
               },
             });
+          }
+        }
+
+        // C2. Poin loyalitas (PKG-A, perbaikan 7 item #6): HANYA kalau
+        // SEMUA syarat terpenuhi — poin diaktifkan di pengaturan toko,
+        // pembayaran BUKAN CREDIT (lunas), customer BUKAN UMUM, dan
+        // grandTotal > 0. Poin = floor(grandTotal / pointsRupiahPerPoint).
+        // Umum tidak pernah dapat poin; CREDIT tidak dapat poin.
+        if (
+          validated.paymentMethod !== PaymentMethod.CREDIT &&
+          customer.type !== "UMUM" &&
+          totals.grandTotal > 0
+        ) {
+          const setting = await tx.storeSetting.findFirst({
+            select: { pointsEnabled: true, pointsRupiahPerPoint: true },
+          });
+          // Tidak ada baris pengaturan = pakai default schema (aktif, Rp 10.000/poin).
+          const pointsEnabled = setting?.pointsEnabled ?? true;
+          const rate = setting?.pointsRupiahPerPoint ?? 10000;
+          if (pointsEnabled && rate > 0) {
+            const pointsEarned = Math.floor(totals.grandTotal / rate);
+            if (pointsEarned > 0) {
+              await tx.customer.update({
+                where: { id: validated.customerId },
+                data: { points: { increment: pointsEarned } },
+              });
+            }
           }
         }
 

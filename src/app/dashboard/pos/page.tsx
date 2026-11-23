@@ -13,6 +13,10 @@ import { POSKeyboardShortcuts } from "./_components/POSKeyboardShortcuts";
 import { HoldCartPanel } from "./_components/HoldCartPanel";
 import { POSProduct, CartItem, POSCustomer } from "@/types/pos";
 import { getPOSProducts, getProductByBarcode, getPOSCustomers } from "@/lib/actions/pos.actions";
+// DEPENDENSI PKG-A (lihat pkg-c-NOTES.md): ensureUmumCustomer belum ada di
+// HEAD ini — disediakan paket PKG-A di src/lib/actions/customer.actions.ts.
+import { ensureUmumCustomer } from "@/lib/actions/customer.actions";
+import { CustomerType } from "@prisma/client";
 import { validateStock, getCustomerDiscount } from "@/lib/utils/pos-helpers";
 import {
     loadParkedCarts,
@@ -41,12 +45,60 @@ export default function POSPage() {
     const searchRef = useRef<ProductSearchHandle>(null);
     const [showMobileCart, setShowMobileCart] = useState(false);
     const { showToast, toast, hideToast } = useToast();
+    // Salesman: daftar dari GET /api/salesmen (disediakan PKG-A). Kosong =
+    // hanya ada pilihan "Tanpa Sales", transaksi tetap jalan.
+    const [salesmen, setSalesmen] = useState<{ id: string; name: string }[]>([]);
+    const [selectedSalesmanId, setSelectedSalesmanId] = useState<string>("");
 
-    // Load default customer (Customer Umum)
+    // Load default customer: SATU customer Umum (tipe UMUM), dibuat dulu
+    // kalau belum ada. JANGAN pakai kode customer hardcoded untuk mencari
+    // Umum (kode lama itu menunjuk Toko Maju Jaya, GROSIR — bukan Umum).
     const loadDefaultCustomer = useCallback(async () => {
-        const result = await getPOSCustomers();
+        const result = await ensureUmumCustomer();
         if (result.success && result.data) {
-            const customerUmum = result.data.find((c) => c.code === "CUST-001");
+            // Bentuk data mengikuti kontrak PKG-A (customer Umum); field
+            // opsional diisi fallback supaya tahan terhadap bentuk subset.
+            const umum = result.data as unknown as {
+                id: string;
+                code: string;
+                name: string;
+                type: CustomerType;
+                phone?: string | null;
+                email?: string | null;
+                address?: string | null;
+                city?: string | null;
+                province?: string | null;
+                isActive?: boolean;
+                createdAt?: Date | string;
+                updatedAt?: Date | string;
+                // PKG-F: points wajib ada di POSCustomer (Prisma Customer
+                // kini punya points dari PKG-A). Umum tidak pernah dapat
+                // poin, tapi field-nya tetap harus diisi.
+                points?: number;
+            };
+            setSelectedCustomer({
+                id: umum.id,
+                code: umum.code,
+                name: umum.name,
+                type: umum.type,
+                phone: umum.phone ?? null,
+                email: umum.email ?? null,
+                address: umum.address ?? null,
+                city: umum.city ?? null,
+                province: umum.province ?? null,
+                isActive: umum.isActive ?? true,
+                createdAt: umum.createdAt ? new Date(umum.createdAt) : new Date(),
+                updatedAt: umum.updatedAt ? new Date(umum.updatedAt) : new Date(),
+                points: umum.points ?? 0,
+                discountPercent: getCustomerDiscount(umum.type),
+            });
+            return;
+        }
+        // Fallback kalau ensureUmumCustomer gagal di runtime: cari customer
+        // bertipe UMUM dari daftar (tetap tanpa kode hardcoded).
+        const fallback = await getPOSCustomers();
+        if (fallback.success && fallback.data) {
+            const customerUmum = fallback.data.find((c) => c.type === CustomerType.UMUM);
             if (customerUmum) {
                 setSelectedCustomer({
                     ...customerUmum,
@@ -57,9 +109,32 @@ export default function POSPage() {
                     isActive: true,
                     createdAt: new Date(),
                     updatedAt: new Date(),
+                    // PKG-F: points wajib ada di POSCustomer (Prisma
+                    // Customer kini punya points dari PKG-A). Cabang ini
+                    // khusus customer UMUM — Umum tidak pernah dapat poin.
+                    points: 0,
                     discountPercent: getCustomerDiscount(customerUmum.type),
                 });
             }
+        }
+    }, []);
+
+    // Load daftar salesman (opsional — gagal dimuat = tetap "Tanpa Sales").
+    const loadSalesmen = useCallback(async () => {
+        try {
+            const res = await fetch("/api/salesmen");
+            if (!res.ok) return;
+            const json = await res.json();
+            const list = Array.isArray(json) ? json : json?.data;
+            if (Array.isArray(list)) {
+                setSalesmen(
+                    list
+                        .filter((s) => s && typeof s.id === "string" && typeof s.name === "string")
+                        .map((s) => ({ id: s.id, name: s.name }))
+                );
+            }
+        } catch {
+            // Rute belum ada / jaringan gagal: biarkan "Tanpa Sales" saja.
         }
     }, []);
 
@@ -84,6 +159,7 @@ export default function POSPage() {
     useEffect(() => {
         loadDefaultCustomer();
         loadProducts();
+        loadSalesmen();
         setParkedCarts(loadParkedCarts());
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -321,11 +397,33 @@ export default function POSPage() {
                 <POSLayout
                     cartItemsCount={cartItems.length}
                     customer={
-                        <CustomerSelector
-                            selectedCustomer={selectedCustomer}
-                            onSelectCustomer={setSelectedCustomer}
-                            onQuickAdd={() => setShowQuickAddCustomer(true)}
-                        />
+                        <div className="space-y-2">
+                            <CustomerSelector
+                                selectedCustomer={selectedCustomer}
+                                onSelectCustomer={setSelectedCustomer}
+                                onQuickAdd={() => setShowQuickAddCustomer(true)}
+                            />
+                            {/* Salesman (internal saja — TIDAK dicetak di invoice/struk).
+                                Opsional, default "Tanpa Sales". */}
+                            <div className="glass-card p-2 md:p-3 flex items-center gap-3">
+                                <label htmlFor="pos-salesman" className="text-sm text-gray-500 whitespace-nowrap">
+                                    Sales
+                                </label>
+                                <select
+                                    id="pos-salesman"
+                                    value={selectedSalesmanId}
+                                    onChange={(e) => setSelectedSalesmanId(e.target.value)}
+                                    className="flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="">Tanpa Sales</option>
+                                    {salesmen.map((salesman) => (
+                                        <option key={salesman.id} value={salesman.id}>
+                                            {salesman.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
                     }
                     cart={
                         <ShoppingCart
@@ -411,6 +509,12 @@ export default function POSPage() {
                         items={cartItems}
                         customer={selectedCustomer}
                         discount={discount}
+                        // DEPENDENSI (lihat pkg-c-NOTES.md): PaymentModal di HEAD ini
+                        // belum menerima prop salesmanId — paket lain harus
+                        // menambahkannya (opsional) dan meneruskannya ke
+                        // createPosTransaction/createSale; createSaleSchema
+                        // (PKG-A) harus menerima salesmanId opsional.
+                        salesmanId={selectedSalesmanId || undefined}
                         onSuccess={handlePaymentSuccess}
                         showToast={showToast}
                     />

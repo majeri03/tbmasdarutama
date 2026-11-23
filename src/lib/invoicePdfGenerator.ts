@@ -21,11 +21,18 @@ export const getStoreSettings = async () => {
   } catch (e) {
     console.warn('[INVOICE_PDF] Error getting store settings:', e);
   }
+  // TIDAK ADA data toko di DB (atau DB tidak bisa dibaca): kembalikan string
+  // kosong, JANGAN data toko rekaan. Template menampilkan "Data toko belum
+  // diisi" sebagai ganti nama toko dan menyembunyikan blok bank.
   return {
-    name: 'TB Masdar Utama',
-    phone: '6285398346677',
-    address: 'Jl. Poros Maros - Pangkep, Maccini Baji, Kec. Lau, Kabupaten Maros, Sulawesi Selatan',
-    tagline: 'Distributor Bahan Bangunan Terpercaya',
+    name: '',
+    phone: '',
+    address: '',
+    tagline: '',
+    logoUrl: null,
+    bankName: '',
+    bankAccount: '',
+    bankHolder: '',
   };
 };
 
@@ -71,6 +78,12 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
   };
 
   const scale = layout.fontSizeScale || 1.0;
+  // Nama toko dari DB; kalau kosong tampilkan catatan jelas, bukan nama rekaan.
+  const displayStoreName = (store?.name || '').trim() || 'Data toko belum diisi';
+  // Blok bank tampil kapan pun toko sudah menyimpan data bank (metode bayar
+  // apa pun) — bukan hanya TRANSFER. Surat jalan tidak pernah memakai ini
+  // (template SURAT_JALAN di bawah tidak punya blok bank sama sekali).
+  const hasBankInfo = Boolean((layout.bankAccount || '').trim());
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
   const logoUrl = store.logoUrl
     ? (store.logoUrl.startsWith('http') ? store.logoUrl : `${baseUrl}${store.logoUrl}`)
@@ -173,11 +186,11 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           ` : ''}
           ${layout.showHeader ? `
             <div class="center">
-              <div style="font-size: ${16 * scale}px; font-weight: bold;">${escapeHtml(store.name)}</div>
+              <div style="font-size: ${16 * scale}px; font-weight: bold;">${escapeHtml(displayStoreName)}</div>
               ${store.tagline ? `<div style="font-size: ${10 * scale}px; font-style: italic;">${escapeHtml(store.tagline)}</div>` : ''}
               <div style="font-size: ${10 * scale}px; color: #4B5563; margin-top: 4px;">
-                ${escapeHtml(store.address || '')}<br>
-                Telp: ${escapeHtml(store.phone || '')}
+                ${store.address ? `${escapeHtml(store.address)}<br>` : ''}
+                ${store.phone ? `Telp: ${escapeHtml(store.phone)}` : ''}
               </div>
             </div>
             <div class="divider"></div>
@@ -215,10 +228,10 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
             <div class="row" style="color: #059669; font-weight: bold;"><div>Kembalian</div><div>Rp ${sale.changeAmount.toLocaleString('id-ID')}</div></div>
           </div>
 
-          ${layout.showPaymentInfo && sale.paymentMethod === 'TRANSFER' && layout.bankAccount ? `
+          ${layout.showPaymentInfo && hasBankInfo ? `
             <div class="divider"></div>
             <div style="font-size: ${10 * scale}px; background: #F3F4F6; padding: 6px; border-radius: 4px; text-align: center;">
-              <div style="font-weight: bold;">TRANSFER KE:</div>
+              <div style="font-weight: bold;">REKENING BANK:</div>
               <div>${escapeHtml(layout.bankName)} - ${escapeHtml(layout.bankAccount)}</div>
               <div style="font-weight: bold;">a/n ${escapeHtml(layout.bankHolder)}</div>
             </div>
@@ -352,10 +365,10 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           ` : ''}
           <div class="header-box">
             <div>
-              <div class="store-title">${escapeHtml(store.name)}</div>
+              <div class="store-title">${escapeHtml(displayStoreName)}</div>
               <div style="font-size: 11px;">
-                ${escapeHtml(store.address)}<br>
-                No. Telp: ${escapeHtml(store.phone)}
+                ${store.address ? `${escapeHtml(store.address)}<br>` : ''}
+                ${store.phone ? `No. Telp: ${escapeHtml(store.phone)}` : ''}
               </div>
             </div>
             <div>
@@ -630,10 +643,10 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           ${layout.showHeader ? `
           <div class="header-box" style="align-items: center;">
             <div class="store-info">
-              <div class="store-name" style="margin: 0; font-size: ${18 * scale}px; font-weight: bold; text-transform: uppercase;">${escapeHtml(store.name)}</div>
+              <div class="store-name" style="margin: 0; font-size: ${18 * scale}px; font-weight: bold; text-transform: uppercase;">${escapeHtml(displayStoreName)}</div>
               <div style="font-size: 11px; margin-top: 4px;">
-                ${escapeHtml(store.address)}<br>
-                Phone: ${escapeHtml(store.phone)}
+                ${store.address ? `${escapeHtml(store.address)}<br>` : ''}
+                ${store.phone ? `Phone: ${escapeHtml(store.phone)}` : ''}
               </div>
             </div>
             <div class="invoice-title-col">
@@ -702,9 +715,9 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
                   <b>Terbilang:</b> <i>${terbilangStr}</i>
                 </div>
 
-                ${layout.showPaymentInfo && sale.paymentMethod === 'TRANSFER' && layout.bankAccount ? `
+                ${layout.showPaymentInfo && hasBankInfo ? `
                   <div class="transfer-box">
-                    <b>TRANSFER VIA:</b><br>
+                    <b>REKENING BANK:</b><br>
                     ${escapeHtml(layout.bankName)}<br>
                     A/C: <b>${escapeHtml(layout.bankAccount)}</b><br>
                     A/N: <b>${escapeHtml(layout.bankHolder)}</b>
@@ -972,10 +985,10 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
                 </div>
               ` : ''}
               <div>
-                <div class="store-name" style="margin: 0; font-size: ${18 * scale}px; font-weight: bold; text-transform: uppercase;">${escapeHtml(store.name)}</div>
+                <div class="store-name" style="margin: 0; font-size: ${18 * scale}px; font-weight: bold; text-transform: uppercase;">${escapeHtml(displayStoreName)}</div>
                 <div style="font-size: 11px; margin-top: 4px;">
-                  ${escapeHtml(store.address)}<br>
-                  Phone: ${escapeHtml(store.phone)}
+                  ${store.address ? `${escapeHtml(store.address)}<br>` : ''}
+                  ${store.phone ? `Phone: ${escapeHtml(store.phone)}` : ''}
                 </div>
               </div>
             </div>
@@ -1044,9 +1057,9 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
                   <b>Terbilang:</b> <i>${terbilangStr}</i>
                 </div>
 
-                ${layout.showPaymentInfo && sale.paymentMethod === 'TRANSFER' && layout.bankAccount ? `
+                ${layout.showPaymentInfo && hasBankInfo ? `
                   <div class="transfer-box">
-                    <b>TRANSFER VIA:</b><br>
+                    <b>REKENING BANK:</b><br>
                     ${escapeHtml(layout.bankName)}<br>
                     A/C: <b>${escapeHtml(layout.bankAccount)}</b><br>
                     A/N: <b>${escapeHtml(layout.bankHolder)}</b>

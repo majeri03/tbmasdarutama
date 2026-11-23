@@ -15,9 +15,14 @@ interface PaymentModalProps {
     discount: number;
     onSuccess: (invoiceNumber: string, saleId: string) => void;
     showToast: (message: string, type?: "success" | "error" | "info") => void;
+    // PKG-A (23 Nov 2026, perbaikan 7 item #5): salesperson yang menangani
+    // penjualan ini — dioper dari halaman POS (PKG-C). Opsional; diteruskan
+    // ke createPosTransaction/createSale. Dicatat internal saja — TIDAK
+    // PERNAH dicetak di invoice/struk/surat jalan.
+    salesmanId?: string | null;
 }
 
-export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuccess, showToast }: PaymentModalProps) {
+export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuccess, showToast, salesmanId }: PaymentModalProps) {
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
     const [paidAmount, setPaidAmount] = useState<number>(0);
     const [isLoading, setIsLoading] = useState(false);
@@ -125,6 +130,11 @@ export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuc
                 changeAmount: paymentMethod === "CREDIT" ? 0 : changeAmount,
                 // Tag bukti dipakai APK + laporan keuangan untuk menemukan foto.
                 notes: proofUrl ? `[BUKTI_TF]: ${proofUrl}` : null,
+                // PKG-A (23 Nov 2026, perbaikan 7 item #5): salesman dari
+                // halaman POS (PKG-C). createSaleSchema sudah menerima
+                // salesmanId; createSale memvalidasi (harus ada + aktif)
+                // dan menyimpannya di Sale.salesmanId.
+                salesmanId: salesmanId || null,
             });
             console.log("✅ Payment result:", result); 
             if (result.success && result.data) {

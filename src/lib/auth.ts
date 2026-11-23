@@ -31,6 +31,10 @@ declare module "@auth/core/jwt" {
   interface JWT {
     id: string;
     role: string;
+    /** Nama & email akun — supaya halaman Profil Akun bisa menampilkannya
+     *  tanpa query tambahan (sebelumnya tidak pernah masuk ke token/sesi). */
+    name?: string | null;
+    email?: string | null;
     /** Versi token (lihat User.tokenVersion). Naik tiap logout / ganti
      *  password / nonaktifkan akun / ganti role — token lama langsung mati. */
     tv?: number;
@@ -133,6 +137,8 @@ export const authConfig: NextAuthConfig = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.name = user.name ?? undefined;
+        token.email = user.email ?? undefined;
         token.tv = (user as { tokenVersion?: number }).tokenVersion;
         return token;
       }
@@ -151,11 +157,15 @@ export const authConfig: NextAuthConfig = {
       try {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { role: true, isActive: true, tokenVersion: true },
+          select: { name: true, email: true, role: true, isActive: true, tokenVersion: true },
         });
         if (!dbUser || !dbUser.isActive) return null;
         if (dbUser.tokenVersion !== token.tv) return null;
         token.role = dbUser.role;
+        // Isi ulang nama/email dari DB — mengisi token lama (terbit sebelum
+        // patch ini) yang belum punya klaim nama/email.
+        token.name = dbUser.name ?? undefined;
+        token.email = dbUser.email ?? undefined;
         return token;
       } catch (error) {
         // Query DB gagal (mis. konteks runtime tanpa akses DB) — JANGAN
@@ -171,6 +181,8 @@ export const authConfig: NextAuthConfig = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        session.user.name = (token.name as string | undefined) ?? "";
+        session.user.email = (token.email as string | undefined) ?? "";
       }
       return session;
     },

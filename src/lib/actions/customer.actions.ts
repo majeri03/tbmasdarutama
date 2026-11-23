@@ -41,6 +41,21 @@ export async function createCustomer(data: CreateCustomerInput, externalSession?
     // Validate input
     const validatedData = createCustomerSchema.parse(data);
 
+    // PKG-A (23 Nov 2026, perbaikan 7 item #7): hanya SATU customer UMUM
+    // yang boleh ada di toko (dipakai POS untuk penjualan cepat).
+    if (validatedData.type === "UMUM") {
+      const existingUmum = await prisma.customer.findFirst({
+        where: { type: "UMUM" },
+        select: { id: true, name: true, code: true },
+      });
+      if (existingUmum) {
+        return {
+          success: false,
+          error: `Customer UMUM sudah ada ("${existingUmum.name}" ${existingUmum.code}). Hanya satu customer Umum yang boleh ada.`,
+        };
+      }
+    }
+
     // Check duplicate name
     const existingCustomer = await prisma.customer.findFirst({
       where: { name: { equals: validatedData.name, mode: "insensitive" } },
@@ -112,6 +127,22 @@ export async function updateCustomer(id: string, data: UpdateCustomerInput, exte
 
     if (!customer) {
       return { success: false, error: "Customer tidak ditemukan." };
+    }
+
+    // PKG-A (23 Nov 2026, perbaikan 7 item #7): hanya SATU customer UMUM.
+    // Mengubah customer lain menjadi UMUM ditolak kalau UMUM sudah ada;
+    // mengubah si UMUM itu sendiri tetap boleh.
+    if (validatedData.type === "UMUM" && customer.type !== "UMUM") {
+      const existingUmum = await prisma.customer.findFirst({
+        where: { type: "UMUM", id: { not: id } },
+        select: { id: true, name: true, code: true },
+      });
+      if (existingUmum) {
+        return {
+          success: false,
+          error: `Customer UMUM sudah ada ("${existingUmum.name}" ${existingUmum.code}). Hanya satu customer Umum yang boleh ada.`,
+        };
+      }
     }
 
     // Check duplicate name (exclude current customer)
@@ -306,6 +337,8 @@ export async function getCustomers(filters?: { status?: "ACTIVE" | "INACTIVE" },
         city: true,
         province: true,
         type: true,
+        // PKG-A (23 Nov 2026, perbaikan 7 item #6): poin loyalitas customer.
+        points: true,
         isActive: true,
       },
       orderBy: {
@@ -322,6 +355,105 @@ export async function getCustomers(filters?: { status?: "ACTIVE" | "INACTIVE" },
     return {
       success: false,
       error: "Gagal mengambil data customer.",
+    };
+  }
+}
+
+//   ENSURE UMUM CUSTOMER (PKG-A, perbaikan 7 item #7)
+//   Ambil SATU-SATUNYA customer UMUM; kalau belum ada, buat baru
+//   (nama "Umum", kode berikutnya dari generateCustomerCode).
+//   Dipanggil dari jalur createSale (sale.actions.ts) dan dari
+//   getPOSCustomers (pos.actions.ts — lihat NOTES paket ini) supaya POS
+//   selalu punya satu customer Umum untuk penjualan cepat.
+//   Umum TIDAK bisa utang (CREDIT diblokir validatePaymentAndChange) dan
+//   TIDAK dapat poin.
+export async function ensureUmumCustomer(externalSession?: AuthSession | null) {
+  const session = externalSession || (await auth());
+  try {
+    requireMinimumRole(session, "KASIR");
+    const umum = await prisma.$transaction(async (tx) => {
+      const existing = await tx.customer.findFirst({
+        where: { type: "UMUM" },
+      });
+      if (existing) return existing;
+      const code = await generateCustomerCode();
+      return tx.customer.create({
+        data: {
+          code,
+          name: "Umum",
+          type: "UMUM",
+          isActive: true,
+        },
+      });
+    });
+    return { success: true, data: umum };
+  } catch (error) {
+    console.error("[ENSURE_UMUM_CUSTOMER_ERROR]", error);
+    if (error instanceof Error && error.message.startsWith("Unauthorized")) {
+      return { success: false, error: error.message };
+    }
+    return {
+      success: false,
+      error: "Gagal menyiapkan customer Umum.",
+    };
+  }
+}
+
+//   ADJUST CUSTOMER POINTS (PKG-A, perbaikan 7 item #6)
+//   Dukungan server-side untuk penyesuaian poin manual oleh SUPER_ADMIN
+//   (UI-nya paket lain). delta boleh positif (tambah) atau negatif
+//   (kurang); hasil akhir tidak pernah di bawah 0. Customer UMUM tidak
+//   punya poin — penyesuaiannya ditolak.
+export async function adjustCustomerPoints(
+  customerId: string,
+  delta: number,
+  externalSession?: AuthSession | null
+) {
+  try {
+    const session = externalSession || (await auth());
+    if (!session?.user) {
+      return { success: false, error: "Unauthorized" };
+    }
+    requireMinimumRole(session, "SUPER_ADMIN");
+
+    if (!Number.isInteger(delta) || delta === 0) {
+      return { success: false, error: "Jumlah penyesuaian poin harus bilangan bulat bukan nol." };
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const customer = await tx.customer.findUnique({
+        where: { id: customerId },
+        select: { id: true, name: true, type: true, points: true },
+      });
+      if (!customer) {
+        throw new Error("Customer tidak ditemukan.");
+      }
+      if (customer.type === "UMUM") {
+        throw new Error("Customer Umum tidak memiliki poin.");
+      }
+      const nextPoints = Math.max(0, customer.points + delta);
+      return tx.customer.update({
+        where: { id: customerId },
+        data: { points: nextPoints },
+        select: { id: true, name: true, type: true, points: true },
+      });
+    });
+
+    revalidatePath("/dashboard/customers");
+
+    return {
+      success: true,
+      data: updated,
+      message: `Poin customer "${updated.name}" sekarang ${updated.points}.`,
+    };
+  } catch (error) {
+    console.error("[ADJUST_CUSTOMER_POINTS_ERROR]", error);
+    if (error instanceof Error && error.message.startsWith("Unauthorized")) {
+      return { success: false, error: error.message };
+    }
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Gagal menyesuaikan poin customer.",
     };
   }
 }

@@ -55,10 +55,21 @@ ON CONFLICT (code) DO NOTHING;
 
 -- ==================== INSERT CUSTOMERS ====================
 INSERT INTO customers (id, code, name, phone, email, address, city, province, type, "isActive", "createdAt", "updatedAt")
-VALUES 
+VALUES
 ('cust001', 'CUST-001', 'Toko Maju Jaya', '081234567890', 'tokojaya@gmail.com', 'Jl. Raya Pembangunan No. 45', 'Bandung', 'Jawa Barat', 'GROSIR', true, NOW(), NOW()),
 ('cust002', 'CUST-002', 'CV Bangun Sejahtera', '081234567891', 'bangun@gmail.com', 'Jl. Raya Sukamaju No. 12', 'Jakarta', 'DKI Jakarta', 'PROYEK', true, NOW(), NOW()),
 ('cust003', 'CUST-003', 'Toko Berkah', '081234567892', NULL, 'Jl. Pasar No. 5', 'Bandung', 'Jawa Barat', 'REGULER', true, NOW(), NOW())
+ON CONFLICT (code) DO NOTHING;
+
+-- PKG-A (23 Nov 2026, perbaikan 7 item #7): SATU-SATUNYA customer Umum.
+-- POS otomatis memilih customer ini untuk penjualan cepat. Umum TIDAK bisa
+-- utang (CREDIT diblokir validatePaymentAndChange) dan TIDAK dapat poin.
+-- Kode CUST-000 supaya selalu pertama kalau diurutkan berdasarkan kode.
+-- JANGAN tambah customer UMUM lain — ensureUmumCustomer + validasi
+-- create/update customer hanya mengizinkan satu UMUM.
+INSERT INTO customers (id, code, name, phone, email, address, city, province, type, points, "isActive", "createdAt", "updatedAt")
+VALUES
+('cust000', 'CUST-000', 'Umum', NULL, NULL, NULL, NULL, NULL, 'UMUM', 0, true, NOW(), NOW())
 ON CONFLICT (code) DO NOTHING;
 
 -- ==================== INSERT SAMPLE PRODUCTS ====================

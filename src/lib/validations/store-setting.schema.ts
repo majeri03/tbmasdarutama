@@ -31,6 +31,10 @@ export const storeSettingSchema = z.object({
   invoiceShowSignature: z.boolean().optional(),
   invoiceShowFooter: z.boolean().optional(),
   invoiceFooterTerms: z.string().max(2000).optional().nullable(),
+  // PKG-A (23 Nov 2026, perbaikan 7 item #6): pengaturan poin loyalitas.
+  // Hanya SUPER_ADMIN (updateStoreSetting memakai MANAGE_STORE_SETTINGS).
+  pointsEnabled: z.boolean().optional(),
+  pointsRupiahPerPoint: z.number().int().min(1, "Nilai rupiah per poin minimal Rp 1").max(1_000_000_000, "Nilai rupiah per poin terlalu besar").optional(),
 });
 
 export type StoreSettingFormValues = z.infer<typeof storeSettingSchema>;

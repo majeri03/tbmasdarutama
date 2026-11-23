@@ -43,6 +43,25 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
     
     // Ref ke iframe untuk keperluan download PDF
     const iframeRef = useRef<HTMLIFrameElement>(null);
+    // Ref + ukuran area preview — dipakai untuk fit-to-width: iframe dirender
+    // selebar desktop (850px untuk A4 / 320px untuk struk) lalu diperkecil
+    // dengan transform scale supaya muat di layar HP tanpa overflow horizontal.
+    const previewWrapRef = useRef<HTMLDivElement>(null);
+    const [previewSize, setPreviewSize] = useState({ width: 0, height: 0 });
+
+    useEffect(() => {
+        const el = previewWrapRef.current;
+        if (!el) return;
+        const update = () => setPreviewSize({ width: el.clientWidth, height: el.clientHeight });
+        update();
+        const ro = new ResizeObserver(update);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [isOpen]);
+
+    // Lebar "desktop" konten invoice di dalam iframe.
+    const previewBaseWidth = activeLayout === "STRUK_KECIL" ? 320 : 850;
+    const previewScale = previewSize.width > 0 ? Math.min(1, previewSize.width / previewBaseWidth) : 1;
 
     useEffect(() => {
         if (isOpen && saleId) {
@@ -129,7 +148,9 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
         }
     };
 
-    // Fungsi Download: Mengambil snapshot dari Iframe Preview
+    // Fungsi Download: snapshot iframe lalu ekspor ke PDF A4 multi-halaman.
+    // Invoice panjang TIDAK LAGI terpotong jadi satu gambar — tiap halaman A4
+    // penuh lanjut ke halaman berikutnya.
     const handleDownload = async () => {
         // Pastikan iframe dan isinya sudah siap
         if (!iframeRef.current || !iframeRef.current.contentDocument || !iframeRef.current.contentDocument.body || !saleData) return;
@@ -137,31 +158,55 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
         setIsProcessingPdf(true);
         try {
             const iframeBody = iframeRef.current.contentDocument.body;
+            const isThermal = activeLayout === "STRUK_KECIL";
 
-            // Gunakan html2canvas untuk 'memotret' isi iframe
+            // windowWidth selebar desktop supaya hasil PDF di HP sama dengan di desktop.
             const canvas = await html2canvas(iframeBody, {
-                scale: 2, 
-                useCORS: true, 
+                scale: 2,
+                useCORS: true,
                 logging: false,
-                backgroundColor: "#ffffff"
+                backgroundColor: "#ffffff",
+                windowWidth: isThermal ? 320 : 850,
             });
 
             const imgData = canvas.toDataURL("image/png");
-            const isThermal = activeLayout === "STRUK_KECIL";
 
-            const pdf = new jsPDF({
-                orientation: "portrait",
-                unit: "mm",
-                format: isThermal ? [80, 250] : "a4",
-            });
+            if (isThermal) {
+                // Struk thermal = gulungan: satu halaman memanjang.
+                const pdfWidth = 80;
+                const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+                const thermalPdf = new jsPDF({
+                    orientation: "portrait",
+                    unit: "mm",
+                    format: [80, Math.max(imgHeight, 100)],
+                });
+                thermalPdf.addImage(imgData, "PNG", 0, 0, pdfWidth, imgHeight);
+                thermalPdf.save(`Struk-${saleData.invoiceNumber}.pdf`);
+            } else {
+                const pdf = new jsPDF({
+                    orientation: "portrait",
+                    unit: "mm",
+                    format: "a4",
+                });
 
-            const pdfWidth = isThermal ? 80 : 210;
-            const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+                const pdfWidth = 210;
+                const pageHeight = 297;
+                const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
-            pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, imgHeight);
-            const prefix = activeLayout === "SURAT_JALAN" ? "SuratJalan" : activeLayout === "FAKTUR_NCR" ? "Faktur" : "Invoice";
-            pdf.save(`${prefix}-${saleData.invoiceNumber}.pdf`);
-            
+                let heightLeft = imgHeight;
+                let position = 0;
+                pdf.addImage(imgData, "PNG", 0, position, pdfWidth, imgHeight);
+                heightLeft -= pageHeight;
+                while (heightLeft > 0) {
+                    position = heightLeft - imgHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, "PNG", 0, position, pdfWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+                const prefix = activeLayout === "SURAT_JALAN" ? "SuratJalan" : activeLayout === "FAKTUR_NCR" ? "Faktur" : "Invoice";
+                pdf.save(`${prefix}-${saleData.invoiceNumber}.pdf`);
+            }
+
             showToast("PDF berhasil didownload!", "success");
         } catch (err) {
             console.error("Gagal membuat PDF:", err);
@@ -175,7 +220,7 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
 
     return (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 print:hidden">
-            <div className="glass-card w-full max-w-4xl h-[90vh] flex flex-col bg-white rounded-lg shadow-xl overflow-hidden">
+            <div className="glass-card w-full max-w-4xl h-[92dvh] sm:h-[90vh] flex flex-col bg-white rounded-lg shadow-xl overflow-hidden">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border-b border-gray-200 bg-white gap-3">
                     <div>
@@ -241,8 +286,15 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                     </div>
                 </div>
 
+                {/* Peringatan kalau data toko belum diisi di Pengaturan */}
+                {storeSetting && !storeSetting.name?.trim() && !isLoading && (
+                    <div className="px-4 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-800">
+                        Data toko belum diisi — lengkapi nama, alamat &amp; rekening di Pengaturan agar invoice menampilkan data toko yang benar.
+                    </div>
+                )}
+
                 {/* Preview Area (Menggunakan Iframe) */}
-                <div className="flex-1 bg-gray-50 overflow-hidden relative">
+                <div className="flex-1 bg-gray-50 overflow-auto relative" ref={previewWrapRef}>
                     {isLoading ? (
                         <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10">
                             <div className="text-center">
@@ -251,19 +303,29 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                             </div>
                         </div>
                     ) : (
-                        // Iframe ini menampilkan HTML yang digenerate oleh utils
+                        // Iframe ini menampilkan HTML yang digenerate oleh utils.
+                        // Fit-to-width: iframe dirender selebar desktop lalu di-scale
+                        // supaya muat di layar HP tanpa overflow horizontal.
                         // XSS fix (Nov 2026): sandbox="allow-same-origin" — script di dalam
                         // iframe TIDAK boleh jalan, tapi iframe tetap satu origin supaya
                         // download PDF (html2canvas baca iframeRef.contentDocument) tetap jalan.
                         // sandbox="" polos akan merusak download PDF; allow-scripts akan
                         // membiarkan script injeksi jalan — keduanya jangan dipakai.
-                        <iframe
-                            ref={iframeRef}
-                            srcDoc={htmlContent}
-                            sandbox="allow-same-origin"
-                            className="w-full h-full border-0 bg-white shadow-sm"
-                            title="Invoice Preview"
-                        />
+                        <div className="min-h-full flex justify-center">
+                            <iframe
+                                ref={iframeRef}
+                                srcDoc={htmlContent}
+                                sandbox="allow-same-origin"
+                                className="border-0 bg-white shadow-sm shrink-0"
+                                style={{
+                                    width: previewBaseWidth,
+                                    height: previewSize.height > 0 ? previewSize.height / previewScale : 600,
+                                    transform: `scale(${previewScale})`,
+                                    transformOrigin: "top center",
+                                }}
+                                title="Invoice Preview"
+                            />
+                        </div>
                     )}
                 </div>
 

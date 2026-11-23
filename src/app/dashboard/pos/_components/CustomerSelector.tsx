@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { POSCustomer } from "@/types/pos";
 import { getPOSCustomers } from "@/lib/actions/pos.actions";
 import { getCustomerDiscount } from "@/lib/utils/pos-helpers";
+import { CustomerType } from "@prisma/client";
 import { User, Search, Loader2, UserPlus } from "lucide-react";
 
 interface CustomerSelectorProps {
@@ -36,9 +37,11 @@ export function CustomerSelector({ selectedCustomer, onSelectCustomer, onQuickAd
                     discountPercent: getCustomerDiscount(c.type),
                 } as POSCustomer))
                 .sort((a, b) => {
-                    // Customer Umum (CUST-00001) di paling atas
-                    if (a.code === "CUST-00001") return -1;
-                    if (b.code === "CUST-00001") return 1;
+                    // Customer Umum (tipe UMUM) di paling atas — dikenali dari
+                    // tipe, BUKAN dari kode hardcoded (tidak ada kode CUST-*
+                    // yang boleh diasumsikan di sini).
+                    if (a.type === CustomerType.UMUM) return -1;
+                    if (b.type === CustomerType.UMUM) return 1;
                     // Sisanya sort by name
                     return a.name.localeCompare(b.name);
                 });
@@ -159,8 +162,8 @@ export function CustomerSelector({ selectedCustomer, onSelectCustomer, onQuickAd
                                         <div className="flex-1 text-left min-w-0">
                                             <div className="flex items-center gap-2">
                                                 <p className="font-medium text-gray-900 truncate">{customer.name}</p>
-                                                {/* ✅ PENANDA CUSTOMER UMUM */}
-                                                {customer.code === "CUST-00001" && (
+                                                {/* ✅ PENANDA CUSTOMER UMUM (berdasar tipe, bukan kode) */}
+                                                {customer.type === CustomerType.UMUM && (
                                                     <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-medium rounded">
                                                         UMUM
                                                     </span>
