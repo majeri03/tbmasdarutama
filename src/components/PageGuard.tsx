@@ -3,11 +3,24 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { hasMinimumRole } from "@/lib/utils/role";
 
 interface PageGuardProps {
-  pageKey: "pos" | "reports_settings" | "po" | "invoice_layout" | "stock_opname";
+  pageKey: "pos" | "reports_settings" | "po" | "invoice_layout" | "stock_opname" | "salesmen" | "points";
   children: React.ReactNode;
 }
+
+// Halaman yang aksesnya ditentukan LANGSUNG oleh role, bukan oleh matriks
+// "Akses Halaman" (SUPER_ADMIN yang mengatur). Matriks itu default-nya
+// nonaktif untuk ADMIN/KASIR, jadi kalau "salesmen"/"points" masuk matriks,
+// KASIR akan terblokir padahal aturannya KASIR+ boleh baca. Karena itu dua
+// halaman baru ini dicek dengan hasMinimumRole(KASIR) di bawah —
+// SUPER_ADMIN tetap lolos seperti biasa, dan tidak ada baris matriks baru
+// yang perlu di-seed di database.
+const ROLE_GATED_PAGE_KEYS: Record<string, "KASIR"> = {
+  salesmen: "KASIR",
+  points: "KASIR",
+};
 
 export default function PageGuard({ pageKey, children }: PageGuardProps) {
   const { data: session, status } = useSession();
@@ -21,6 +34,12 @@ export default function PageGuard({ pageKey, children }: PageGuardProps) {
     if (status === "unauthenticated") {
       router.replace("/login");
     } else if (status === "authenticated" && !isSuperAdmin) {
+      // Halaman berbasis role (salesmen/points): tanpa matriks Akses Halaman.
+      const minRole = ROLE_GATED_PAGE_KEYS[pageKey];
+      if (minRole) {
+        setAllowed(hasMinimumRole(session, minRole));
+        return;
+      }
       fetch("/api/page-access")
         .then((r) => r.json())
         .then((res) => {
@@ -32,7 +51,7 @@ export default function PageGuard({ pageKey, children }: PageGuardProps) {
         })
         .catch(() => setAllowed(false));
     }
-  }, [status, isSuperAdmin, pageKey, router]);
+  }, [status, isSuperAdmin, pageKey, router, session]);
 
   // Derived effective permission
   const isEffectiveAllowed = isSuperAdmin ? true : allowed;

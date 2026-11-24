@@ -2,18 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Users, Star, Save, Loader2, Plus, Pencil, Trash2, ShieldAlert } from "lucide-react";
-import { getStoreSetting, updateStoreSetting } from "@/lib/actions/store-setting.actions";
+import { Users, Loader2, Plus, Pencil, Trash2 } from "lucide-react";
 import { toggleSalesmanStatus } from "@/lib/actions/salesman.actions";
+import { hasMinimumRole } from "@/lib/utils/role";
 import { useToast } from "@/components/ui/toast";
 import { Toast } from "@/components/ui/toast";
 
-// PKG-A (23 Nov 2026, perbaikan 7 item #5/#6): tab "Sales & Poin" di
-// Pengaturan — KHUSUS SUPER_ADMIN (server juga menolak role lain di
-// salesman.actions + updateStoreSetting/MANAGE_STORE_SETTINGS).
-// Isinya: CRUD salesman + pengaturan poin loyalitas (aktif/mati dan
-// Rp per poin). Salesman tercatat internal di penjualan — TIDAK PERNAH
-// dicetak di invoice/struk/surat jalan.
+// Dipindah dari SalesSettingsTab (tab "Sales & Poin" di Pengaturan, dihapus
+// 24 Nov 2026) ke halaman sendiri /dashboard/salesmen.
+// Aturan akses (tidak berubah, server tetap yang memutuskan):
+// - Baca daftar: KASIR+ (GET /api/salesmen + getSalesmen: requireMinimumRole KASIR).
+// - Tulis (tambah/ubah/nonaktifkan/hapus): SUPER_ADMIN saja — form dan
+//   tombol tulis hanya dirender untuk SUPER_ADMIN; server menolak role lain.
+// Salesman tercatat internal di penjualan — TIDAK PERNAH dicetak di
+// invoice/struk/surat jalan.
 
 type SalesmanRow = {
   id: string;
@@ -23,15 +25,12 @@ type SalesmanRow = {
   salesCount: number;
 };
 
-export default function SalesSettingsTab() {
+export default function SalesmenManager() {
   const { data: session } = useSession();
   const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
+  const canRead = hasMinimumRole(session, "KASIR");
 
   const [loading, setLoading] = useState(true);
-  const [savingPoints, setSavingPoints] = useState(false);
-  const [pointsEnabled, setPointsEnabled] = useState(true);
-  const [pointsRupiahPerPoint, setPointsRupiahPerPoint] = useState("10000");
-
   const [salesmen, setSalesmen] = useState<SalesmanRow[]>([]);
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
@@ -43,11 +42,13 @@ export default function SalesSettingsTab() {
   const { toast, showToast, hideToast } = useToast();
 
   useEffect(() => {
-    if (isSuperAdmin) {
+    if (canRead) {
       fetchSalesmen();
-      fetchPointsSettings();
+    } else {
+      setLoading(false);
     }
-  }, [isSuperAdmin]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canRead]);
 
   const fetchSalesmen = async () => {
     try {
@@ -55,45 +56,13 @@ export default function SalesSettingsTab() {
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
         setSalesmen(data.data as SalesmanRow[]);
+      } else {
+        showToast(data.error || "Gagal memuat daftar salesman", "error");
       }
     } catch {
       showToast("Gagal memuat daftar salesman", "error");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchPointsSettings = async () => {
-    const result = await getStoreSetting();
-    if (result.success && result.data) {
-      const s = result.data as { pointsEnabled?: boolean; pointsRupiahPerPoint?: number };
-      setPointsEnabled(s.pointsEnabled ?? true);
-      setPointsRupiahPerPoint(String(s.pointsRupiahPerPoint ?? 10000));
-    }
-  };
-
-  const handleSavePoints = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const rate = Number(pointsRupiahPerPoint);
-    if (!Number.isInteger(rate) || rate < 1) {
-      showToast("Nilai Rp per poin harus bilangan bulat minimal Rp 1", "error");
-      return;
-    }
-    setSavingPoints(true);
-    try {
-      const result = await updateStoreSetting({
-        pointsEnabled,
-        pointsRupiahPerPoint: rate,
-      });
-      if (result.success) {
-        showToast("Pengaturan poin berhasil disimpan", "success");
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "Gagal menyimpan pengaturan poin", "error");
-    } finally {
-      setSavingPoints(false);
     }
   };
 
@@ -179,78 +148,24 @@ export default function SalesSettingsTab() {
     }
   };
 
-  if (!isSuperAdmin) {
-    return (
-      <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-50 border border-amber-200">
-        <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-        <p className="text-sm text-amber-800">
-          Tab Sales &amp; Poin hanya untuk SUPER_ADMIN. Daftar salesman dan
-          pengaturan poin hanya bisa diubah oleh pemilik toko.
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       {toast && (
         <Toast message={toast.message} type={toast.type} onClose={hideToast} />
       )}
 
-      {/* ---------- Pengaturan Poin ---------- */}
-      <form onSubmit={handleSavePoints} className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Star className="w-5 h-5 text-amber-500" />
-          <h2 className="text-lg font-semibold text-gray-800">Poin Loyalitas Customer</h2>
-        </div>
-        <p className="text-sm text-gray-600">
-          Customer mendapat poin dari penjualan lunas (bukan CREDIT), bukan
-          customer Umum. Poin = total belanja dibagi nilai Rp per poin
-          (dibulatkan ke bawah). Contoh: Rp 10.000 per poin, belanja Rp 250.000
-          = 25 poin.
-        </p>
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={pointsEnabled}
-            onChange={(e) => setPointsEnabled(e.target.checked)}
-            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-          />
-          <span className="text-sm font-medium text-gray-700">Aktifkan pemberian poin</span>
-        </label>
-        <div>
-          <label className="label">Nilai Rp per 1 poin</label>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500 font-medium">Rp</span>
-            <input
-              type="number"
-              min={1}
-              step={1}
-              value={pointsRupiahPerPoint}
-              onChange={(e) => setPointsRupiahPerPoint(e.target.value)}
-              className="glass-input w-40"
-              placeholder="10000"
-            />
-          </div>
-        </div>
-        <button type="submit" disabled={savingPoints} className="btn-primary inline-flex items-center gap-2">
-          {savingPoints ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          Simpan Pengaturan Poin
-        </button>
-      </form>
+      <div className="flex items-center gap-2">
+        <Users className="w-5 h-5 text-blue-600" />
+        <h2 className="text-lg font-semibold text-gray-800">Salesman</h2>
+      </div>
+      <p className="text-sm text-gray-600">
+        Salesman dipilih per transaksi di POS dan tercatat di dalam
+        penjualan. Nama salesman TIDAK PERNAH dicetak di invoice, struk,
+        atau surat jalan.
+        {!isSuperAdmin && " Anda hanya bisa melihat daftar — perubahan hanya bisa dilakukan SUPER_ADMIN."}
+      </p>
 
-      {/* ---------- Daftar Salesman ---------- */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Users className="w-5 h-5 text-blue-600" />
-          <h2 className="text-lg font-semibold text-gray-800">Salesman</h2>
-        </div>
-        <p className="text-sm text-gray-600">
-          Salesman dipilih per transaksi di POS dan tercatat di dalam
-          penjualan. Nama salesman TIDAK PERNAH dicetak di invoice, struk,
-          atau surat jalan.
-        </p>
-
+      {isSuperAdmin && (
         <form onSubmit={handleAddSalesman} className="flex flex-wrap items-end gap-2">
           <div>
             <label className="label label-required">Nama salesman</label>
@@ -279,54 +194,56 @@ export default function SalesSettingsTab() {
             Tambah
           </button>
         </form>
+      )}
 
-        {loading ? (
-          <p className="text-sm text-gray-500">Memuat daftar salesman…</p>
-        ) : salesmen.length === 0 ? (
-          <p className="text-sm text-gray-500">Belum ada salesman. Tambahkan salesman pertama di atas.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 border-b">
-                  <th className="py-2 pr-2 font-medium">Nama</th>
-                  <th className="py-2 pr-2 font-medium">No. HP</th>
-                  <th className="py-2 pr-2 font-medium">Penjualan</th>
-                  <th className="py-2 pr-2 font-medium">Status</th>
-                  <th className="py-2 font-medium text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {salesmen.map((s) => (
-                  <tr key={s.id} className="border-b last:border-0">
-                    <td className="py-2 pr-2 font-medium text-gray-800">
-                      {editingId === s.id ? (
-                        <input
-                          type="text"
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          className="glass-input w-44"
-                          maxLength={100}
-                        />
-                      ) : (
-                        s.name
-                      )}
-                    </td>
-                    <td className="py-2 pr-2 text-gray-600">
-                      {editingId === s.id ? (
-                        <input
-                          type="text"
-                          value={editPhone}
-                          onChange={(e) => setEditPhone(e.target.value)}
-                          className="glass-input w-36"
-                          maxLength={30}
-                        />
-                      ) : (
-                        s.phone || "-"
-                      )}
-                    </td>
-                    <td className="py-2 pr-2 text-gray-600">{s.salesCount} transaksi</td>
-                    <td className="py-2 pr-2">
+      {loading ? (
+        <p className="text-sm text-gray-500">Memuat daftar salesman…</p>
+      ) : salesmen.length === 0 ? (
+        <p className="text-sm text-gray-500">Belum ada salesman. {isSuperAdmin ? "Tambahkan salesman pertama di atas." : ""}</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-500 border-b">
+                <th className="py-2 pr-2 font-medium">Nama</th>
+                <th className="py-2 pr-2 font-medium">No. HP</th>
+                <th className="py-2 pr-2 font-medium">Penjualan</th>
+                <th className="py-2 pr-2 font-medium">Status</th>
+                {isSuperAdmin && <th className="py-2 font-medium text-right">Aksi</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {salesmen.map((s) => (
+                <tr key={s.id} className="border-b last:border-0">
+                  <td className="py-2 pr-2 font-medium text-gray-800">
+                    {editingId === s.id ? (
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="glass-input w-44"
+                        maxLength={100}
+                      />
+                    ) : (
+                      s.name
+                    )}
+                  </td>
+                  <td className="py-2 pr-2 text-gray-600">
+                    {editingId === s.id ? (
+                      <input
+                        type="text"
+                        value={editPhone}
+                        onChange={(e) => setEditPhone(e.target.value)}
+                        className="glass-input w-36"
+                        maxLength={30}
+                      />
+                    ) : (
+                      s.phone || "-"
+                    )}
+                  </td>
+                  <td className="py-2 pr-2 text-gray-600">{s.salesCount} transaksi</td>
+                  <td className="py-2 pr-2">
+                    {isSuperAdmin ? (
                       <button
                         type="button"
                         onClick={() => handleToggleActive(s.id)}
@@ -337,7 +254,17 @@ export default function SalesSettingsTab() {
                       >
                         {s.isActive ? "Aktif" : "Nonaktif"}
                       </button>
-                    </td>
+                    ) : (
+                      <span
+                        className={`text-xs font-medium px-2 py-1 rounded-full ${
+                          s.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                        }`}
+                      >
+                        {s.isActive ? "Aktif" : "Nonaktif"}
+                      </span>
+                    )}
+                  </td>
+                  {isSuperAdmin && (
                     <td className="py-2 text-right whitespace-nowrap">
                       {editingId === s.id ? (
                         <>
@@ -379,13 +306,13 @@ export default function SalesSettingsTab() {
                         </>
                       )}
                     </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

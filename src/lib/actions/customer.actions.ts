@@ -440,6 +440,7 @@ export async function adjustCustomerPoints(
     });
 
     revalidatePath("/dashboard/customers");
+    revalidatePath("/dashboard/points");
 
     return {
       success: true,

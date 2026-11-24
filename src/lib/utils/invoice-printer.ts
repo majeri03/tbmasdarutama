@@ -122,7 +122,7 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
     const paperSize = customLayout?.paperSize || (isThermal ? defaultThermalSize : defaultDocSize);
     // XSS/CSS fix (Nov 2026): paperSize dari setting toko tidak boleh ditempel
     // mentah ke CSS — hanya nilai kertas yang dikenal yang dipakai.
-    const safePaperSize = /^(58mm|80mm|a4|a5|f4|hvs|letter)$/i.test(paperSize)
+    const safePaperSize = /^(57mm|58mm|76mm|80mm|a4|a5|f4|hvs|letter)$/i.test(paperSize)
         ? paperSize
         : (isThermal ? "58mm" : "A4");
     
@@ -282,6 +282,12 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
     } else if (pLower === "letter") {
         pageConfig = "@page { size: letter portrait; margin: 12mm; }";
         bodyWidth = "max-width: 216mm;";
+    } else if (/^\d+\s*mm\s*x\s*\d+\s*mm$/.test(pLower)) {
+        const m = pLower.match(/(\d+)\s*mm\s*x\s*(\d+)\s*mm/);
+        const w = m ? m[1] : "210";
+        const h = m ? m[2] : "297";
+        pageConfig = `@page { size: ${w}mm ${h}mm; margin: 12mm; }`;
+        bodyWidth = `max-width: ${w}mm;`;
     } else if (pLower !== "a4") {
         bodyWidth = `max-width: ${safePaperSize};`;
     }
@@ -310,6 +316,11 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                     table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
                     th, td { border: 1px solid #000; padding: 6px 8px; }
                     th { background: #f3f4f6; }
+                    /* Faktur/Invoice (bukan Surat Jalan): tanpa garis grid —
+                       hanya satu garis di bawah baris header. */
+                    table.invoice-items { margin-bottom: 12px; }
+                    table.invoice-items th, table.invoice-items td { border: none; padding: 4px 8px; background: transparent; }
+                    table.invoice-items thead th { border-bottom: 1.5px solid #000; padding: 5px 8px; }
                     .no-border td, .no-border th { border: none !important; padding: 2px !important; background: transparent !important;}
                     .flex-between { display: flex; justify-content: space-between; align-items: flex-start; }
                     .header-box { border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
@@ -350,7 +361,7 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                 </div>
                 ` : ''}
 
-                <table>
+                <table${showPrices ? ' class="invoice-items"' : ''}>
                     <thead>
                         <tr>
                             <th style="width: 5%;">No</th>
@@ -408,12 +419,12 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                     ${showPrices ? `
                     <div style="width: 35%;">
                         <table style="border:1px solid #000;">
-                            <tr><td style="border:none; padding:4px 8px;">Gross Total</td><td style="border:none; padding:4px 8px; text-align:right;">${formatCurrency(sale.totalAmount).replace("Rp ","")}</td></tr>
-                            <tr><td style="border:none; padding:4px 8px;">Discount</td><td style="border:none; padding:4px 8px; text-align:right; color:red;">(${formatCurrency(sale.discount).replace("Rp ","")})</td></tr>
-                            <tr><td style="border:none; padding:4px 8px;">Tax</td><td style="border:none; padding:4px 8px; text-align:right;">${formatCurrency(sale.tax).replace("Rp ","")}</td></tr>
-                            <tr style="border-top:1px solid #000;"><td style="border:none; padding:4px 8px;"><b>Grand Total</b></td><td style="border:none; padding:4px 8px; text-align:right;"><b>${formatCurrency(sale.grandTotal).replace("Rp ","")}</b></td></tr>
-                            <tr><td style="border:none; padding:4px 8px;">Paid</td><td style="border:none; padding:4px 8px; text-align:right;">${formatCurrency(sale.paidAmount).replace("Rp ","")}</td></tr>
-                            <tr><td style="border:none; padding:4px 8px;">Change</td><td style="border:none; padding:4px 8px; text-align:right;">${formatCurrency(sale.changeAmount).replace("Rp ","")}</td></tr>
+                            <tr><td style="border:none; padding:3px 8px;">Gross Total</td><td style="border:none; padding:3px 8px; text-align:right;">${formatCurrency(sale.totalAmount).replace("Rp ","")}</td></tr>
+                            <tr><td style="border:none; padding:3px 8px;">Discount</td><td style="border:none; padding:3px 8px; text-align:right; color:red;">(${formatCurrency(sale.discount).replace("Rp ","")})</td></tr>
+                            <tr><td style="border:none; padding:3px 8px;">Tax</td><td style="border:none; padding:3px 8px; text-align:right;">${formatCurrency(sale.tax).replace("Rp ","")}</td></tr>
+                            <tr style="border-top:1px solid #000;"><td style="border:none; padding:3px 8px;"><b>Grand Total</b></td><td style="border:none; padding:3px 8px; text-align:right;"><b>${formatCurrency(sale.grandTotal).replace("Rp ","")}</b></td></tr>
+                            <tr><td style="border:none; padding:3px 8px;">Paid</td><td style="border:none; padding:3px 8px; text-align:right;">${formatCurrency(sale.paidAmount).replace("Rp ","")}</td></tr>
+                            <tr><td style="border:none; padding:3px 8px;">Change</td><td style="border:none; padding:3px 8px; text-align:right;">${formatCurrency(sale.changeAmount).replace("Rp ","")}</td></tr>
                         </table>
                     </div>
                     ` : ''}

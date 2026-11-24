@@ -26,6 +26,7 @@ import {
   MapPin,
   ClipboardCheck,
   HardDrive,
+  Star,
 } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
@@ -61,6 +62,8 @@ const menuGroups = [
       { href: "/dashboard/fleet", icon: <MapPin />, label: "Armada & GPS", permission: "VIEW_DELIVERY_ORDERS" as const, },
       { href: "/dashboard/purchases", icon: <ShoppingBag />, label: "Purchase Orders", permission: "VIEW_PURCHASES" as const, pageKey: "po" },
       { href: "/dashboard/sales", icon: <DollarSign />, label: "Penjualan", permission: "VIEW_MENU_SALES" as const },
+      { href: "/dashboard/salesmen", icon: <Users />, label: "Salesman", permission: "VIEW_SALESMEN" as const },
+      { href: "/dashboard/points", icon: <Star />, label: "Poin Loyalitas", permission: "VIEW_POINTS" as const },
       { href: "/dashboard/pos", icon: <CreditCard />, label: "Point of Sale", permission: "ACCESS_POS" as const, pageKey: "pos" },
     ],
   },

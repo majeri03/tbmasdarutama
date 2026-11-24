@@ -121,6 +121,7 @@ export async function createSalesman(data: SalesmanInput, externalSession?: Auth
     });
 
     revalidatePath("/dashboard/settings");
+    revalidatePath("/dashboard/salesmen");
     revalidatePath("/dashboard/pos");
 
     return {
@@ -163,6 +164,7 @@ export async function updateSalesman(id: string, data: SalesmanInput, externalSe
     });
 
     revalidatePath("/dashboard/settings");
+    revalidatePath("/dashboard/salesmen");
     revalidatePath("/dashboard/pos");
 
     return {
@@ -206,6 +208,7 @@ export async function deleteSalesman(id: string, externalSession?: AuthSession |
     await prisma.salesman.delete({ where: { id } });
 
     revalidatePath("/dashboard/settings");
+    revalidatePath("/dashboard/salesmen");
     revalidatePath("/dashboard/pos");
 
     return {
@@ -242,6 +245,7 @@ export async function toggleSalesmanStatus(id: string, externalSession?: AuthSes
     });
 
     revalidatePath("/dashboard/settings");
+    revalidatePath("/dashboard/salesmen");
     revalidatePath("/dashboard/pos");
 
     return {

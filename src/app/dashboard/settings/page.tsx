@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Store, Lock, Globe, User, ShieldAlert, Users, Bell } from "lucide-react";
+import { Store, Lock, Globe, User, ShieldAlert, Bell } from "lucide-react";
 import StoreSettingsTab from "./_components/StoreSettingsTab";
-import SalesSettingsTab from "./_components/SalesSettingsTab";
 import DebtNotificationTab from "./_components/DebtNotificationTab";
 import PasswordSettingsTab from "./_components/PasswordSettingsTab";
 import LandingPageTab from "./_components/LandingPageTab";
@@ -12,7 +11,7 @@ import DataManagementTab from "./_components/DataManagementTab";
 import InvoiceSettingsTab from "./_components/InvoiceSettingsTab";
 import PageGuard from "@/components/PageGuard";
 
-type TabType = "profile" | "store" | "invoice" | "password" | "landing" | "data" | "sales" | "debt";
+type TabType = "profile" | "store" | "invoice" | "password" | "landing" | "data" | "debt";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<TabType>("profile");
@@ -36,9 +35,6 @@ export default function SettingsPage() {
     { id: "password" as TabType, label: "Ganti Password", icon: Lock },
     { id: "landing" as TabType, label: "Landing Page", icon: Globe },
     { id: "data" as TabType, label: "Manajemen Data", icon: ShieldAlert },
-    // PKG-A (23 Nov 2026, perbaikan 7 item #5/#6): kelola salesman + poin.
-    // Isi tabnya SUPER_ADMIN-only (SalesSettingsTab + server actions).
-    { id: "sales" as TabType, label: "Sales & Poin", icon: Users },
     // PKG-H (23 Nov 2026, email pengingat utang): daftar email penerima +
     // jadwal pengingat. Isi tabnya SUPER_ADMIN-only (DebtNotificationTab
     // + server actions).
@@ -89,7 +85,6 @@ export default function SettingsPage() {
           {activeTab === "password" && <PasswordSettingsTab />}
           {activeTab === "landing" && <LandingPageTab />}
           {activeTab === "data" && <DataManagementTab />}
-          {activeTab === "sales" && <SalesSettingsTab />}
           {activeTab === "debt" && <DebtNotificationTab />}
         </div>
       </div>

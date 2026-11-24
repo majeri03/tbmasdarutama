@@ -105,6 +105,14 @@ export const PERMISSIONS = {
   MANAGE_USERS: ["SUPER_ADMIN"] as Role[],
 
 
+  // Salesman & poin loyalitas (24 Nov 2026, pisah dari tab "Sales & Poin"
+  // di Pengaturan ke halaman /dashboard/salesmen dan /dashboard/points).
+  // Baca: KASIR+ (kasir butuh daftar salesman di POS + saldo poin).
+  // Tulis tetap SUPER_ADMIN saja — dicek di server actions / API routes,
+  // izin ini hanya mengatur tampilnya menu di sidebar.
+  VIEW_SALESMEN: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
+  VIEW_POINTS: ["SUPER_ADMIN", "ADMIN", "KASIR"] as Role[],
+
   // View menu
   VIEW_MENU_PRODUCTS: ["SUPER_ADMIN", "ADMIN"] as Role[],
   VIEW_MENU_STOCK: ["SUPER_ADMIN", "ADMIN"] as Role[],
