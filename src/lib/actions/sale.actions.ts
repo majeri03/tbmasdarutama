@@ -739,6 +739,15 @@ export async function getSales(params?: SaleFilterInput, externalSession?: AuthS
               status: true,
             },
           },
+          // PKG-K (23 Nov 2026): salesman yang dipilih di POS sudah
+          // tersimpan di Sale.salesmanId, tapi tidak pernah dibaca kembali
+          // — kolom SALES di daftar selalu "-". Include ini yang hilang.
+          salesman: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
       }),
       prisma.sale.count({ where }),
@@ -818,6 +827,14 @@ export async function getSales(params?: SaleFilterInput, externalSession?: AuthS
                 id: sale.deliveryOrder.id,
                 doNumber: sale.deliveryOrder.doNumber,
                 status: sale.deliveryOrder.status,
+              }
+            : null,
+
+          // ✅ Salesman (manual) — PKG-K: tanpa ini, kolom SALES selalu "-".
+          salesman: sale.salesman
+            ? {
+                id: sale.salesman.id,
+                name: sale.salesman.name,
               }
             : null,
         };
@@ -1142,6 +1159,14 @@ export async function getSaleById(saleId: string, externalSession?: AuthSession 
             status: true,
           },
         },
+        // PKG-K (23 Nov 2026): salesman tidak pernah dibaca kembali di
+        // detail penjualan — include ini yang hilang.
+        salesman: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
@@ -1205,6 +1230,14 @@ export async function getSaleById(saleId: string, externalSession?: AuthSession 
             remainingDebt: parseFloat(
               sale.customerDebts[0].remainingDebt.toString()
             ),
+          }
+        : null,
+
+      // ✅ Salesman (manual) — PKG-K: tanpa ini, detail tidak membawa sales.
+      salesman: sale.salesman
+        ? {
+            id: sale.salesman.id,
+            name: sale.salesman.name,
           }
         : null,
     };

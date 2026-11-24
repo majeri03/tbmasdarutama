@@ -51,6 +51,11 @@ interface SaleDetail {
     cashier: {
         name: string;
     };
+    // PKG-K (23 Nov 2026): salesman yang menangani penjualan ini.
+    salesman?: {
+        id: string;
+        name: string;
+    } | null;
     saleItems: SaleItem[];
     customerDebt?: {
         totalDebt: number;
@@ -183,6 +188,16 @@ export function SaleViewModal({ saleId }: SaleViewModalProps) {
                                                 <div>
                                                     <p className="text-xs text-gray-500">Kasir</p>
                                                     <p className="font-semibold text-gray-800">{sale.cashier.name}</p>
+                                                </div>
+                                            </div>
+                                            {/* PKG-K (23 Nov 2026): sales yang menangani penjualan. */}
+                                            <div className="flex items-start gap-2">
+                                                <User className="w-4 h-4 text-gray-400 mt-1" />
+                                                <div>
+                                                    <p className="text-xs text-gray-500">Sales</p>
+                                                    <p className="font-semibold text-gray-800">
+                                                        {sale.salesman?.name || "-"}
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>
