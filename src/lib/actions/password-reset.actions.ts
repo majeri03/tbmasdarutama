@@ -10,6 +10,14 @@ import { headers } from "next/headers";
 import { generatePasswordResetEmail, sendEmail } from "../utils/email";
 import { requireAuth } from "@/lib/utils/role";
 import {
+  verifyTurnstileToken,
+  TURNSTILE_ERROR_MESSAGE,
+} from "@/lib/utils/turnstile";
+import {
+  PASSWORD_ERROR_MESSAGE,
+  validatePassword,
+} from "@/lib/utils/password";
+import {
   getClientIp,
   isRateLimited,
   recordRateLimitHit,
@@ -42,8 +50,6 @@ const RESET_MAX_REQUESTS = 5;
 // Rate limit pakai token reset (L-8): 10x per IP dalam 1 jam.
 const RESET_USE_WINDOW_MS = 60 * 60 * 1000;
 const RESET_USE_MAX_ATTEMPTS = 10;
-// Batas panjang password baru (bcrypt memotong di 72 byte; 128 cukup longgar).
-const MAX_PASSWORD_LENGTH = 128;
 
 async function getRequestIp(): Promise<string> {
   try {
@@ -75,12 +81,18 @@ export async function changePassword(formData: {
     }
     await recordRateLimitHit(changePwKey, CHANGE_PW_WINDOW_MS);
 
+    // Kebijakan password (24 Nov 2026): min 8, maks 128, 1 huruf besar,
+    // 1 angka, 1 simbol — dicek server-side di sini SEBELUM zod parse,
+    // supaya pesan penolakannya selalu pesan yang sama persis.
+    if (
+      typeof formData.newPassword !== "string" ||
+      !validatePassword(formData.newPassword).valid
+    ) {
+      return { success: false, error: PASSWORD_ERROR_MESSAGE };
+    }
+
     // Validate
     const validated = changePasswordSchema.parse(formData);
-
-    if (validated.newPassword.length > MAX_PASSWORD_LENGTH) {
-      return { success: false, error: "Password baru maksimal 128 karakter" };
-    }
 
     // Get user with password
     const user = await prisma.user.findUnique({
@@ -120,14 +132,23 @@ export async function changePassword(formData: {
   }
 }
 
-export async function requestPasswordReset(email: string) {
+export async function requestPasswordReset(
+  email: string,
+  turnstileToken?: string
+) {
   try {
     const normalizedEmail = email.toLowerCase().trim();
+    const ip = await getRequestIp();
+    // HARDENING (24 Nov 2026): cek bot Turnstile SEBELUM rate limit —
+    // endpoint ini mengirim email (target email-bombing). Kalau kunci
+    // Turnstile belum diisi, cek dilewati (fail open).
+    if (!(await verifyTurnstileToken(turnstileToken, ip))) {
+      return { success: false, error: TURNSTILE_ERROR_MESSAGE };
+    }
     // Rate-limit dulu (sebelum cek user) supaya penyerang tidak bisa
     // membanjiri inbox siapa pun. Pesan penolakan sengaja sama untuk semua.
     // SECURITY FIX (22 Nov 2026, pentest M2 + M28): IP dari elemen TERAKHIR
     // X-Forwarded-For dan hitungan di DB (bukan in-memory per instance).
-    const ip = await getRequestIp();
     const rateKey = `reset-request:${ip}:${normalizedEmail}`;
     if (await isRateLimited(rateKey, RESET_MAX_REQUESTS, RESET_WINDOW_MS)) {
       return { success: false, error: "Terlalu banyak permintaan reset password. Coba lagi 1 jam lagi." };
@@ -195,11 +216,20 @@ export async function requestPasswordReset(email: string) {
   }
 }
 
-export async function resetPassword(token: string, newPassword: string) {
+export async function resetPassword(
+  token: string,
+  newPassword: string,
+  turnstileToken?: string
+) {
   try {
+    // HARDENING (24 Nov 2026): cek bot Turnstile SEBELUM rate limit /
+    // pemakaian token. Kalau kunci belum diisi, cek dilewati (fail open).
+    const ip = await getRequestIp();
+    if (!(await verifyTurnstileToken(turnstileToken, ip))) {
+      return { success: false, error: TURNSTILE_ERROR_MESSAGE };
+    }
     // SECURITY FIX (22 Nov 2026, pentest L-8): pemakaian token reset
     // sebelumnya tanpa rate limit. Sekarang 10x/jam per IP (hitungan DB).
-    const ip = await getRequestIp();
     const useKey = `reset-use:ip:${ip}`;
     if (await isRateLimited(useKey, RESET_USE_MAX_ATTEMPTS, RESET_USE_WINDOW_MS)) {
       return { success: false, error: "Terlalu banyak percobaan reset password. Coba lagi 1 jam lagi." };
@@ -232,13 +262,11 @@ export async function resetPassword(token: string, newPassword: string) {
       return { success: false, error: "Token tidak valid" };
     }
 
-    // FIX (22 Nov 2026): minimum password baru naik dari 6 ke 8 karakter
-    // (action ini tidak memakai zod schema — validasi langsung di sini).
-    if (!newPassword || newPassword.length < 8) {
-      return { success: false, error: "Password baru minimal 8 karakter" };
-    }
-    if (newPassword.length > MAX_PASSWORD_LENGTH) {
-      return { success: false, error: "Password baru maksimal 128 karakter" };
+    // Kebijakan password (24 Nov 2026): min 8, maks 128, 1 huruf besar,
+    // 1 angka, 1 simbol — dicek server-side di sini (action ini tidak
+    // memakai zod schema, validasi langsung).
+    if (!validatePassword(newPassword).valid) {
+      return { success: false, error: PASSWORD_ERROR_MESSAGE };
     }
 
     // Hash new password

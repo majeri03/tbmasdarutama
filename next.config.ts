@@ -52,13 +52,25 @@ const nextConfig: NextConfig = {
             value: "camera=(self), microphone=(), geolocation=()",
           },
           {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin",
+          },
+          {
+            key: "X-Permitted-Cross-Domain-Policies",
+            value: "none",
+          },
+          {
             key: "Content-Security-Policy",
             // Pentest fix (Nov 2026): 'unsafe-eval' dihapus; tambah object-src,
             // base-uri, form-action. 'unsafe-inline' di script-src SENGAJA
             // dipertahankan — Next.js App Router butuh inline script untuk
             // hydration; menghapusnya tanpa nonce akan merusak aplikasi.
             // Lihat a-NOTES.md untuk sisa risiko ini.
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://placehold.co https://flat-art-975br2-upload-worker.kirinxe00.workers.dev https://tile.openstreetmap.org; connect-src 'self' https://masdarutama.tech; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;",
+            // HARDENING (24 Nov 2026): izinkan Cloudflare Turnstile
+            // (https://challenges.cloudflare.com) di script-src, frame-src
+            // dan connect-src — widget bot check dimuat dari sana. Tidak ada
+            // origin lain yang ditambahkan; sisa CSP tidak dilonggarkan.
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://placehold.co https://flat-art-975br2-upload-worker.kirinxe00.workers.dev https://tile.openstreetmap.org; connect-src 'self' https://masdarutama.tech https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;",
           },
         ],
       },

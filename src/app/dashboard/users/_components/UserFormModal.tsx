@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { X, Loader2, Save } from "lucide-react";
 import { userFormSchema, UserFormValues } from "@/lib/validations/user.schema";
 import { createUser, updateUser } from "@/lib/actions/user.actions";
+import PasswordChecklist from "@/components/ui/password-checklist";
 import { useToast, Toast } from "@/components/ui/toast";
 
 // 1. Definisikan tipe data User (sesuai output dari getUsers)
@@ -17,6 +18,9 @@ interface UserData {
   phone: string | null;
   address: string | null;
   isActive: boolean;
+  // FIX (24 Nov 2026, OTP): dipakai untuk menyembunyikan checkbox
+  // "Akun Aktif" pada akun yang emailnya belum terverifikasi.
+  emailVerifiedAt: Date | null;
 }
 
 interface Props {
@@ -70,6 +74,13 @@ export function UserFormModal({ isOpen, onClose, initialData }: Props) {
         }
     }
   }, [isOpen, initialData, form]);
+
+  // Nilai password saat ini — checklist hanya tampil saat kolom diisi
+  // (saat edit, kosong = password tidak diubah). Submit diblokir
+  // client-side oleh zod schema (user.schema.ts) kalau password yang
+  // diisi tidak lolos aturan; server (createUser/updateUser) menolak
+  // juga, jadi client tidak bisa bypass.
+  const passwordValue = form.watch("password") || "";
 
   const onSubmit = async (data: UserFormValues) => {
     setIsLoading(true);
@@ -152,6 +163,9 @@ export function UserFormModal({ isOpen, onClose, initialData }: Props) {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
                 placeholder="******"
                 />
+                {passwordValue && (
+                  <PasswordChecklist password={passwordValue} />
+                )}
                 {form.formState.errors.password && <p className="text-xs text-red-500">{form.formState.errors.password.message}</p>}
             </div>
             <div className="space-y-1">
@@ -188,19 +202,46 @@ export function UserFormModal({ isOpen, onClose, initialData }: Props) {
             />
           </div>
 
-          {/* Status: akun baru wajib verifikasi email dulu (PKG-I, 23 Nov 2026) */}
+          {/* Status akun
+              FIX (24 Nov 2026, OTP bypass): akun yang emailnya BELUM
+              terverifikasi TIDAK BOLEH diaktifkan dari form edit — dulu
+              checkbox "Akun Aktif" di sini langsung mengaktifkan akun
+              tanpa kode OTP (lihat updateUser). Aktivasi sekarang hanya
+              lewat kode OTP di /verify-email.
+              Checkbox hanya tampil kalau email sudah terverifikasi
+              (akun aktif / pernah aktif) atau akun sedang aktif, supaya
+              admin tetap bisa MENONAKTIFKAN akun, dan mengaktifkan
+              kembali akun yang emailnya sudah terverifikasi. */}
           {initialData ? (
-            <div className="flex items-center gap-2 pt-2">
-              <input
-                  type="checkbox"
-                  id="isActive"
-                  {...form.register("isActive")}
-                  className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-              />
-              <label htmlFor="isActive" className="text-sm text-gray-700 cursor-pointer select-none">
-                  Akun Aktif (Dapat Login)
-              </label>
-            </div>
+            initialData.isActive || initialData.emailVerifiedAt ? (
+              <div className="flex items-center gap-2 pt-2">
+                <input
+                    type="checkbox"
+                    id="isActive"
+                    {...form.register("isActive")}
+                    className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                />
+                <label htmlFor="isActive" className="text-sm text-gray-700 cursor-pointer select-none">
+                    Akun Aktif (Dapat Login)
+                </label>
+              </div>
+            ) : (
+              <div className="flex items-start gap-2 pt-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                <p className="text-sm text-amber-800">
+                  Akun ini belum terverifikasi dan belum bisa login. Akun hanya
+                  bisa aktif setelah pemiliknya memasukkan kode OTP 6 digit di{" "}
+                  <a
+                    href={`/verify-email?email=${encodeURIComponent(initialData.email)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-semibold underline"
+                  >
+                    halaman verifikasi
+                  </a>
+                  . Centang &quot;Akun Aktif&quot; sengaja dihapus dari form ini.
+                </p>
+              </div>
+            )
           ) : (
             <div className="flex items-start gap-2 pt-2 p-3 rounded-lg bg-blue-50 border border-blue-200">
               <p className="text-sm text-blue-800">

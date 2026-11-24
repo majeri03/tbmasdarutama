@@ -12,6 +12,10 @@ import {
   isRateLimited,
   recordRateLimitHit,
 } from "@/lib/utils/rate-limit";
+import {
+  PASSWORD_ERROR_MESSAGE,
+  validatePassword,
+} from "@/lib/utils/password";
 
 // FIX (22 Nov 2026): rate-limit ganti password — 10 percobaan per user
 // dalam 1 jam, lalu 429.
@@ -20,7 +24,6 @@ import {
 // antar-instance serverless).
 const CHANGE_PW_WINDOW_MS = 60 * 60 * 1000;
 const CHANGE_PW_MAX_ATTEMPTS = 10;
-const MAX_PASSWORD_LENGTH = 128;
 
 /**
  * POST /api/auth/change-password
@@ -60,12 +63,10 @@ export async function POST(request: NextRequest) {
       );
     }
     await recordRateLimitHit(changePwKey, CHANGE_PW_WINDOW_MS);
-    // FIX (22 Nov 2026): minimum password baru naik dari 6 ke 8 karakter.
-    if (newPassword.length < 8) {
-      return validationErrorResponse("Password baru minimal 8 karakter.");
-    }
-    if (newPassword.length > MAX_PASSWORD_LENGTH) {
-      return validationErrorResponse("Password baru maksimal 128 karakter.");
+    // Kebijakan password (24 Nov 2026): min 8, maks 128, 1 huruf besar,
+    // 1 angka, 1 simbol — sama seperti ganti password di web.
+    if (!validatePassword(newPassword).valid) {
+      return validationErrorResponse(PASSWORD_ERROR_MESSAGE);
     }
     if (newPassword === currentPassword) {
       return validationErrorResponse("Password baru tidak boleh sama dengan password lama.");

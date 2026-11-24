@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/utils/api';
 import prisma from '@/lib/prisma';
+import {
+  isRateLimited,
+  recordRateLimitHit,
+} from '@/lib/utils/rate-limit';
 
 /**
  * PENTEST FIX (22 Nov 2026, M3 — susulan): token push orang lain tidak
@@ -13,6 +17,11 @@ import prisma from '@/lib/prisma';
  */
 const EXPO_PUSH_TOKEN_RE = /^(ExponentPushToken|ExpoPushToken)\[[A-Za-z0-9_-]+\]$/;
 const MAX_PUSH_TOKEN_LENGTH = 255;
+
+// HARDENING (24 Nov 2026): endpoint ini sebelumnya TANPA rate limit —
+// sama seperti /api/notifications/register-token. 30x/jam per user.
+const PUSH_TOKEN_WINDOW_MS = 60 * 60 * 1000;
+const PUSH_TOKEN_MAX_CALLS = 30;
 
 function isValidPushToken(token: string): boolean {
   if (token.length === 0 || token.length > MAX_PUSH_TOKEN_LENGTH) return false;
@@ -34,6 +43,17 @@ export async function POST(request: NextRequest) {
     if (!token || typeof token !== 'string') {
       return NextResponse.json({ success: false, message: 'Token is required' }, { status: 400 });
     }
+    // HARDENING (24 Nov 2026): rate limit 30x/jam per user (dihitung
+    // sebelum validasi format, supaya penyerang tidak bisa membanjiri
+    // dengan token sembarang sekalipun).
+    const pushKey = `push-token:user:${userId ?? userEmail}`;
+    if (await isRateLimited(pushKey, PUSH_TOKEN_MAX_CALLS, PUSH_TOKEN_WINDOW_MS)) {
+      return NextResponse.json(
+        { success: false, message: 'Terlalu banyak permintaan. Coba lagi 1 jam lagi.' },
+        { status: 429 }
+      );
+    }
+    await recordRateLimitHit(pushKey, PUSH_TOKEN_WINDOW_MS);
     if (!isValidPushToken(token)) {
       return NextResponse.json({ success: false, message: 'Format token perangkat tidak valid' }, { status: 400 });
     }

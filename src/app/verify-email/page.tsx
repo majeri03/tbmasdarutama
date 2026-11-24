@@ -6,6 +6,7 @@ import { Loader2, Mail, CheckCircle, Send } from "lucide-react";
 import { verifyEmailOtp, resendVerificationOtp } from "@/lib/actions/email-verification.actions";
 import { useToast, Toast } from "@/components/ui/toast";
 import Link from "next/link";
+import TurnstileWidget from "@/components/TurnstileWidget";
 
 // PKG-I (23 Nov 2026, OTP verifikasi email akun baru): halaman publik
 // tempat pemilik akun baru memasukkan kode OTP 6 digit yang dikirim ke
@@ -23,6 +24,10 @@ function VerifyEmailForm() {
   const [success, setSuccess] = useState(false);
   const [email, setEmail] = useState(prefilledEmail);
   const [otp, setOtp] = useState("");
+  // HARDENING (24 Nov 2026): token Turnstile dari widget (fail open kalau
+  // Turnstile belum dipasang).
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileReset, setTurnstileReset] = useState(0);
 
   const { toast, showToast, hideToast } = useToast();
 
@@ -46,7 +51,7 @@ function VerifyEmailForm() {
 
     setLoading(true);
     try {
-      const result = await verifyEmailOtp(email.trim(), otp.trim());
+      const result = await verifyEmailOtp(email.trim(), otp.trim(), turnstileToken ?? undefined);
       if (result.success) {
         setSuccess(true);
         showToast(result.message || "Email berhasil diverifikasi", "success");
@@ -61,6 +66,7 @@ function VerifyEmailForm() {
       );
     } finally {
       setLoading(false);
+      setTurnstileReset((n) => n + 1);
     }
   };
 
@@ -71,7 +77,7 @@ function VerifyEmailForm() {
     }
     setResending(true);
     try {
-      const result = await resendVerificationOtp(email.trim());
+      const result = await resendVerificationOtp(email.trim(), turnstileToken ?? undefined);
       if (result.success) {
         showToast(result.message || "Kode baru dikirim", "success");
         setResendCooldown(60);
@@ -85,6 +91,7 @@ function VerifyEmailForm() {
       );
     } finally {
       setResending(false);
+      setTurnstileReset((n) => n + 1);
     }
   };
 
@@ -153,6 +160,12 @@ function VerifyEmailForm() {
               required
             />
           </div>
+
+          {/* HARDENING (24 Nov 2026): widget bot check Turnstile — hanya
+              tampil kalau site key sudah diisi; kalau belum, tidak ada
+              apa-apa dan form tetap jalan (fail open). Dipakai verifikasi
+              dan kirim ulang OTP. */}
+          <TurnstileWidget onToken={setTurnstileToken} resetSignal={turnstileReset} />
 
           <button type="submit" disabled={loading} className="btn-primary w-full">
             {loading ? (

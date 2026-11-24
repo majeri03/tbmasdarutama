@@ -2,8 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Users, Loader2, Plus, Pencil, Trash2 } from "lucide-react";
-import { toggleSalesmanStatus } from "@/lib/actions/salesman.actions";
+import { Users, Loader2, Plus, Pencil, Trash2, Eye, Percent } from "lucide-react";
+import {
+  toggleSalesmanStatus,
+  getSalesmanFeeSetting,
+  updateSalesmanFeeSetting,
+} from "@/lib/actions/salesman.actions";
+import { SalesmanDetailModal } from "./SalesmanDetailModal";
 import { hasMinimumRole } from "@/lib/utils/role";
 import { useToast } from "@/components/ui/toast";
 import { Toast } from "@/components/ui/toast";
@@ -38,17 +43,70 @@ export default function SalesmenManager() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [detailSalesman, setDetailSalesman] = useState<SalesmanRow | null>(null);
+
+  // Pengaturan fee global (24 Nov 2026): default MATI, persen default 2%.
+  // Hanya SUPER_ADMIN yang bisa mengubah (server yang memutuskan);
+  // KASIR+ hanya melihat statusnya.
+  const [feeEnabled, setFeeEnabled] = useState(false);
+  const [feePercent, setFeePercent] = useState(2);
+  const [feePercentDraft, setFeePercentDraft] = useState("2");
+  const [feeLoading, setFeeLoading] = useState(true);
+  const [feeSaving, setFeeSaving] = useState(false);
 
   const { toast, showToast, hideToast } = useToast();
 
   useEffect(() => {
     if (canRead) {
       fetchSalesmen();
+      fetchFeeSetting();
     } else {
       setLoading(false);
+      setFeeLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canRead]);
+
+  const fetchFeeSetting = async () => {
+    try {
+      const result = await getSalesmanFeeSetting();
+      if (result.success && result.data) {
+        setFeeEnabled(result.data.enabled);
+        setFeePercent(result.data.percent);
+        setFeePercentDraft(String(result.data.percent));
+      } else {
+        showToast(result.error || "Gagal memuat pengaturan fee", "error");
+      }
+    } catch {
+      showToast("Gagal memuat pengaturan fee", "error");
+    } finally {
+      setFeeLoading(false);
+    }
+  };
+
+  const handleSaveFeeSetting = async () => {
+    const percent = Number(feePercentDraft);
+    if (!Number.isInteger(percent) || percent < 0 || percent > 100) {
+      showToast("Persen fee harus bilangan bulat 0–100", "error");
+      return;
+    }
+    setFeeSaving(true);
+    try {
+      const result = await updateSalesmanFeeSetting({ enabled: feeEnabled, percent });
+      if (result.success && result.data) {
+        setFeeEnabled(result.data.enabled);
+        setFeePercent(result.data.percent);
+        setFeePercentDraft(String(result.data.percent));
+        showToast(result.message || "Pengaturan fee disimpan", "success");
+      } else {
+        throw new Error(result.error || "Gagal menyimpan pengaturan fee");
+      }
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Gagal menyimpan pengaturan fee", "error");
+    } finally {
+      setFeeSaving(false);
+    }
+  };
 
   const fetchSalesmen = async () => {
     try {
@@ -165,6 +223,66 @@ export default function SalesmenManager() {
         {!isSuperAdmin && " Anda hanya bisa melihat daftar — perubahan hanya bisa dilakukan SUPER_ADMIN."}
       </p>
 
+      {/* Pengaturan fee salesman (24 Nov 2026) */}
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-2">
+        <div className="flex items-center gap-2">
+          <Percent className="w-5 h-5 text-blue-600" />
+          <h3 className="text-sm font-semibold text-gray-800">Fee Salesman (per invoice)</h3>
+        </div>
+        {feeLoading ? (
+          <p className="text-sm text-gray-500">Memuat pengaturan fee…</p>
+        ) : isSuperAdmin ? (
+          <>
+            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={feeEnabled}
+                onChange={(e) => setFeeEnabled(e.target.checked)}
+                className="w-4 h-4 accent-blue-600"
+              />
+              Fee salesman aktif
+            </label>
+            <div className="flex flex-wrap items-end gap-2">
+              <div>
+                <label className="label">Persen fee (%)</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={feePercentDraft}
+                  onChange={(e) => setFeePercentDraft(e.target.value)}
+                  className="glass-input w-24"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleSaveFeeSetting}
+                disabled={feeSaving}
+                className="btn-primary inline-flex items-center gap-2"
+              >
+                {feeSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Simpan Fee
+              </button>
+            </div>
+            <p className="text-xs text-gray-500">
+              Fee = floor(grand total × persen / 100) per invoice, hanya untuk
+              penjualan yang punya salesman. Contoh: Rp57.850 × 2% = Rp1.157.
+              Kalau fee dimatikan di sini, fee SEMUA invoice jadi Rp0 — apa pun
+              pengaturan fee per invoice. Fee tidak pernah dicetak di invoice.
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-gray-600">
+            Fee salesman saat ini:{" "}
+            <span className="font-semibold text-gray-800">
+              {feeEnabled ? `AKTIF — ${feePercent}% per invoice` : "NONAKTIF — fee Rp0"}
+            </span>
+            . Hanya SUPER_ADMIN yang bisa mengubahnya.
+          </p>
+        )}
+      </div>
+
       {isSuperAdmin && (
         <form onSubmit={handleAddSalesman} className="flex flex-wrap items-end gap-2">
           <div>
@@ -209,7 +327,7 @@ export default function SalesmenManager() {
                 <th className="py-2 pr-2 font-medium">No. HP</th>
                 <th className="py-2 pr-2 font-medium">Penjualan</th>
                 <th className="py-2 pr-2 font-medium">Status</th>
-                {isSuperAdmin && <th className="py-2 font-medium text-right">Aksi</th>}
+                <th className="py-2 font-medium text-right">Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -225,7 +343,14 @@ export default function SalesmenManager() {
                         maxLength={100}
                       />
                     ) : (
-                      s.name
+                      <button
+                        type="button"
+                        onClick={() => setDetailSalesman(s)}
+                        className="text-blue-600 hover:underline text-left"
+                        title="Klik untuk melihat detail penjualan & fee"
+                      >
+                        {s.name}
+                      </button>
                     )}
                   </td>
                   <td className="py-2 pr-2 text-gray-600">
@@ -264,55 +389,71 @@ export default function SalesmenManager() {
                       </span>
                     )}
                   </td>
-                  {isSuperAdmin && (
-                    <td className="py-2 text-right whitespace-nowrap">
-                      {editingId === s.id ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => handleSaveEdit(s.id)}
-                            className="btn-primary !py-1 !px-3 text-xs mr-2"
-                          >
-                            Simpan
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEditingId(null)}
-                            className="btn-secondary !py-1 !px-3 text-xs"
-                          >
-                            Batal
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingId(s.id);
-                              setEditName(s.name);
-                              setEditPhone(s.phone || "");
-                            }}
-                            className="btn-secondary !py-1 !px-3 text-xs mr-2 inline-flex items-center gap-1"
-                          >
-                            <Pencil className="w-3 h-3" /> Ubah
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(s.id, s.name)}
-                            className="btn-secondary !py-1 !px-3 text-xs inline-flex items-center gap-1"
-                          >
-                            <Trash2 className="w-3 h-3" /> Hapus
-                          </button>
-                        </>
-                      )}
-                    </td>
-                  )}
+                  <td className="py-2 text-right whitespace-nowrap">
+                    {editingId === s.id ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleSaveEdit(s.id)}
+                          className="btn-primary !py-1 !px-3 text-xs mr-2"
+                        >
+                          Simpan
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(null)}
+                          className="btn-secondary !py-1 !px-3 text-xs"
+                        >
+                          Batal
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setDetailSalesman(s)}
+                          className="btn-secondary !py-1 !px-3 text-xs mr-2 inline-flex items-center gap-1"
+                          title="Lihat detail penjualan & fee salesman ini"
+                        >
+                          <Eye className="w-3 h-3" /> Detail
+                        </button>
+                        {isSuperAdmin && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingId(s.id);
+                                setEditName(s.name);
+                                setEditPhone(s.phone || "");
+                              }}
+                              className="btn-secondary !py-1 !px-3 text-xs mr-2 inline-flex items-center gap-1"
+                            >
+                              <Pencil className="w-3 h-3" /> Ubah
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(s.id, s.name)}
+                              className="btn-secondary !py-1 !px-3 text-xs inline-flex items-center gap-1"
+                            >
+                              <Trash2 className="w-3 h-3" /> Hapus
+                            </button>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+
+      <SalesmanDetailModal
+        salesman={detailSalesman}
+        isOpen={detailSalesman !== null}
+        onClose={() => setDetailSalesman(null)}
+      />
     </div>
   );
 }

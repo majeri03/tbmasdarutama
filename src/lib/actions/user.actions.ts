@@ -7,6 +7,10 @@ import bcrypt from "bcryptjs";
 import { UserFormValues } from "../validations/user.schema";
 import { Prisma, Role } from "@prisma/client";
 import { sendVerificationOtp } from "@/lib/services/email-verification.service";
+import {
+  PASSWORD_ERROR_MESSAGE,
+  validatePassword,
+} from "@/lib/utils/password";
 // Helper: Security Check
 async function requireSuperAdmin() {
   const user = await getCurrentUser();
@@ -81,20 +85,16 @@ export async function createUser(data: UserFormValues) {
     if (existing)
       return { success: false, error: "Email sudah digunakan user lain" };
 
-    // SECURITY FIX (22 Nov 2026, pentest L-2): minimum password user baru
-    // disamakan 8 karakter seperti ganti password di tempat lain (dulu 6 —
-    // "123456" bisa lolos). Maksimal 128 (bcrypt memotong di 72 byte).
-    if (!data.password || data.password.length < 8) {
+    // Kebijakan password (24 Nov 2026): min 8, maks 128, 1 huruf besar,
+    // 1 angka, 1 simbol — dicek server-side, client tidak bisa bypass.
+    if (!data.password) {
       return {
         success: false,
         error: "Password wajib diisi minimal 8 karakter untuk user baru",
       };
     }
-    if (data.password.length > 128) {
-      return {
-        success: false,
-        error: "Password maksimal 128 karakter",
-      };
+    if (!validatePassword(data.password).valid) {
+      return { success: false, error: PASSWORD_ERROR_MESSAGE };
     }
 
     const hashedPassword = await bcrypt.hash(data.password, 10);
@@ -157,7 +157,7 @@ export async function updateUser(id: string, data: UserFormValues) {
     // token mobile user ini harus dicabut (lihat bawah).
     const current = await prisma.user.findUnique({
       where: { id },
-      select: { isActive: true, role: true, email: true },
+      select: { isActive: true, role: true, email: true, emailVerifiedAt: true },
     });
     if (!current) return { success: false, error: "User tidak ditemukan" };
 
@@ -167,24 +167,36 @@ export async function updateUser(id: string, data: UserFormValues) {
     const emailChangedOnPendingAccount =
       !current.isActive && current.email !== data.email;
 
+    // FIX (24 Nov 2026, OTP bypass): akun yang emailnya BELUM
+    // terverifikasi TIDAK BOLEH diaktifkan dari form edit — dulu
+    // `isActive: data.isActive` ditulis apa adanya DAN token OTP yang
+    // menggantung dihapus, sehingga SUPER_ADMIN yang mencentang "Akun
+    // Aktif" di form edit langsung mengaktifkan akun TANPA kode OTP.
+    // Mulai sekarang akun hanya bisa aktif lewat verifyEmailOtp
+    // (/verify-email). Kalau form mengirim isActive=true untuk akun yang
+    // belum terverifikasi, nilainya DIBUANG (dipaksa tetap false) dan
+    // perubahan lain tetap tersimpan — lihat pesan di bawah.
+    // Akun yang emailnya SUDAH terverifikasi (pernah aktif lalu
+    // dinonaktifkan admin) tetap boleh diaktifkan kembali dari sini.
+    const activationBlocked =
+      !current.isActive && data.isActive && !current.emailVerifiedAt;
+    const effectiveIsActive = activationBlocked ? false : data.isActive;
+
     const updateData: Prisma.UserUpdateInput = {
       name: data.name,
       email: data.email,
       role: data.role as Role,
       phone: data.phone,
       address: data.address,
-      isActive: data.isActive,
+      isActive: effectiveIsActive,
     };
 
     // Hanya update password jika input tidak kosong
     let passwordChanged = false;
     if (data.password && data.password.trim() !== "") {
-      // SECURITY FIX (22 Nov 2026, pentest L-2): samakan minimal 8 karakter
-      // (dulu 6) + maksimal 128.
-      if (data.password.length < 8)
-        return { success: false, error: "Password minimal 8 karakter" };
-      if (data.password.length > 128)
-        return { success: false, error: "Password maksimal 128 karakter" };
+      // Kebijakan password (24 Nov 2026): sama seperti user baru.
+      if (!validatePassword(data.password).valid)
+        return { success: false, error: PASSWORD_ERROR_MESSAGE };
       updateData.password = await bcrypt.hash(data.password, 10);
       passwordChanged = true;
     }
@@ -193,7 +205,7 @@ export async function updateUser(id: string, data: UserFormValues) {
     // password diganti admin — cabut semua token mobile user ini dengan
     // menaikkan tokenVersion. Token lama langsung ditolak verifyMobileToken.
     const revokeSessions =
-      (current.isActive && !data.isActive) ||
+      (current.isActive && !effectiveIsActive) ||
       current.role !== (data.role as Role) ||
       passwordChanged;
     if (revokeSessions) {
@@ -207,29 +219,38 @@ export async function updateUser(id: string, data: UserFormValues) {
 
     // PKG-I: email akun yang belum terverifikasi diganti -> kirim OTP baru
     // ke alamat yang benar (OTP lama gugur karena sendVerificationOtp
-    // menghapus token lama). Kalau SUPER_ADMIN mengaktifkan akun yang
-    // belum terverifikasi secara manual (toggle di form), hapus token OTP
-    // yang menggantung — itu keputusan admin yang sadar, bukan bypass
-    // diam-diam.
+    // menghapus token lama).
     if (emailChangedOnPendingAccount) {
       const otp = await sendVerificationOtp(id);
       revalidatePath("/dashboard/users");
       if (!otp.success) {
         return {
           success: true,
-          message: "User berhasil diperbarui, tetapi kode verifikasi baru gagal dikirim ke email baru. Gunakan tombol \"Kirim ulang OTP\" di tabel akun.",
+          message:
+            "User berhasil diperbarui, tetapi kode verifikasi baru gagal dikirim ke email baru. Gunakan tombol \"Kirim ulang OTP\" di tabel akun." +
+            (activationBlocked
+              ? " Akun TIDAK diaktifkan — aktivasi hanya lewat kode OTP."
+              : ""),
         };
       }
       return {
         success: true,
-        message: `User berhasil diperbarui. Kode verifikasi baru dikirim ke ${data.email}.`,
+        message:
+          `User berhasil diperbarui. Kode verifikasi baru dikirim ke ${data.email}.` +
+          (activationBlocked
+            ? " Akun TIDAK diaktifkan — aktivasi hanya lewat kode OTP."
+            : ""),
       };
-    }
-    if (!current.isActive && data.isActive) {
-      await prisma.emailVerificationToken.deleteMany({ where: { userId: id } });
     }
 
     revalidatePath("/dashboard/users");
+    if (activationBlocked) {
+      return {
+        success: true,
+        message:
+          "User berhasil diperbarui, tetapi akun TIDAK diaktifkan: akun yang belum terverifikasi hanya bisa aktif lewat kode OTP di halaman verifikasi.",
+      };
+    }
     return { success: true, message: "User berhasil diperbarui" };
   } catch (error) {
     // Cek apakah error adalah instance dari Error javascript

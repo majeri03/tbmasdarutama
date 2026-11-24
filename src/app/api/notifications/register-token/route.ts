@@ -1,6 +1,10 @@
 import { NextRequest } from "next/server";
 import { getAuthenticatedUser, unauthorizedResponse, successResponse, errorResponse } from "@/lib/utils/api";
 import prisma from "@/lib/prisma";
+import {
+  isRateLimited,
+  recordRateLimitHit,
+} from "@/lib/utils/rate-limit";
 
 /**
  * PENTEST FIX (22 Nov 2026, M3): token push orang lain tidak boleh
@@ -17,6 +21,22 @@ import prisma from "@/lib/prisma";
 const EXPO_PUSH_TOKEN_RE = /^(ExponentPushToken|ExpoPushToken)\[[A-Za-z0-9_-]+\]$/;
 const MAX_PUSH_TOKEN_LENGTH = 255;
 
+// HARDENING (24 Nov 2026): endpoint ini sebelumnya TANPA rate limit —
+// walau butuh login, satu sesi curian / satu HP bisa membanjiri DB dengan
+// upsert token tanpa batas. 30x/jam per user sudah sangat longgar
+// (APK normal memanggil 1x saat login / 1x saat ganti token).
+const PUSH_TOKEN_WINDOW_MS = 60 * 60 * 1000;
+const PUSH_TOKEN_MAX_CALLS = 30;
+
+async function checkPushTokenLimit(userId: string): Promise<boolean> {
+  const key = `push-token:user:${userId}`;
+  if (await isRateLimited(key, PUSH_TOKEN_MAX_CALLS, PUSH_TOKEN_WINDOW_MS)) {
+    return false;
+  }
+  await recordRateLimitHit(key, PUSH_TOKEN_WINDOW_MS);
+  return true;
+}
+
 function isValidPushToken(token: string): boolean {
   if (token.length === 0 || token.length > MAX_PUSH_TOKEN_LENGTH) return false;
   if (/\s/.test(token)) return false;
@@ -27,6 +47,13 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getAuthenticatedUser();
     if (!session?.user?.id) return unauthorizedResponse();
+
+    if (!(await checkPushTokenLimit(session.user.id))) {
+      return errorResponse(
+        "Terlalu banyak permintaan pendaftaran token. Coba lagi 1 jam lagi.",
+        429
+      );
+    }
 
     const body = await request.json();
     const { token, platform, deviceName } = body;
@@ -86,6 +113,13 @@ export async function DELETE(request: NextRequest) {
   try {
     const session = await getAuthenticatedUser();
     if (!session?.user?.id) return unauthorizedResponse();
+
+    if (!(await checkPushTokenLimit(session.user.id))) {
+      return errorResponse(
+        "Terlalu banyak permintaan pendaftaran token. Coba lagi 1 jam lagi.",
+        429
+      );
+    }
 
     const body = await request.json().catch(() => ({}));
     const { token } = body;

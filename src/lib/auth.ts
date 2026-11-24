@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import type { NextAuthConfig } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
@@ -10,6 +10,7 @@ import {
   recordRateLimitHit,
   clearRateLimit,
 } from "@/lib/utils/rate-limit";
+import { verifyTurnstileToken } from "@/lib/utils/turnstile";
 declare module "next-auth" {
   interface Session {
     user: {
@@ -41,14 +42,41 @@ declare module "@auth/core/jwt" {
   }
 }
 // Rate-limit login web (dashboard) — samakan dengan login mobile:
-// 10x gagal per IP+email dalam 15 menit, lalu tolak 15 menit.
+// 5x gagal per IP+email dalam 15 menit, lalu tolak 15 menit.
+// HARDENING (24 Nov 2026): batas diperketat dari 10x menjadi 5x, dan
+// ditambah batas AGREGAT per IP (30x/15 menit, semua email) — tanpa ini
+// penyerang bisa memutar banyak email (tiap email 5x) dari satu IP tanpa
+// pernah kena batas per-email.
 // SECURITY FIX (22 Nov 2026, pentest M28 + M12/L-1): hitungan pindah dari
 // Map in-memory per instance ke tabel rate_limits di DB (berlaku
 // antar-instance serverless), dan kunci sekarang ip:email — sebelumnya
 // kunci email saja, jadi penyerang bisa mengunci akun korban (termasuk
 // SUPER_ADMIN) selama 15 menit tanpa perlu tahu password.
 const WEB_LOGIN_WINDOW_MS = 15 * 60 * 1000;
-const WEB_LOGIN_MAX_FAILED = 10;
+const WEB_LOGIN_MAX_FAILED = 5;
+const WEB_LOGIN_IP_MAX_FAILED = 30;
+
+// FIX (24 Nov 2026, OTP): akun yang belum terverifikasi ditolak login
+// dengan kode yang bisa dibedakan dari password salah — supaya halaman
+// login bisa menampilkan pesan "Akun belum terverifikasi" + tombol ke
+// /verify-email (tempat memasukkan kode OTP).
+// Auth.js v5 TIDAK meneruskan pesan Error biasa ke client (sampainya
+// hanya "Configuration"); yang diteruskan hanyalah subclass
+// CredentialsSignin lewat properti `code` (dibaca LoginForm dari
+// result.code — diverifikasi dari source next-auth 5.0.0-beta.30).
+// Kode ini HANYA dilempar kalau passwordnya BENAR (lihat authorize di
+// bawah), jadi tidak membocorkan status akun ke orang yang tidak tahu
+// password.
+class UnverifiedAccountError extends CredentialsSignin {
+  code = "unverified";
+}
+
+// HARDENING (24 Nov 2026): cek bot Turnstile gagal — pola yang sama
+// seperti UnverifiedAccountError supaya LoginForm bisa menampilkan pesan
+// yang benar (result.code === "turnstile"), bukan pesan generik.
+class TurnstileFailedError extends CredentialsSignin {
+  code = "turnstile";
+}
 
 export const authConfig: NextAuthConfig = {
   trustHost: true,
@@ -58,6 +86,9 @@ export const authConfig: NextAuthConfig = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        // HARDENING (24 Nov 2026): token Turnstile dari widget di LoginForm.
+        // Hanya dipakai login WEB — login mobile (APK) tidak lewat sini.
+        turnstileToken: { label: "Turnstile", type: "text" },
       },
       async authorize(credentials) {
         // SECURITY FIX (22 Nov 2026, pentest L8 API): validasi tipe dulu —
@@ -91,20 +122,42 @@ export const authConfig: NextAuthConfig = {
           // Di luar konteks request — pakai "unknown".
         }
         const rateKey = `${ip}:${email}`;
+        // HARDENING (24 Nov 2026): cek bot Turnstile untuk login WEB,
+        // SEBELUM cek rate limit / password. Kalau kunci Turnstile belum
+        // diisi, verifikasi dilewati (fail open). Kalau kunci sudah diisi
+        // tapi token kosong/tidak valid, tolak dengan kode "turnstile"
+        // supaya LoginForm menampilkan pesan yang benar. Login mobile
+        // (APK, /api/auth/login) TIDAK memakai cek ini.
+        const turnstileOk = await verifyTurnstileToken(
+          typeof credentials.turnstileToken === "string"
+            ? credentials.turnstileToken
+            : undefined,
+          ip
+        );
+        if (!turnstileOk) {
+          throw new TurnstileFailedError();
+        }
         if (await isRateLimited(rateKey, WEB_LOGIN_MAX_FAILED, WEB_LOGIN_WINDOW_MS)) {
           throw new Error("Terlalu banyak percobaan login. Coba lagi 15 menit lagi.");
         }
+        // HARDENING (24 Nov 2026): batas agregat per IP — dihitung untuk
+        // SETIAP percobaan login (berhasil/gagal) dari IP ini, semua email.
+        // 30x/15 menit sangat longgar untuk pemakaian normal.
+        const ipRateKey = `login-ip:${ip}`;
+        if (await isRateLimited(ipRateKey, WEB_LOGIN_IP_MAX_FAILED, WEB_LOGIN_WINDOW_MS)) {
+          throw new Error("Terlalu banyak percobaan login. Coba lagi 15 menit lagi.");
+        }
+        await recordRateLimitHit(ipRateKey, WEB_LOGIN_WINDOW_MS);
 
         const user = await prisma.user.findUnique({
           where: { email },
         });
 
         // SECURITY FIX (22 Nov 2026, pentest M12/L-7): satu pesan generik
-        // untuk SEMUA kegagalan — sebelumnya "Email tidak ditemukan atau
-        // akun tidak aktif" vs "Password salah" membocorkan email mana
-        // yang terdaftar. Keamanan tidak boleh bergantung pada UI yang
-        // menutupi perbedaan ini (LoginForm).
-        if (!user || !user.isActive) {
+        // untuk email tidak terdaftar DAN password salah — sebelumnya
+        // "Email tidak ditemukan atau akun tidak aktif" vs "Password
+        // salah" membocorkan email mana yang terdaftar.
+        if (!user) {
           await recordRateLimitHit(rateKey, WEB_LOGIN_WINDOW_MS);
           throw new Error("Email atau password salah");
         }
@@ -116,6 +169,23 @@ export const authConfig: NextAuthConfig = {
 
         if (!isPasswordValid) {
           await recordRateLimitHit(rateKey, WEB_LOGIN_WINDOW_MS);
+          throw new Error("Email atau password salah");
+        }
+
+        // FIX (24 Nov 2026, OTP): password BENAR tapi akun belum aktif.
+        // - Email BELUM terverifikasi (emailVerifiedAt null) -> tolak
+        //   dengan kode "unverified" supaya halaman login menampilkan
+        //   pesan + tombol ke /verify-email. Kode ini hanya sampai ke
+        //   orang yang sudah tahu password yang benar (trade-off ini
+        //   diminta user: tanpa pembedaan ini, pemilik akun tidak tahu
+        //   harus memasukkan OTP di mana).
+        // - Email SUDAH terverifikasi tapi akun dinonaktifkan admin ->
+        //   tetap pesan generik seperti password salah.
+        if (!user.isActive) {
+          await recordRateLimitHit(rateKey, WEB_LOGIN_WINDOW_MS);
+          if (!user.emailVerifiedAt) {
+            throw new UnverifiedAccountError();
+          }
           throw new Error("Email atau password salah");
         }
 

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Edit, Trash2, Shield, ShieldAlert, User as UserIcon, CheckCircle, XCircle, Mail, Clock, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { Edit, Trash2, Shield, ShieldAlert, User as UserIcon, CheckCircle, XCircle, Mail, Clock, Loader2, KeyRound } from "lucide-react";
 import { UserFormModal } from "./UserFormModal";
 import { DeleteUserDialog } from "./DeleteUserDialog";
 import { resendUserVerificationOtp } from "@/lib/actions/email-verification.actions";
@@ -97,14 +98,26 @@ export default function UserTable({ users }: { users: UserData[] }) {
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       {user.hasPendingVerification && (
-                        <button
-                          onClick={() => handleResendOtp(user)}
-                          disabled={resendingId === user.id}
-                          className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-50"
-                          title="Kirim ulang kode OTP"
-                        >
-                          {resendingId === user.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-                        </button>
+                        <>
+                          <button
+                            onClick={() => handleResendOtp(user)}
+                            disabled={resendingId === user.id}
+                            className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-50"
+                            title="Kirim ulang kode OTP"
+                          >
+                            {resendingId === user.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                          </button>
+                          {/* FIX (24 Nov 2026, OTP): baris "Menunggu verifikasi"
+                              sekarang juga menautkan langsung ke halaman tempat
+                              kode OTP dimasukkan (email sudah terisi). */}
+                          <Link
+                            href={`/verify-email?email=${encodeURIComponent(user.email)}`}
+                            className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors inline-flex"
+                            title="Buka halaman verifikasi OTP (masukkan kode)"
+                          >
+                            <KeyRound className="w-4 h-4" />
+                          </Link>
+                        </>
                       )}
                       <button
                         onClick={() => { setSelectedUser(user); setIsEditOpen(true); }}

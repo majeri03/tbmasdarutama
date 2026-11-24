@@ -4,8 +4,14 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Loader2, Lock, CheckCircle } from "lucide-react";
 import { resetPassword } from "@/lib/actions/password-reset.actions";
+import PasswordChecklist from "@/components/ui/password-checklist";
+import {
+  PASSWORD_ERROR_MESSAGE,
+  isStrongPassword,
+} from "@/lib/utils/password";
 import { useToast, Toast } from "@/components/ui/toast";
 import Link from "next/link";
+import TurnstileWidget from "@/components/TurnstileWidget";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -14,6 +20,10 @@ function ResetPasswordForm() {
 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  // HARDENING (24 Nov 2026): token Turnstile dari widget (fail open kalau
+  // Turnstile belum dipasang).
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileReset, setTurnstileReset] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [formData, setFormData] = useState({
@@ -33,8 +43,11 @@ function ResetPasswordForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (formData.newPassword.length < 8) {
-      showToast("Password minimal 8 karakter", "error");
+    // Blokir client-side kalau ada aturan password yang belum lolos —
+    // server tetap menolaknya juga (lihat resetPassword di
+    // password-reset.actions.ts), jadi client tidak bisa bypass.
+    if (!isStrongPassword(formData.newPassword)) {
+      showToast(PASSWORD_ERROR_MESSAGE, "error");
       return;
     }
 
@@ -46,7 +59,7 @@ function ResetPasswordForm() {
     setLoading(true);
 
     try {
-      const result = await resetPassword(token!, formData.newPassword);
+      const result = await resetPassword(token!, formData.newPassword, turnstileToken ?? undefined);
 
       if (result.success) {
         setSuccess(true);
@@ -62,6 +75,7 @@ function ResetPasswordForm() {
       );
     } finally {
       setLoading(false);
+      setTurnstileReset((n) => n + 1);
     }
   };
 
@@ -119,7 +133,7 @@ function ResetPasswordForm() {
                 value={formData.newPassword}
                 onChange={handleChange}
                 className="glass-input pr-12"
-                placeholder="Minimal 6 karakter"
+                placeholder="Min. 8 karakter, huruf besar, angka & simbol"
                 required
               />
               <button
@@ -134,10 +148,8 @@ function ResetPasswordForm() {
                 )}
               </button>
             </div>
-            {formData.newPassword && formData.newPassword.length < 6 && (
-              <p className="text-xs text-red-500 mt-1">
-                Password minimal 6 karakter
-              </p>
+            {formData.newPassword && (
+              <PasswordChecklist password={formData.newPassword} />
             )}
           </div>
 
@@ -171,6 +183,11 @@ function ResetPasswordForm() {
                 <p className="text-xs text-red-500 mt-1">Password tidak cocok</p>
               )}
           </div>
+
+          {/* HARDENING (24 Nov 2026): widget bot check Turnstile — hanya
+              tampil kalau site key sudah diisi; kalau belum, tidak ada
+              apa-apa dan form tetap jalan (fail open). */}
+          <TurnstileWidget onToken={setTurnstileToken} resetSignal={turnstileReset} />
 
           {/* Submit Button */}
           <button type="submit" disabled={loading} className="btn-primary w-full">

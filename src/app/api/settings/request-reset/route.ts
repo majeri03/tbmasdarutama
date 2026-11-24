@@ -8,9 +8,18 @@ export async function POST(req: NextRequest) {
     
     // Validate
     const validated = requestPasswordResetSchema.parse(body);
-    
+
+    // HARDENING (24 Nov 2026): teruskan token Turnstile dari form
+    // lupa-password ke action (zod .parse membuang key yang tidak ada
+    // di schema, jadi dibaca langsung dari body).
+    const turnstileToken =
+      typeof (body as { turnstileToken?: unknown }).turnstileToken ===
+      "string"
+        ? (body as { turnstileToken: string }).turnstileToken
+        : undefined;
+
     // Process
-    const result = await requestPasswordReset(validated.email);
+    const result = await requestPasswordReset(validated.email, turnstileToken);
     
     return NextResponse.json(result);
   } catch (error) {

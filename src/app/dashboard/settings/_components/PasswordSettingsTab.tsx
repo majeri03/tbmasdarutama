@@ -4,6 +4,11 @@ import { useState } from "react";
 import { Lock, Eye, EyeOff, Loader2, Shield } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { changePassword } from "@/lib/actions/password-reset.actions";
+import PasswordChecklist from "@/components/ui/password-checklist";
+import {
+  PASSWORD_ERROR_MESSAGE,
+  isStrongPassword,
+} from "@/lib/utils/password";
 import { Toast } from "@/components/ui/toast";
 export default function PasswordSettingsTab() {
     const [loading, setLoading] = useState(false);
@@ -22,9 +27,11 @@ export default function PasswordSettingsTab() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Validation
-        if (formData.newPassword.length < 6) {
-            showToast("Password baru minimal 6 karakter", "error");
+        // Validation — blokir client-side kalau ada aturan yang belum
+        // lolos; server tetap menolaknya juga (lihat changePassword di
+        // password-reset.actions.ts).
+        if (!isStrongPassword(formData.newPassword)) {
+            showToast(PASSWORD_ERROR_MESSAGE, "error");
             return;
         }
 
@@ -81,8 +88,8 @@ export default function PasswordSettingsTab() {
                     <div>
                         <h3 className="font-semibold text-blue-900">Keamanan Akun</h3>
                         <p className="text-sm text-blue-700 mt-1">
-                            Gunakan password yang kuat dengan kombinasi huruf besar, huruf kecil, angka, dan simbol.
-                            Minimal 6 karakter.
+                            Password baru harus minimal 8 karakter, maksimal 128 karakter,
+                            dan mengandung minimal 1 huruf besar, 1 angka, dan 1 simbol.
                         </p>
                     </div>
                 </div>
@@ -134,8 +141,8 @@ export default function PasswordSettingsTab() {
                             {showNew ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                         </button>
                     </div>
-                    {formData.newPassword && formData.newPassword.length < 6 && (
-                        <p className="text-xs text-red-500 mt-1">Password minimal 6 karakter</p>
+                    {formData.newPassword && (
+                        <PasswordChecklist password={formData.newPassword} />
                     )}
                 </div>
 

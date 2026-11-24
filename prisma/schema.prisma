@@ -261,6 +261,10 @@ model Sale {
   // penjualan ini. Dicatat internal saja — TIDAK PERNAH dicetak di
   // invoice/struk/surat jalan.
   salesmanId      String?
+  // Fee salesman per invoice (24 Nov 2026): null = ikut pengaturan global
+  // di StoreSetting. TIDAK PERNAH dicetak di invoice/struk/surat jalan.
+  salesmanFeeEnabled Boolean?
+  salesmanFeePercent Int?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
@@ -725,6 +729,12 @@ model StoreSetting {
   // SUPER_ADMIN yang mengatur bebas dari tab Sales di Pengaturan.
   pointsEnabled       Boolean @default(true)
   pointsRupiahPerPoint Int    @default(10000)
+
+  // Fee salesman (24 Nov 2026): fee/komisi per invoice untuk salesman.
+  // Default MATI (false) — tidak ada fee sampai SUPER_ADMIN mengaktifkan.
+  // Persen default 2%. Diatur SUPER_ADMIN dari halaman Salesman.
+  salesmanFeeEnabled Boolean @default(false)
+  salesmanFeePercent Int    @default(2)
 
   // PKG-H (23 Nov 2026, email pengingat utang): saklar email ringkasan,
   // jadwal pengingat (hari lewat jatuh tempo, dipisah koma, default 3,7,30)

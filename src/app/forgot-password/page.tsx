@@ -4,11 +4,16 @@ import { useState } from "react";
 import { Mail, Loader2, CheckCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useToast, Toast } from "@/components/ui/toast";
+import TurnstileWidget from "@/components/TurnstileWidget";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  // HARDENING (24 Nov 2026): token Turnstile dari widget (fail open kalau
+  // Turnstile belum dipasang).
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileReset, setTurnstileReset] = useState(0);
 
   const { toast, showToast, hideToast } = useToast();
 
@@ -20,7 +25,7 @@ export default function ForgotPasswordPage() {
       const res = await fetch("/api/settings/request-reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, turnstileToken: turnstileToken ?? undefined }),
       });
 
       const data = await res.json();
@@ -38,6 +43,7 @@ export default function ForgotPasswordPage() {
       );
     } finally {
       setLoading(false);
+      setTurnstileReset((n) => n + 1);
     }
   };
 
@@ -122,6 +128,11 @@ export default function ForgotPasswordPage() {
               />
             </div>
           </div>
+
+          {/* HARDENING (24 Nov 2026): widget bot check Turnstile — hanya
+              tampil kalau site key sudah diisi; kalau belum, tidak ada
+              apa-apa dan form tetap jalan (fail open). */}
+          <TurnstileWidget onToken={setTurnstileToken} resetSignal={turnstileReset} />
 
           <button
             type="submit"

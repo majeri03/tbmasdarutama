@@ -7,18 +7,34 @@ import { Store, Mail, Lock, Loader2 } from "lucide-react";
 import Link from "next/link"; // ✅ ADD THIS IMPORT
 import { useToast, Toast } from "@/components/ui/toast";
 import Image from "next/image";
+import TurnstileWidget from "@/components/TurnstileWidget";
 export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  // FIX (24 Nov 2026, OTP): true kalau login gagal karena akun belum
+  // terverifikasi — tampilkan tombol ke /verify-email (lihat bawah).
+  const [isUnverified, setIsUnverified] = useState(false);
   const [loading, setLoading] = useState(false);
+  // HARDENING (24 Nov 2026): token Turnstile dari widget. Kalau Turnstile
+  // belum dipasang (belum ada site key), widget tidak tampil dan token
+  // tetap null — server melewati cek (fail open).
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileReset, setTurnstileReset] = useState(0);
+
+  // Link verifikasi dengan email sudah terisi (dipakai tombol OTP +
+  // link "Belum terima kode?" di bawah).
+  const verifyHref = email.trim()
+    ? `/verify-email?email=${encodeURIComponent(email.trim())}`
+    : "/verify-email";
 
   const { toast, showToast, hideToast } = useToast();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setIsUnverified(false);
     setLoading(true);
 
     try {
@@ -26,11 +42,23 @@ export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
         redirect: false,
         email,
         password,
+        turnstileToken: turnstileToken ?? undefined,
       });
 
       if (result?.error) {
-        setError("Email atau password salah");
-        showToast("Email atau password salah", "error");
+        // HARDENING (24 Nov 2026): authorize melempar kode "turnstile"
+        // kalau cek bot gagal (pola yang sama seperti "unverified").
+        if (result.code === "turnstile") {
+          setError("Verifikasi keamanan gagal. Muat ulang halaman lalu coba lagi.");
+          showToast("Verifikasi keamanan gagal", "error");
+        } else if (result.code === "unverified") {
+          setIsUnverified(true);
+          setError("Akun belum terverifikasi. Masukkan kode OTP 6 digit yang dikirim ke email Anda.");
+          showToast("Akun belum terverifikasi", "error");
+        } else {
+          setError("Email atau password salah");
+          showToast("Email atau password salah", "error");
+        }
       } else {
         showToast("Login berhasil! Redirecting...", "success");
         setTimeout(() => {
@@ -42,6 +70,8 @@ export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
       showToast("Terjadi kesalahan. Silakan coba lagi.", "error");
     } finally {
       setLoading(false);
+      // Terbitkan token Turnstile baru untuk percobaan berikutnya.
+      setTurnstileReset((n) => n + 1);
     }
   };
 
@@ -127,6 +157,32 @@ export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
             </div>
           )}
 
+          {/* FIX (24 Nov 2026, OTP): akun belum terverifikasi — tunjukkan
+              JELAS ke mana memasukkan kode OTP (email sudah terisi). */}
+          {isUnverified && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-center">
+              <p className="text-sm font-semibold text-amber-800 mb-1">
+                Akun Anda belum terverifikasi
+              </p>
+              <p className="text-sm text-amber-700 mb-3">
+                Kode 6 digit sudah dikirim ke email Anda. Masukkan kodenya
+                untuk mengaktifkan akun, lalu login kembali.
+              </p>
+              <Link
+                href={verifyHref}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors"
+              >
+                <Mail className="w-4 h-4" />
+                Masukkan Kode OTP
+              </Link>
+            </div>
+          )}
+
+          {/* HARDENING (24 Nov 2026): widget bot check Turnstile — hanya
+              tampil kalau site key sudah diisi; kalau belum, tidak ada
+              apa-apa dan login tetap jalan (fail open). */}
+          <TurnstileWidget onToken={setTurnstileToken} resetSignal={turnstileReset} />
+
           {/* Submit Button */}
           <button
             type="submit"
@@ -156,14 +212,16 @@ export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
             <Lock className="w-4 h-4" />
             Lupa Password?
           </Link>
-          <div>
-            {/* PKG-I (23 Nov 2026, OTP): akun baru harus verifikasi email dulu. */}
+          <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+            {/* PKG-I (23 Nov 2026, OTP): akun baru harus verifikasi email dulu.
+                Link dibuat menonjol (kotak biru) supaya pemilik akun baru
+                langsung menemukan tempat memasukkan kode OTP. */}
             <Link
-              href="/verify-email"
-              className="text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors inline-flex items-center gap-1"
+              href={verifyHref}
+              className="text-sm font-semibold text-blue-700 hover:text-blue-800 hover:underline transition-colors inline-flex items-center gap-1"
             >
               <Mail className="w-4 h-4" />
-              Belum terima kode? Verifikasi email
+              Belum terima kode? Verifikasi email / masukkan kode OTP
             </Link>
           </div>
         </div>
