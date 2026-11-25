@@ -79,6 +79,15 @@ class TurnstileFailedError extends CredentialsSignin {
 }
 
 export const authConfig: NextAuthConfig = {
+  // WS-A (25 Nov 2026): trustHost:true membuat Auth.js memakai host
+  // request untuk URL absolutnya. TAPI kalau env AUTH_URL /
+  // NEXTAUTH_URL di Vercel masih berisi domain lama
+  // (https://masdarutama.tech), env itu yang dipakai Auth.js untuk
+  // redirect signIn/signOut dan untuk baseUrl next-auth/react — dan
+  // TIDAK ADA kode yang bisa menimpa env dari dalam aplikasi. Jadi:
+  // ganti AUTH_URL dan NEXTAUTH_URL di Vercel ke
+  // https://tbmasdarutama.vercel.app lalu redeploy (lihat NOTES WS-A).
+  // Jangan "memperbaiki" ini dengan hardcode domain di kode.
   trustHost: true,
   providers: [
     CredentialsProvider({
@@ -243,6 +252,14 @@ export const authConfig: NextAuthConfig = {
         // penuh tetap terjadi di route handler / server action (Node)
         // yang memanggil auth(), karena callback ini jalan lagi di sana
         // dengan akses DB normal.
+        // WS-A (25 Nov 2026): fail-open ini SENGAJA dan load-bearing —
+        // middleware jalan di Edge Runtime dan SELALU masuk cabang ini,
+        // jadi req.auth di middleware TIDAK BISA membedakan sesi valid
+        // dari sesi yang tokenVersion-nya sudah dicabut. Karena itu
+        // middleware TIDAK BOLEH memutuskan redirect /login →
+        // /dashboard (keputusan itu hanya di halaman /login, runtime
+        // Node). Jangan ubah cabang ini menjadi fail-closed tanpa
+        // memindahkan seluruh logika auth middleware.
         console.error("Error validating web session in jwt callback:", error);
         return token;
       }

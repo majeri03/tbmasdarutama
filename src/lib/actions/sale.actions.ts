@@ -33,12 +33,88 @@ import {
 } from "@/lib/utils/r2-tracking";
 import { ensureUmumCustomer } from "@/lib/actions/customer.actions";
 
+// WS-D (25 Nov 2026, batch 2 item 47): nomor invoice ada DUA format di
+// database — POS menulis "INV/20261124-0003" (pos.actions.ts) sedangkan
+// form penjualan menulis "INV-20261124-0003" (generateInvoiceNumber di
+// file ini). Pencarian harus cocok dengan keduanya, apa pun pemisah yang
+// diketik user; tanpa ini pencarian format yang satu mengembalikan 0 baris
+// untuk invoice format yang lain.
+function buildSaleSearchWhere(search: string): Prisma.SaleWhereInput {
+  const term = search.trim();
+  if (!term) return {};
+  const variants = Array.from(
+    new Set([
+      term,
+      term.split("/").join("-"),
+      term.split("-").join("/"),
+    ])
+  );
+  return {
+    OR: variants.flatMap((v) => [
+      { invoiceNumber: { contains: v, mode: "insensitive" } },
+      { customer: { name: { contains: v, mode: "insensitive" } } },
+      { customer: { code: { contains: v, mode: "insensitive" } } },
+    ]),
+  };
+}
+
+// WS-D (25 Nov 2026, batch 2 item 50): filter tanggal dari
+// <input type="date"> datang sebagai tengah malam (00:00). Tanpa
+// normalisasi, `lte` tanggal akhir mengecualikan SELURUH hari itu —
+// rentang 23-24 Nov hanya mengembalikan penjualan 23 Nov. Samakan dengan
+// perbaikan M-31 di src/app/api/sales/route.ts (endOfDay di sana);
+// pemanggilan ganda tetap idempotent karena setHours yang sama.
+function startOfDay(d: Date): Date {
+  const out = new Date(d);
+  out.setHours(0, 0, 0, 0);
+  return out;
+}
+
+function endOfDay(d: Date): Date {
+  const out = new Date(d);
+  out.setHours(23, 59, 59, 999);
+  return out;
+}
+
+// WS-D (25 Nov 2026, batch 2 item 46): awal/akhir "hari ini" dalam WITA
+// (Asia/Makassar, UTC+8, tanpa DST). Server (Vercel) berjalan di UTC —
+// `new Date()` + setHours(0,0,0,0) menggeser batas hari 8 jam, sehingga
+// penjualan pagi WITA jatuh di "kemarin" UTC dan kartu "Penjualan Hari
+// Ini" tampil 0 padahal ada penjualan hari ini.
+function todayWindowWita(): { start: Date; end: Date } {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Makassar",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const get = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value);
+  const startUtcMs =
+    Date.UTC(get("year"), get("month") - 1, get("day"), 0, 0, 0) -
+    8 * 60 * 60 * 1000;
+  return { start: new Date(startUtcMs), end: new Date(startUtcMs + 24 * 60 * 60 * 1000) };
+}
+
+// FIX (25 Nov 2026, ws-j2 item 139): prefiks tanggal nomor dokumen memakai
+// WITA (Asia/Makassar, UTC+8), bukan tanggal lokal server. Server Vercel
+// berjalan di UTC, jadi dokumen yang dibuat 25 Nov pukul 00:xx-07:59 WITA
+// sebelumnya mendapat nomor berprefiks 24 Nov. Nomor yang sudah terbit
+// tidak diubah — hanya nomor baru yang memakai tanggal WITA.
+function getWitaDatePrefix(date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Makassar",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const value = (type: string) =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  return `${value("year")}${value("month")}${value("day")}`;
+}
+
 async function generateInvoiceNumber(): Promise<string> {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-  const datePrefix = `${year}${month}${day}`;
+  const datePrefix = getWitaDatePrefix();
 
   const lastSale = await prisma.sale.findFirst({
     where: {
@@ -673,10 +749,9 @@ export async function getSales(params?: SaleFilterInput, externalSession?: AuthS
     const where: Prisma.SaleWhereInput = {};
 
     if (search) {
-      where.OR = [
-        { invoiceNumber: { contains: search, mode: "insensitive" } },
-        { customer: { name: { contains: search, mode: "insensitive" } } },
-      ];
+      // WS-D item 47: cocokkan nomor invoice (kedua format INV/... dan
+      // INV-...) / nama / kode customer; lihat buildSaleSearchWhere.
+      where.OR = buildSaleSearchWhere(search).OR;
     }
 
     if (customerId) where.customerId = customerId;
@@ -685,9 +760,11 @@ export async function getSales(params?: SaleFilterInput, externalSession?: AuthS
     if (status) where.status = status;
 
     if (dateFrom || dateTo) {
+      // WS-D item 50: tanggal akhir INKLUSIF (akhir hari), bukan tengah
+      // malam — tanpa ini seluruh penjualan di tanggal akhir hilang.
       where.createdAt = {};
-      if (dateFrom) where.createdAt.gte = dateFrom;
-      if (dateTo) where.createdAt.lte = dateTo;
+      if (dateFrom) where.createdAt.gte = startOfDay(dateFrom);
+      if (dateTo) where.createdAt.lte = endOfDay(dateTo);
     }
 
     const [sales, total] = await Promise.all([
@@ -1280,10 +1357,8 @@ export async function getSalesForTable(params?: SaleFilters) {
     const where: Prisma.SaleWhereInput = {};
 
     if (search) {
-      where.OR = [
-        { invoiceNumber: { contains: search, mode: "insensitive" } },
-        { customer: { name: { contains: search, mode: "insensitive" } } },
-      ];
+      // WS-D item 47: lihat buildSaleSearchWhere (format INV/... & INV-...).
+      where.OR = buildSaleSearchWhere(search).OR;
     }
 
     if (customerId) where.customerId = customerId;
@@ -1292,9 +1367,10 @@ export async function getSalesForTable(params?: SaleFilters) {
     if (status) where.status = status;
 
     if (dateFrom || dateTo) {
+      // WS-D item 50: tanggal akhir INKLUSIF (akhir hari), bukan tengah malam.
       where.saleDate = {};
-      if (dateFrom) where.saleDate.gte = dateFrom;
-      if (dateTo) where.saleDate.lte = dateTo;
+      if (dateFrom) where.saleDate.gte = startOfDay(dateFrom);
+      if (dateTo) where.saleDate.lte = endOfDay(dateTo);
     }
 
     const [sales, total] = await Promise.all([
@@ -1362,24 +1438,32 @@ export async function getTodaySalesStats() {
     const session = await auth();
     requirePermission(session, "VIEW_SALES");
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    // WS-D (25 Nov 2026, batch 2 item 46 + 57): kartu harus cocok dengan
+    // daftar — daftar menampilkan semua penjualan AKTIF (COMPLETED +
+    // PENDING). Dulu hanya COMPLETED yang dihitung, sehingga Total 8
+    // padahal daftar 9-10 baris, dan Pendapatan tidak berubah setelah
+    // penjualan kredit (PENDING) baru. CANCELLED dikeluarkan dari SEMUA
+    // total di halaman ini (item 57). RETURN tetap dikeluarkan seperti
+    // sebelumnya — penanganan RETURN TIDAK diubah.
+    const activeWhere: Prisma.SaleWhereInput = {
+      status: { in: [SaleStatus.COMPLETED, SaleStatus.PENDING] },
+    };
+    // WS-D item 46: "Hari Ini" memakai hari WITA, bukan hari UTC server.
+    const { start: todayStart, end: todayEnd } = todayWindowWita();
 
     const [totalSales, totalRevenue, todaySales, pendingSales] =
       await Promise.all([
         prisma.sale.count({
-          where: { status: SaleStatus.COMPLETED },
+          where: activeWhere,
         }),
         prisma.sale.aggregate({
-          where: { status: SaleStatus.COMPLETED },
+          where: activeWhere,
           _sum: { grandTotal: true },
         }),
         prisma.sale.count({
           where: {
-            saleDate: { gte: today, lt: tomorrow },
-            status: SaleStatus.COMPLETED,
+            ...activeWhere,
+            saleDate: { gte: todayStart, lt: todayEnd },
           },
         }),
         prisma.sale.count({
@@ -1454,14 +1538,14 @@ export async function deleteSale(id: string, passwordInput?: string, externalSes
     if (sale.deliveryOrder && (sale.deliveryOrder.status === "IN_TRANSIT" || sale.deliveryOrder.status === "DELIVERED")) {
       return {
         success: false,
-        error: "Tidak dapat menghapus transaksi karena Surat Jalan sedang di jalan (IN_TRANSIT) atau sudah DITERIMA.",
+        error: "Tidak dapat membatalkan transaksi karena Surat Jalan sedang di jalan (IN_TRANSIT) atau sudah DITERIMA.",
       };
     }
 
     if (sale.status === SaleStatus.RETURN) {
       return {
         success: false,
-        error: "Penjualan yang sudah di-return tidak dapat dihapus",
+        error: "Penjualan yang sudah di-return tidak dapat dibatalkan",
       };
     }
 
@@ -1470,7 +1554,7 @@ export async function deleteSale(id: string, passwordInput?: string, externalSes
     if (paidDebt) {
       return {
         success: false,
-        error: `Tidak dapat menghapus: hutang ini sudah dibayar Rp ${Number(paidDebt.paidAmount).toLocaleString("id-ID")}. Hapus pembayaran dulu di menu Hutang.`,
+        error: `Tidak dapat membatalkan: hutang ini sudah dibayar Rp ${Number(paidDebt.paidAmount).toLocaleString("id-ID")}. Hapus pembayaran dulu di menu Hutang.`,
       };
     }
 
@@ -1507,7 +1591,10 @@ export async function deleteSale(id: string, passwordInput?: string, externalSes
       }
     }
 
-    // Soft delete (Tutup Buku): update status to CANCELLED and restore stock/debt
+    // WS-D item 57 — Soft-cancel (Tutup Buku): TIDAK ADA hard-delete di
+    // sini. Penjualan hanya diubah statusnya menjadi CANCELLED, barisnya
+    // tetap tampil di daftar sebagai arsip "Dibatalkan"; stok dikembalikan
+    // dan sisa piutang dibatalkan seperti sebelumnya.
     await prisma.$transaction(async (tx) => {
       // Klaim di DALAM transaksi (lihat cancelSale di atas).
       const claimed = await tx.sale.updateMany({
@@ -1520,7 +1607,7 @@ export async function deleteSale(id: string, passwordInput?: string, externalSes
         where: { id },
         data: {
           status: SaleStatus.CANCELLED,
-          notes: `${sale.notes || ""}\n[DIHAPUS] Dihapus oleh Admin via Konfirmasi Password.`.trim(),
+          notes: `${sale.notes || ""}\n[DIBATALKAN] Dibatalkan oleh Admin via Konfirmasi Password (Tutup Buku).`.trim(),
         },
       });
 
@@ -1542,7 +1629,7 @@ export async function deleteSale(id: string, passwordInput?: string, externalSes
             productId: item.productId,
             type: "IN",
             quantity: item.qtyPrimary,
-            notes: `Pembatalan/Penghapusan Transaksi ${sale.invoiceNumber}`,
+            notes: `Pembatalan Transaksi ${sale.invoiceNumber}`,
             referenceType: "Sale Cancellation",
             referenceId: sale.id,
             createdById: userId,
@@ -1566,7 +1653,7 @@ export async function deleteSale(id: string, passwordInput?: string, externalSes
           where: { id: sale.deliveryOrder.id },
           data: {
             status: "CANCELLED",
-            notes: `${sale.deliveryOrder.notes || ""}\n[DIBATALKAN KARENA TRANSAKSI DIHAPUS]`.trim(),
+            notes: `${sale.deliveryOrder.notes || ""}\n[DIBATALKAN KARENA TRANSAKSI DIBATALKAN]`.trim(),
           },
         });
       }
@@ -1587,7 +1674,7 @@ export async function deleteSale(id: string, passwordInput?: string, externalSes
     };
   } catch (error) {
     console.error("Delete sale error:", error);
-    return { success: false, error: "Gagal memproses penghapusan penjualan" };
+    return { success: false, error: "Gagal memproses pembatalan penjualan" };
   }
 }
 

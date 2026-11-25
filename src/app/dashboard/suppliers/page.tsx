@@ -6,7 +6,7 @@ import { SupplierTable } from "./_components/SupplierTable";
 import { SupplierFormModal } from "./_components/SupplierFormModal";
 import { DeleteSupplierDialog } from "./_components/DeleteSupplierDialog";
 import { Toast, type ToastType } from "@/components/ui/toast";
-import { getSuppliers } from "@/lib/actions/supplier.actions";
+import { getSuppliers, getSupplierStatistics } from "@/lib/actions/supplier.actions";
 
 interface Supplier {
   id: string;
@@ -50,11 +50,29 @@ export default function SuppliersPage() {
     type: ToastType;
   } | null>(null);
 
-  // Stats
-  const activeSuppliers = suppliers.filter((s) => s.isActive).length;
-  const inactiveSuppliers = suppliers.filter((s) => !s.isActive).length;
-  const totalProducts = suppliers.reduce((sum, s) => sum + s._count.products, 0);
-  const totalPurchases = suppliers.reduce((sum, s) => sum + s._count.purchases, 0);
+  // WS-F item 6 — statistik GLOBAL (seluruh supplier), bukan dari baris
+  // halaman / filter saat ini. Dulu angka-angka ini dihitung dari `suppliers`
+  // (maks. 10 baris halaman aktif), jadi pindah halaman / memfilter mengubah
+  // kartu statistik. Diambil terpisah dari daftar lewat
+  // getSupplierStatistics dan di-refresh tiap ada perubahan data.
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+    totalProducts: 0,
+    totalPurchases: 0,
+  });
+
+  const fetchGlobalStats = async () => {
+    try {
+      const result = await getSupplierStatistics();
+      if (result.success) {
+        setStats(result.data);
+      }
+    } catch {
+      // Statistik gagal dimuat: kartu memakai angka 0, daftar tetap jalan.
+    }
+  };
 
   // Fetch suppliers
   const fetchSuppliers = async (
@@ -85,6 +103,7 @@ export default function SuppliersPage() {
   // Initial load
   useEffect(() => {
     fetchSuppliers();
+    fetchGlobalStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -129,16 +148,19 @@ export default function SuppliersPage() {
   const handleFormSuccess = (message: string) => {
     showToast(message, "success");
     fetchSuppliers(pagination.page, search, statusFilter);
+    fetchGlobalStats();
   };
 
   const handleDeleteSuccess = (message: string) => {
     showToast(message, "success");
     fetchSuppliers(1, search, statusFilter);
+    fetchGlobalStats();
   };
 
   const handleStatusToggle = (message: string) => {
     showToast(message, "success");
     fetchSuppliers(pagination.page, search, statusFilter);
+    fetchGlobalStats();
   };
 
   return (
@@ -156,17 +178,17 @@ export default function SuppliersPage() {
               </p>
               <div className="flex items-center gap-3 mt-3">
                 <div className="badge badge-info">
-                  {pagination.total} Total Supplier
+                  {stats.total} Total Supplier
                 </div>
                 <span className="text-gray-400 text-sm">•</span>
                 <div className="badge badge-success">
-                  {activeSuppliers} Aktif
+                  {stats.active} Aktif
                 </div>
-                {inactiveSuppliers > 0 && (
+                {stats.inactive > 0 && (
                   <>
                     <span className="text-gray-400 text-sm">•</span>
                     <div className="badge badge-danger">
-                      {inactiveSuppliers} Nonaktif
+                      {stats.inactive} Nonaktif
                     </div>
                   </>
                 )}
@@ -205,7 +227,7 @@ export default function SuppliersPage() {
               Total Supplier
             </h3>
             <p className="text-3xl font-bold text-gray-900 mb-1">
-              {pagination.total}
+              {stats.total}
             </p>
             <p className="text-gray-500 text-xs">Supplier terdaftar</p>
           </div>
@@ -227,11 +249,11 @@ export default function SuppliersPage() {
               Supplier Aktif
             </h3>
             <p className="text-3xl font-bold text-gray-900 mb-1">
-              {activeSuppliers}
+              {stats.active}
             </p>
             <p className="text-gray-500 text-xs">
-              {pagination.total > 0
-                ? `${((activeSuppliers / pagination.total) * 100).toFixed(0)}% dari total`
+              {stats.total > 0
+                ? `${((stats.active / stats.total) * 100).toFixed(0)}% dari total`
                 : "Belum ada data"}
             </p>
           </div>
@@ -253,11 +275,11 @@ export default function SuppliersPage() {
               Supplier Nonaktif
             </h3>
             <p className="text-3xl font-bold text-gray-900 mb-1">
-              {inactiveSuppliers}
+              {stats.inactive}
             </p>
             <p className="text-gray-500 text-xs">
-              {pagination.total > 0
-                ? `${((inactiveSuppliers / pagination.total) * 100).toFixed(0)}% dari total`
+              {stats.total > 0
+                ? `${((stats.inactive / stats.total) * 100).toFixed(0)}% dari total`
                 : "Belum ada data"}
             </p>
           </div>
@@ -279,7 +301,7 @@ export default function SuppliersPage() {
               Total Produk
             </h3>
             <p className="text-3xl font-bold text-gray-900 mb-1">
-              {totalProducts}
+              {stats.totalProducts}
             </p>
             <p className="text-gray-500 text-xs">Produk dari supplier</p>
           </div>
@@ -304,7 +326,7 @@ export default function SuppliersPage() {
                   Total Transaksi Pembelian
                 </h3>
                 <p className="text-3xl font-bold text-gray-900">
-                  {totalPurchases}
+                  {stats.totalPurchases}
                 </p>
               </div>
             </div>
@@ -327,8 +349,8 @@ export default function SuppliersPage() {
                   Rata-rata Produk per Supplier
                 </h3>
                 <p className="text-3xl font-bold text-gray-900">
-                  {pagination.total > 0
-                    ? (totalProducts / pagination.total).toFixed(1)
+                  {stats.total > 0
+                    ? (stats.totalProducts / stats.total).toFixed(1)
                     : "0"}
                 </p>
               </div>

@@ -19,9 +19,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  X,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { notifyNotificationsChanged } from "./_components/NotificationBell";
 
 type NotifType =
   | "NEW_ORDER"
@@ -115,6 +117,19 @@ export default function NotificationsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [unreadCount, setUnreadCount] = useState(0);
+  // Batch 6 item 193 — dulu pakai window.confirm (dialog native) yang di
+  // browser pengujian auto-dismiss tanpa jejak: diklik 2x, tidak ada dialog,
+  // tidak ada toast, 14 notifikasi terbaca tetap ada. Sekarang modal di
+  // dalam aplikasi.
+  const [showClearReadConfirm, setShowClearReadConfirm] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  // Batch 7 item 194 (b) — pesan saat notifikasi menunjuk DO yang sudah
+  // tidak ada, beserta tombol hapus notifikasi basi itu.
+  const [staleNotice, setStaleNotice] = useState<{
+    doNumber: string;
+    notifId: string;
+  } | null>(null);
+  const [deletingStale, setDeletingStale] = useState(false);
 
   const loadNotifications = useCallback(async (pageNum: number) => {
     setLoading(true);
@@ -142,13 +157,21 @@ export default function NotificationsPage() {
 
   const markRead = async (id: string) => {
     try {
-      await fetch("/api/notifications", {
+      const res = await fetch("/api/notifications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
+      const json = await res.json().catch(() => ({}));
+      // Dulu state diupdate tanpa memeriksa jawaban server — kalau PATCH
+      // gagal, header sempat menampilkan angka yang salah. Sekarang hanya
+      // update kalau server benar-benar berhasil.
+      if (!res.ok || json.success === false) return;
       setItems((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
       setUnreadCount((c) => Math.max(0, c - 1));
+      // Badge lonceng memakai sumber hitungan yang sama — beri tahu supaya
+      // langsung sinkron, jangan tunggu polling 60 detik (item 192).
+      notifyNotificationsChanged();
     } catch {
       // diam — tandai baca gagal tidak menghalangi navigasi
     }
@@ -156,32 +179,101 @@ export default function NotificationsPage() {
 
   const markAllRead = async () => {
     try {
-      await fetch("/api/notifications", {
+      const res = await fetch("/api/notifications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ readAll: true }),
       });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.success === false) {
+        setError(json.message || "Gagal menandai semua dibaca");
+        return;
+      }
       setItems((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
+      notifyNotificationsChanged();
     } catch {
       setError("Gagal menandai semua dibaca");
     }
   };
 
   const clearRead = async () => {
-    if (!confirm("Hapus semua notifikasi yang sudah dibaca?")) return;
+    setClearing(true);
     try {
       const res = await fetch("/api/notifications?clearRead=true", { method: "DELETE" });
-      const json = await res.json();
-      if (json.success) loadNotifications(1);
-      else setError(json.message || "Gagal menghapus notifikasi");
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) {
+        setError(json.message || json.error || "Gagal menghapus notifikasi");
+        return;
+      }
+      setShowClearReadConfirm(false);
+      // Kembali ke halaman 1 — dulu hanya loadNotifications(1) tanpa
+      // setPage(1), jadi state halaman dan data yang tampil bisa tidak cocok.
+      setPage(1);
+      await loadNotifications(1);
+      notifyNotificationsChanged();
     } catch {
       setError("Gagal menghapus notifikasi");
+    } finally {
+      setClearing(false);
     }
   };
 
-  const handleTap = (item: NotificationItem) => {
+  /** Hapus satu notifikasi basi (dipakai untuk DO yang sudah tidak ada). */
+  const deleteStaleNotification = async () => {
+    if (!staleNotice) return;
+    setDeletingStale(true);
+    try {
+      const res = await fetch(
+        `/api/notifications?id=${encodeURIComponent(staleNotice.notifId)}`,
+        { method: "DELETE" }
+      );
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) {
+        setError(json.message || json.error || "Gagal menghapus notifikasi");
+        return;
+      }
+      setStaleNotice(null);
+      setItems((prev) => prev.filter((n) => n.id !== staleNotice.notifId));
+      await loadNotifications(page);
+      notifyNotificationsChanged();
+    } catch {
+      setError("Gagal menghapus notifikasi");
+    } finally {
+      setDeletingStale(false);
+    }
+  };
+
+  /**
+   * Batch 7 item 194 (b): sebelum lompat ke halaman DO, periksa dulu
+   * apakah DO-nya masih ada. Kalau sudah dihapus, JANGAN membuka halaman
+   * pencarian 0 hasil yang kosong tanpa penjelasan — tampilkan pesan yang
+   * jelas di halaman ini dan tawarkan hapus notifikasi basinya.
+   * Kalau pemeriksaan gagal (mis. tidak ada izin VIEW_DELIVERY_ORDERS atau
+   * jaringan bermasalah), tetap navigasi seperti biasa supaya tidak
+   * memblokir pengguna.
+   */
+  const handleTap = async (item: NotificationItem) => {
     if (!item.isRead) void markRead(item.id);
+    const params = (item.params || {}) as Record<string, unknown>;
+    const doNumber = typeof params.doNumber === "string" ? params.doNumber : "";
+    if (item.type === "DELIVERY_UPDATE" && doNumber) {
+      try {
+        const res = await fetch(
+          `/api/delivery-orders?search=${encodeURIComponent(doNumber)}&limit=1`
+        );
+        if (res.ok) {
+          const json = await res.json().catch(() => null);
+          const found = Array.isArray(json?.data) && json.data.length > 0;
+          if (!found) {
+            setStaleNotice({ doNumber, notifId: item.id });
+            return;
+          }
+        }
+      } catch {
+        // Pemeriksaan gagal — lanjut navigasi normal.
+      }
+    }
     const url = targetUrl(item);
     if (url) router.push(url);
   };
@@ -202,7 +294,7 @@ export default function NotificationsPage() {
             <CheckCheck className="w-4 h-4" />
             Tandai Semua Dibaca
           </button>
-          <button onClick={clearRead} className="btn-secondary">
+          <button onClick={() => setShowClearReadConfirm(true)} className="btn-secondary">
             <Trash2 className="w-4 h-4" />
             Hapus yang Dibaca
           </button>
@@ -228,6 +320,39 @@ export default function NotificationsPage() {
 
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>
+      )}
+
+      {/* Batch 7 item 194 (b): DO yang ditunjuk notifikasi sudah tidak ada. */}
+      {staleNotice && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 space-y-2">
+          <p className="text-sm font-medium">
+            Surat jalan {staleNotice.doNumber} sudah tidak ada — kemungkinan sudah dihapus.
+          </p>
+          <p className="text-sm">
+            Notifikasi ini menunjuk ke surat jalan yang sudah dihapus, jadi tidak bisa dibuka
+            lagi. Anda bisa menghapus notifikasi ini supaya daftar tetap bersih.
+          </p>
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={deleteStaleNotification}
+              disabled={deletingStale}
+              className="btn-secondary text-sm"
+            >
+              {deletingStale ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Menghapus...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" /> Hapus notifikasi ini
+                </>
+              )}
+            </button>
+            <button onClick={() => setStaleNotice(null)} className="btn-secondary text-sm">
+              Tutup
+            </button>
+          </div>
+        </div>
       )}
 
       <div className="glass-card divide-y divide-gray-100">
@@ -298,6 +423,55 @@ export default function NotificationsPage() {
               Next
               <ChevronRight className="w-4 h-4" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal konfirmasi "Hapus yang Dibaca" (batch 6 item 193) */}
+      {showClearReadConfirm && (
+        <div className="modal-overlay">
+          <div className="modal-container max-w-md animate-modal-slide-up">
+            <div className="modal-header bg-gradient-to-r from-red-500 to-red-600">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Trash2 className="w-5 h-5" />
+                Hapus yang Dibaca
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowClearReadConfirm(false)}
+                className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+                disabled={clearing}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="modal-body">
+              <p className="text-gray-700 text-sm">
+                Hapus semua notifikasi yang sudah dibaca? Notifikasi yang belum dibaca tidak
+                ikut terhapus.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                onClick={() => setShowClearReadConfirm(false)}
+                className="btn-secondary text-sm"
+                disabled={clearing}
+              >
+                Batal
+              </button>
+              <button type="button" onClick={clearRead} className="btn-danger text-sm" disabled={clearing}>
+                {clearing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Menghapus...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" /> Ya, Hapus
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

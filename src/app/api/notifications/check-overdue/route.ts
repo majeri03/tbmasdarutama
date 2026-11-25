@@ -38,7 +38,7 @@ function secretsEqual(a: string, b: string): boolean {
  * dengan dedup 24 jam di NotificationService supaya tidak spam.
  *
  * Cara pakai (pilih satu):
- * 1. Cron Vercel (vercel.json, tiap hari 01:00 UTC = 08:00 WITA):
+ * 1. Cron Vercel (vercel.json, tiap hari 00:00 UTC = 08:00 WITA):
  *    Vercel mengirim header `Authorization: Bearer <CRON_SECRET>`
  *    (CRON_SECRET dibuat otomatis oleh Vercel saat cron terpasang).
  * 2. Cron eksternal (mis. cron-job.org, tiap hari 08:00 WITA):

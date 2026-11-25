@@ -2,11 +2,97 @@
 
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { startOfDay, endOfDay } from "date-fns";
 import { SaleStatus, DebtStatus, PurchaseStatus } from "@prisma/client";
 import { requirePermission, type AuthSession } from "../utils/role";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+// ---------------------------------------------------------------------------
+// Zona waktu laporan: WITA (Asia/Makassar, UTC+8, tanpa DST) — item 142/147.
+// Halaman laporan mengirim tanggal "yyyy-MM-dd" pilihan user (kalender
+// WITA). startOfDay/endOfDay date-fns memakai zona lokal SERVER (Vercel =
+// UTC), sehingga rentang "23-25 Nov" lama bergeser 8 jam dan transaksi
+// sekitar tengah malam WITA masuk/keluar laporan yang salah. Helper di
+// bawah menafsirkan tanggal pilihan sebagai hari kalender WITA:
+// 00:00:00.000 WITA s.d. 23:59:59.999 WITA.
+// ---------------------------------------------------------------------------
+const WITA_TIME_ZONE = "Asia/Makassar";
+const WITA_OFFSET_MS = 8 * 60 * 60 * 1000;
+
+function witaDayParts(date: Date): { year: number; month: number; day: number } {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: WITA_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  return { year: get("year"), month: get("month"), day: get("day") };
+}
+
+function startOfWitaDay(date: Date): Date {
+  const { year, month, day } = witaDayParts(date);
+  return new Date(Date.UTC(year, month - 1, day) - WITA_OFFSET_MS);
+}
+
+function endOfWitaDay(date: Date): Date {
+  const { year, month, day } = witaDayParts(date);
+  // Akhir hari WITA = awal hari WITA berikutnya dikurangi 1 ms
+  // (23:59:59.999 WITA = 15:59:59.999 UTC).
+  return new Date(Date.UTC(year, month - 1, day + 1) - WITA_OFFSET_MS - 1);
+}
+
+function startOfWitaMonth(date: Date): Date {
+  const { year, month } = witaDayParts(date);
+  return new Date(Date.UTC(year, month - 1, 1) - WITA_OFFSET_MS);
+}
+
+// Data toko untuk kop laporan (item 6): dibaca di sini, server-side, lalu
+// diteruskan sebagai prop ke ReportHeader/ReportFooter. Dulu ReportHeader
+// fetch client-side (getStoreSetting) dan sebelum fetch selesai kop sudah
+// terlanjur tampil "Data toko belum diisi" — termasuk saat di-print/di-
+// download PDF. Pengambilan di sini memakai izin VIEW_REPORTS yang sudah
+// diperiksa tiap action laporan, bukan VIEW_SETTINGS.
+async function getReportStoreInfo(): Promise<{
+  name: string | null;
+  address: string | null;
+  phone: string | null;
+}> {
+  const setting = await prisma.storeSetting.findFirst({
+    select: { name: true, address: true, phone: true },
+  });
+  return {
+    name: setting?.name ?? null,
+    address: setting?.address ?? null,
+    phone: setting?.phone ?? null,
+  };
+}
+
+// HPP per item penjualan (item 142).
+// Aturan satuan (lihat src/lib/utils/stock-units.ts): stok & harga beli
+// primer dinyatakan per SATUAN UTAMA; conversionValue = jumlah satuan itu
+// per 1 satuan utama (mis. Kg = 50, Sak primer = 1). Jadi biaya per satuan
+// jual = buyPrice primer / conversionValue satuan jual.
+// Kode lama: quantity * buyPrice primer — untuk penjualan eceran (Kg) HPP
+// membengkak conversionValue kali lipat (50x) sampai melebihi pendapatan
+// (laporan 23-25 Nov: HPP Rp527.800 vs pendapatan Rp329.400).
+// Pembagian boleh menghasilkan pecahan rupiah (biaya boleh pecahan walau
+// stok harus bulat — beda dengan toPrimaryQuantity yang menolak pecahan).
+function calcItemCogs(item: any): number {
+  const quantity = Number(item.quantity) || 0;
+  const units: any[] = item.product?.productUnits ?? [];
+  const ownUnit = units.find((pu: any) => pu.unitId === item.unitId);
+  const primaryUnit = units.find((pu: any) => pu.isPrimary);
+  if (ownUnit && primaryUnit) {
+    const conv = Number(ownUnit.conversionValue) || 1;
+    return quantity * (Number(primaryUnit.buyPrice) / conv);
+  }
+  // Baris satuan tidak lengkap: pakai harga beli satuan itu sendiri,
+  // terakhir harga primer (perilaku lama) supaya HPP tidak jadi nol diam-diam.
+  if (ownUnit) return quantity * Number(ownUnit.buyPrice || 0);
+  if (primaryUnit) return quantity * Number(primaryUnit.buyPrice || 0);
+  return 0;
+}
 
 // Helper function to serialize Prisma data (convert Decimal to number)
 function serializePrismaData<T>(data: T): T {
@@ -47,10 +133,13 @@ export async function getSalesReport(filters: ReportFilters, externalSession?: A
     const sales = await prisma.sale.findMany({
       where: {
         AND: [
-          dateFrom ? { saleDate: { gte: startOfDay(dateFrom) } } : {},
-          dateTo ? { saleDate: { lte: endOfDay(dateTo) } } : {},
+          dateFrom ? { saleDate: { gte: startOfWitaDay(new Date(dateFrom)) } } : {},
+          dateTo ? { saleDate: { lte: endOfWitaDay(new Date(dateTo)) } } : {},
           customerId ? { customerId } : {},
-          status ? { status: status as SaleStatus } : {},
+          // Aturan bersama laporan (item 142): hanya CANCELLED yang
+          // dikeluarkan. Filter status eksplisit (mis. untuk melihat yang
+          // dibatalkan) tetap dihormati.
+          status ? { status: status as SaleStatus } : { status: { not: SaleStatus.CANCELLED } },
         ],
       },
       include: {
@@ -83,7 +172,7 @@ export async function getSalesReport(filters: ReportFilters, externalSession?: A
 
     return {
       success: true,
-      data: { sales: serializedSales, summary },
+      data: { sales: serializedSales, summary, store: await getReportStoreInfo() },
     };
   } catch (error) {
     console.error("Error getSalesReport:", error);
@@ -136,7 +225,9 @@ export async function getInventoryReport(filters: ReportFilters, externalSession
       lowStockProducts: serializedProducts.filter((p: any) => p.currentStock <= p.minStock).length,
       outOfStockProducts: serializedProducts.filter((p: any) => p.currentStock === 0).length,
       categoriesBreakdown: serializedProducts.reduce((acc: Record<string, number>, product: any) => {
-        const categoryName = product.category.name;
+        // Kategori wajib di schema, tapi jangan jatuhkan seluruh laporan
+        // kalau ada produk yang referensinya hilang (item 141).
+        const categoryName = product.category?.name ?? "Tanpa Kategori";
         acc[categoryName] = (acc[categoryName] || 0) + 1;
         return acc;
       }, {} as Record<string, number>),
@@ -144,7 +235,7 @@ export async function getInventoryReport(filters: ReportFilters, externalSession
 
     return {
       success: true,
-      data: { products: serializedProducts, summary },
+      data: { products: serializedProducts, summary, store: await getReportStoreInfo() },
     };
   } catch (error) {
     console.error("Error getInventoryReport:", error);
@@ -166,26 +257,28 @@ export async function getFinancialReport(filters: DateRangeFilter, externalSessi
 
     if (period) {
       const now = new Date();
-      dateTo = endOfDay(now);
+      dateTo = endOfWitaDay(now);
 
       if (period === 'daily') {
-        dateFrom = startOfDay(now);
+        dateFrom = startOfWitaDay(now);
       } else if (period === 'weekly') {
-        const sevenDaysAgo = new Date(now);
-        sevenDaysAgo.setDate(now.getDate() - 6);
-        dateFrom = startOfDay(sevenDaysAgo);
+        const sevenDaysAgo = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+        dateFrom = startOfWitaDay(sevenDaysAgo);
       } else if (period === 'monthly') {
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        dateFrom = startOfDay(startOfMonth);
+        dateFrom = startOfWitaMonth(now);
       }
     }
 
     const sales = await prisma.sale.findMany({
       where: {
         AND: [
-          { status: "COMPLETED" },
-          dateFrom ? { saleDate: { gte: startOfDay(dateFrom) } } : {},
-          dateTo ? { saleDate: { lte: endOfDay(dateTo) } } : {},
+          // Aturan bersama laporan (item 142): hanya CANCELLED yang
+          // dikeluarkan — sama seperti Laporan Penjualan. Dulu hanya
+          // COMPLETED, sehingga laporan keuangan menghitung 7 transaksi
+          // sementara laporan penjualan menghitung 10 (selisih Rp7.650).
+          { status: { not: SaleStatus.CANCELLED } },
+          dateFrom ? { saleDate: { gte: startOfWitaDay(new Date(dateFrom)) } } : {},
+          dateTo ? { saleDate: { lte: endOfWitaDay(new Date(dateTo)) } } : {},
         ],
       },
       include: {
@@ -193,8 +286,15 @@ export async function getFinancialReport(filters: DateRangeFilter, externalSessi
           include: {
             product: {
               include: {
+                // SEMUA satuan, bukan hanya primer: HPP butuh
+                // conversionValue satuan jual (lihat calcItemCogs).
                 productUnits: {
-                  where: { isPrimary: true },
+                  select: {
+                    unitId: true,
+                    buyPrice: true,
+                    conversionValue: true,
+                    isPrimary: true,
+                  },
                 },
               },
             },
@@ -207,8 +307,8 @@ export async function getFinancialReport(filters: DateRangeFilter, externalSessi
       where: {
         AND: [
           { status: "RECEIVED" },
-          dateFrom ? { purchaseDate: { gte: startOfDay(dateFrom) } } : {},
-          dateTo ? { purchaseDate: { lte: endOfDay(dateTo) } } : {},
+          dateFrom ? { purchaseDate: { gte: startOfWitaDay(new Date(dateFrom)) } } : {},
+          dateTo ? { purchaseDate: { lte: endOfWitaDay(new Date(dateTo)) } } : {},
         ],
       },
     });
@@ -216,8 +316,8 @@ export async function getFinancialReport(filters: DateRangeFilter, externalSessi
     const customerDebts = await prisma.customerDebt.findMany({
       where: {
         AND: [
-          dateFrom ? { createdAt: { gte: startOfDay(dateFrom) } } : {},
-          dateTo ? { createdAt: { lte: endOfDay(dateTo) } } : {},
+          dateFrom ? { createdAt: { gte: startOfWitaDay(new Date(dateFrom)) } } : {},
+          dateTo ? { createdAt: { lte: endOfWitaDay(new Date(dateTo)) } } : {},
         ],
       },
     });
@@ -229,10 +329,11 @@ export async function getFinancialReport(filters: DateRangeFilter, externalSessi
     const totalRevenue = serializedSales.reduce((sum: number, sale: any) => sum + Number(sale.grandTotal), 0);
     const totalDiscount = serializedSales.reduce((sum: number, sale: any) => sum + Number(sale.discount), 0);
 
+    // HPP dihitung dari harga beli primer PER SATUAN UTAMA dengan konversi
+    // satuan jual (calcItemCogs) — bukan quantity * buyPrice primer.
     const totalCOGS = serializedSales.reduce((sum: number, sale: any) => {
       const itemsCost = sale.saleItems.reduce((itemSum: number, item: any) => {
-        const buyPrice = item.product.productUnits[0]?.buyPrice || 0;
-        return itemSum + (item.quantity * Number(buyPrice));
+        return itemSum + calcItemCogs(item);
       }, 0);
       return sum + itemsCost;
     }, 0);
@@ -259,7 +360,7 @@ export async function getFinancialReport(filters: DateRangeFilter, externalSessi
 
     return {
       success: true,
-      data: { sales: serializedSales, purchases: serializedPurchases, summary },
+      data: { sales: serializedSales, purchases: serializedPurchases, summary, store: await getReportStoreInfo() },
     };
   } catch (error) {
     console.error("Error getFinancialReport:", error);
@@ -360,6 +461,7 @@ export async function getDebtsReport(filters: ReportFilters, externalSession?: A
         supplierDebts: serializedSupplierDebts,
         customerDebtSummary,
         supplierDebtSummary,
+        store: await getReportStoreInfo(),
         pagination: {
           page,
           limit,
@@ -387,8 +489,8 @@ export async function getPurchasesReport(filters: ReportFilters, externalSession
     const purchases = await prisma.purchase.findMany({
       where: {
         AND: [
-          dateFrom ? { purchaseDate: { gte: startOfDay(dateFrom) } } : {},
-          dateTo ? { purchaseDate: { lte: endOfDay(dateTo) } } : {},
+          dateFrom ? { purchaseDate: { gte: startOfWitaDay(new Date(dateFrom)) } } : {},
+          dateTo ? { purchaseDate: { lte: endOfWitaDay(new Date(dateTo)) } } : {},
           supplierId ? { supplierId } : {},
           status ? { status: status as PurchaseStatus } : {},
         ],
@@ -417,7 +519,7 @@ export async function getPurchasesReport(filters: ReportFilters, externalSession
       totalPaid: serializedPurchases.reduce((sum: number, purchase: any) => sum + Number(purchase.paidAmount), 0),
       totalUnpaid: serializedPurchases.reduce((sum: number, purchase: any) => sum + (Number(purchase.grandTotal) - Number(purchase.paidAmount)), 0),
       supplierBreakdown: serializedPurchases.reduce((acc: Record<string, number>, purchase: any) => {
-        const supplierName = purchase.supplier.name;
+        const supplierName = purchase.supplier?.name ?? "Tanpa Supplier";
         acc[supplierName] = (acc[supplierName] || 0) + Number(purchase.grandTotal);
         return acc;
       }, {} as Record<string, number>),
@@ -425,7 +527,7 @@ export async function getPurchasesReport(filters: ReportFilters, externalSession
 
     return {
       success: true,
-      data: { purchases: serializedPurchases, summary },
+      data: { purchases: serializedPurchases, summary, store: await getReportStoreInfo() },
     };
   } catch (error) {
     console.error("Error getPurchasesReport:", error);
@@ -472,7 +574,7 @@ export async function getProductListReport(filters: ReportFilters) {
 
     return {
       success: true,
-      data: { products: serializedProducts },
+      data: { products: serializedProducts, store: await getReportStoreInfo() },
     };
   } catch (error) {
     console.error("Error getProductListReport:", error);

@@ -68,6 +68,73 @@ interface Props {
   units: Unit[];
 }
 
+interface VoiceSession {
+  rowId: string;
+  field: string;
+  status: "listening" | "processing";
+  isSequential: boolean;
+}
+
+// Item 69 (batch 2): FieldWrapper HARUS di level modul, bukan di dalam
+// BulkImportClient. Sebelumnya komponen ini didefinisikan di dalam
+// badan komponen, sehingga setiap render menghasilkan TIPE komponen
+// yang baru — React menganggapnya komponen berbeda, lalu unmount +
+// remount seluruh subtree (termasuk <input/>) pada SETIAP ketikan.
+// Akibatnya input kehilangan fokus setelah 1 karakter ("T"/"TE" saja
+// yang masuk; paste lolos karena satu event memasukkan semua teks
+// sekaligus sebelum remount). Dengan definisi di level modul, tipe
+// komponen stabil antar render dan fokus ketikan tidak hilang.
+function FieldWrapper({
+  rowId,
+  field,
+  label,
+  voiceSession,
+  onStartVoice,
+  onStopVoice,
+  children,
+}: {
+  rowId: string;
+  field: string;
+  label: string;
+  voiceSession: VoiceSession | null;
+  onStartVoice: (rowId: string, field: string, isSequential?: boolean) => void;
+  onStopVoice: () => void;
+  children: React.ReactNode;
+}) {
+  const isActive = voiceSession?.rowId === rowId && voiceSession?.field === field;
+
+  return (
+    <div className="relative flex items-center w-full">
+      {isActive && (
+        <div className="absolute top-11 left-0 bg-purple-600 text-white text-xs px-3 py-1.5 rounded-lg shadow-lg animate-bounce whitespace-nowrap z-[100] flex items-center gap-1.5 font-medium">
+          <div className="absolute -top-1 left-4 w-2.5 h-2.5 bg-purple-600 rotate-45"></div>
+          {voiceSession?.status === "listening" ? <Mic className="w-3.5 h-3.5 animate-pulse" /> : <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+          {voiceSession?.status === "listening" ? `Sebutkan ${label}...` : `Memproses...`}
+        </div>
+      )}
+      <div className="w-full relative flex items-center">
+        {children}
+        <button
+          type="button"
+          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (isActive) onStopVoice();
+            else onStartVoice(rowId, field, false);
+          }}
+          className={`absolute right-1 p-1.5 rounded-md transition-all z-10 flex-shrink-0 ${
+            isActive ? "text-purple-600 bg-purple-100 animate-pulse" : "text-gray-400 hover:text-purple-600 hover:bg-purple-50"
+          }`}
+          title={`Dikte ${label}`}
+        >
+          {isActive ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function BulkImportClient({ categories, subCategories, suppliers, units }: Props) {
   const router = useRouter();
   const [rows, setRows] = useState<BulkProductRow[]>([createEmptyRow()]);
@@ -120,12 +187,7 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
     }
   };
 
-  const [voiceSession, setVoiceSession] = useState<{
-    rowId: string;
-    field: string;
-    status: "listening" | "processing";
-    isSequential: boolean;
-  } | null>(null);
+  const [voiceSession, setVoiceSession] = useState<VoiceSession | null>(null);
 
   const fieldSequence = [
     { key: "name", label: "Nama Produk", parse: (t: string) => t },
@@ -283,41 +345,9 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
     return `w-full glass-input text-sm py-1.5 pr-9 transition-all duration-300 ${isActive ? "ring-2 ring-purple-500 bg-purple-50 border-purple-300 shadow-inner" : ""}`;
   };
 
-  const FieldWrapper = ({ rowId, field, children }: { rowId: string, field: string, children: React.ReactNode }) => {
-    const isActive = voiceSession?.rowId === rowId && voiceSession?.field === field;
-    const label = fieldSequence.find(f => f.key === field)?.label || "";
-
-    return (
-      <div className="relative flex items-center w-full">
-        {isActive && (
-          <div className="absolute top-11 left-0 bg-purple-600 text-white text-xs px-3 py-1.5 rounded-lg shadow-lg animate-bounce whitespace-nowrap z-[100] flex items-center gap-1.5 font-medium">
-            <div className="absolute -top-1 left-4 w-2.5 h-2.5 bg-purple-600 rotate-45"></div>
-            {voiceSession.status === "listening" ? <Mic className="w-3.5 h-3.5 animate-pulse" /> : <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            {voiceSession.status === "listening" ? `Sebutkan ${label}...` : `Memproses...`}
-          </div>
-        )}
-        <div className="w-full relative flex items-center">
-           {children}
-           <button
-             type="button"
-             onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-             onClick={(e) => {
-               e.preventDefault();
-               e.stopPropagation();
-               if (isActive) stopVoiceInput();
-               else startVoice(rowId, field, false);
-             }}
-             className={`absolute right-1 p-1.5 rounded-md transition-all z-10 flex-shrink-0 ${
-               isActive ? "text-purple-600 bg-purple-100 animate-pulse" : "text-gray-400 hover:text-purple-600 hover:bg-purple-50"
-             }`}
-             title={`Dikte ${label}`}
-           >
-             {isActive ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-           </button>
-        </div>
-      </div>
-    );
-  };
+  // Label kolom untuk tooltip voice di FieldWrapper (level modul).
+  const labelFor = (field: string) =>
+    fieldSequence.find((f) => f.key === field)?.label || "";
 
   const updateRow = (id: string, field: keyof BulkProductRow, value: any) => {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
@@ -564,7 +594,7 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
 
                   {/* Nama */}
                   <td className="px-2 py-1.5 relative">
-                    <FieldWrapper rowId={row.id} field="name">
+                    <FieldWrapper rowId={row.id} field="name" label={labelFor("name")} voiceSession={voiceSession} onStartVoice={startVoice} onStopVoice={stopVoiceInput}>
                       <input
                         type="text"
                         value={row.name}
@@ -580,7 +610,7 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
 
                   {/* Kategori */}
                   <td className="px-2 py-1.5 relative">
-                    <FieldWrapper rowId={row.id} field="categoryId">
+                    <FieldWrapper rowId={row.id} field="categoryId" label={labelFor("categoryId")} voiceSession={voiceSession} onStartVoice={startVoice} onStopVoice={stopVoiceInput}>
                       <select
                         value={row.categoryId}
                         onChange={(e) => updateRow(row.id, "categoryId", e.target.value)}
@@ -596,7 +626,7 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
 
                   {/* Satuan */}
                   <td className="px-2 py-1.5 relative">
-                    <FieldWrapper rowId={row.id} field="unitId">
+                    <FieldWrapper rowId={row.id} field="unitId" label={labelFor("unitId")} voiceSession={voiceSession} onStartVoice={startVoice} onStopVoice={stopVoiceInput}>
                       <select
                         value={row.unitId}
                         onChange={(e) => updateRow(row.id, "unitId", e.target.value)}
@@ -612,7 +642,7 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
 
                   {/* Harga Beli */}
                   <td className="px-2 py-1.5 relative">
-                    <FieldWrapper rowId={row.id} field="buyPrice">
+                    <FieldWrapper rowId={row.id} field="buyPrice" label={labelFor("buyPrice")} voiceSession={voiceSession} onStartVoice={startVoice} onStopVoice={stopVoiceInput}>
                       <input
                         type="number"
                         min={0}
@@ -626,7 +656,7 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
 
                   {/* Harga Jual */}
                   <td className="px-2 py-1.5 relative">
-                    <FieldWrapper rowId={row.id} field="sellPrice">
+                    <FieldWrapper rowId={row.id} field="sellPrice" label={labelFor("sellPrice")} voiceSession={voiceSession} onStartVoice={startVoice} onStopVoice={stopVoiceInput}>
                       <input
                         type="number"
                         min={0}
@@ -640,7 +670,7 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
 
                   {/* Supplier */}
                   <td className="px-2 py-1.5 relative">
-                    <FieldWrapper rowId={row.id} field="supplierId">
+                    <FieldWrapper rowId={row.id} field="supplierId" label={labelFor("supplierId")} voiceSession={voiceSession} onStartVoice={startVoice} onStopVoice={stopVoiceInput}>
                       <select
                         value={row.supplierId}
                         onChange={(e) => updateRow(row.id, "supplierId", e.target.value)}
@@ -656,7 +686,7 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
 
                   {/* Min Stok */}
                   <td className="px-2 py-1.5 relative">
-                    <FieldWrapper rowId={row.id} field="minStock">
+                    <FieldWrapper rowId={row.id} field="minStock" label={labelFor("minStock")} voiceSession={voiceSession} onStartVoice={startVoice} onStopVoice={stopVoiceInput}>
                       <input
                         type="number"
                         min={0}

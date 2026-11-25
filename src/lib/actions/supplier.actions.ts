@@ -23,19 +23,67 @@ const supplierServerSchema = z.object({
 export type SupplierFormData = z.infer<typeof supplierServerSchema>;
 
 async function generateSupplierCode(): Promise<string> {
-  const lastSupplier = await prisma.supplier.findFirst({
-    orderBy: { code: "desc" },
+  // WS-F item 83 — format kanonik "SUP-001" (prisma/schema.prisma +
+  // prisma/seed.sql: SUP-001, SUP-002). Dulu: orderBy code desc lalu
+  // parseInt(code.split("-")[1]) tanpa guard — satu kode non-numerik /
+  // tanpa "-" (mis. dari impor manual) membuat parseInt = NaN sehingga
+  // kode berikutnya jadi "SUP-00NaN". Sekarang: pindai SEMUA kode SUP-,
+  // ambil angka akhirnya, abaikan yang tidak bisa diparse (pola yang sama
+  // seperti generateProductCode di product.actions.ts). Kode lama 5-digit
+  // (SUP-00001) tetap terbaca nilai numeriknya, jadi penomoran berlanjut
+  // dari angka terbesar yang ada, bukan dari urutan string.
+  const suppliers = await prisma.supplier.findMany({
+    where: { code: { startsWith: "SUP-" } },
     select: { code: true },
   });
 
-  if (!lastSupplier) {
-    return "SUP-00001";
+  let maxNumber = 0;
+  for (const supplier of suppliers) {
+    const match = supplier.code.match(/(\d+)$/);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (!Number.isNaN(num) && num > maxNumber) {
+        maxNumber = num;
+      }
+    }
   }
 
-  const lastNumber = parseInt(lastSupplier.code.split("-")[1]);
-  const nextNumber = lastNumber + 1;
+  return `SUP-${String(maxNumber + 1).padStart(3, "0")}`;
+}
 
-  return `SUP-${nextNumber.toString().padStart(5, "0")}`;
+// WS-F item 6 — statistik GLOBAL supplier (bukan dari baris halaman /
+// filter saat ini). Dipakai halaman Master Supplier supaya kartu Aktif /
+// Nonaktif / Total Produk / Total Pembelian tidak berubah saat pindah
+// halaman atau memfilter.
+export async function getSupplierStatistics() {
+  const session = await auth();
+  try {
+    requirePermission(session, "VIEW_SUPPLIERS");
+    const [total, active, inactive, totalProducts, totalPurchases] =
+      await Promise.all([
+        prisma.supplier.count(),
+        prisma.supplier.count({ where: { isActive: true } }),
+        prisma.supplier.count({ where: { isActive: false } }),
+        // Jumlah produk yang punya supplier == jumlah _count.products
+        // semua supplier (Product.supplierId opsional).
+        prisma.product.count({ where: { supplierId: { not: null } } }),
+        // Purchase.supplierId wajib diisi, jadi semua pembelian adalah
+        // pembelian dari supplier.
+        prisma.purchase.count(),
+      ]);
+
+    return {
+      success: true,
+      data: { total, active, inactive, totalProducts, totalPurchases },
+    };
+  } catch (error) {
+    console.error("[GET_SUPPLIER_STATISTICS_ERROR]", error);
+    return {
+      success: false,
+      error: "Gagal mengambil statistik supplier.",
+      data: { total: 0, active: 0, inactive: 0, totalProducts: 0, totalPurchases: 0 },
+    };
+  }
 }
 
 export async function createSupplier(data: SupplierFormData) {

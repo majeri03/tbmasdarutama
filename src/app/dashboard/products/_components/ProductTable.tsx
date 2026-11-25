@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, Filter, Edit2, Trash2, Eye, Power, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Filter, Edit2, Trash2, Eye, Power, ChevronLeft, ChevronRight, RotateCcw, Undo2 } from "lucide-react";
 import { ProductStockBadge } from "./ProductStockBadge";
 import { ProductUnitDisplay } from "./ProductUnitDisplay";
 import { ProductImageDisplay } from "./ProductImageDisplay";
 import { DeleteProductDialog } from "./DeleteProductDialog";
-import { toggleProductStatus } from "@/lib/actions/product.actions";
+import { toggleProductStatus, getDeletedProducts, restoreProduct } from "@/lib/actions/product.actions";
 
 interface Category {
   id: string;
@@ -58,6 +58,7 @@ interface Product {
   isActive: boolean;
   createdAt: Date;              // ✅ TAMBAHKAN
   updatedAt: Date;              // ✅ TAMBAHKAN
+  deletedAt?: Date | null;      // Item 66: terisi untuk produk yang dihapus
   categoryId: string;           // ✅ TAMBAHKAN
   subCategoryId: string | null; // ✅ TAMBAHKAN
   supplierId: string | null;    // ✅ TAMBAHKAN
@@ -117,6 +118,19 @@ export function ProductTable({
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
   const [togglingStatus, setTogglingStatus] = useState<string | null>(null);
+  // Item 66: tampilan produk yang di-soft-delete + tombol restore.
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [deletedProducts, setDeletedProducts] = useState<Product[]>([]);
+  const [loadingDeleted, setLoadingDeleted] = useState(false);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
+
+  // Item 64: sinkronkan state lokal dengan data server. Sebelumnya
+  // `products` hanya diisi sekali dari initialProducts, jadi setelah
+  // simpan (router.refresh() dari ProductsClient) tabel tetap
+  // menampilkan harga lama sampai full reload manual.
+  useEffect(() => {
+    setProducts(initialProducts);
+  }, [initialProducts]);
 
   const totalPages = Math.ceil(initialTotal / initialLimit);
   // ✅ Initialize filters from URL on mount
@@ -203,6 +217,51 @@ export function ProductTable({
     }
   };
 
+  // Item 66: tampilkan / sembunyikan daftar produk yang dihapus.
+  // Dialog hapus menjanjikan produk "bisa direstore jika diperlukan",
+  // tapi sebelumnya tidak ada satu pun tempat untuk melihat produk
+  // yang sudah dihapus (daftar + filter Nonaktif selalu mengecualikan
+  // deletedAt != null) dan restoreProduct tidak pernah dipanggil UI.
+  const handleToggleDeleted = async (show: boolean) => {
+    setShowDeleted(show);
+    if (!show) return;
+    setLoadingDeleted(true);
+    try {
+      const result = await getDeletedProducts();
+      if (result.success) {
+        setDeletedProducts((result.data as unknown as Product[]) || []);
+      } else {
+        onError(result.error || "Gagal memuat produk yang dihapus.");
+        setShowDeleted(false);
+      }
+    } catch (error) {
+      console.error("Load deleted products error:", error);
+      onError("Gagal memuat produk yang dihapus.");
+      setShowDeleted(false);
+    } finally {
+      setLoadingDeleted(false);
+    }
+  };
+
+  // Item 66: pulihkan produk yang dihapus, lalu keluarkan dari daftar.
+  const handleRestore = async (product: Product) => {
+    setRestoringId(product.id);
+    try {
+      const result = await restoreProduct(product.id);
+      if (result.success) {
+        setDeletedProducts(prev => prev.filter(p => p.id !== product.id));
+        onSuccess(result.message!);
+      } else {
+        onError(result.error!);
+      }
+    } catch (error) {
+      console.error("Restore product error:", error);
+      onError("Gagal restore produk.");
+    } finally {
+      setRestoringId(null);
+    }
+  };
+
   // Reset filters
   const handleResetFilters = () => {
     setSearch("");
@@ -251,6 +310,17 @@ export function ProductTable({
                 {activeFilterCount}
               </span>
             )}
+          </button>
+
+          {/* Item 66: tombol untuk melihat produk yang sudah dihapus
+              (soft-delete) supaya bisa direstore. */}
+          <button
+            onClick={() => handleToggleDeleted(!showDeleted)}
+            className={`btn-secondary relative ${showDeleted ? "ring-2 ring-orange-500" : ""}`}
+            title="Tampilkan produk yang sudah dihapus (bisa direstore)"
+          >
+            <Undo2 className="w-4 h-4" />
+            <span>Produk Dihapus</span>
           </button>
         </div>
 
@@ -409,6 +479,22 @@ export function ProductTable({
         )}
       </div>
 
+      {/* Banner mode produk dihapus */}
+      {showDeleted && (
+        <div className="mt-4 p-3 rounded-lg bg-orange-50 border border-orange-200 text-sm text-orange-800 flex items-center justify-between gap-3">
+          <span>
+            Menampilkan produk yang sudah dihapus. Klik tombol pulihkan
+            untuk mengembalikan produk ke daftar.
+          </span>
+          <button
+            onClick={() => handleToggleDeleted(false)}
+            className="font-semibold text-orange-700 hover:text-orange-900 whitespace-nowrap"
+          >
+            Kembali ke daftar produk
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="glass-card overflow-hidden">
         <div className="overflow-x-auto">
@@ -436,22 +522,26 @@ export function ProductTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {products.length === 0 ? (
+              {(showDeleted ? deletedProducts : products).length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center">
                     <div className="flex flex-col items-center justify-center text-gray-500">
                       <Search className="w-12 h-12 mb-3 text-gray-300" />
                       <p className="text-lg font-semibold">Tidak ada produk</p>
                       <p className="text-sm">
-                        {search || activeFilterCount > 0
-                          ? "Coba ubah filter pencarian"
-                          : "Belum ada produk yang ditambahkan"}
+                        {loadingDeleted
+                          ? "Memuat produk yang dihapus..."
+                          : showDeleted
+                            ? "Belum ada produk yang dihapus"
+                            : search || activeFilterCount > 0
+                              ? "Coba ubah filter pencarian"
+                              : "Belum ada produk yang ditambahkan"}
                       </p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                products.map((product) => (
+                (showDeleted ? deletedProducts : products).map((product) => (
                   <tr
                     key={product.id}
                     className="hover:bg-gray-50 transition-colors"
@@ -481,6 +571,15 @@ export function ProductTable({
                           {product.supplier && (
                             <p className="text-xs text-gray-500 mt-1">
                               Supplier: {product.supplier.name}
+                            </p>
+                          )}
+                          {showDeleted && product.deletedAt && (
+                            <p className="text-xs text-orange-600 mt-1">
+                              Dihapus: {new Date(product.deletedAt).toLocaleDateString("id-ID", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })}
                             </p>
                           )}
                         </div>
@@ -528,66 +627,87 @@ export function ProductTable({
 
                     {/* Status */}
                     <td className="px-4 py-4 text-center">
-                      <button
-                        onClick={() => handleToggleStatus(product)}
-                        disabled={togglingStatus === product.id}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${product.isActive
-                          ? "bg-green-100 text-green-700 hover:bg-green-200"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                          } ${togglingStatus === product.id
-                            ? "opacity-50 cursor-not-allowed"
-                            : ""
-                          }`}
-                      >
-                        <Power className="w-3 h-3" />
-                        <span>{product.isActive ? "Aktif" : "Nonaktif"}</span>
-                      </button>
+                      {showDeleted ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-100 text-red-700">
+                          <Trash2 className="w-3 h-3" />
+                          <span>Dihapus</span>
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleToggleStatus(product)}
+                          disabled={togglingStatus === product.id}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${product.isActive
+                            ? "bg-green-100 text-green-700 hover:bg-green-200"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            } ${togglingStatus === product.id
+                              ? "opacity-50 cursor-not-allowed"
+                              : ""
+                            }`}
+                        >
+                          <Power className="w-3 h-3" />
+                          <span>{product.isActive ? "Aktif" : "Nonaktif"}</span>
+                        </button>
+                      )}
                     </td>
 
                     {/* Actions */}
                     <td className="px-4 py-4">
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={() => onView(product)}
-                          className="p-2 rounded-lg hover:bg-blue-100 transition-colors group"
-                          title="Lihat Detail"
-                        >
-                          <Eye className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
-                        </button>
-                        <button
-                          onClick={() => onEdit(product)}
-                          className="p-2 rounded-lg hover:bg-yellow-100 transition-colors group"
-                          title="Edit"
-                        >
-                          <Edit2 className="w-4 h-4 text-yellow-600 group-hover:scale-110 transition-transform" />
-                        </button>
-                        <button
-                          onClick={() => setDeleteProduct(product)}
-                          disabled={
-                            product._count.saleItems > 0 ||
-                            product._count.purchaseItems > 0
-                          }
-                          className={`p-2 rounded-lg transition-colors group ${product._count.saleItems > 0 ||
-                            product._count.purchaseItems > 0
-                            ? "opacity-50 cursor-not-allowed"
-                            : "hover:bg-red-100"
-                            }`}
-                          title={
-                            product._count.saleItems > 0 ||
+                      {showDeleted ? (
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => handleRestore(product)}
+                            disabled={restoringId === product.id}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Pulihkan produk ke daftar"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                            <span>{restoringId === product.id ? "Memulihkan..." : "Pulihkan"}</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => onView(product)}
+                            className="p-2 rounded-lg hover:bg-blue-100 transition-colors group"
+                            title="Lihat Detail"
+                          >
+                            <Eye className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
+                          </button>
+                          <button
+                            onClick={() => onEdit(product)}
+                            className="p-2 rounded-lg hover:bg-yellow-100 transition-colors group"
+                            title="Edit"
+                          >
+                            <Edit2 className="w-4 h-4 text-yellow-600 group-hover:scale-110 transition-transform" />
+                          </button>
+                          <button
+                            onClick={() => setDeleteProduct(product)}
+                            disabled={
+                              product._count.saleItems > 0 ||
                               product._count.purchaseItems > 0
-                              ? "Tidak dapat dihapus (ada transaksi terkait)"
-                              : "Hapus"
-                          }
-                        >
-                          <Trash2
-                            className={`w-4 h-4 ${product._count.saleItems > 0 ||
+                            }
+                            className={`p-2 rounded-lg transition-colors group ${product._count.saleItems > 0 ||
                               product._count.purchaseItems > 0
-                              ? "text-gray-400"
-                              : "text-red-600 group-hover:scale-110 transition-transform"
+                              ? "opacity-50 cursor-not-allowed"
+                              : "hover:bg-red-100"
                               }`}
-                          />
-                        </button>
-                      </div>
+                            title={
+                              product._count.saleItems > 0 ||
+                                product._count.purchaseItems > 0
+                                ? "Tidak dapat dihapus (ada transaksi terkait)"
+                                : "Hapus"
+                            }
+                          >
+                            <Trash2
+                              className={`w-4 h-4 ${product._count.saleItems > 0 ||
+                                product._count.purchaseItems > 0
+                                ? "text-gray-400"
+                                : "text-red-600 group-hover:scale-110 transition-transform"
+                                }`}
+                            />
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -596,8 +716,8 @@ export function ProductTable({
           </table>
         </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
+        {/* Pagination (hanya untuk daftar normal, bukan mode produk dihapus) */}
+        {!showDeleted && totalPages > 1 && (
           <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-700">

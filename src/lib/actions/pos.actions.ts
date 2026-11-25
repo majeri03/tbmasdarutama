@@ -113,7 +113,12 @@ export async function getPOSProducts(search?: string, categoryId?: string) {
   }
 }
 
-// Get product by barcode (for scanner)
+// Get product by barcode (for scanner) — cocokkan JUGA kode produk
+// (BUG #25, batch 1b): halaman detail produk tidak punya field barcode
+// terpisah, jadi kasir mengetik kode produk (mis. BB-0001) di input manual
+// scanner. Sebelumnya hanya field `barcode` yang dicocokkan, sehingga
+// produk berkode BB-0001 dengan stok tersedia tidak ketemu. Product tidak
+// punya field SKU, jadi yang dicocokkan hanya barcode dan code.
 export async function getProductByBarcode(barcode: string) {
   try {
     const session = await auth();
@@ -125,9 +130,13 @@ export async function getProductByBarcode(barcode: string) {
       };
     }
     requirePermission(session, "ACCESS_POS");
+    const query = barcode.trim();
     const product = await prisma.product.findFirst({
       where: {
-        barcode: { equals: barcode, mode: "insensitive" },
+        OR: [
+          { barcode: { equals: query, mode: "insensitive" } },
+          { code: { equals: query, mode: "insensitive" } },
+        ],
         isActive: true,
         currentStock: { gt: 0 },
       },
@@ -222,6 +231,11 @@ export async function getPOSCustomers(search?: string) {
         name: true,
         type: true,
         phone: true,
+        // BUG #26 (batch 1b): saldo poin harus tampil di POS — sebelumnya
+        // tidak ikut di-select, jadi customer pilihan dropdown selalu
+        // membawa points undefined. Display saja; logika perolehan poin
+        // tidak berubah.
+        points: true,
       },
     });
 
@@ -305,10 +319,26 @@ export async function createPosTransaction(data: CreateSaleInput) {
       }
     }
 
+    // FIX (25 Nov 2026, ws-j2 item 139): prefiks tanggal nomor memakai WITA
+    // (Asia/Makassar, UTC+8), bukan tanggal lokal server. Server Vercel
+    // berjalan di UTC, jadi penjualan 25 Nov pukul 00:xx-07:59 WITA
+    // sebelumnya mendapat nomor berprefiks 24 Nov. Nomor yang sudah terbit
+    // tidak diubah — hanya nomor baru yang memakai tanggal WITA.
+    const getWitaDatePrefix = (date = new Date()): string => {
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Makassar",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).formatToParts(date);
+      const value = (type: string) =>
+        parts.find((p) => p.type === type)?.value ?? "";
+      return `${value("year")}${value("month")}${value("day")}`;
+    };
+
     // B. Generate Invoice Helper
     const generateInvoiceNumber = async (tx: Prisma.TransactionClient) => {
-        const date = new Date();
-        const prefix = `INV/${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
+        const prefix = `INV/${getWitaDatePrefix()}`;
         const lastSale = await tx.sale.findFirst({
             where: { invoiceNumber: { startsWith: prefix } },
             orderBy: { createdAt: 'desc' },

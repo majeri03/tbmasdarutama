@@ -160,10 +160,17 @@ export function prepareCheckoutItems(
 }
 
 /** Hitung grand total dari total item (diskon total & pajak dibatasi supaya tidak negatif). */
+// BUG #23 (batch 1b): diskon & pajak dibulatkan SEKALI ke rupiah bulat
+// (Math.round — sama seperti pembulatan formatCurrency di tampilan) sebelum
+// dipakai menghitung grand total. Tanpa ini, diskon persen dari klien
+// (cth. 5% x Rp2.550 = Rp127,50) tersimpan pecahan dan tampil beda Rp1
+// dari total. Ini pengaman server-side untuk POS (createPosTransaction)
+// maupun penjualan manual (createSale/updateSale): nilai yang tersimpan
+// selalu rupiah bulat dan total = subtotal - diskon + pajak.
 export function computeGrandTotal(totalAmount: number, discount: number, tax: number): { discount: number; tax: number; grandTotal: number } {
-  const safeDiscount = Math.min(Math.max(discount, 0), totalAmount);
-  const safeTax = Math.max(tax, 0);
-  return { discount: safeDiscount, tax: safeTax, grandTotal: totalAmount - safeDiscount + safeTax };
+  const safeDiscount = Math.round(Math.min(Math.max(discount, 0), totalAmount));
+  const safeTax = Math.round(Math.max(tax, 0));
+  return { discount: safeDiscount, tax: safeTax, grandTotal: Math.round(totalAmount - safeDiscount + safeTax) };
 }
 
 /**

@@ -33,6 +33,13 @@ export function DeleteSaleDialog({ sale, onSuccess }: DeleteSaleDialogProps) {
       return;
     }
 
+    // WS-D item 57: server juga menolak RETURN — cegah dari tombol supaya
+    // tidak membuang satu konfirmasi password yang pasti gagal.
+    if (sale.status === "RETURN") {
+      setError("Transaksi yang sudah di-return tidak dapat dibatalkan!");
+      return;
+    }
+
     if (!password) {
       setError("Password konfirmasi wajib diisi!");
       return;
@@ -50,10 +57,10 @@ export function DeleteSaleDialog({ sale, onSuccess }: DeleteSaleDialogProps) {
           onSuccess();
         }, 1000);
       } else {
-        setError(result.error || "Gagal memproses penghapusan penjualan");
+        setError(result.error || "Gagal memproses pembatalan penjualan");
       }
     } catch {
-      setError("Gagal memproses penghapusan penjualan");
+      setError("Gagal memproses pembatalan penjualan");
     } finally {
       setLoading(false);
     }
@@ -64,8 +71,8 @@ export function DeleteSaleDialog({ sale, onSuccess }: DeleteSaleDialogProps) {
       <button
         onClick={() => setIsOpen(true)}
         className="btn-icon-danger"
-        title="Hapus"
-        disabled={sale.status === "CANCELLED"}
+        title="Batalkan Penjualan (Tutup Buku)"
+        disabled={sale.status === "CANCELLED" || sale.status === "RETURN"}
       >
         <Trash2 className="w-4 h-4" />
       </button>
@@ -76,7 +83,7 @@ export function DeleteSaleDialog({ sale, onSuccess }: DeleteSaleDialogProps) {
             <div className="modal-header bg-gradient-to-r from-red-500 to-red-600">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <Trash2 className="w-5 h-5" />
-                Hapus Penjualan (Tutup Buku)
+                Batalkan Penjualan (Tutup Buku)
               </h2>
               <button
                 onClick={handleClose}
@@ -103,13 +110,13 @@ export function DeleteSaleDialog({ sale, onSuccess }: DeleteSaleDialogProps) {
                   <Trash2 className="w-6 h-6 text-red-600" />
                 </div>
                 <p className="text-gray-700 text-sm mb-1 font-semibold">
-                  Apakah Anda yakin ingin menghapus/membatalkan penjualan ini?
+                  Apakah Anda yakin ingin membatalkan penjualan ini?
                 </p>
                 <p className="text-xs text-gray-500 mb-2">
                   Invoice: <span className="font-semibold text-blue-600">{sale.invoiceNumber}</span>
                 </p>
                 <p className="text-xs text-red-600 bg-red-50 border border-red-100 p-2.5 rounded-lg mt-1 text-left leading-relaxed">
-                  <strong>Pemberitahuan Tutup Buku:</strong> Transaksi tidak dihapus secara fisik dari database, melainkan ditandai sebagai <strong>DIBATALKAN</strong> (pencatatan lengkap diarsip). Stok barang akan otomatis dikembalikan ke gudang dan sisa piutang akan dibatalkan.
+                  <strong>Pemberitahuan Tutup Buku:</strong> Transaksi ini TIDAK dihapus dari database — hanya ditandai sebagai <strong>DIBATALKAN</strong> dan tetap tampil di daftar penjualan sebagai arsip. Stok barang akan dikembalikan ke gudang dan sisa piutang akan dibatalkan. Pembatalan tidak dapat diurungkan dari halaman ini.
                 </p>
               </div>
 
@@ -146,12 +153,12 @@ export function DeleteSaleDialog({ sale, onSuccess }: DeleteSaleDialogProps) {
                 {loading ? (
                   <>
                     <div className="spinner"></div>
-                    Menghapus...
+                    Membatalkan...
                   </>
                 ) : (
                   <>
                     <Trash2 className="w-4 h-4" />
-                    Hapus Penjualan
+                    Batalkan Penjualan
                   </>
                 )}
               </button>

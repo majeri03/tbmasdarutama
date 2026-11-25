@@ -174,16 +174,21 @@ export function DeliveryOrderTable({
                         <Pencil className="w-4 h-4" />
                       </button>
                     )}
-                    {order.status !== "DELIVERED" &&
-                      order.status !== "CANCELLED" && (
-                        <button
-                          onClick={() => onUpdateStatus(order)}
-                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                          title="Update Status"
-                        >
-                          <Truck className="w-4 h-4" />
-                        </button>
-                      )}
+                    {/* FIX WS-H (25 Nov 2026, batch 4 item 120): tombol
+                        Update Status juga tampil untuk DO Terkirim, supaya
+                        foto bukti lain bisa diunggah lewat modal status
+                        (server mengizinkan refresh DELIVERED -> DELIVERED
+                        tanpa potong stok lagi). Hanya DO Dibatalkan yang
+                        tidak lagi bisa diubah statusnya. */}
+                    {order.status !== "CANCELLED" && (
+                      <button
+                        onClick={() => onUpdateStatus(order)}
+                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                        title={order.status === "DELIVERED" ? "Update Status / Ganti Foto Bukti" : "Update Status"}
+                      >
+                        <Truck className="w-4 h-4" />
+                      </button>
+                    )}
                     {order.status === "PENDING" && (
                       <button
                         onClick={() => onDelete(order)}

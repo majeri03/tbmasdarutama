@@ -143,6 +143,7 @@ async function getProductsData(searchParams: SearchParams) {
   SELECT COUNT(*)::int as count
   FROM products
   WHERE "currentStock" <= "minStock"
+    AND "deletedAt" IS NULL
 `,
     ]);
 
@@ -259,6 +260,6 @@ function ProductsLoading() {
 
 // Metadata
 export const metadata = {
-    title: "Manajemen Produk | TB Masda Rutama",
+    title: "Manajemen Produk | TB Masdar Utama",
     description: "Kelola produk, stok, harga, dan informasi produk lainnya",
 };

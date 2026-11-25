@@ -6,6 +6,7 @@ import DateRangeFilter from "../_components/DateRangeFilter";
 import ReportDownloadButton from "../_components/ReportDownloadButton";
 import FinancialReportContent from "./_components/FinancialReportContent";
 import { getFinancialReport } from "@/lib/actions/report.actions";
+import type { ReportStoreInfo } from "../_components/report-types";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { useReactToPrint } from 'react-to-print';
 
@@ -24,12 +25,14 @@ interface FinancialSummary {
 
 interface FinancialReportData {
   summary: FinancialSummary;
+  store?: ReportStoreInfo | null;
 }
 
 export default function FinancialReportPage() {
   const printRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [reportData, setReportData] = useState<FinancialReportData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const today = new Date();
   const [dateFrom, setDateFrom] = useState(format(startOfMonth(today), "yyyy-MM-dd"));
@@ -37,6 +40,7 @@ export default function FinancialReportPage() {
 
   const handleGenerateReport = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const result = await getFinancialReport({
         dateFrom: new Date(dateFrom),
@@ -45,9 +49,12 @@ export default function FinancialReportPage() {
 
       if (result.success && result.data) {
         setReportData(result.data as unknown as FinancialReportData);
+      } else {
+        setError(result.error || "Gagal mengambil data laporan keuangan");
       }
     } catch (error) {
       console.error(error);
+      setError("Terjadi kesalahan saat mengambil data laporan");
     } finally {
       setIsLoading(false);
     }
@@ -96,6 +103,9 @@ export default function FinancialReportPage() {
       ) : (
         <div className="text-center py-12">
           <p className="text-gray-500">Pilih periode dan klik Tampilkan untuk generate laporan</p>
+          {error && (
+            <p className="mt-4 text-sm text-red-700">{error}</p>
+          )}
         </div>
       )}
     </ReportLayout>

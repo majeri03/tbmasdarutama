@@ -19,13 +19,26 @@ import {
   withUniqueRetry,
 } from "@/lib/utils/stock-units";
 
-//    GENERATE PO NUMBER   
+// FIX (25 Nov 2026, ws-j2 item 139): prefiks tanggal nomor dokumen memakai
+// WITA (Asia/Makassar, UTC+8), bukan tanggal lokal server. Server Vercel
+// berjalan di UTC, jadi dokumen yang dibuat 25 Nov pukul 00:xx-07:59 WITA
+// sebelumnya mendapat nomor berprefiks 24 Nov. Nomor yang sudah terbit
+// tidak diubah — hanya nomor baru yang memakai tanggal WITA.
+function getWitaDatePrefix(date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Makassar",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const value = (type: string) =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  return `${value("year")}${value("month")}${value("day")}`;
+}
+
+//    GENERATE PO NUMBER
 async function generatePONumber(): Promise<string> {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-  const datePrefix = `${year}${month}${day}`;
+  const datePrefix = getWitaDatePrefix();
 
   const lastPO = await prisma.purchase.findFirst({
     where: {
@@ -113,6 +126,78 @@ async function validatePurchaseReferences(
     }
   }
   return { ok: true };
+}
+
+//    GET PRODUCTS FOR PO (Item 108, WS-G, 25 Nov 2026)
+// Daftar produk untuk form buat/edit PO. SENGAJA bukan getPOSProducts:
+// getPOSProducts memfilter `currentStock > 0` (benar untuk POS — barang
+// habis tidak bisa dijual), tapi form PO justru dipakai untuk me-restock
+// produk yang habis, sehingga produk berstok 0 (mis. TEST-Import-1, Cat
+// Avian) tidak pernah muncul dan baru bisa dipilih setelah adjustment +1.
+// Fungsi ini TIDAK memfilter stok sama sekali — hanya produk aktif dan
+// belum di-soft-delete. Tanpa `take` karena form PO memfilter di sisi
+// klien dari daftar yang dimuat (batas 20 akan menyembunyikan produk
+// secara alfabetis). getPOSProducts di pos.actions.ts TIDAK diubah:
+// filter stok > 0 di sana tetap benar untuk POS.
+export async function getPurchaseProducts() {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return {
+        success: false,
+        error: "Unauthorized",
+      };
+    }
+    requirePermission(session, "VIEW_PURCHASES");
+
+    const products = await prisma.product.findMany({
+      where: {
+        isActive: true,
+        deletedAt: null,
+      },
+      orderBy: { name: "asc" },
+      include: {
+        productUnits: {
+          include: {
+            unit: true,
+          },
+          orderBy: {
+            isPrimary: "desc",
+          },
+        },
+        productImages: {
+          where: { isPrimary: true },
+          take: 1,
+        },
+        category: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    // Convert Decimal to number before sending to client
+    const serializedProducts = products.map((product) => ({
+      ...product,
+      productUnits: product.productUnits.map((pu) => ({
+        ...pu,
+        buyPrice: parseFloat(pu.buyPrice.toString()),
+        sellPrice: parseFloat(pu.sellPrice.toString()),
+      })),
+    }));
+
+    return {
+      success: true,
+      data: serializedProducts,
+    };
+  } catch (error) {
+    console.error("Get purchase products error:", error);
+    return {
+      success: false,
+      error: "Gagal mengambil data produk",
+    };
+  }
 }
 
 //    CREATE PURCHASE   

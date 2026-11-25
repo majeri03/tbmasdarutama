@@ -36,14 +36,26 @@ export function calculateCart(
   const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
 
   // 2. Calculate total item discount
-  const itemDiscount = items.reduce((sum, item) => sum + item.discount, 0);
+  // BUG #23 (batch 1b): semua komponen diskon dibulatkan SEKALI ke rupiah
+  // bulat (Math.round — sama seperti pembulatan formatCurrency) sebelum
+  // dipakai menghitung total, supaya angka yang tampil = angka yang disimpan.
+  const itemDiscount = Math.round(items.reduce((sum, item) => sum + item.discount, 0));
 
   // 3. Calculate customer discount (percentage based)
   const customerDiscountPercent = customer ? getCustomerDiscount(customer.type) : 0;
-  const customerDiscount = (subtotal - itemDiscount) * (customerDiscountPercent / 100);
+  // Diskon persen bisa menghasilkan pecahan rupiah (cth. 5% x Rp2.550 =
+  // Rp127,50). Tanpa pembulatan di sini, tampilan membulatkan diskon ke
+  // Rp128 tapi total dihitung dari nilai mentah (Rp2.422,50 -> tampil
+  // Rp2.423) sehingga keduanya selisih Rp1.
+  const customerDiscount = Math.round(
+    (subtotal - itemDiscount) * (customerDiscountPercent / 100)
+  );
+
+  // Diskon tambahan (input manual, rupiah) juga dibulatkan ke rupiah bulat.
+  const roundedAdditionalDiscount = Math.round(additionalDiscount);
 
   // 4. Total discount (item + additional + customer)
-  const totalDiscount = itemDiscount + additionalDiscount + customerDiscount;
+  const totalDiscount = itemDiscount + roundedAdditionalDiscount + customerDiscount;
 
   // 5. Tax (currently 0, prepared for future)
   const tax = 0;

@@ -6,6 +6,7 @@ import DateRangeFilter from "../_components/DateRangeFilter";
 import ReportDownloadButton from "../_components/ReportDownloadButton";
 import SalesReportContent from "./_components/SalesReportContent";
 import { getSalesReport } from "@/lib/actions/report.actions";
+import type { ReportStoreInfo } from "../_components/report-types";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { useReactToPrint } from 'react-to-print';
 // Import types from SalesReportContent
@@ -30,12 +31,14 @@ interface SalesSummary {
 interface SalesReportData {
     sales: SaleData[];
     summary: SalesSummary;
+    store?: ReportStoreInfo | null;
 }
 
 export default function SalesReportPage() {
     const printRef = useRef<HTMLDivElement>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [reportData, setReportData] = useState<SalesReportData | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     const today = new Date();
     const [dateFrom, setDateFrom] = useState(format(startOfMonth(today), "yyyy-MM-dd"));
@@ -43,6 +46,7 @@ export default function SalesReportPage() {
 
     const handleGenerateReport = async () => {
         setIsLoading(true);
+        setError(null);
         try {
             const result = await getSalesReport({
                 dateFrom: new Date(dateFrom),
@@ -51,9 +55,12 @@ export default function SalesReportPage() {
 
             if (result.success && result.data) {
                 setReportData(result.data as unknown as SalesReportData);
+            } else {
+                setError(result.error || "Gagal mengambil data laporan penjualan");
             }
         } catch (error) {
             console.error(error);
+            setError("Terjadi kesalahan saat mengambil data laporan");
         } finally {
             setIsLoading(false);
         }
@@ -110,6 +117,9 @@ export default function SalesReportPage() {
             ) : (
                 <div className="text-center py-12">
                     <p className="text-gray-500">Pilih periode dan klik Tampilkan untuk generate laporan</p>
+                    {error && (
+                        <p className="mt-4 text-sm text-red-700">{error}</p>
+                    )}
                 </div>
             )}
         </ReportLayout>

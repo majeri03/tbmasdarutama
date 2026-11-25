@@ -16,6 +16,45 @@ import {
 } from "lucide-react";
 import { getDashboardStats } from "@/lib/actions/dashboard.actions";
 import Link from "next/link";
+
+// Badge pertumbuhan yang jujur:
+// - growth null = tidak terdefinisi (bulan lalu 0, bulan ini > 0) -> "—"
+//   tanpa panah, bukan placeholder "+100%".
+// - growth negatif -> panah bawah merah (sebelumnya selalu panah naik hijau
+//   walau nilainya negatif).
+// - growth undefined (data gagal dimuat) -> "0%" seperti perilaku lama.
+function GrowthBadge({ growth }: { growth: number | null | undefined }) {
+  if (growth === null) {
+    return (
+      <div className="flex items-center gap-1 text-gray-400 text-sm font-semibold">
+        <span>—</span>
+      </div>
+    );
+  }
+  const value = growth ?? 0;
+  if (value === 0) {
+    return (
+      <div className="flex items-center gap-1 text-gray-400 text-sm font-semibold">
+        <span>0%</span>
+      </div>
+    );
+  }
+  const up = value > 0;
+  return (
+    <div className={`flex items-center gap-1 text-sm font-semibold ${up ? 'text-green-600' : 'text-red-600'}`}>
+      {up ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+      <span>{value}%</span>
+    </div>
+  );
+}
+
+// Subteks kartu: bila growth null, tulis nilai bulan lalu apa adanya
+// ("bulan lalu Rp0") alih-alih "null% dari bulan lalu".
+function growthSubtext(growth: number | null | undefined, zeroText: string): string {
+  if (growth === null) return zeroText;
+  return `${growth ?? 0}% dari bulan lalu`;
+}
+
 export default async function DashboardPage() {
   const session = await auth();
 
@@ -24,6 +63,8 @@ export default async function DashboardPage() {
   }
   const statsResult = await getDashboardStats();
   const stats = statsResult.success ? statsResult.data : null;
+  // Perubahan utang (dipakai kartu Utang Customer; null = bulan lalu Rp0).
+  const debtChange = stats?.debt?.change;
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -73,17 +114,14 @@ export default async function DashboardPage() {
               }}>
                 <TrendingUp className="w-6 h-6 text-blue-600" />
               </div>
-              <div className="flex items-center gap-1 text-green-600 text-sm font-semibold">
-                <ArrowUpRight className="w-4 h-4" />
-                <span>{stats?.sales?.growth ?? 0}%</span>
-              </div>
+              <GrowthBadge growth={stats?.sales?.growth} />
             </div>
             <h3 className="text-gray-600 text-sm font-semibold mb-1">Total Penjualan</h3>
             <p className="text-3xl font-bold text-gray-900 mb-1">
               Rp {stats?.sales?.total ? (stats.sales.total / 1000000).toFixed(1) : '0'}M
             </p>
             <p className="text-gray-500 text-xs">
-              {stats?.sales?.growth ?? 0}% dari bulan lalu
+              {growthSubtext(stats?.sales?.growth, 'bulan lalu Rp0')}
             </p>
           </div>
 
@@ -96,10 +134,7 @@ export default async function DashboardPage() {
               }}>
                 <Package className="w-6 h-6 text-purple-600" />
               </div>
-              <div className="flex items-center gap-1 text-green-600 text-sm font-semibold">
-                <ArrowUpRight className="w-4 h-4" />
-                <span>{stats?.products?.growth ?? 0}%</span>
-              </div>
+              <GrowthBadge growth={stats?.products?.growth} />
             </div>
             <h3 className="text-gray-600 text-sm font-semibold mb-1">Total Produk</h3>
             <p className="text-3xl font-bold text-gray-900 mb-1">
@@ -119,10 +154,7 @@ export default async function DashboardPage() {
               }}>
                 <Users className="w-6 h-6 text-pink-600" />
               </div>
-              <div className="flex items-center gap-1 text-green-600 text-sm font-semibold">
-                <ArrowUpRight className="w-4 h-4" />
-                <span>{stats?.customers?.growth ?? 0}%</span>
-              </div>
+              <GrowthBadge growth={stats?.customers?.growth} />
             </div>
             <h3 className="text-gray-600 text-sm font-semibold mb-1">Total Customer</h3>
             <p className="text-3xl font-bold text-gray-900 mb-1">
@@ -142,14 +174,24 @@ export default async function DashboardPage() {
               }}>
                 <DollarSign className="w-6 h-6 text-red-600" />
               </div>
-              <div className={`flex items-center gap-1 text-sm font-semibold ${(stats?.debt?.change ?? 0) < 0 ? 'text-green-600' : 'text-red-600'
+              <div className={`flex items-center gap-1 text-sm font-semibold ${debtChange === null || debtChange === undefined
+                  ? 'text-gray-400'
+                  : debtChange < 0 ? 'text-green-600' : debtChange > 0 ? 'text-red-600' : 'text-gray-400'
                 }`}>
-                {(stats?.debt?.change ?? 0) < 0 ? (
-                  <ArrowDownRight className="w-4 h-4" />
+                {debtChange === null ? (
+                  <span>—</span>
+                ) : (debtChange ?? 0) === 0 ? (
+                  <span>0%</span>
                 ) : (
-                  <ArrowUpRight className="w-4 h-4" />
+                  <>
+                    {(debtChange ?? 0) < 0 ? (
+                      <ArrowDownRight className="w-4 h-4" />
+                    ) : (
+                      <ArrowUpRight className="w-4 h-4" />
+                    )}
+                    <span>{Math.abs(debtChange ?? 0)}%</span>
+                  </>
                 )}
-                <span>{Math.abs(stats?.debt?.change ?? 0)}%</span>
               </div>
             </div>
             <h3 className="text-gray-600 text-sm font-semibold mb-1">Utang Customer</h3>
@@ -157,7 +199,7 @@ export default async function DashboardPage() {
               Rp {stats?.debt?.total ? (stats.debt.total / 1000000).toFixed(1) : '0'}M
             </p>
             <p className="text-gray-500 text-xs">
-              {stats?.debt?.change ?? 0}% dari bulan lalu
+              {growthSubtext(stats?.debt?.change, 'bulan lalu Rp0')}
             </p>
           </div>
         </div>
@@ -249,20 +291,15 @@ export default async function DashboardPage() {
                           y: 100 - (data.total / maxValue) * 100
                         }));
 
-                        // Perbaikan Garis: Menggunakan L (Line) sederhana agar normal/biasa aja
-                        // Jika ingin sedikit melengkung tanpa "loop", gunakan Path yang bersih
+                        // Garis LURUS antar titik (tanpa smoothing): kurva
+                        // Bezier sebelumnya membulatkan sudut sehingga hari
+                        // bernilai 0 tidak jatuh ke garis dasar dan tampak
+                        // seperti masih ada penjualan. Segmen lurus membuat
+                        // hari Rp0 terlihat jujur menyentuh baseline.
                         let pathData = `M ${points[0].x} ${points[0].y}`;
 
-                        // 2. Gunakan Cubic Bezier (C) untuk kelengkungan yang natural
-                        for (let i = 0; i < points.length - 1; i++) {
-                          const curr = points[i];
-                          const next = points[i + 1];
-
-                          // Menentukan control points di tengah antara dua titik (smooth transition)
-                          const cp1x = curr.x + (next.x - curr.x) / 2;
-                          const cp2x = curr.x + (next.x - curr.x) / 2;
-
-                          pathData += ` C ${cp1x} ${curr.y}, ${cp2x} ${next.y}, ${next.x} ${next.y}`;
+                        for (let i = 1; i < points.length; i++) {
+                          pathData += ` L ${points[i].x} ${points[i].y}`;
                         }
 
                         // 3. Gabungkan untuk area pengisian (fill)
@@ -288,6 +325,31 @@ export default async function DashboardPage() {
                         );
                       })()}
                     </svg>
+
+                    {/* Titik data per hari (HTML, bukan <circle> SVG: lingkaran
+                        SVG terdistorsi jadi elips karena preserveAspectRatio="none").
+                        Overlay ini sejajar persis dengan viewport SVG (py-6 = top-6/bottom-6).
+                        Titik MERAH = hari tanpa penjualan (Rp0) agar langsung kelihatan. */}
+                    <div className="absolute inset-x-0 top-6 bottom-6 pointer-events-none">
+                      {(() => {
+                        const chartData = stats?.chart ?? [];
+                        if (chartData.length < 2) return null;
+                        const maxValue = Math.max(...chartData.map(d => d.total), 1);
+                        return chartData.map((data, i) => {
+                          const x = (i / (chartData.length - 1)) * 100;
+                          const y = (data.total / maxValue) * 100;
+                          const isZero = data.total === 0;
+                          return (
+                            <div
+                              key={i}
+                              title={`Rp ${data.total.toLocaleString('id-ID')} — ${new Date(data.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}`}
+                              className={`absolute w-2.5 h-2.5 rounded-full border-2 border-white shadow ${isZero ? 'bg-red-500' : 'bg-blue-600'}`}
+                              style={{ left: `${x}%`, bottom: `${y}%`, transform: 'translate(-50%, 50%)' }}
+                            />
+                          );
+                        });
+                      })()}
+                    </div>
 
                     {/* Interactive hover areas */}
                     <div className="absolute inset-0 flex items-end justify-between">
@@ -315,15 +377,36 @@ export default async function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* X-Axis Labels */}
-                  <div className="absolute left-12 right-0 bottom-0 flex justify-between">
-                    {(stats?.chart ?? []).map((data, i) => (
-                      <div key={i} className="flex-1 text-center">
-                        <p className="text-[10px] font-semibold text-gray-500">
-                          {new Date(data.date).toLocaleDateString('id-ID', { weekday: 'short' })}
-                        </p>
-                      </div>
-                    ))}
+                  {/* X-Axis Labels: diposisikan tepat di bawah titik datanya.
+                      Sebelumnya flex-1 + text-center menggeser label pertama/
+                      terakhir ke dalam kolomnya sehingga tidak sejajar titik dan
+                      tampak terpotong di tepi ("Min"/"Sen" saja). Label pertama
+                      rata kiri, terakhir rata kanan, tengah rata tengah; dua
+                      baris (hari + tanggal) supaya tidak ambigu. */}
+                  <div className="absolute left-12 right-0 bottom-0 h-8">
+                    {(stats?.chart ?? []).map((data, i) => {
+                      const chartData = stats?.chart ?? [];
+                      const x = chartData.length > 1 ? (i / (chartData.length - 1)) * 100 : 50;
+                      const transform = i === 0
+                        ? 'translateX(0)'
+                        : i === chartData.length - 1
+                          ? 'translateX(-100%)'
+                          : 'translateX(-50%)';
+                      return (
+                        <div
+                          key={i}
+                          className="absolute top-0 text-center whitespace-nowrap"
+                          style={{ left: `${x}%`, transform }}
+                        >
+                          <p className="text-[10px] font-semibold text-gray-500 leading-tight">
+                            {new Date(data.date).toLocaleDateString('id-ID', { weekday: 'short' })}
+                          </p>
+                          <p className="text-[10px] text-gray-400 leading-tight">
+                            {new Date(data.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                          </p>
+                        </div>
+                      );
+                    })}
                   </div>
                 </>
               )}
@@ -344,7 +427,7 @@ export default async function DashboardPage() {
               { icon: ShoppingCart, label: 'Buat Transaksi', color: 'blue', gradient: 'from-blue-500 to-blue-600', href: '/dashboard/pos' },
               { icon: Package, label: 'Tambah Produk', color: 'purple', gradient: 'from-purple-500 to-purple-600', href: '/dashboard/products' },
               { icon: Users, label: 'Data Customer', color: 'pink', gradient: 'from-pink-500 to-pink-600', href: '/dashboard/customers' },
-              { icon: BarChart3, label: 'Laporan', color: 'blue', gradient: 'from-blue-500 to-indigo-600', href: '/dashboard/sales' },
+              { icon: BarChart3, label: 'Laporan', color: 'blue', gradient: 'from-blue-500 to-indigo-600', href: '/dashboard/reports' },
             ].map((action, i) => (
               <Link
                 key={i}

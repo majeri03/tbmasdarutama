@@ -133,10 +133,34 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
     const showSignature = customLayout?.showSignature ?? storeSetting?.invoiceShowSignature ?? true;
     const showFooter = customLayout?.showFooter ?? storeSetting?.invoiceShowFooter ?? true;
     const footerTerms = customLayout?.footerTerms ?? storeSetting?.invoiceFooterTerms ?? "BARANG YANG SUDAH DIBELI TIDAK DAPAT DITUKAR/DIKEMBALIKAN KECUALI ADA PERJANJIAN.";
+    // FAKTUR_NCR (item 208): tanpa logo, tanpa garis tabel/kotak — hanya
+    // garis bawah header tabel + garis total; baris lebih rapat.
+    const isNcr = layoutType === "FAKTUR_NCR";
     
     const logoUrl = storeSetting?.logoUrl ? (storeSetting.logoUrl.startsWith('http') ? storeSetting.logoUrl : `${storeSetting.logoUrl}`) : null;
-    const logoImg = showLogo && logoUrl ? `<img src="${escapeHtml(logoUrl)}" style="width: 44px; height: 44px; object-fit: contain; margin-right: 10px; border-radius: 4px;" />` :
+    // FAKTUR_NCR: tanpa logo sama sekali — termasuk placeholder kotak "MU"
+    // yang muncul saat toko belum mengunggah logo (item 208).
+    const logoImg = isNcr ? '' :
+                    showLogo && logoUrl ? `<img src="${escapeHtml(logoUrl)}" style="width: 44px; height: 44px; object-fit: contain; margin-right: 10px; border-radius: 4px;" />` :
                     showLogo ? `<div style="width: 36px; height: 36px; background-color: #DC2626; display: flex; align-items: center; justify-content: center; margin-right: 10px; color: white; font-weight: bold;">MU</div>` : '';
+
+    // Watermark lunas/kredit (item 211) — aturan sama dengan
+    // src/lib/invoicePdfGenerator.ts: non-CREDIT dianggap lunas; CREDIT
+    // lunas hanya bila paidAmount >= grandTotal. Surat jalan bukan invoice,
+    // jadi tidak ada status lunas/kredit dan tidak diberi watermark.
+    const isPaid = sale.paymentMethod !== "CREDIT" || Number(sale.paidAmount) >= Number(sale.grandTotal);
+    const watermarkText = isPaid ? "PAID" : "UNPAID";
+    const showWatermark = layoutType !== "SURAT_JALAN";
+    // Watermark harus berupa elemen DOM sungguhan (teks PAID/UNPAID di dalam
+    // div), bukan pseudo-element, supaya terbaca di DOM dan saat print.
+    // position:absolute terhadap body (position:relative) supaya html2canvas
+    // (download PDF) ikut merendernya.
+    const watermarkHtmlA4 = showWatermark ? `
+        <div style="position: absolute; top: 38%; left: 0; right: 0; text-align: center; opacity: 0.08; transform: rotate(-30deg); font-size: 110px; font-weight: 900; z-index: 1000; color: #9CA3AF; pointer-events: none; white-space: nowrap; font-family: Arial, Helvetica, sans-serif; letter-spacing: 12px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${watermarkText}</div>
+    ` : "";
+    const watermarkHtmlThermal = showWatermark ? `
+        <div style="position: absolute; top: 40%; left: 0; right: 0; text-align: center; opacity: 0.08; transform: rotate(-25deg); font-size: 40px; font-weight: 900; z-index: 1000; color: #9CA3AF; pointer-events: none; white-space: nowrap; font-family: Arial, Helvetica, sans-serif; letter-spacing: 4px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${watermarkText}</div>
+    ` : "";
 
     // STRUK KECIL (THERMAL)
     if (layoutType === "STRUK_KECIL") {
@@ -174,6 +198,9 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                             box-sizing: border-box;
                             overflow-x: hidden;
                             background: white;
+                            position: relative;
+                            -webkit-print-color-adjust: exact;
+                            print-color-adjust: exact;
                         }
                         .center { text-align: center; }
                         .bold { font-weight: bold; }
@@ -182,6 +209,7 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                     </style>
                 </head>
                 <body>
+                    ${watermarkHtmlThermal}
                     ${showHeader ? `
                     <div style="display:flex; justify-content:center; align-items:center; flex-direction:column; margin-bottom: 4px;">
                         ${logoImg}
@@ -310,6 +338,7 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                         background: #ffffff;
                         box-sizing: border-box;
                         overflow-x: hidden;
+                        position: relative;
                         ${bodyWidth}
                     }
                     img { max-width: 100%; height: auto; }
@@ -321,6 +350,9 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                     table.invoice-items { margin-bottom: 12px; }
                     table.invoice-items th, table.invoice-items td { border: none; padding: 4px 8px; background: transparent; }
                     table.invoice-items thead th { border-bottom: 1.5px solid #000; padding: 5px 8px; }
+                    /* Faktur NCR: baris lebih rapat tapi tetap terbaca. */
+                    table.invoice-items-ncr th, table.invoice-items-ncr td { padding: 2px 8px; }
+                    table.invoice-items-ncr thead th { padding: 3px 8px; }
                     .no-border td, .no-border th { border: none !important; padding: 2px !important; background: transparent !important;}
                     .flex-between { display: flex; justify-content: space-between; align-items: flex-start; }
                     .header-box { border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
@@ -328,6 +360,7 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                 </style>
             </head>
             <body>
+                ${watermarkHtmlA4}
                 ${showHeader ? `
                 <div class="flex-between header-box">
                     <div style="display:flex; align-items:center;">
@@ -351,8 +384,8 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                 ` : ''}
 
                 ${showCustomerInfo ? `
-                <div style="border: 1px solid #000; padding: 10px; margin-bottom: 20px; width: 50%;">
-                    <strong style="border-bottom:1px solid #000; display:block; margin-bottom:5px;">CUSTOMER INFO</strong>
+                <div style="${isNcr ? 'padding: 0; margin-bottom: 12px;' : 'border: 1px solid #000; padding: 10px; margin-bottom: 20px;'} width: 50%;">
+                    <strong style="${isNcr ? '' : 'border-bottom:1px solid #000; '}display:block; margin-bottom:5px;">CUSTOMER INFO</strong>
                     <table class="no-border">
                         <tr><td style="width:60px;">Name</td><td>: <b>${escapeHtml(sale.customer?.name || 'Umum')}</b></td></tr>
                         <tr><td>Phone</td><td>: ${escapeHtml(sale.customer?.phone || '-')}</td></tr>
@@ -361,7 +394,7 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                 </div>
                 ` : ''}
 
-                <table${showPrices ? ' class="invoice-items"' : ''}>
+                <table${showPrices ? (isNcr ? ' class="invoice-items invoice-items-ncr"' : ' class="invoice-items"') : ''}>
                     <thead>
                         <tr>
                             <th style="width: 5%;">No</th>
@@ -388,13 +421,13 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                 <div class="flex-between">
                     <div style="width: 60%;">
                         ${showPrices ? `
-                        <div style="border:1px solid #000; padding:10px; margin-bottom:10px;">
+                        <div style="${isNcr ? 'padding: 0; margin-bottom: 8px;' : 'border:1px solid #000; padding:10px; margin-bottom:10px;'}">
                             <b>Terbilang:</b> <br/><i>${numberToWords(Math.floor(sale.grandTotal))} Rupiah</i>
                         </div>
                         ` : ''}
                         
                         ${showPaymentInfo && showPrices && hasBankInfo ? `
-                        <div style="border:1px solid #000; padding:10px; margin-bottom:10px; display:inline-block;">
+                        <div style="${isNcr ? 'padding: 0; margin-bottom: 8px; display:inline-block;' : 'border:1px solid #000; padding:10px; margin-bottom:10px; display:inline-block;'}">
                             <b>REKENING BANK:</b> ${escapeHtml(storeSetting?.bankName || '')} - ${escapeHtml(storeSetting?.bankAccount || '')}<br/>
                             a/n ${escapeHtml(storeSetting?.bankHolder || '')}
                         </div>
@@ -418,7 +451,7 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                     
                     ${showPrices ? `
                     <div style="width: 35%;">
-                        <table style="border:1px solid #000;">
+                        <table style="${isNcr ? 'border: none;' : 'border:1px solid #000;'}">
                             <tr><td style="border:none; padding:3px 8px;">Gross Total</td><td style="border:none; padding:3px 8px; text-align:right;">${formatCurrency(sale.totalAmount).replace("Rp ","")}</td></tr>
                             <tr><td style="border:none; padding:3px 8px;">Discount</td><td style="border:none; padding:3px 8px; text-align:right; color:red;">(${formatCurrency(sale.discount).replace("Rp ","")})</td></tr>
                             <tr><td style="border:none; padding:3px 8px;">Tax</td><td style="border:none; padding:3px 8px; text-align:right;">${formatCurrency(sale.tax).replace("Rp ","")}</td></tr>

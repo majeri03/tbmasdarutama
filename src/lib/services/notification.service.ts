@@ -367,15 +367,17 @@ export class NotificationService {
   // UTANG SUPPLIER ikut diperiksa di sini — sebelumnya tidak pernah
   // ternotifikasi (celah yang ditemukan saat desain).
 
+  // FIX (25 Nov 2026, koordinator — temuan ws-j2): WITA = UTC+8, bukan
+  // +7 (itu WIB). Offset +7 membuat batas hari jatuh 23:00 WITA.
   /** Nomor hari kalender (WITA) dari sebuah DateTime. */
   private static witaDayNumber(d: Date): number {
-    const w = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+    const w = new Date(d.getTime() + 8 * 60 * 60 * 1000);
     return Date.UTC(w.getUTCFullYear(), w.getUTCMonth(), w.getUTCDate()) / 86400000;
   }
 
   /** Awal hari ini (WITA) sebagai Date UTC — batas dedup harian. */
   private static witaTodayStart(): Date {
-    const nowWita = new Date(Date.now() + 7 * 60 * 60 * 1000);
+    const nowWita = new Date(Date.now() + 8 * 60 * 60 * 1000);
     return new Date(Date.UTC(nowWita.getUTCFullYear(), nowWita.getUTCMonth(), nowWita.getUTCDate()));
   }
 

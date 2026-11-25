@@ -1,7 +1,9 @@
 import ReportHeader from "../../_components/ReportHeader";
 import ReportFooter from "../../_components/ReportFooter";
 import ReportSummary, { ReportSectionTitle } from "../../_components/ReportSummary";
-import { formatCurrency, formatDate } from "@/lib/utils/pdf-helpers";
+import type { ReportStoreInfo } from "../../_components/report-types";
+import { formatDateWita } from "../../_components/report-datetime";
+import { formatCurrency } from "@/lib/utils/pdf-helpers";
 
 interface SaleData {
   id: string;
@@ -25,18 +27,27 @@ interface SalesReportContentProps {
   data: {
     sales: SaleData[];
     summary: SalesSummary;
+    store?: ReportStoreInfo | null;
   };
   dateFrom: string;
   dateTo: string;
 }
 
 export default function SalesReportContent({ data, dateFrom, dateTo }: SalesReportContentProps) {
-  const { sales, summary } = data;
-  const period = `${formatDate(dateFrom)} - ${formatDate(dateTo)}`;
+  const { sales, summary, store } = data;
+  // Label periode + tanggal transaksi diformat eksplisit zona WITA
+  // (item 139/147): formatDate lama memakai zona lokal runtime.
+  const period = `${formatDateWita(dateFrom)} - ${formatDateWita(dateTo)}`;
 
   return (
     <div id="print-content" className="bg-white p-8 min-h-[297mm] text-[#111111]">
-      <ReportHeader title="Laporan Penjualan" period={period} />
+      <ReportHeader
+        title="Laporan Penjualan"
+        period={period}
+        storeName={store?.name}
+        storeAddress={store?.address}
+        storePhone={store?.phone}
+      />
 
       <ReportSummary
         title="Ringkasan"
@@ -76,7 +87,7 @@ export default function SalesReportContent({ data, dateFrom, dateTo }: SalesRepo
               <tr key={sale.id} className="border-b border-gray-200 even:bg-[#FAFAFA]">
                 <td className="px-3 py-2">{index + 1}</td>
                 <td className="px-3 py-2 font-mono text-xs">{sale.invoiceNumber}</td>
-                <td className="px-3 py-2">{formatDate(sale.saleDate)}</td>
+                <td className="px-3 py-2">{formatDateWita(sale.saleDate)}</td>
                 <td className="px-3 py-2">{sale.customer?.name || "Walk-in"}</td>
                 <td className="px-3 py-2">{sale.cashier?.name}</td>
                 <td className="px-3 py-2">{sale.paymentMethod}</td>
@@ -97,7 +108,7 @@ export default function SalesReportContent({ data, dateFrom, dateTo }: SalesRepo
         </table>
       </div>
 
-      <ReportFooter />
+      <ReportFooter storeName={store?.name ?? undefined} />
     </div>
   );
 }

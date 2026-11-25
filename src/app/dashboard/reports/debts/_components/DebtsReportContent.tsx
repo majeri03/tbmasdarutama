@@ -1,7 +1,9 @@
 import ReportHeader from "../../_components/ReportHeader";
 import ReportFooter from "../../_components/ReportFooter";
 import ReportSummary, { ReportSectionTitle } from "../../_components/ReportSummary";
-import { formatCurrency, formatDate } from "@/lib/utils/pdf-helpers";
+import type { ReportStoreInfo } from "../../_components/report-types";
+import { formatDateWita } from "../../_components/report-datetime";
+import { formatCurrency } from "@/lib/utils/pdf-helpers";
 
 interface CustomerDebt {
   id: string;
@@ -38,15 +40,21 @@ interface DebtsReportContentProps {
     supplierDebts: SupplierDebt[];
     customerDebtSummary: DebtSummary;
     supplierDebtSummary: DebtSummary;
+    store?: ReportStoreInfo | null;
   };
 }
 
 export default function DebtsReportContent({ data }: DebtsReportContentProps) {
-  const { customerDebts, supplierDebts, customerDebtSummary, supplierDebtSummary } = data;
+  const { customerDebts, supplierDebts, customerDebtSummary, supplierDebtSummary, store } = data;
 
   return (
     <div id="print-content" className="bg-white p-8 min-h-[297mm] text-[#111111]">
-      <ReportHeader title="Laporan Piutang & Hutang" />
+      <ReportHeader
+        title="Laporan Piutang & Hutang"
+        storeName={store?.name}
+        storeAddress={store?.address}
+        storePhone={store?.phone}
+      />
 
       {/* Summary */}
       <div className="grid grid-cols-2 gap-6 mb-8">
@@ -103,7 +111,7 @@ export default function DebtsReportContent({ data }: DebtsReportContentProps) {
                   <div className="text-xs text-[#6B7280]">{debt.customer.phone}</div>
                 </td>
                 <td className="px-3 py-2 font-mono text-xs">{debt.sale.invoiceNumber}</td>
-                <td className="px-3 py-2">{formatDate(debt.dueDate)}</td>
+                <td className="px-3 py-2">{formatDateWita(debt.dueDate)}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(debt.totalDebt)}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(debt.paidAmount)}</td>
                 <td className="px-3 py-2 text-right font-semibold tabular-nums">{formatCurrency(debt.remainingDebt)}</td>
@@ -148,7 +156,7 @@ export default function DebtsReportContent({ data }: DebtsReportContentProps) {
                   <div className="text-xs text-[#6B7280]">{debt.supplier.phone}</div>
                 </td>
                 <td className="px-3 py-2 font-mono text-xs">{debt.purchase.invoiceNumber}</td>
-                <td className="px-3 py-2">{formatDate(debt.dueDate)}</td>
+                <td className="px-3 py-2">{formatDateWita(debt.dueDate)}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(debt.totalDebt)}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(debt.paidAmount)}</td>
                 <td className="px-3 py-2 text-right font-semibold tabular-nums">{formatCurrency(debt.remainingDebt)}</td>
@@ -168,7 +176,7 @@ export default function DebtsReportContent({ data }: DebtsReportContentProps) {
         </table>
       </div>
 
-      <ReportFooter />
+      <ReportFooter storeName={store?.name ?? undefined} />
     </div>
   );
 }

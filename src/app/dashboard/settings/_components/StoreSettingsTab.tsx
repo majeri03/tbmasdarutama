@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Building2, Upload, Save, Loader2 } from "lucide-react";
-import { getStoreSetting, updateStoreSetting } from "@/lib/actions/store-setting.actions";
+import { Building2, Upload, Save, Loader2, Trash2 } from "lucide-react";
+import { getStoreSetting, updateStoreSetting, clearStoreLogo } from "@/lib/actions/store-setting.actions";
 import { StoreSettingFormData } from "@/types/settings";
 import { useToast } from "@/components/ui/toast";
 import Image from "next/image";
@@ -11,6 +11,9 @@ import { compressImageFile } from "@/lib/utils/image-compress";
 export default function StoreSettingsTab() {
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
+    // FIX WS-K (25 Nov 2026, batch 6 item 153): state hapus logo.
+    const [deletingLogo, setDeletingLogo] = useState(false);
+    const [confirmDeleteLogo, setConfirmDeleteLogo] = useState(false);
     const [formData, setFormData] = useState<StoreSettingFormData>({
         name: "TB Masdar Utama",
         tagline: "",
@@ -87,6 +90,30 @@ export default function StoreSettingsTab() {
             showToast("Gagal upload logo", "error");
         } finally {
             setUploading(false);
+        }
+    };
+
+    // FIX WS-K (25 Nov 2026, batch 6 item 153): tombol Hapus Logo.
+    // Sebelumnya logo hanya bisa ditimpa (upload baru), tidak bisa
+    // dihapus — logo tes menimpa logo asli dan tidak ada jalan kembali
+    // dari UI. clearStoreLogo hanya mengosongkan logoUrl (string kosong
+    // -> null di server) + menghapus file lama dari R2; logo asli
+    // dikembalikan user sendiri dengan upload ulang.
+    const handleDeleteLogo = async () => {
+        setDeletingLogo(true);
+        try {
+            const result = await clearStoreLogo();
+            if (result.success) {
+                setFormData((prev) => ({ ...prev, logoUrl: "" }));
+                setConfirmDeleteLogo(false);
+                showToast(result.message || "Logo berhasil dihapus", "success");
+            } else {
+                throw new Error(result.error);
+            }
+        } catch (error) {
+            showToast(error instanceof Error ? error.message : "Gagal menghapus logo", "error");
+        } finally {
+            setDeletingLogo(false);
         }
     };
 
@@ -172,6 +199,40 @@ export default function StoreSettingsTab() {
                                 </>
                             )}
                         </label>
+                        {formData.logoUrl && (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={() => setConfirmDeleteLogo(true)}
+                                    disabled={uploading || deletingLogo}
+                                    className="btn-secondary inline-flex items-center gap-2 cursor-pointer ml-2 !text-red-600"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    Hapus Logo
+                                </button>
+                                {confirmDeleteLogo && (
+                                    <span className="inline-flex flex-wrap items-center gap-2 ml-2 text-xs">
+                                        <span className="text-red-600 font-medium">Yakin hapus logo toko?</span>
+                                        <button
+                                            type="button"
+                                            onClick={handleDeleteLogo}
+                                            disabled={deletingLogo}
+                                            className="px-2 py-1 rounded bg-red-600 text-white font-semibold disabled:opacity-50"
+                                        >
+                                            {deletingLogo ? "Menghapus..." : "Ya, hapus"}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setConfirmDeleteLogo(false)}
+                                            disabled={deletingLogo}
+                                            className="px-2 py-1 rounded border border-gray-300 text-gray-600"
+                                        >
+                                            Batal
+                                        </button>
+                                    </span>
+                                )}
+                            </>
+                        )}
                         <p className="text-xs text-gray-500 mt-2">
                             Format: PNG, JPG, SVG | Max: 1MB
                         </p>

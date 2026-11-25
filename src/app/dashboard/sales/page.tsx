@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";  // ✅ tambah useCallback
-import { ShoppingCart, Filter, FileText, Pencil } from "lucide-react";  // ✅ hapus Download
+import { ShoppingCart, Filter, FileText, Pencil, ChevronLeft, ChevronRight } from "lucide-react";  // ✅ hapus Download
 import { useSession } from "next-auth/react";
 import { hasPermission } from "@/lib/utils/role";
 import { getSales } from "@/lib/actions/sale.actions";
@@ -44,12 +44,47 @@ export default function SalesPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
-    // Filters
+    // Filters — WS-D item 47: ada DUA state filter. Input di atas hanya
+    // mengubah "draf"; yang dikirim ke server adalah appliedFilters, yang
+    // baru berubah saat "Terapkan Filter" ditekan. Dulu setiap ketikan
+    // langsung memicu fetch, sehingga banyak request in-flight saling
+    // berlomba dan respons basi (tanpa filter / filter prefix "INV")
+    // bisa tiba paling akhir dan menimpa hasil pencarian yang benar —
+    // daftar tampak "tetap 8 baris" walau pencarian sudah diketik.
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
     const [paymentMethodFilter, setPaymentMethodFilter] = useState("");
     const [dateFrom, setDateFrom] = useState("");
     const [dateTo, setDateTo] = useState("");
+
+    interface AppliedSalesFilters {
+        search: string;
+        status: string;
+        paymentMethod: string;
+        dateFrom: string;
+        dateTo: string;
+    }
+    const EMPTY_FILTERS: AppliedSalesFilters = {
+        search: "",
+        status: "",
+        paymentMethod: "",
+        dateFrom: "",
+        dateTo: "",
+    };
+    const [appliedFilters, setAppliedFilters] = useState<AppliedSalesFilters>(EMPTY_FILTERS);
+
+    // WS-D item 46: dulu page/limit di-hardcode (page 1, limit 30) tanpa
+    // kontrol pagination sama sekali.
+    const PAGE_SIZE = 10;
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
+    // WS-D item 46: kartu statistik (SalesStats) dimuat sekali saat mount
+    // dan tidak pernah ikut termuat ulang. Kunci ini dinaikkan setiap kali
+    // daftar berhasil dimuat ulang, supaya kartu ikut segar.
+    const [statsKey, setStatsKey] = useState(0);
+
+    const hasActiveFilters = Object.values(appliedFilters).some(Boolean);
 
     // Invoice Modal
     const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
@@ -62,9 +97,14 @@ export default function SalesPage() {
 
     // Prefill pencarian dari URL (?search=INV-...) — dipakai saat ketuk
     // notifikasi (pusat notifikasi mengarah ke sini dengan nomor invoice).
+    // WS-D item 47: isi draf DAN filter yang diterapkan, supaya pencarian
+    // dari notifikasi langsung jalan tanpa menekan Terapkan Filter dulu.
     useEffect(() => {
         const q = new URLSearchParams(window.location.search).get("search");
-        if (q) setSearchTerm(q);
+        if (q) {
+            setSearchTerm(q);
+            setAppliedFilters((f) => ({ ...f, search: q }));
+        }
     }, []);
 
 
@@ -73,13 +113,13 @@ export default function SalesPage() {
         setError("");
         try {
             const result = await getSales({
-                search: searchTerm || undefined,
-                status: (statusFilter || undefined) as SaleStatus | undefined,
-                paymentMethod: (paymentMethodFilter || undefined) as PaymentMethod | undefined,
-                dateFrom: dateFrom ? new Date(dateFrom) : undefined,
-                dateTo: dateTo ? new Date(dateTo) : undefined,
-                page: 1,     // ✅ FIX: ubah dari 0 ke 1
-                limit: 30,  // ✅ FIX: ubah dari 0 ke 100 (atau sesuai kebutuhan)
+                search: appliedFilters.search || undefined,
+                status: (appliedFilters.status || undefined) as SaleStatus | undefined,
+                paymentMethod: (appliedFilters.paymentMethod || undefined) as PaymentMethod | undefined,
+                dateFrom: appliedFilters.dateFrom ? new Date(appliedFilters.dateFrom) : undefined,
+                dateTo: appliedFilters.dateTo ? new Date(appliedFilters.dateTo) : undefined,
+                page,
+                limit: PAGE_SIZE,
             });
 
             if (result.success && result.data) {
@@ -87,6 +127,12 @@ export default function SalesPage() {
                     ...sale,
                     grandTotal: Number(sale.grandTotal),
                 })));
+                const tp = result.pagination?.totalPages || 1;
+                setTotalPages(tp);
+                setTotalCount(result.pagination?.total ?? result.data.length);
+                // WS-D item 46: daftar segar -> kartu statistik ikut segar.
+                setStatsKey((k) => k + 1);
+                if (page > tp) setPage(tp);
             } else {
                 setError(result.error || "Gagal memuat data penjualan");
             }
@@ -95,14 +141,23 @@ export default function SalesPage() {
         } finally {
             setLoading(false);
         }
-    }, [searchTerm, statusFilter, paymentMethodFilter, dateFrom, dateTo]);
+    }, [appliedFilters, page]);
 
     useEffect(() => {
         loadSales();
     }, [loadSales]);
 
     const handleFilter = () => {
-        loadSales();
+        // WS-D item 47: baru di sini draf diterapkan + kembali ke halaman 1.
+        // Mengetik saja TIDAK memicu fetch lagi (tidak ada race respons basi).
+        setAppliedFilters({
+            search: searchTerm,
+            status: statusFilter,
+            paymentMethod: paymentMethodFilter,
+            dateFrom,
+            dateTo,
+        });
+        setPage(1);
     };
 
     const handleReset = () => {
@@ -111,7 +166,11 @@ export default function SalesPage() {
         setPaymentMethodFilter("");
         setDateFrom("");
         setDateTo("");
-        loadSales();
+        // WS-D item 47: dulu Reset memanggil loadSales() langsung dengan
+        // closure lama, sehingga filter lama tetap terkirim. Sekarang Reset
+        // mengosongkan filter yang diterapkan; useEffect yang memuat ulang.
+        setAppliedFilters(EMPTY_FILTERS);
+        setPage(1);
     };
 
     const handleShowInvoice = (saleId: string) => {
@@ -123,8 +182,6 @@ export default function SalesPage() {
         setShowInvoiceModal(false);
         setSelectedSaleId(null);
     };
-
-    const filteredSales = sales;
 
     return (
         <div className="space-y-6">
@@ -138,7 +195,7 @@ export default function SalesPage() {
             </div>
 
             {/* Stats */}
-            <SalesStats />
+            <SalesStats refreshKey={statsKey} />
 
             {/* Filters */}
             <div className="glass-card p-6">
@@ -235,10 +292,14 @@ export default function SalesPage() {
                         <div className="flex items-center justify-center py-12">
                             <div className="spinner-large"></div>
                         </div>
-                    ) : filteredSales.length === 0 ? (
+                    ) : sales.length === 0 ? (
                         <div className="text-center py-12">
                             <ShoppingCart className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                            <p className="text-gray-500">Belum ada data penjualan</p>
+                            <p className="text-gray-500">
+                                {hasActiveFilters
+                                    ? "Tidak ada penjualan yang cocok dengan filter yang diterapkan"
+                                    : "Belum ada data penjualan"}
+                            </p>
                         </div>
                     ) : (
                         <table className="data-table">
@@ -256,7 +317,7 @@ export default function SalesPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredSales.map((sale) => (
+                                {sales.map((sale) => (
                                     <tr key={sale.id}>
                                         <td>
                                             <span className="font-mono font-semibold text-blue-600">
@@ -314,6 +375,39 @@ export default function SalesPage() {
                         </table>
                     )}
                 </div>
+
+                {/* WS-D item 46: kontrol pagination — dulu tidak ada sama
+                    sekali (page 1, limit 30, hardcode). */}
+                {!loading && sales.length > 0 && (
+                    <div className="p-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <p className="text-sm text-gray-600">
+                            Menampilkan {(page - 1) * PAGE_SIZE + 1}–
+                            {Math.min(page * PAGE_SIZE, totalCount)} dari{" "}
+                            {totalCount} penjualan
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                disabled={page === 1}
+                                className="btn-secondary btn-sm"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                                Prev
+                            </button>
+                            <span className="text-sm text-gray-600">
+                                Halaman {page} dari {totalPages}
+                            </span>
+                            <button
+                                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                                disabled={page === totalPages}
+                                className="btn-secondary btn-sm"
+                            >
+                                Next
+                                <ChevronRight className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Invoice Modal */}

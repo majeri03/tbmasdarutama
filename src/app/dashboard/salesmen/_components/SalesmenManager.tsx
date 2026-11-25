@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Users, Loader2, Plus, Pencil, Trash2, Eye, Percent } from "lucide-react";
+import { Users, Loader2, Plus, Pencil, Trash2, Eye, Percent, X } from "lucide-react";
 import {
   toggleSalesmanStatus,
   getSalesmanFeeSetting,
@@ -44,6 +44,14 @@ export default function SalesmenManager() {
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [detailSalesman, setDetailSalesman] = useState<SalesmanRow | null>(null);
+  // Batch 6 item 166 — hapus salesman MATI: dulu pakai window.confirm
+  // (dialog native browser). Di browser pengujian dialog native itu
+  // auto-dismiss tanpa jejak — klik 3x tidak memunculkan apa pun, tidak
+  // ada fetch, tidak ada toast. Sekarang pakai modal di dalam aplikasi
+  // (pola yang sama dengan DeleteSaleDialog dkk) supaya konfirmasi selalu
+  // terlihat dan bisa diklik.
+  const [deleteTarget, setDeleteTarget] = useState<SalesmanRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Pengaturan fee global (24 Nov 2026): default MATI, persen default 2%.
   // Hanya SUPER_ADMIN yang bisa mengubah (server yang memutuskan);
@@ -58,7 +66,7 @@ export default function SalesmenManager() {
 
   useEffect(() => {
     if (canRead) {
-      fetchSalesmen();
+      void fetchSalesmen();
       fetchFeeSetting();
     } else {
       setLoading(false);
@@ -142,7 +150,7 @@ export default function SalesmenManager() {
         showToast(data.message || "Salesman berhasil ditambahkan", "success");
         setNewName("");
         setNewPhone("");
-        fetchSalesmen();
+        await fetchSalesmen();
       } else {
         throw new Error(data.error || "Gagal menambahkan salesman");
       }
@@ -168,7 +176,7 @@ export default function SalesmenManager() {
       if (data.success) {
         showToast(data.message || "Salesman berhasil diperbarui", "success");
         setEditingId(null);
-        fetchSalesmen();
+        await fetchSalesmen();
       } else {
         throw new Error(data.error || "Gagal memperbarui salesman");
       }
@@ -182,27 +190,51 @@ export default function SalesmenManager() {
       const result = await toggleSalesmanStatus(id);
       if (!result.success) throw new Error(result.error || "Gagal mengubah status salesman");
       showToast(result.message || "Status salesman diubah", "success");
-      fetchSalesmen();
+      await fetchSalesmen();
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Gagal mengubah status salesman", "error");
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!window.confirm(`Hapus salesman "${name}"? Salesman yang sudah tercatat di penjualan tidak bisa dihapus.`)) {
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    // Server menolak hapus kalau salesman sudah tercatat di penjualan —
+    // tombol konfirmasi sudah nonaktif untuk kasus itu (lihat modal),
+    // jadi ini hanya jaring pengaman.
+    if (deleteTarget.salesCount > 0) {
+      showToast(
+        `Salesman "${deleteTarget.name}" tidak bisa dihapus karena sudah tercatat di ${deleteTarget.salesCount} transaksi penjualan. Nonaktifkan saja supaya tidak muncul di POS.`,
+        "error"
+      );
       return;
     }
+    setDeleting(true);
     try {
-      const res = await fetch(`/api/salesmen/${id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (data.success) {
-        showToast(data.message || "Salesman berhasil dihapus", "success");
-        fetchSalesmen();
-      } else {
-        throw new Error(data.error || "Gagal menghapus salesman");
+      const res = await fetch(`/api/salesmen/${deleteTarget.id}`, { method: "DELETE" });
+      // Jangan langsung res.json(): kalau server mengembalikan halaman
+      // error/redirect (bukan JSON), json() melempar dan toast error
+      // tidak pernah muncul — persis gejala "tombol mati" di batch 6.
+      const text = await res.text();
+      let data: { success?: boolean; message?: string; error?: string } = {};
+      try {
+        data = text ? (JSON.parse(text) as typeof data) : {};
+      } catch {
+        throw new Error(
+          res.ok
+            ? "Server mengembalikan jawaban yang tidak bisa dibaca."
+            : `Server error (HTTP ${res.status}). Coba lagi.`
+        );
       }
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || data.message || `Gagal menghapus salesman (HTTP ${res.status}).`);
+      }
+      showToast(data.message || "Salesman berhasil dihapus", "success");
+      setDeleteTarget(null);
+      await fetchSalesmen();
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Gagal menghapus salesman", "error");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -432,7 +464,7 @@ export default function SalesmenManager() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleDelete(s.id, s.name)}
+                              onClick={() => setDeleteTarget(s)}
                               className="btn-secondary !py-1 !px-3 text-xs inline-flex items-center gap-1"
                             >
                               <Trash2 className="w-3 h-3" /> Hapus
@@ -454,6 +486,76 @@ export default function SalesmenManager() {
         isOpen={detailSalesman !== null}
         onClose={() => setDetailSalesman(null)}
       />
+
+      {/* Modal konfirmasi hapus (batch 6 item 166) */}
+      {deleteTarget && (
+        <div className="modal-overlay">
+          <div className="modal-container max-w-md animate-modal-slide-up">
+            <div className="modal-header bg-gradient-to-r from-red-500 to-red-600">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Trash2 className="w-5 h-5" />
+                Hapus Salesman
+              </h2>
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+                disabled={deleting}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="modal-body">
+              <p className="text-gray-700 text-sm">
+                Hapus salesman{" "}
+                <span className="font-semibold text-gray-900">{deleteTarget.name}</span>?
+              </p>
+              {deleteTarget.salesCount > 0 ? (
+                <p className="text-xs text-red-600 bg-red-50 border border-red-100 p-2.5 rounded-lg mt-3 leading-relaxed">
+                  Salesman ini sudah tercatat di {deleteTarget.salesCount} transaksi
+                  penjualan, jadi <strong>tidak bisa dihapus</strong>. Gunakan tombol
+                  status &ldquo;Nonaktif&rdquo; supaya tidak muncul lagi di POS.
+                </p>
+              ) : (
+                <p className="text-xs text-gray-500 mt-2">
+                  Salesman ini belum tercatat di penjualan mana pun, jadi aman dihapus.
+                </p>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="btn-secondary text-sm"
+                disabled={deleting}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="btn-danger text-sm"
+                disabled={deleting || deleteTarget.salesCount > 0}
+                title={
+                  deleteTarget.salesCount > 0
+                    ? "Tidak bisa dihapus — sudah tercatat di penjualan"
+                    : undefined
+                }
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Menghapus...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" /> Ya, Hapus
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

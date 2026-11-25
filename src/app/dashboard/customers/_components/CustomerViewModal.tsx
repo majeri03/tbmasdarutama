@@ -149,20 +149,35 @@ export function CustomerViewModal({
     setPointsMessage("");
     try {
       const delta = sign * amount;
+      const prevPoints = points;
       const result = await adjustCustomerPoints(customerId, delta);
       if (result.success) {
         // Kontrak PKG-A: data berisi customer ter-update (termasuk points).
         // Kalau bentuknya berbeda, pakai hitungan optimistis sebagai fallback.
         const data = result.data as unknown as { points?: number } | null;
-        setPoints(
-          typeof data?.points === "number" ? data.points : points + delta
-        );
+        const nextPoints =
+          typeof data?.points === "number"
+            ? data.points
+            : Math.max(0, points + delta);
+        const actualDelta = nextPoints - prevPoints;
+        setPoints(nextPoints);
         setPointsInput("");
-        setPointsMessage(
-          delta > 0
-            ? `${amount} poin ditambahkan`
-            : `${amount} poin dikurangi`
-        );
+        // WS-F item 5 — dulu pesan selalu memakai jumlah yang DIMINTA
+        // ("100 poin dikurangi") padahal server menahan saldo di 0, jadi
+        // kalau saldo hanya 27 yang benar-benar berkurang cuma 27. Sekarang
+        // pesan memakai selisih saldo yang sebenarnya terjadi.
+        if (actualDelta > 0) {
+          setPointsMessage(`${actualDelta} poin ditambahkan`);
+        } else if (actualDelta < 0) {
+          const requested = Math.abs(delta);
+          setPointsMessage(
+            requested > -actualDelta
+              ? `${-actualDelta} poin dikurangi (saldo hanya ${prevPoints}, jadi hanya ${-actualDelta} yang bisa dikurangi)`
+              : `${-actualDelta} poin dikurangi`
+          );
+        } else {
+          setPointsMessage("Poin tidak berubah (saldo sudah 0)");
+        }
       } else {
         setPointsMessage(result.error || "Gagal mengubah poin");
       }
@@ -211,7 +226,17 @@ export function CustomerViewModal({
 
   const typeInfo = getCustomerTypeLabel(customer.type);
 
-  const totalBelanja = sales.reduce((sum, sale) => sum + sale.grandTotal, 0);
+  // WS-F item 92 — penjualan CANCELLED dikeluarkan dari Total Belanja
+  // (aturan bersama: hanya CANCELLED yang dikeluarkan; RETURN tetap
+  // dihitung). Riwayat di tabel bawah tetap menampilkan semua penjualan
+  // termasuk yang dibatalkan; yang dikoreksi hanya totalnya. Contoh:
+  // TEST-Pelanggan Rp257.500 termasuk penjualan yang dibatalkan (salah
+  // satunya Rp2.550) -> total yang benar Rp250.700. "Transaksi" tetap
+  // menghitung baris riwayat yang ditampilkan (maks. 20).
+  const totalBelanja = sales.reduce(
+    (sum, sale) => (sale.status === "CANCELLED" ? sum : sum + sale.grandTotal),
+    0
+  );
   const totalSisaUtang = debts.reduce((sum, debt) => sum + debt.remainingDebt, 0);
 
   const saleStatusStyle: Record<string, string> = {

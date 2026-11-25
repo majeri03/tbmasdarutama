@@ -5,6 +5,7 @@ import ReportLayout from "../_components/ReportLayout";
 import ReportDownloadButton from "../_components/ReportDownloadButton";
 import ProductsReportContent from "./_components/ProductsReportContent";
 import { getProductListReport } from "@/lib/actions/report.actions";
+import type { ReportStoreInfo } from "../_components/report-types";
 import { useReactToPrint } from 'react-to-print';
 
 interface ProductUnit {
@@ -20,32 +21,38 @@ interface ProductData {
   description: string | null;
   currentStock: number;
   minStock: number;
-  category: { name: string };
+  category: { name: string } | null;
   subCategory: { name: string } | null;
-  supplier: { name: string };
+  supplier: { name: string } | null;
   productUnits: ProductUnit[];
   productImages: Array<{ imageUrl: string }>;
 }
 
 interface ProductsReportData {
   products: ProductData[];
+  store?: ReportStoreInfo | null;
 }
 
 export default function ProductsReportPage() {
   const printRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [reportData, setReportData] = useState<ProductsReportData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleGenerateReport = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const result = await getProductListReport({});
 
       if (result.success && result.data) {
         setReportData(result.data as unknown as ProductsReportData);
+      } else {
+        setError(result.error || "Gagal mengambil data daftar produk");
       }
     } catch (error) {
       console.error(error);
+      setError("Terjadi kesalahan saat mengambil data katalog");
     } finally {
       setIsLoading(false);
     }
@@ -92,6 +99,9 @@ export default function ProductsReportPage() {
           <button onClick={handleGenerateReport} className="inline-flex items-center gap-2 rounded-lg bg-[#111111] px-4 py-2 text-sm font-semibold text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-50">
             Generate Katalog
           </button>
+          {error && (
+            <p className="mt-4 text-sm text-red-700">{error}</p>
+          )}
         </div>
       )}
     </ReportLayout>

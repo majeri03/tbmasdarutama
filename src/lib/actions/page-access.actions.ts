@@ -15,19 +15,22 @@ export async function initializePageAccess() {
     const count = await prisma.pageAccess.count();
     if (count > 0) return;
 
-    // Seed defaults: all 5 pages = disabled (false) for ADMIN and KASIR
-    const defaultAccess: { pageKey: string; role: Role; enabled: boolean }[] = [];
-    const roles: Role[] = [Role.ADMIN, Role.KASIR];
-
-    for (const page of PAGE_KEYS) {
-      for (const role of roles) {
-        defaultAccess.push({
-          pageKey: page.key,
-          role,
-          enabled: false,
-        });
-      }
-    }
+    // Seed defaults (25 Nov 2026, item 184 — keputusan Jery).
+    // Hanya jalan bila tabel masih kosong; DB yang sudah punya baris TIDAK
+    // diubah di sini — nilai awal yang benar untuk DB lama diatur oleh
+    // migrasi 20261125190000_page_access_defaults.
+    const defaultAccess: { pageKey: string; role: Role; enabled: boolean }[] = [
+      { pageKey: "pos", role: Role.ADMIN, enabled: true },
+      { pageKey: "pos", role: Role.KASIR, enabled: true },
+      { pageKey: "reports_settings", role: Role.ADMIN, enabled: true },
+      { pageKey: "reports_settings", role: Role.KASIR, enabled: false },
+      { pageKey: "po", role: Role.ADMIN, enabled: true },
+      { pageKey: "po", role: Role.KASIR, enabled: false },
+      { pageKey: "invoice_layout", role: Role.ADMIN, enabled: false },
+      { pageKey: "invoice_layout", role: Role.KASIR, enabled: false },
+      { pageKey: "stock_opname", role: Role.ADMIN, enabled: true },
+      { pageKey: "stock_opname", role: Role.KASIR, enabled: false },
+    ];
 
     await prisma.pageAccess.createMany({
       data: defaultAccess,

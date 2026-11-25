@@ -309,17 +309,14 @@ export async function getProducts(
         categoryId ? { categoryId } : {},
         supplierId ? { supplierId } : {},
         isActive !== null ? { isActive } : {},
+        // Item 58 (batch 2): definisi tunggal stok menipis =
+        // currentStock <= minStock. Tanpa syarat currentStock > 0:
+        // produk yang stoknya 0 (mis. baru selesai import massal)
+        // tetap stok menipis selama 0 <= minStock, supaya angka kartu
+        // "Stok Menipis" sama dengan jumlah hasil filter yang sama
+        // (dan sama dengan definisi di halaman stocks).
         lowStock
-          ? {
-              AND: [
-                { currentStock: { gt: 0 } },
-                {
-                  OR: [
-                    { currentStock: { lte: prisma.product.fields.minStock } },
-                  ],
-                },
-              ],
-            }
+          ? { currentStock: { lte: prisma.product.fields.minStock } }
           : {},
       ],
     };
@@ -757,6 +754,10 @@ export async function deleteProduct(id: string) {
   }
 }
 // Restore deleted product
+// Item 66 (batch 2): fungsi ini SUDAH ADA, tapi tidak pernah dipanggil
+// dari UI mana pun (tidak ada tombol restore), dan tidak memeriksa
+// apakah produknya ada / memang sedang dihapus — update atas id yang
+// tidak ada hanya melempar P2025 lalu dijawab "Gagal restore produk".
 export async function restoreProduct(id: string) {
   try {
     const session = await auth();
@@ -765,6 +766,23 @@ export async function restoreProduct(id: string) {
       return { success: false, error: "Unauthorized" };
     }
     requirePermission(session, "EDIT_PRODUCT");
+
+    const product = await prisma.product.findUnique({
+      where: { id },
+      select: { id: true, name: true, code: true, deletedAt: true },
+    });
+
+    if (!product) {
+      return { success: false, error: "Produk tidak ditemukan." };
+    }
+
+    if (!product.deletedAt) {
+      return {
+        success: false,
+        error: `Produk "${product.name}" tidak sedang dihapus.`,
+      };
+    }
+
     await prisma.product.update({
       where: { id },
       data: {
@@ -777,7 +795,7 @@ export async function restoreProduct(id: string) {
 
     return {
       success: true,
-      message: "Produk berhasil direstore",
+      message: `Produk "${product.name}" (${product.code}) berhasil direstore!`,
     };
   } catch (error) {
     console.error("[RESTORE_PRODUCT_ERROR]", error);
@@ -785,6 +803,53 @@ export async function restoreProduct(id: string) {
       success: false,
       error: "Gagal restore produk",
     };
+  }
+}
+
+// Item 66 (batch 2): daftar produk yang di-soft-delete (deletedAt
+// terisi), untuk tampilan "Produk Dihapus" di halaman produk. Tanpa
+// ini produk yang dihapus tidak bisa ditemukan lagi dari UI mana pun,
+// padahal dialog hapus menjanjikan "bisa direstore jika diperlukan".
+export async function getDeletedProducts() {
+  const session = await auth();
+  try {
+    requirePermission(session, "EDIT_PRODUCT");
+    const isKasir = session?.user?.role === "KASIR";
+
+    const products = await prisma.product.findMany({
+      where: { deletedAt: { not: null } },
+      orderBy: { deletedAt: "desc" },
+      include: {
+        category: { select: { id: true, name: true } },
+        subCategory: { select: { id: true, name: true } },
+        supplier: { select: { id: true, code: true, name: true, phone: true } },
+        productUnits: {
+          include: { unit: { select: { id: true, name: true } } },
+          orderBy: { isPrimary: "desc" },
+        },
+        productImages: { orderBy: { isPrimary: "desc" }, take: 1 },
+        _count: {
+          select: { productImages: true, saleItems: true, purchaseItems: true },
+        },
+      },
+    });
+
+    const serialized = products.map((product) => ({
+      ...product,
+      productUnits: product.productUnits.map((pu) => ({
+        ...pu,
+        conversionValue: Number(pu.conversionValue),
+        buyPrice: isKasir ? 0 : Number(pu.buyPrice),
+        sellPrice: Number(pu.sellPrice),
+        unit: { id: pu.unit.id, name: pu.unit.name, symbol: "" },
+      })),
+      productImages: product.productImages,
+    }));
+
+    return { success: true, data: serialized };
+  } catch (error) {
+    console.error("[GET_DELETED_PRODUCTS_ERROR]", error);
+    return { success: false, error: "Gagal mengambil produk yang dihapus.", data: [] };
   }
 }
 //    TOGGLE PRODUCT STATUS   

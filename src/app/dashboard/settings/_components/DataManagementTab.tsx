@@ -54,7 +54,10 @@ export default function DataManagementTab() {
   const [tahunTutupBuku, setTahunTutupBuku] = useState(new Date().getFullYear());
   const { toast, showToast, hideToast } = useToast();
 
-  const CONFIRM_KEYWORD_HAPUS = "HAPUS TRANSAKSI";
+  // FIX WS-K (25 Nov 2026, batch 6 item 163): kata kunci ketik ulang
+  // mengikuti label jujur — operasi ini HAPUS MASSAL, bukan hapus satu
+  // transaksi.
+  const CONFIRM_KEYWORD_HAPUS = "HAPUS MASSAL";
   const CONFIRM_KEYWORD_TUTUP = `TUTUP BUKU ${tahunTutupBuku}`;
 
   async function loadStats() {
@@ -200,11 +203,11 @@ export default function DataManagementTab() {
             </div>
             <div>
               <h3 className="font-bold text-gray-800">Hapus Transaksi Penjualan</h3>
-              <p className="text-xs text-orange-700 font-medium mt-0.5">Operasi Berbahaya</p>
+              <p className="text-xs text-red-700 font-bold mt-0.5">⛔ HAPUS MASSAL — Operasi Berbahaya</p>
             </div>
           </div>
           <div className="text-sm text-gray-600 leading-relaxed space-y-1.5">
-            <p>Menghapus <strong>seluruh data penjualan</strong> beserta:</p>
+            <p>Menghapus <strong>SEMUA transaksi penjualan sekaligus</strong> (hapus massal — <u>bukan</u> satu transaksi saja) beserta:</p>
             <ul className="list-disc pl-4 space-y-0.5 text-gray-500">
               <li>Item penjualan POS</li>
               <li>Utang pelanggan & pembayarannya</li>
@@ -220,7 +223,7 @@ export default function DataManagementTab() {
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-semibold text-sm transition-all shadow-sm hover:shadow-md"
           >
             <Trash2 className="w-4 h-4" />
-            Hapus Transaksi Penjualan
+            Hapus Massal Transaksi Penjualan
           </button>
         </div>
 
@@ -287,7 +290,7 @@ export default function DataManagementTab() {
                 }
                 <div>
                   <h3 className="font-bold text-white text-lg">
-                    {activeModal === "tutup-buku" ? `Tutup Buku Tahun ${tahunTutupBuku}` : "Hapus Transaksi Penjualan"}
+                    {activeModal === "tutup-buku" ? `Tutup Buku Tahun ${tahunTutupBuku}` : "HAPUS MASSAL — Hapus Semua Transaksi Penjualan"}
                   </h3>
                   <p className="text-white/80 text-xs">
                     {step === "warning" && "Langkah 1 dari 3 — Baca peringatan"}
@@ -309,7 +312,7 @@ export default function DataManagementTab() {
                     <div className="text-sm text-yellow-800 leading-relaxed">
                       {activeModal === "hapus-transaksi" ? (
                         <>
-                          <p className="font-semibold mb-1">Yang akan dihapus secara PERMANEN:</p>
+                          <p className="font-semibold mb-1">HAPUS MASSAL — yang akan dihapus secara PERMANEN (SEMUA transaksi, bukan satu):</p>
                           <ul className="list-disc pl-4 space-y-0.5">
                             <li>Semua data penjualan POS</li>
                             <li>Utang pelanggan & riwayat pembayaran</li>
@@ -422,7 +425,7 @@ export default function DataManagementTab() {
                       ) : (
                         <>
                           <ShieldAlert className="w-4 h-4" />
-                          {activeModal === "tutup-buku" ? "Eksekusi Tutup Buku" : "Hapus Sekarang"}
+                          {activeModal === "tutup-buku" ? "Eksekusi Tutup Buku" : "Hapus Massal Sekarang"}
                         </>
                       )}
                     </button>

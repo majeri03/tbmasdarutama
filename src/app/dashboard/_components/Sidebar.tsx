@@ -27,6 +27,7 @@ import {
   ClipboardCheck,
   HardDrive,
   Star,
+  Wallet,
 } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
@@ -65,6 +66,12 @@ const menuGroups = [
       { href: "/dashboard/salesmen", icon: <Users />, label: "Salesman", permission: "VIEW_SALESMEN" as const },
       { href: "/dashboard/points", icon: <Star />, label: "Poin Loyalitas", permission: "VIEW_POINTS" as const },
       { href: "/dashboard/pos", icon: <CreditCard />, label: "Point of Sale", permission: "ACCESS_POS" as const, pageKey: "pos" },
+      // FIX (25 Nov 2026, batch 8 item 233): menu Kas — sebelumnya API
+      // /api/cash-movements sudah ada tapi tidak ada halaman/menu/tombol
+      // yang memakainya. Permission VIEW_REPORTS (SUPER_ADMIN + ADMIN)
+      // dipakai karena belum ada permission khusus kas dan gate API-nya
+      // memang ADMIN+; halaman /dashboard/cash mengecek role yang sama.
+      { href: "/dashboard/cash", icon: <Wallet />, label: "Kas", permission: "VIEW_REPORTS" as const },
     ],
   },
   {
@@ -99,6 +106,13 @@ export default function Sidebar({
   const { data: session, status } = useSession();
   const [storeLogo, setStoreLogo] = useState<string | null>(null);
   const [storeName, setStoreName] = useState("TB Masdar Utama");
+  // WS-F (temuan WS-B) — dulu tidak ada state loading logo: storeLogo
+  // berawal null dan baru diisi getStoreSetting() setelah mount, jadi
+  // selama fetch berlangsung fallback huruf "T" tampil padahal logo toko
+  // sebenarnya ada (hanya belum dimuat). Sekarang loading dibedakan dari
+  // "tidak ada logo": huruf fallback hanya tampil setelah fetch selesai
+  // dan terbukti tidak ada logo; selama memuat tampil skeleton netral.
+  const [storeLogoLoaded, setStoreLogoLoaded] = useState(false);
 
   // Debugging log client-side to trace sidebar visibility issues
   useEffect(() => {
@@ -115,6 +129,8 @@ export default function Sidebar({
         }
       } catch (error) {
         console.error("Gagal memuat setting toko di sidebar", error);
+      } finally {
+        setStoreLogoLoaded(true);
       }
     };
     fetchSettings();
@@ -181,8 +197,16 @@ export default function Sidebar({
                 sizes="32px"
               />
             </div>
+          ) : !storeLogoLoaded ? (
+            // MASIH MEMUAT — skeleton netral, bukan huruf fallback, supaya
+            // tidak tampil "T" biru padahal logo sebenarnya ada.
+            <div
+              aria-hidden
+              className="w-8 h-8 rounded-lg bg-gray-200/70 animate-pulse flex-shrink-0"
+            />
           ) : (
-            // FALLBACK JIKA TIDAK ADA LOGO (Inisial Huruf)
+            // FALLBACK JIKA TIDAK ADA LOGO (Inisial Huruf) — hanya tampil
+            // setelah fetch selesai dan terbukti tidak ada logo.
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white shadow-md shadow-blue-200 flex-shrink-0 transition-transform group-hover:scale-110">
               <span className="font-bold text-sm">{storeName.charAt(0)}</span>
             </div>
@@ -267,7 +291,14 @@ export default function Sidebar({
   return (
     <>
       {/* Desktop */}
-      <aside className="fixed z-30 top-0 left-0 h-screen w-64 glass-card shadow-2xl border-r border-white/30 hidden md:flex flex-col backdrop-blur-xl overflow-y-auto">
+      {/* FIX (25 Nov 2026, minor batch 1a): JANGAN pakai class glass-card
+          di aside ini. glass-card = position:relative + overflow:hidden +
+          rounded-2xl — itu melawan `fixed` + `overflow-y-auto` di bawah
+          dan membuat sidebar docking terlihat seperti kartu mengambang
+          (sudut membulat + bayangan) yang menutupi ~250px kiri. Styling
+          kaca ditulis eksplisit (bg-white/70 + backdrop-blur-xl) supaya
+          tidak ada properti yang bertabrakan dengan position:fixed. */}
+      <aside className="fixed z-30 top-0 left-0 h-screen w-64 bg-white/70 shadow-2xl border-r border-white/30 hidden md:flex flex-col backdrop-blur-xl overflow-y-auto">
         {sidebarContent}
       </aside>
       {/* Mobile Drawer */}

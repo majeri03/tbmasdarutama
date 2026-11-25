@@ -3,12 +3,17 @@
 import { useState } from "react";
 import { createCustomer } from "@/lib/actions/customer.actions";
 import { X, Loader2 } from "lucide-react";
-import { CustomerType } from "@prisma/client";
+import { CustomerType, type Customer } from "@prisma/client";
 
 interface QuickAddCustomerProps {
     isOpen: boolean;
     onClose: () => void;
-    onSuccess: (customerId: string) => void;
+    // BUG #28 (batch 1b): sebelumnya callback ini menerima string dan
+    // dipanggil dengan literal "reload" — bukan id customer baru — sehingga
+    // parent tidak bisa memilih customer yang baru dibuat. Sekarang
+    // customer yang baru dibuat (record lengkap dari createCustomer)
+    // dikembalikan supaya parent langsung menjadikannya customer terpilih.
+    onSuccess: (customer: Customer) => void;
     showToast: (message: string, type?: "success" | "error" | "info") => void;
 }
 
@@ -37,10 +42,11 @@ export function QuickAddCustomer({ isOpen, onClose, onSuccess, showToast }: Quic
                 phone: formData.phone || undefined,
             });
 
-            if (result.success) {
+            if (result.success && result.data) {
                 showToast("Customer berhasil ditambahkan!", "success");
-                // Reload customers after add (call parent reload)
-                onSuccess("reload"); // Signal to reload customer list
+                // Kembalikan customer yang baru dibuat ke parent supaya
+                // langsung terpilih (BUG #28) — bukan sinyal "reload".
+                onSuccess(result.data);
                 onClose();
                 setFormData({ name: "", phone: "", type: "REGULER" });
             } else {

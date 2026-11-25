@@ -438,33 +438,33 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
       </html>
     `;
   } else if (layout.layoutType === 'FAKTUR_NCR') {
-    // 3. FAKTUR NCR (SIMILAR TO A4 BUT NO LOGO, NO GRIDS)
+    // 3. FAKTUR NCR (SIMILAR TO A4 BUT NO LOGO, NO GRIDS) — item 208: tanpa garis kotak/tabel, hanya garis bawah header tabel + garis total; baris dirapatkan.
     const itemsHtml = items.map((item: any, index: number) => {
       const gross = item.quantity * item.unitPrice;
       const discountPercent = item.discount > 0 ? Math.round((item.discount / gross) * 100) : 0;
       return `
         <tr style="font-size: ${12 * scale}px;">
-          <td style="padding: 5px 8px; text-align: center;">${index + 1}</td>
-          <td style="padding: 5px 8px;">
+          <td style="padding: 2px 8px; text-align: center;">${index + 1}</td>
+          <td style="padding: 2px 8px;">
             <div style="font-weight: bold; color: #000000;">${escapeHtml(item.product.name)}</div>
             <div style="font-size: 10px; color: #4B5563; font-family: monospace;">${escapeHtml(item.product.code)}</div>
           </td>
-          <td style="padding: 5px 8px; text-align: center;">
+          <td style="padding: 2px 8px; text-align: center;">
             ${item.quantity} ${escapeHtml(item.unit?.name || 'Unit')}
           </td>
-          <td style="padding: 5px 8px; text-align: right;">
+          <td style="padding: 2px 8px; text-align: right;">
             Rp ${item.unitPrice.toLocaleString('id-ID')}
           </td>
-          <td style="padding: 5px 8px; text-align: right;">
+          <td style="padding: 2px 8px; text-align: right;">
             Rp ${gross.toLocaleString('id-ID')}
           </td>
-          <td style="padding: 5px 8px; text-align: center;">
+          <td style="padding: 2px 8px; text-align: center;">
             ${discountPercent}%
           </td>
-          <td style="padding: 5px 8px; text-align: right; color: #DC2626;">
+          <td style="padding: 2px 8px; text-align: right; color: #DC2626;">
             ${item.discount > 0 ? `Rp ${item.discount.toLocaleString('id-ID')}` : 'Rp 0'}
           </td>
-          <td style="padding: 5px 8px; text-align: right; font-weight: bold;">
+          <td style="padding: 2px 8px; text-align: right; font-weight: bold;">
             Rp ${item.subtotal.toLocaleString('id-ID')}
           </td>
         </tr>
@@ -537,14 +537,12 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
             color: #000000;
           }
           .card-box {
-            border: 1px solid #000000;
-            padding: 10px 12px;
-            margin-bottom: 14px;
+            padding: 0;
+            margin-bottom: 12px;
           }
           .card-box-title {
             font-weight: bold;
             text-transform: uppercase;
-            border-bottom: 1px solid #000000;
             padding-bottom: 4px;
             margin-bottom: 8px;
             font-size: ${11 * scale}px;
@@ -556,7 +554,7 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           }
           .data-table th {
             border-bottom: 1.5px solid #000000;
-            padding: 5px 8px;
+            padding: 3px 8px;
             background: transparent;
             font-weight: bold;
             text-transform: uppercase;
@@ -575,15 +573,13 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
             justify-content: space-between;
           }
           .terbilang-box {
-            border: 1px solid #000000;
-            padding: 10px;
+            padding: 0;
             font-size: ${11 * scale}px;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             background: transparent;
           }
           .transfer-box {
-            border: 1px solid #000000;
-            padding: 10px;
+            padding: 0;
             font-size: ${11 * scale}px;
             background: transparent;
           }
@@ -606,7 +602,7 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           .totals-table {
             width: 100%;
             border-collapse: collapse;
-            border: 1px solid #000000;
+            border: none;
           }
           .totals-table td {
             padding: 5px 8px;

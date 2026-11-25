@@ -120,17 +120,17 @@ export async function getLowStockProducts() {
   const session = await auth();
   try {
     requireMinimumRole(session, "KASIR");
+    // Item 96 (WS-G, 25 Nov 2026): SATU definisi stok rendah di halaman
+    // stocks — currentStock <= minStock. Cabang OR `currentStock = 0` yang
+    // lama sudah tercakup di sini (minStock >= 0, jadi 0 <= minStock
+    // selalu) dan dihapus supaya daftar ini tidak bisa menyimpang lagi
+    // dari hitungan lowStockCount di getStockStatistics.
     const lowStockProducts = await prisma.product.findMany({
       where: {
         AND: [
           { isActive: true },
           { deletedAt: null },
-          {
-            OR: [
-              { currentStock: { lte: prisma.product.fields.minStock } },
-              { currentStock: 0 },
-            ],
-          },
+          { currentStock: { lte: prisma.product.fields.minStock } },
         ],
       },
       select: {
@@ -328,18 +328,14 @@ export async function getStockStatistics() {
       }
     });
 
-    // Low stock count
+    // Low stock count — definisi SAMA dengan getLowStockProducts (item 96,
+    // WS-G): currentStock <= minStock, tanpa cabang tambahan.
     const lowStockCount = await prisma.product.count({
       where: {
         AND: [
           { isActive: true },
           { deletedAt: null },
-          {
-            OR: [
-              { currentStock: { lte: prisma.product.fields.minStock } },
-              { currentStock: 0 },
-            ],
-          },
+          { currentStock: { lte: prisma.product.fields.minStock } },
         ],
       },
     });

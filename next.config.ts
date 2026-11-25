@@ -70,7 +70,12 @@ const nextConfig: NextConfig = {
             // (https://challenges.cloudflare.com) di script-src, frame-src
             // dan connect-src — widget bot check dimuat dari sana. Tidak ada
             // origin lain yang ditambahkan; sisa CSP tidak dilonggarkan.
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://placehold.co https://flat-art-975br2-upload-worker.kirinxe00.workers.dev https://tile.openstreetmap.org; connect-src 'self' https://masdarutama.tech https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;",
+            // FIX (25 Nov 2026, koordinator item 204): tambah
+            // https://www.google.com dan https://maps.google.com ke
+            // frame-src — kalau tidak, iframe embed Google Maps di beranda
+            // publik diblokir browser ("Konten ini diblokir"). Hanya dua
+            // host Maps ini yang ditambahkan; sisa CSP tidak dilonggarkan.
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://placehold.co https://flat-art-975br2-upload-worker.kirinxe00.workers.dev https://tile.openstreetmap.org; connect-src 'self' https://masdarutama.tech https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com https://www.google.com https://maps.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;",
           },
         ],
       },

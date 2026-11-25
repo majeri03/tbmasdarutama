@@ -175,9 +175,14 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
 
     const calculateTotals = () => {
         const totalAmount = cart.reduce((sum, item) => sum + item.subtotal, 0);
-        const discountAmount = (totalAmount * globalDiscount) / 100;
+        // BUG #23 (batch 1b): diskon % bisa menghasilkan pecahan rupiah
+        // (cth. 5% x Rp2.550 = Rp127,50). Bulatkan diskon & pajak SEKALI ke
+        // rupiah bulat (Math.round — sama seperti pembulatan tampilan) lalu
+        // hitung total dari nilai yang sudah dibulatkan, supaya angka yang
+        // tampil = angka yang dikirim ke server & tersimpan.
+        const discountAmount = Math.round((totalAmount * globalDiscount) / 100);
         const afterDiscount = totalAmount - discountAmount;
-        const taxAmount = (afterDiscount * tax) / 100;
+        const taxAmount = Math.round((afterDiscount * tax) / 100);
         const grandTotal = afterDiscount + taxAmount;
         const changeAmount = Math.max(0, paidAmount - grandTotal);
 

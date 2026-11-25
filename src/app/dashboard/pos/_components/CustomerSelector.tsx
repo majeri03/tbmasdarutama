@@ -92,7 +92,7 @@ export function CustomerSelector({ selectedCustomer, onSelectCustomer, onQuickAd
                         </p>
                         {selectedCustomer && (
                             <p className="text-xs text-blue-600">
-                                {selectedCustomer.type} • Diskon {selectedCustomer.discountPercent}%
+                                {selectedCustomer.type} • Diskon {selectedCustomer.discountPercent}% • {selectedCustomer.points ?? 0} poin
                             </p>
                         )}
                     </div>
@@ -172,6 +172,7 @@ export function CustomerSelector({ selectedCustomer, onSelectCustomer, onQuickAd
                                             <p className="text-xs text-gray-500">
                                                 {customer.code} • {customer.type}
                                                 {customer.discountPercent > 0 && ` • Diskon ${customer.discountPercent}%`}
+                                                {` • ${customer.points ?? 0} poin`}
                                             </p>
                                             {customer.phone && (
                                                 <p className="text-xs text-gray-400">{customer.phone}</p>

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { X, CheckCircle, Upload, Camera, Image as ImageIcon, Trash2, Loader2 } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { X, CheckCircle, Upload, Camera, Image as ImageIcon, Trash2, Loader2, AlertCircle } from "lucide-react";
 import { DeliveryOrderData } from "@/types/delivery-order";
 import { DeliveryStatus } from "@prisma/client";
 import { updateDeliveryStatus } from "@/lib/actions/delivery-order.actions";
@@ -14,6 +14,20 @@ interface ReceiveDeliveryModalProps {
   onClose: () => void;
   onSuccess: () => void;
   deliveryOrder: DeliveryOrderData | null;
+  // FIX WS-H (item 118/120): sama seperti modal Edit — useToast() lokal
+  // tidak dirender, jadi parent mengoper showToast-nya lewat prop ini.
+  notify?: (message: string, type: "success" | "error" | "info") => void;
+}
+
+// Bukti yang tersimpan bisa berada di kolom proofImage atau sebagai tag di
+// notes ([BUKTI_KIRIM]: / [FOTO_LOKASI]:) — sama seperti modal Edit.
+function extractExistingProof(order: DeliveryOrderData): string {
+  if (order.proofImage) return order.proofImage;
+  const m1 = (order.notes || "").match(/\[BUKTI_KIRIM\]:\s*([^\s\]\n]+)/);
+  if (m1 && m1[1]) return m1[1].trim();
+  const m2 = (order.notes || "").match(/\[FOTO_LOKASI\]:\s*([^\s\]\n]+)/);
+  if (m2 && m2[1]) return m2[1].trim();
+  return "";
 }
 
 export function ReceiveDeliveryModal({
@@ -21,6 +35,7 @@ export function ReceiveDeliveryModal({
   onClose,
   onSuccess,
   deliveryOrder,
+  notify: notifyProp,
 }: ReceiveDeliveryModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState<DeliveryStatus>("IN_TRANSIT");
@@ -29,9 +44,38 @@ export function ReceiveDeliveryModal({
     new Date().toISOString().split("T")[0]
   );
   const [proofImage, setProofImage] = useState<string>("");
+  // FIX WS-H (item 120): bukti yang sudah tersimpan sebelumnya — dipakai
+  // untuk (a) prefill foto saat modal dibuka dan (b) membedakan "tidak
+  // ada foto" dari "foto dihapus user" (yang kedua harus dikirim sebagai
+  // null supaya server benar-benar membersihkannya).
+  const [existingProof, setExistingProof] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
+  const notify = notifyProp ?? showToast;
+  const [formError, setFormError] = useState<string>("");
+
+  // FIX WS-H (item 120): prefill dari DO saat modal dibuka. Sebelumnya
+  // modal ini TIDAK PERNAH prefill — status selalu IN_TRANSIT, nama
+  // penerima & foto selalu kosong — sehingga untuk DO Terkirim user harus
+  // mengetik ulang semuanya dan foto lama tidak terlihat (terasa seperti
+  // "foto bukti lain tidak bisa diunggah"). DO Terkirim kini dibuka
+  // dengan status DELIVERED + data terima & foto yang sudah ada.
+  useEffect(() => {
+    if (isOpen && deliveryOrder) {
+      setFormError("");
+      setStatus(deliveryOrder.status === "DELIVERED" ? "DELIVERED" : "IN_TRANSIT");
+      setReceivedBy(deliveryOrder.receivedBy || "");
+      setReceivedDate(
+        deliveryOrder.receivedDate
+          ? new Date(deliveryOrder.receivedDate).toISOString().split("T")[0]
+          : new Date().toISOString().split("T")[0]
+      );
+      const proof = extractExistingProof(deliveryOrder);
+      setProofImage(proof);
+      setExistingProof(proof);
+    }
+  }, [isOpen, deliveryOrder]);
 
   if (!isOpen || !deliveryOrder) return null;
 
@@ -40,11 +84,11 @@ export function ReceiveDeliveryModal({
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      showToast("File harus berupa gambar (JPG, PNG, WebP)", "error");
+      notify("File harus berupa gambar (JPG, PNG, WebP)", "error");
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      showToast("Ukuran foto maksimal 5MB", "error");
+      notify("Ukuran foto maksimal 5MB", "error");
       return;
     }
 
@@ -65,10 +109,10 @@ export function ReceiveDeliveryModal({
       }
 
       setProofImage(data.url);
-      showToast("Foto bukti pengiriman berhasil diunggah", "success");
+      notify("Foto bukti pengiriman berhasil diunggah", "success");
     } catch (err) {
       console.error("[Upload Proof Error]", err);
-      showToast(err instanceof Error ? err.message : "Gagal mengunggah foto bukti", "error");
+      notify(err instanceof Error ? err.message : "Gagal mengunggah foto bukti", "error");
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -78,10 +122,13 @@ export function ReceiveDeliveryModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setFormError("");
 
     try {
       if (status === "DELIVERED" && !receivedBy) {
-        showToast("Nama penerima harus diisi", "error");
+        const msg = "Nama penerima harus diisi";
+        setFormError(msg);
+        notify(msg, "error");
         setIsLoading(false);
         return;
       }
@@ -91,29 +138,55 @@ export function ReceiveDeliveryModal({
         status,
         receivedBy: status === "DELIVERED" ? receivedBy : undefined,
         receivedDate: status === "DELIVERED" ? new Date(receivedDate) : undefined,
-        proofImage: proofImage || undefined,
+        // FIX WS-H (item 120): foto yang dihapus user harus dikirim sebagai
+        // null supaya server benar-benar membersihkannya; sebelumnya selalu
+        // `undefined` sehingga hapus foto tidak pernah tersimpan. Bila
+        // tidak ada foto lama maupun baru, kirim undefined (tidak diubah).
+        proofImage: proofImage ? proofImage : existingProof ? null : undefined,
       });
 
       if (result.success) {
-        showToast(result.message || "Status berhasil diupdate", "success");
+        notify(result.message || "Status berhasil diupdate", "success");
         onSuccess();
         onClose();
         resetForm();
       } else {
-        showToast(result.error || "Gagal update status", "error");
+        const msg = result.error || "Gagal update status";
+        setFormError(msg);
+        notify(msg, "error");
       }
     } catch (error) {
       console.error("Error updating delivery status:", error);
-      showToast("Terjadi kesalahan", "error");
+      const msg = "Terjadi kesalahan";
+      setFormError(msg);
+      notify(msg, "error");
     } finally {
       setIsLoading(false);
     }
   };
 
   const resetForm = () => {
-    setStatus("IN_TRANSIT");
-    setReceivedBy("");
-    setReceivedDate(new Date().toISOString().split("T")[0]);
+    // Kembali ke nilai prefill DO (bukan hardcode), supaya modal siap
+    // dibuka lagi untuk DO yang sama maupun DO lain.
+    if (deliveryOrder) {
+      setStatus(deliveryOrder.status === "DELIVERED" ? "DELIVERED" : "IN_TRANSIT");
+      setReceivedBy(deliveryOrder.receivedBy || "");
+      setReceivedDate(
+        deliveryOrder.receivedDate
+          ? new Date(deliveryOrder.receivedDate).toISOString().split("T")[0]
+          : new Date().toISOString().split("T")[0]
+      );
+      const proof = extractExistingProof(deliveryOrder);
+      setProofImage(proof);
+      setExistingProof(proof);
+    } else {
+      setStatus("IN_TRANSIT");
+      setReceivedBy("");
+      setReceivedDate(new Date().toISOString().split("T")[0]);
+      setProofImage("");
+      setExistingProof("");
+    }
+    setFormError("");
   };
 
   return (
@@ -168,10 +241,26 @@ export function ReceiveDeliveryModal({
               className="input-field"
               required
             >
-              <option value="IN_TRANSIT">Dalam Pengiriman</option>
-              <option value="DELIVERED">Terkirim</option>
-              <option value="CANCELLED">Dibatalkan</option>
+              {/* FIX WS-H (item 120): DO Terkirim tidak bisa mundur ke
+                  IN_TRANSIT / dibatalkan (state machine server menolaknya),
+                  jadi satu-satunya pilihan yang valid adalah tetap
+                  Terkirim — dipakai untuk mengganti/menambah foto bukti
+                  atau memperbaiki nama penerima tanpa memotong stok lagi. */}
+              {deliveryOrder.status === "DELIVERED" ? (
+                <option value="DELIVERED">Terkirim</option>
+              ) : (
+                <>
+                  <option value="IN_TRANSIT">Dalam Pengiriman</option>
+                  <option value="DELIVERED">Terkirim</option>
+                  <option value="CANCELLED">Dibatalkan</option>
+                </>
+              )}
             </select>
+            {deliveryOrder.status === "DELIVERED" && (
+              <p className="text-xs text-gray-500 mt-1.5">
+                Surat jalan ini sudah Terkirim — form ini dipakai untuk mengganti/menambah foto bukti atau memperbaiki nama penerima. Stok tidak dipotong lagi.
+              </p>
+            )}
           </div>
 
           {/* Received Info (only for DELIVERED) */}
@@ -285,6 +374,15 @@ export function ReceiveDeliveryModal({
               <p className="text-sm text-red-800">
                 <strong>Perhatian!</strong> Pengiriman akan dibatalkan dan tidak dapat diubah lagi.
               </p>
+            </div>
+          )}
+
+          {/* Pesan galat inline (FIX WS-H): kegagalan update harus terlihat
+              di dalam modal, bukan hanya lewat toast. */}
+          {formError && (
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+              <p className="text-sm text-red-800">{formError}</p>
             </div>
           )}
 

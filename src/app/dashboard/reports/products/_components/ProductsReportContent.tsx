@@ -1,8 +1,8 @@
 import ReportHeader from "../../_components/ReportHeader";
 import ReportFooter from "../../_components/ReportFooter";
 import ReportSummary, { ReportSectionTitle } from "../../_components/ReportSummary";
+import type { ReportStoreInfo } from "../../_components/report-types";
 import { formatCurrency } from "@/lib/utils/pdf-helpers";
-import Image from "next/image";
 
 interface ProductUnit {
   buyPrice: number;
@@ -17,9 +17,12 @@ interface ProductData {
   description: string | null;
   currentStock: number;
   minStock: number;
-  category: { name: string };
+  // Kategori wajib di schema, supplier OPSIONAL (supplierId nullable) —
+  // keduanya ditype-kan nullable supaya satu produk tanpa supplier tidak
+  // menjatuhkan seluruh katalog (item 144).
+  category: { name: string } | null;
   subCategory: { name: string } | null;
-  supplier: { name: string };
+  supplier: { name: string } | null;
   productUnits: ProductUnit[];
   productImages: Array<{ imageUrl: string }>;
 }
@@ -27,15 +30,21 @@ interface ProductData {
 interface ProductsReportContentProps {
   data: {
     products: ProductData[];
+    store?: ReportStoreInfo | null;
   };
 }
 
 export default function ProductsReportContent({ data }: ProductsReportContentProps) {
-  const { products } = data;
+  const { products, store } = data;
 
   return (
     <div id="print-content" className="bg-white p-8 min-h-[297mm] text-[#111111]">
-      <ReportHeader title="Daftar Produk" />
+      <ReportHeader
+        title="Daftar Produk"
+        storeName={store?.name}
+        storeAddress={store?.address}
+        storePhone={store?.phone}
+      />
 
       <ReportSummary
         title="Ringkasan"
@@ -47,20 +56,36 @@ export default function ProductsReportContent({ data }: ProductsReportContentPro
       <div className="grid grid-cols-2 gap-4">
         {products.map((product) => {
           const primaryUnit = product.productUnits[0];
-          const imageUrl = product.productImages[0]?.imageUrl || '/placeholder-product.png';
+          const imageUrl = product.productImages[0]?.imageUrl || null;
 
           return (
             <div key={product.id} className="border border-gray-200 rounded-lg p-4 break-inside-avoid">
               <div className="flex gap-4">
-                {/* Product Image */}
-                <div className="w-20 h-20 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
-                  <Image
-                    src={imageUrl}
-                    alt={product.name}
-                    width={80}
-                    height={80}
-                    className="w-full h-full object-cover"
-                  />
+                {/* Product Image — <img> biasa, BUKAN next/image (item 144):
+                    next/image menolak URL remote yang host-nya tidak ada di
+                    next.config images.remotePatterns; foto produk tersimpan
+                    di R2 (host tidak terdaftar) sehingga render katalog
+                    melempar error dan halaman crash ("client-side
+                    exception"). <img> tidak butuh konfigurasi host. Kalau
+                    URL rusak, gambar disembunyikan (onError), bukan crash.
+                    File fallback lama '/placeholder-product.png' tidak ada
+                    di public/, jadi produk tanpa foto menampilkan kotak
+                    "Tanpa Gambar", bukan gambar rusak. */}
+                <div className="w-20 h-20 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center">
+                  {imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt={product.name}
+                      width={80}
+                      height={80}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <span className="text-[10px] text-[#6B7280] text-center px-1">Tanpa Gambar</span>
+                  )}
                 </div>
 
                 {/* Product Info */}
@@ -72,10 +97,10 @@ export default function ProductsReportContent({ data }: ProductsReportContentPro
 
                   <div className="text-xs text-[#6B7280] space-y-1">
                     <p>
-                      <span className="font-semibold text-[#111111]">Kategori:</span> {product.category.name}
+                      <span className="font-semibold text-[#111111]">Kategori:</span> {product.category?.name ?? "—"}
                       {product.subCategory && ` / ${product.subCategory.name}`}
                     </p>
-                    <p><span className="font-semibold text-[#111111]">Supplier:</span> {product.supplier.name}</p>
+                    <p><span className="font-semibold text-[#111111]">Supplier:</span> {product.supplier?.name ?? "—"}</p>
 
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-xs font-semibold text-[#111111]">
@@ -115,7 +140,7 @@ export default function ProductsReportContent({ data }: ProductsReportContentPro
         </div>
       )}
 
-      <ReportFooter />
+      <ReportFooter storeName={store?.name ?? undefined} />
     </div>
   );
 }

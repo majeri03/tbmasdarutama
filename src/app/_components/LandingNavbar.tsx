@@ -17,6 +17,14 @@ interface Props {
 export default function LandingNavbar({ store }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  // Logo rusak/kosong -> jatuh ke monogram huruf (bukan kotak placeholder kosong).
+  const [logoBroken, setLogoBroken] = useState(false);
+
+  // Kalau logoUrl berubah (mis. user selesai upload ulang logo asli),
+  // beri kesempatan lagi untuk menampilkan logo.
+  useEffect(() => {
+    setLogoBroken(false);
+  }, [store?.logoUrl]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -34,6 +42,13 @@ export default function LandingNavbar({ store }: Props) {
     { href: "#contact", label: "Kontak" },
   ];
 
+  // Logo hanya ditampilkan bila URL ada DAN belum terbukti gagal dimuat.
+  // `unoptimized` dipakai supaya logo tetap tampil apa pun host-nya
+  // (logo tersimpan sebagai URL penuh dari layanan upload; host itu belum
+  // tentu terdaftar di next.config `images.remotePatterns`, dan kalau tidak
+  // terdaftar, next/image gagal mengoptimasi -> gambar pecah).
+  const showLogo = Boolean(store?.logoUrl) && !logoBroken;
+
   return (
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -46,13 +61,15 @@ export default function LandingNavbar({ store }: Props) {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
-            {store?.logoUrl ? (
-              <div className="relative w-12 h-12 rounded-xl overflow-hidden ring-2 ring-white/20 group-hover:ring-blue-400 transition-all">
+            {showLogo ? (
+              <div className="relative w-12 h-12 rounded-xl overflow-hidden ring-2 ring-white/20 group-hover:ring-blue-400 transition-all bg-white">
                 <Image
-                  src={store.logoUrl}
-                  alt={store.name}
+                  src={store!.logoUrl as string}
+                  alt={store?.name || "Logo toko"}
                   fill
                   className="object-contain"
+                  unoptimized
+                  onError={() => setLogoBroken(true)}
                 />
               </div>
             ) : (

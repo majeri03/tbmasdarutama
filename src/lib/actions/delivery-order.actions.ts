@@ -41,12 +41,27 @@ function resolveProofImage(
   return null;
 }
 
-//    GENERATE DO NUMBER   
+// FIX (25 Nov 2026, ws-j2 item 139): prefiks tanggal nomor dokumen memakai
+// WITA (Asia/Makassar, UTC+8), bukan tanggal lokal server. Server Vercel
+// berjalan di UTC, jadi dokumen yang dibuat 25 Nov pukul 00:xx-07:59 WITA
+// sebelumnya mendapat nomor berprefiks 24 Nov. Nomor yang sudah terbit
+// tidak diubah — hanya nomor baru yang memakai tanggal WITA.
+function getWitaDatePrefix(date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Makassar",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const value = (type: string) =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  return `${value("year")}${value("month")}${value("day")}`;
+}
+
+//    GENERATE DO NUMBER
 async function generateDONumber(tx: Prisma.TransactionClient): Promise<string> {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const prefix = `DO/${year}${month}`;
+  // DO memakai YYYYMM saja (bukan YYYYMMDD) — 6 digit pertama prefiks WITA.
+  const prefix = `DO/${getWitaDatePrefix().slice(0, 6)}`;
 
   const lastDO = await tx.deliveryOrder.findFirst({
     where: { doNumber: { startsWith: prefix } },
@@ -327,10 +342,9 @@ export async function getDeliveryOrderById(id: string, externalSession?: AuthSes
 }
 
 async function generateInvoiceNumber(tx: Prisma.TransactionClient) {
-  const date = new Date();
-  const dateStr = `${date.getFullYear()}${(date.getMonth() + 1)
-    .toString()
-    .padStart(2, "0")}${date.getDate().toString().padStart(2, "0")}`;
+  // FIX (25 Nov 2026, ws-j2 item 139): tanggal prefiks memakai WITA —
+  // lihat getWitaDatePrefix di atas (generateDONumber).
+  const dateStr = getWitaDatePrefix();
 
   // 1. Cari nomor terakhir berdasarkan ABJAD (invoiceNumber), BUKAN tanggal (createdAt)
   const lastSale = await tx.sale.findFirst({
@@ -710,16 +724,24 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput, ext
 
     // FIX QA (M-9): state machine — hanya transisi yang masuk akal, dan status
     // terminal (DELIVERED / CANCELLED) tidak bisa diubah lagi.
+    // FIX WS-H (25 Nov 2026, batch 4 item 120): DELIVERED -> DELIVERED
+    // diizinkan sebagai "refresh" — BUKAN perubahan status, hanya untuk
+    // mengganti/menambah foto bukti atau memperbaiki nama penerima DO yang
+    // sudah terkirim. Tanpa ini, tombol Update Status untuk DO Terkirim
+    // (yang kini ditampilkan di tabel) selalu ditolak server. Refresh ini
+    // TIDAK memotong stok lagi (lihat pengaman `from !== "DELIVERED"` di
+    // bawah) dan TIDAK mengirim notifikasi baru.
     const ALLOWED: Record<string, string[]> = {
       PENDING: ["IN_TRANSIT", "DELIVERED", "CANCELLED"],
       IN_TRANSIT: ["DELIVERED", "CANCELLED"],
-      DELIVERED: [],
+      DELIVERED: ["DELIVERED"],
       CANCELLED: [],
     };
     const from = deliveryOrder.status;
     if (!ALLOWED[from].includes(validated.status)) {
       return { success: false, error: `Status ${from} tidak bisa diubah ke ${validated.status}.` };
     }
+    const isDeliveredRefresh = from === "DELIVERED" && validated.status === "DELIVERED";
 
     // Penjualan yang dibuat otomatis oleh DO ini (bukan penjualan POS asli).
     const isAutoSale = !!deliveryOrder.sale?.notes?.startsWith("Auto-Invoice DO:");
@@ -797,7 +819,11 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput, ext
         data: { status: validated.status },
       });
       if (claimed.count === 0) throw new Error("Status surat jalan sudah berubah, muat ulang dulu.");
-      if (validated.status === "DELIVERED") {
+      // FIX WS-H (25 Nov 2026, item 120): refresh DELIVERED -> DELIVERED
+      // tidak boleh memotong stok lagi — stok sudah dipotong saat DO ini
+      // pertama kali dinyatakan Terkirim. Tanpa pengaman ini, setiap
+      // ganti foto bukti akan memotong stok kedua kalinya.
+      if (validated.status === "DELIVERED" && from !== "DELIVERED") {
         // Apakah penjualan terkait sudah memotong stok saat dibuat? (B-5)
         // Kalau ya (penjualan POS / manual), DO tidak boleh memotong lagi.
         let saleAlreadyDeducted = false;
@@ -896,18 +922,24 @@ export async function updateDeliveryStatus(input: UpdateDeliveryStatusInput, ext
     // Notifikasi perubahan status DO — SATU sistem saja (Sistem A).
     // Dulu di sini Sistem B + route PUT memanggil Sistem A lagi = dobel.
     // Route PUT tidak lagi memanggil onDeliveryUpdate (lihat route.ts).
-    try {
-      const { NotificationService } = await import("@/lib/services/notification.service");
-      NotificationService.onDeliveryUpdate(updated.id, updated.doNumber, validated.status).catch((e) =>
-        console.error("[Notif] Error notifying delivery status:", e),
-      );
-    } catch (e) {
-      console.error("[Notif] Delivery status notification dispatch error:", e);
+    // FIX WS-H (25 Nov 2026, item 120): refresh DELIVERED -> DELIVERED
+    // bukan perubahan status, jadi tidak mengirim notifikasi baru.
+    if (!isDeliveredRefresh) {
+      try {
+        const { NotificationService } = await import("@/lib/services/notification.service");
+        NotificationService.onDeliveryUpdate(updated.id, updated.doNumber, validated.status).catch((e) =>
+          console.error("[Notif] Error notifying delivery status:", e),
+        );
+      } catch (e) {
+        console.error("[Notif] Delivery status notification dispatch error:", e);
+      }
     }
 
     return {
       success: true,
-      message: `Delivery status updated to ${validated.status}`,
+      message: isDeliveredRefresh
+        ? "Bukti pengiriman berhasil diperbarui."
+        : `Delivery status updated to ${validated.status}`,
       data: {
         ...updated,
         proofImage: resolveProofImage(updated.proofImage, updated.notes),
@@ -947,17 +979,27 @@ export async function updateDeliveryOrder(
       return { success: false, error: "Surat Jalan tidak ditemukan" };
     }
 
-    // FIX QA (M-13): status & tanda terima TIDAK boleh diubah lewat Edit —
-    // status hanya lewat updateDeliveryStatus (ada efek stoknya), edit hanya
-    // untuk tanggal/supir/kendaraan/catatan/bukti.
+    // FIX WS-H (25 Nov 2026, batch 4 item 118): status & tanda terima
+    // TIDAK boleh diubah lewat Edit — status hanya lewat
+    // updateDeliveryStatus (ada efek stoknya), edit hanya untuk
+    // tanggal/supir/kendaraan/alamat/catatan/bukti. Guard ini dipertahankan
+    // sebagai pertahanan lapis kedua (modal Edit sudah tidak lagi mengirim
+    // field-field ini), dan juga melindungi route API /api/delivery-orders.
     if (validated.status !== undefined) {
       return { success: false, error: "Status Surat Jalan tidak bisa diubah lewat Edit. Pakai menu Ubah Status." };
     }
     if (validated.receivedBy !== undefined || validated.receivedDate !== undefined) {
       return { success: false, error: "Penerima / tanggal terima hanya bisa diisi saat mengubah status ke DITERIMA." };
     }
-    if (existingDO.status === "DELIVERED" || existingDO.status === "CANCELLED") {
-      return { success: false, error: "Surat Jalan yang sudah DITERIMA / dibatalkan tidak bisa diedit." };
+    // FIX WS-H (25 Nov 2026, batch 4 item 118/120): DO yang sudah
+    // TERKIRIM tetap boleh diedit metadata-nya (tanggal, sopir,
+    // kendaraan, catatan, foto bukti) — tanpa mengubah status, jadi tidak
+    // ada efek stok. Sebelumnya blok ini menolak SEMUA edit atas DO
+    // DELIVERED, sehingga foto bukti DO terkirim tidak bisa diganti atau
+    // dihapus lewat Edit. Yang tetap terminal dan tidak bisa diedit
+    // hanyalah DO yang DIBATALKAN.
+    if (existingDO.status === "CANCELLED") {
+      return { success: false, error: "Surat Jalan yang sudah dibatalkan tidak bisa diedit." };
     }
 
     // FIX (22 Nov 2026, R2): catat bukti lama SEBELUM ditimpa — ganti bukti
@@ -1128,6 +1170,25 @@ export async function deleteDeliveryOrder(id: string, externalSession?: AuthSess
             where: { deliveryOrderId: id }
         });
 
+        // F. Batch 7 item 194 (a): hapus juga notifikasi yang menunjuk ke
+        // DO ini, supaya tidak tertinggal notifikasi basi yang tautannya
+        // membuka pencarian 0 hasil (contoh: "Surat Jalan Baru Siap Muat
+        // #DO/202611/0003" yang DO-nya sudah dihapus). Notifikasi DO dibuat
+        // dari dua jalur dengan bentuk params yang berbeda, jadi cocokkan
+        // keduanya:
+        // - NotificationService.onDeliveryUpdate: params { doId, doNumber }
+        // - notify.ts NotifEvent.doCreated/doStatusChanged: params { search, doNumber }
+        // doNumber unik per DO, jadi pencocokan doNumber aman.
+        await tx.notification.deleteMany({
+            where: {
+                type: "DELIVERY_UPDATE",
+                OR: [
+                    { params: { path: ["doId"], equals: id } },
+                    { params: { path: ["doNumber"], equals: deliveryOrder.doNumber } },
+                ],
+            },
+        });
+
         // E. Terakhir, Hapus Surat Jalan (DeliveryOrder)
         await tx.deliveryOrder.delete({
             where: { id }
@@ -1151,9 +1212,22 @@ export async function deleteDeliveryOrder(id: string, externalSession?: AuthSess
 
     // FIX (22 Nov 2026): hapus DO juga ternotifikasi (sebagai pembatalan),
     // supaya tim tahu surat jalan itu tidak jadi dikirim.
+    // Batch 7 item 194 (a): notifikasi pembatalan ini SENGAJA dibuat TANPA
+    // params doNumber/doId — kalau memakai onDeliveryUpdate(..., "CANCELLED"),
+    // notifikasi itu ikut membawa tautan ke DO yang baru saja dihapus dan
+    // ketukannya membuka pencarian 0 hasil (persis bug yang diperbaiki di
+    // atas). Tanpa params, ketuk notifikasi ini membuka daftar surat jalan
+    // (/dashboard/delivery-orders), bukan pencarian kosong.
     try {
       const { NotificationService } = await import("@/lib/services/notification.service");
-      NotificationService.onDeliveryUpdate(id, deliveryOrder.doNumber, "CANCELLED").catch((e) =>
+      NotificationService.send({
+        role: "ADMIN",
+        title: "❌ Pengiriman Dibatalkan",
+        body: `Surat Jalan #${deliveryOrder.doNumber} telah dihapus/dibatalkan.`,
+        type: "DELIVERY_UPDATE",
+        screen: "Delivery",
+        channelId: "masdar_channel_v3",
+      }).catch((e) =>
         console.error("[Notif] Error notifying delivery deletion:", e),
       );
     } catch (e) {

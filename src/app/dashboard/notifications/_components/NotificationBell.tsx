@@ -1,12 +1,33 @@
 // Lonceng notifikasi untuk layout/sidebar — badge jumlah belum dibaca dari
 // GET /api/notifications?unread=true (bukan /api/notifications/count yang
 // menghitung DO pending + hutang overdue, bukan notifikasi belum dibaca).
+//
+// SATU SUMBER HITUNGAN (batch 7 item 192 + temuan batch 1a): badge ini DAN
+// header halaman /dashboard/notifications membaca angka yang sama — field
+// `unreadCount` dari GET /api/notifications. Dulu keduanya mengambil dari
+// endpoint yang sama tapi pada waktu yang berbeda: badge hanya refresh tiap
+// 60 detik (polling), sementara halaman mengupdate angkanya sendiri setelah
+// "Tandai Semua Dibaca" / "Hapus yang Dibaca" — jadi badge sempat tampil 11
+// padahal header sudah "Semua sudah dibaca" (dan sebaliknya).
+// Sekarang halaman notifikasi memanggil notifyNotificationsChanged() setiap
+// kali selesai mengubah status notifikasi, dan hook ini langsung fetch ulang
+// — polling 60 detik tinggal jadi jaring pengaman.
 
 "use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
+
+/** Event yang disiarkan halaman notifikasi setelah mengubah status notifikasi. */
+export const NOTIFICATIONS_CHANGED_EVENT = "masdar:notifications-changed";
+
+/** Panggil ini setelah tandai-baca / hapus notifikasi supaya badge langsung sinkron. */
+export function notifyNotificationsChanged() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED_EVENT));
+  }
+}
 
 export function useUnreadCount(pollMs = 60000): number {
   const [count, setCount] = useState(0);
@@ -23,9 +44,13 @@ export function useUnreadCount(pollMs = 60000): number {
     };
     fetchCount();
     const t = setInterval(fetchCount, pollMs);
+    // Refresh seketika saat halaman notifikasi mengubah status (tandai
+    // dibaca / hapus yang dibaca) — jangan tunggu polling berikutnya.
+    window.addEventListener(NOTIFICATIONS_CHANGED_EVENT, fetchCount);
     return () => {
       alive = false;
       clearInterval(t);
+      window.removeEventListener(NOTIFICATIONS_CHANGED_EVENT, fetchCount);
     };
   }, [pollMs]);
   return count;

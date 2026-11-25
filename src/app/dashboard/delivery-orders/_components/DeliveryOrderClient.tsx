@@ -288,6 +288,10 @@ export function DeliveryOrderClient() {
                 }}
                 onSuccess={handleSuccess}
                 deliveryOrder={selectedOrder}
+                // FIX WS-H (item 118/120): oper showToast client supaya
+                // toast dari dalam modal benar-benar tampil (useToast()
+                // lokal di modal tidak dirender).
+                notify={showToast}
             />
 
             <EditDeliveryOrderModal
@@ -298,6 +302,7 @@ export function DeliveryOrderClient() {
                 }}
                 onSuccess={handleSuccess}
                 deliveryOrder={selectedOrder}
+                notify={showToast}
             />
 
             <DeleteDeliveryDialog

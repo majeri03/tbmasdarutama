@@ -169,6 +169,14 @@ export async function getCustomerDebtStatistics() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    // FIX (25 Nov 2026, batch 8 item 225): filter "Bulan Ini" sebelumnya
+    // hanya punya batas bawah (paymentDate >= 1 Nov). Pembayaran yang
+    // tanggal bayarnya ditulis di bulan DEPAN (mis. salah ketik / bayar
+    // bertanggal mundur-maju) ikut terhitung di bulan ini, jadi kartu
+    // "Pembayaran Bulan Ini" bisa naik dari pembayaran yang bukan bulan
+    // ini. Sekarang dibatasi ke bulan berjalan saja
+    // (>= 1 bulan ini DAN < 1 bulan depan).
+    const firstDayOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
 
     const [activeDebts, overdueCount, paidThisMonth, totalActive] = await Promise.all([
       prisma.customerDebt.count({
@@ -185,7 +193,7 @@ export async function getCustomerDebtStatistics() {
         _sum: { amount: true },
         where: {
           customerDebtId: { not: null },
-          paymentDate: { gte: firstDayOfMonth },
+          paymentDate: { gte: firstDayOfMonth, lt: firstDayOfNextMonth },
         },
       }),
       prisma.customerDebt.aggregate({
@@ -294,6 +302,42 @@ export async function getCustomerDebtById(id: string, externalSession?: AuthSess
   }
 }
 
+// WS-F minor batch 5 — jam riwayat pembayaran selalu 08:00.
+// Modal bayar memakai <input type="date">: nilai "YYYY-MM-DD" diparse
+// JS sebagai tengah malam UTC (00:00Z = 08:00 WITA), jadi pembayaran yang
+// dicatat siang (~15:12/15:14) tetap tersimpan 08:00. Perbaikan di sini
+// (server action, supaya berlaku untuk web + API): kalau paymentDate
+// datang tepat tengah malam UTC (= tanggal saja, tanpa jam), isi jamnya
+// dengan jam sebenarnya saat pembayaran dicatat (jam WITA saat ini
+// dipasang pada tanggal yang dipilih). Tanggal yang dipilih pengguna
+// tetap dipertahankan; hanya jamnya yang dikoreksi. Kalau paymentDate
+// sudah membawa jam (mis. dari datetime-local di masa depan), dipakai
+// apa adanya. Modal bayar sendiri (PaymentModal.tsx) bukan file
+// workstream ini, jadi inputnya tetap type="date" — lihat NOTES.md.
+const WITA_OFFSET_MS = 8 * 60 * 60 * 1000;
+function resolvePaymentDate(input: Date): Date {
+  const d = new Date(input);
+  if (Number.isNaN(d.getTime())) return new Date();
+  const isMidnightUtc =
+    d.getUTCHours() === 0 &&
+    d.getUTCMinutes() === 0 &&
+    d.getUTCSeconds() === 0 &&
+    d.getUTCMilliseconds() === 0;
+  if (!isMidnightUtc) return d;
+  const nowWita = new Date(Date.now() + WITA_OFFSET_MS);
+  return new Date(
+    Date.UTC(
+      d.getUTCFullYear(),
+      d.getUTCMonth(),
+      d.getUTCDate(),
+      nowWita.getUTCHours(),
+      nowWita.getUTCMinutes(),
+      nowWita.getUTCSeconds(),
+      nowWita.getUTCMilliseconds()
+    ) - WITA_OFFSET_MS
+  );
+}
+
 //ADD PAYMENT
 export async function addCustomerDebtPayment(input: AddPaymentInput, externalSession?: AuthSession | null) {
   try {
@@ -387,7 +431,7 @@ export async function addCustomerDebtPayment(input: AddPaymentInput, externalSes
           customerDebtId: validated.debtId,
           amount: validated.amount,
           paymentMethod: validated.paymentMethod,
-          paymentDate: validated.paymentDate,
+          paymentDate: resolvePaymentDate(validated.paymentDate),
           notes: validated.notes,
           adminId: userId, // Sesuaikan dengan field Anda (adminId/createdById)
         },

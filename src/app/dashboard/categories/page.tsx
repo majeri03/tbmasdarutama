@@ -61,6 +61,52 @@ export default function CategoriesPage() {
     type: ToastType;
   } | null>(null);
 
+  // WS-F item 6 — statistik GLOBAL (seluruh kategori), bukan dari baris
+  // halaman / pencarian saat ini. Dulu totalSubCategories / totalProducts /
+  // categoriesWithSub dihitung dari `categories` (maks. 10 baris halaman
+  // aktif), jadi halaman 2 yang kategorinya tidak punya sub-kategori tampil
+  // "0 Sub-Kategori / 0 Kategori Aktif". Diambil terpisah tanpa filter
+  // pencarian lewat satu panggilan getCategories limit besar.
+  // Catatan: getCategories tidak punya agregasi server-side (file action
+  // kategori bukan milik workstream ini), jadi batasnya STATS_LIMIT baris;
+  // toko ini punya puluhan kategori, jadi 1000 jauh di atas kebutuhan.
+  // Kalau suatu hari kategori > 1000, statistik perlu action agregasi
+  // khusus (lihat NOTES.md).
+  const STATS_LIMIT = 1000;
+  const [globalStats, setGlobalStats] = useState({
+    totalSubCategories: 0,
+    totalProducts: 0,
+    categoriesWithSub: 0,
+  });
+
+  const fetchGlobalStats = async () => {
+    try {
+      const result = await getCategories({
+        page: 1,
+        limit: STATS_LIMIT,
+        includeSubCategories: false,
+      });
+      if (result.success) {
+        const all = result.data as Category[];
+        setGlobalStats({
+          totalSubCategories: all.reduce(
+            (sum, cat) => sum + cat._count.subCategories,
+            0
+          ),
+          totalProducts: all.reduce(
+            (sum, cat) => sum + cat._count.products,
+            0
+          ),
+          categoriesWithSub: all.filter(
+            (cat) => cat._count.subCategories > 0
+          ).length,
+        });
+      }
+    } catch {
+      // Statistik gagal dimuat: kartu memakai angka 0, daftar tetap jalan.
+    }
+  };
+
   // Fetch categories
   const fetchCategories = async (page = 1, searchQuery = search) => {
     setLoading(true);
@@ -86,6 +132,7 @@ export default function CategoriesPage() {
   // Initial load
   useEffect(() => {
     fetchCategories();
+    fetchGlobalStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -125,11 +172,13 @@ export default function CategoriesPage() {
   const handleCategoryFormSuccess = (message: string) => {
     showToast(message, "success");
     fetchCategories(pagination.page);
+    fetchGlobalStats();
   };
 
   const handleCategoryDeleteSuccess = (message: string) => {
     showToast(message, "success");
     fetchCategories(1);
+    fetchGlobalStats();
   };
 
   const handleAddSubCategory = (categoryId: string) => {
@@ -152,25 +201,18 @@ export default function CategoriesPage() {
   const handleSubCategoryFormSuccess = (message: string) => {
     showToast(message, "success");
     fetchCategories(pagination.page);
+    fetchGlobalStats();
   };
 
   const handleSubCategoryDeleteSuccess = (message: string) => {
     showToast(message, "success");
     fetchCategories(pagination.page);
+    fetchGlobalStats();
   };
 
-  // Calculate stats
-  const totalSubCategories = categories.reduce(
-    (sum, cat) => sum + cat._count.subCategories,
-    0
-  );
-  const totalProducts = categories.reduce(
-    (sum, cat) => sum + cat._count.products,
-    0
-  );
-  const categoriesWithSub = categories.filter(
-    (cat) => cat._count.subCategories > 0
-  ).length;
+  // Kartu statistik memakai globalStats (seluruh kategori), bukan
+  // `categories` halaman aktif — lihat fetchGlobalStats di atas.
+  const { totalSubCategories, totalProducts, categoriesWithSub } = globalStats;
 
   return (
     <div className="min-h-screen p-6">

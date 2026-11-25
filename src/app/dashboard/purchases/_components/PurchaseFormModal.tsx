@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react";
 import { X, Plus, Trash2, Search } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
-import { createPurchase, updatePurchase } from "@/lib/actions/purchase.actions";
+import { createPurchase, updatePurchase, getPurchaseProducts } from "@/lib/actions/purchase.actions";
 import { getSuppliers } from "@/lib/actions/supplier.actions";
-import { getPOSProducts } from "@/lib/actions/pos.actions";
 import { PurchaseData, PurchaseProduct, PurchaseItem } from "@/types/purchase";
 import { PaymentMethod } from "@prisma/client";
 import { formatCurrency } from "@/lib/utils/pos-helpers";
@@ -87,7 +86,10 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
     };
 
     const loadProducts = async () => {
-        const result = await getPOSProducts();
+        // Item 108 (WS-G): pakai getPurchaseProducts, BUKAN getPOSProducts —
+        // daftar POS menyembunyikan produk berstok 0, padahal PO dipakai
+        // untuk me-restock produk yang habis.
+        const result = await getPurchaseProducts();
         if (result.success && result.data) {
             // Transform data to match PurchaseProduct type
             const transformedProducts = result.data.map((p) => ({
@@ -314,7 +316,10 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                                     >
                                         <div>
                                             <p className="font-medium text-gray-900">{product.name}</p>
-                                            <p className="text-xs text-gray-500">{product.code}</p>
+                                            <p className="text-xs text-gray-500">
+                                                {product.code} • Stok: {product.currentStock}
+                                                {product.currentStock === 0 ? " (habis)" : ""}
+                                            </p>
                                         </div>
                                         <Plus className="w-4 h-4 text-blue-600" />
                                     </button>

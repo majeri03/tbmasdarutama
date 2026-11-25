@@ -7,13 +7,18 @@ import { BarcodeScannerModal } from "./BarcodeScannerModal";
 interface ProductSearchProps {
   onSearch: (query: string) => void;
   onBarcodeScanned: (barcode: string) => void;
+  // BUG #25 (batch 1b): Enter di kolom pencarian utama harus memasukkan
+  // produk ke keranjang kalau hasil pencarian tinggal satu produk (atau
+  // cocok persis dengan kode/barcode) — sebelumnya Enter hanya memfilter
+  // grid dan tidak menambah apa pun.
+  onSearchEnter?: (query: string) => void;
   isLoading?: boolean;
 }
 export interface ProductSearchHandle {
   focus: () => void;
 }
 export const ProductSearch = forwardRef<ProductSearchHandle, ProductSearchProps>(
-  function ProductSearch({ onSearch, onBarcodeScanned, isLoading }, ref) {
+  function ProductSearch({ onSearch, onBarcodeScanned, onSearchEnter, isLoading }, ref) {
   const [searchQuery, setSearchQuery] = useState("");
   const [barcodeBuffer, setBarcodeBuffer] = useState("");
   const [showScanner, setShowScanner] = useState(false);
@@ -85,6 +90,12 @@ export const ProductSearch = forwardRef<ProductSearchHandle, ProductSearchProps>
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              onSearchEnter?.(searchQuery.trim());
+            }
+          }}
           placeholder="Cari produk (nama/kode) atau scan barcode..."
           className="w-full pl-10 md:pl-12 pr-24 py-2 md:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base"
         />

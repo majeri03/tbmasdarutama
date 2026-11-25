@@ -3,6 +3,7 @@ import { getAuthenticatedUser, unauthorizedResponse, forbiddenResponse, notFound
 import { getSaleById } from "@/lib/actions/sale.actions";
 import { hasPermission } from "@/lib/utils/role";
 import { getStoreSettings, generateInvoiceHtml } from "@/lib/invoicePdfGenerator";
+import prisma from "@/lib/prisma";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -19,7 +20,24 @@ export async function GET(request: NextRequest, context: RouteContext) {
     if (!hasPermission(session, "VIEW_SALES")) return forbiddenResponse();
 
     const { id } = await context.params;
-    const saleResult = await getSaleById(id, session);
+    let saleResult = await getSaleById(id, session);
+
+    // Item 220 (batch 8): [id] di URL sering diisi NOMOR INVOICE
+    // (mis. INV/20261124-0003), bukan id database (cuid). getSaleById hanya
+    // mencari by id (prisma.sale.findUnique where id), jadi nomor invoice
+    // selalu gagal dan route mengembalikan "Invoice penjualan tidak
+    // ditemukan." — padahal penjualannya ada. Fallback: cari id asli lewat
+    // invoiceNumber (kolom @unique), lalu coba getSaleById sekali lagi.
+    // getSaleById sendiri TIDAK diubah (bukan file workstream ini).
+    if (!saleResult.success || !saleResult.data) {
+      const byNumber = await prisma.sale.findUnique({
+        where: { invoiceNumber: id },
+        select: { id: true },
+      });
+      if (byNumber) {
+        saleResult = await getSaleById(byNumber.id, session);
+      }
+    }
 
     if (!saleResult.success || !saleResult.data) {
       return notFoundResponse("Invoice penjualan");

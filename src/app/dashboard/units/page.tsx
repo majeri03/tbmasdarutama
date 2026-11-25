@@ -41,6 +41,35 @@ export default function UnitsPage() {
     type: ToastType;
   } | null>(null);
 
+  // WS-F item 6 — statistik GLOBAL (seluruh satuan), bukan dari baris
+  // halaman / pencarian saat ini. Dulu "Sedang Digunakan" / "Tidak
+  // Digunakan" dihitung dari `units` (maks. 10 baris halaman aktif),
+  // jadi halaman 1 tampil "Digunakan 9 / Tidak Digunakan 1" padahal
+  // globalnya 15/1. Diambil terpisah tanpa filter pencarian lewat satu
+  // panggilan getUnits limit besar. Batasnya STATS_LIMIT baris (lihat
+  // catatan yang sama di halaman kategori — file action satuan bukan
+  // milik workstream ini, jadi belum ada agregasi server-side).
+  const STATS_LIMIT = 1000;
+  const [globalStats, setGlobalStats] = useState({
+    used: 0,
+    unused: 0,
+  });
+
+  const fetchGlobalStats = async () => {
+    try {
+      const result = await getUnits({ page: 1, limit: STATS_LIMIT });
+      if (result.success) {
+        const all = result.data as Unit[];
+        setGlobalStats({
+          used: all.filter((u) => u._count.productUnits > 0).length,
+          unused: all.filter((u) => u._count.productUnits === 0).length,
+        });
+      }
+    } catch {
+      // Statistik gagal dimuat: kartu memakai angka 0, daftar tetap jalan.
+    }
+  };
+
   // Fetch units
   const fetchUnits = async (page = 1, searchQuery = search) => {
     setLoading(true);
@@ -65,6 +94,7 @@ export default function UnitsPage() {
   // Initial load
   useEffect(() => {
     fetchUnits();
+    fetchGlobalStats();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -105,11 +135,13 @@ export default function UnitsPage() {
   const handleFormSuccess = (message: string) => {
     showToast(message, "success");
     fetchUnits(pagination.page);
+    fetchGlobalStats();
   };
 
   const handleDeleteSuccess = (message: string) => {
     showToast(message, "success");
     fetchUnits(1); // Reset ke page 1 setelah delete
+    fetchGlobalStats();
   };
 
   return (
@@ -187,7 +219,7 @@ export default function UnitsPage() {
               Sedang Digunakan
             </h3>
             <p className="text-3xl font-bold text-gray-900 mb-1">
-              {units.filter((u) => u._count.productUnits > 0).length}
+              {globalStats.used}
             </p>
             <p className="text-gray-500 text-xs">Satuan aktif</p>
           </div>
@@ -208,7 +240,7 @@ export default function UnitsPage() {
               Tidak Digunakan
             </h3>
             <p className="text-3xl font-bold text-gray-900 mb-1">
-              {units.filter((u) => u._count.productUnits === 0).length}
+              {globalStats.unused}
             </p>
             <p className="text-gray-500 text-xs">Satuan tersedia</p>
           </div>

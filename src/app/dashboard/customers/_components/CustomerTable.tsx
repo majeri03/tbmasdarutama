@@ -171,6 +171,16 @@ export function CustomerTable({
 
     const getCustomerTypeBadge = (type: CustomerType) => {
         switch (type) {
+            // WS-F item 4 — dulu tidak ada case UMUM, jadi getCustomerTypeBadge
+            // mengembalikan undefined dan kolom TIPE customer UMUM (mis.
+            // CUST-00006) tampil kosong.
+            case CustomerType.UMUM:
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-50 text-gray-700 border border-gray-200">
+                        <Tag className="w-3 h-3" />
+                        Umum
+                    </span>
+                );
             case CustomerType.REGULER:
                 return (
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
@@ -190,6 +200,15 @@ export function CustomerTable({
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
                         <Tag className="w-3 h-3" />
                         Proyek
+                    </span>
+                );
+            // Pengaman: tipe apa pun yang tidak dikenal tetap tampil sebagai
+            // teks (bukan sel kosong) supaya tidak terulang seperti UMUM.
+            default:
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-50 text-gray-700 border border-gray-200">
+                        <Tag className="w-3 h-3" />
+                        {type}
                     </span>
                 );
         }
@@ -227,6 +246,9 @@ export function CustomerTable({
                         className="glass-input md:w-48"
                     >
                         <option value="">Semua Tipe</option>
+                        {/* WS-F item 4 — dulu tidak ada pilihan UMUM, jadi
+                            customer UMUM tidak bisa difilter. */}
+                        <option value={CustomerType.UMUM}>Umum</option>
                         <option value={CustomerType.REGULER}>Reguler</option>
                         <option value={CustomerType.GROSIR}>Grosir</option>
                         <option value={CustomerType.PROYEK}>Proyek</option>

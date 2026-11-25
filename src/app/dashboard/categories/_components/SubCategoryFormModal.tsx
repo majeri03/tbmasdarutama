@@ -35,6 +35,7 @@ export function SubCategoryFormModal({
     handleSubmit,
     formState: { errors },
     reset,
+    setValue,
   } = useForm({
     defaultValues: {
       name: subCategory?.name || "",
@@ -71,6 +72,26 @@ export function SubCategoryFormModal({
       });
     }
   }, [subCategory, reset]);
+
+  // WS-F item 7 — dulu dropdown kategori di mode Edit tampil
+  // "Pilih Kategori" walau subCategory.categoryId sudah benar. Penyebabnya
+  // balapan (race): nilai categoryId dipasang react-hook-form saat modal
+  // mount, tapi daftar <option> kategori baru tiba belakangan (async
+  // getCategoriesForSelect). Saat nilai dipasang, belum ada <option> yang
+  // cocok, jadi browser membuang pilihan itu — dan menambah <option>
+  // belakangan tidak mengembalikannya. Perbaikan: begitu daftar kategori
+  // selesai dimuat, pasang ulang nilai kategori induk saat ini (atau
+  // kategori yang sudah dipilih sebelumnya untuk mode Tambah).
+  // Kalau kategori induknya sudah tidak ada di daftar (mis. dihapus),
+  // nilai sengaja tidak dipasang supaya pengguna wajib memilih ulang.
+  const parentCategoryId = subCategory?.categoryId || preSelectedCategoryId || "";
+  useEffect(() => {
+    if (!loadingCategories && parentCategoryId) {
+      if (categories.some((category) => category.id === parentCategoryId)) {
+        setValue("categoryId", parentCategoryId);
+      }
+    }
+  }, [loadingCategories, categories, parentCategoryId, setValue]);
 
   const onSubmit = async (data: { name: string; description: string; categoryId: string }) => {
     setLoading(true);

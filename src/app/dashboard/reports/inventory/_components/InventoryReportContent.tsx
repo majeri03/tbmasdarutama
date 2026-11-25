@@ -1,6 +1,7 @@
 import ReportHeader from "../../_components/ReportHeader";
 import ReportFooter from "../../_components/ReportFooter";
 import ReportSummary, { ReportSectionTitle } from "../../_components/ReportSummary";
+import type { ReportStoreInfo } from "../../_components/report-types";
 import { formatCurrency } from "@/lib/utils/pdf-helpers";
 
 interface ProductData {
@@ -9,9 +10,12 @@ interface ProductData {
   name: string;
   currentStock: number;
   minStock: number;
-  category: { name: string };
+  // Kategori wajib di schema, supplier OPSIONAL (supplierId nullable) —
+  // keduanya ditype-kan nullable supaya satu produk tanpa supplier tidak
+  // menjatuhkan seluruh laporan (item 141).
+  category: { name: string } | null;
   subCategory: { name: string } | null;
-  supplier: { name: string };
+  supplier: { name: string } | null;
   productUnits: Array<{
     buyPrice: number;
     sellPrice: number;
@@ -31,15 +35,21 @@ interface InventoryReportContentProps {
   data: {
     products: ProductData[];
     summary: InventorySummary;
+    store?: ReportStoreInfo | null;
   };
 }
 
 export default function InventoryReportContent({ data }: InventoryReportContentProps) {
-  const { products, summary } = data;
+  const { products, summary, store } = data;
 
   return (
     <div id="print-content" className="bg-white p-8 min-h-[297mm] text-[#111111]">
-      <ReportHeader title="Laporan Stok Inventory" />
+      <ReportHeader
+        title="Laporan Stok Inventory"
+        storeName={store?.name}
+        storeAddress={store?.address}
+        storePhone={store?.phone}
+      />
 
       <ReportSummary
         title="Ringkasan"
@@ -89,8 +99,8 @@ export default function InventoryReportContent({ data }: InventoryReportContentP
                   <td className="px-3 py-2">{index + 1}</td>
                   <td className="px-3 py-2 font-mono text-xs">{product.code}</td>
                   <td className="px-3 py-2">{product.name}</td>
-                  <td className="px-3 py-2 text-xs">{product.category.name}</td>
-                  <td className="px-3 py-2 text-xs">{product.supplier.name}</td>
+                  <td className="px-3 py-2 text-xs">{product.category?.name ?? "—"}</td>
+                  <td className="px-3 py-2 text-xs">{product.supplier?.name ?? "—"}</td>
                   <td className="px-3 py-2 text-center font-semibold tabular-nums">{product.currentStock}</td>
                   <td className="px-3 py-2 text-center tabular-nums text-[#6B7280]">{product.minStock}</td>
                   <td className="px-3 py-2 text-right tabular-nums">
@@ -107,7 +117,7 @@ export default function InventoryReportContent({ data }: InventoryReportContentP
         </table>
       </div>
 
-      <ReportFooter />
+      <ReportFooter storeName={store?.name ?? undefined} />
     </div>
   );
 }

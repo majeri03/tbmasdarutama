@@ -1,7 +1,9 @@
 import ReportHeader from "../../_components/ReportHeader";
 import ReportFooter from "../../_components/ReportFooter";
 import ReportSummary, { ReportSectionTitle } from "../../_components/ReportSummary";
-import { formatCurrency, formatDate } from "@/lib/utils/pdf-helpers";
+import type { ReportStoreInfo } from "../../_components/report-types";
+import { formatDateWita } from "../../_components/report-datetime";
+import { formatCurrency } from "@/lib/utils/pdf-helpers";
 
 interface FinancialSummary {
   totalRevenue: number;
@@ -19,18 +21,25 @@ interface FinancialSummary {
 interface FinancialReportContentProps {
   data: {
     summary: FinancialSummary;
+    store?: ReportStoreInfo | null;
   };
   dateFrom: string;
   dateTo: string;
 }
 
 export default function FinancialReportContent({ data, dateFrom, dateTo }: FinancialReportContentProps) {
-  const { summary } = data;
-  const period = `${formatDate(dateFrom)} - ${formatDate(dateTo)}`;
+  const { summary, store } = data;
+  const period = `${formatDateWita(dateFrom)} - ${formatDateWita(dateTo)}`;
 
   return (
     <div id="print-content" className="bg-white p-8 min-h-[297mm] text-[#111111]">
-      <ReportHeader title="Laporan Keuangan" period={period} />
+      <ReportHeader
+        title="Laporan Keuangan"
+        period={period}
+        storeName={store?.name}
+        storeAddress={store?.address}
+        storePhone={store?.phone}
+      />
 
       <ReportSummary
         title="Pendapatan"
@@ -103,7 +112,7 @@ export default function FinancialReportContent({ data, dateFrom, dateTo }: Finan
         </table>
       </div>
 
-      <ReportFooter />
+      <ReportFooter storeName={store?.name ?? undefined} />
     </div>
   );
 }

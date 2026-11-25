@@ -68,6 +68,37 @@ const isOwnAppUrl = (value: string | undefined): value is string => {
 
 const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
+// Nama cookie sesi Auth.js v5 — di https namanya
+// "__Secure-authjs.session-token", di http "authjs.session-token".
+const SESSION_COOKIE_NAMES = [
+  "__Secure-authjs.session-token",
+  "authjs.session-token",
+] as const;
+
+// FIX (25 Nov 2026, WS-A, batch 1a): hapus cookie sesi yang masih
+// dikirim browser padahal sesi sudah TIDAK valid menurut middleware
+// (req.auth null) — mis. token kedaluwarsa, tidak bisa didekripsi, atau
+// token lawas tanpa klaim tv. Hanya dipanggil kalau req.auth null:
+// sesi yang masih terlihat valid di edge TIDAK disentuh, karena edge
+// tidak bisa membedakan sesi valid dari sesi yang tokenVersion-nya
+// sudah dicabut (cek tv di DB hanya jalan di runtime Node — lihat
+// callback jwt di src/lib/auth.ts). Menghapus cookie sesi yang
+// terlihat valid akan mengeluarkan user yang sebenarnya masih login.
+// Sesi basi yang lolos edge (tv dicabut) dibersihkan di halaman /login
+// lewat GET /api/auth/logout (lihat src/app/login/page.tsx).
+const clearStaleSessionCookies = (
+  req: NextRequest,
+  response: NextResponse
+): void => {
+  const hasStaleCookie = SESSION_COOKIE_NAMES.some((name) =>
+    req.cookies.has(name)
+  );
+  if (!hasStaleCookie) return;
+  for (const name of SESSION_COOKIE_NAMES) {
+    response.cookies.delete(name);
+  }
+};
+
 // Pentest fix (Nov 2026, CSRF): mutasi /api dari origin browser yang tidak
 // dikenal ditolak. Request TANPA header Origin (APK native, server-to-server,
 // curl, cron Vercel) tetap lolos — yang dicegah adalah situs jahat yang
@@ -151,14 +182,40 @@ export default auth((req: NextRequest & { auth: Session | null }) => {
   const isLoggedIn = !!req.auth;
   const path = req.nextUrl.pathname;
 
-  // Redirect Dashboard Setelah Login
-  if (path === "/login" && isLoggedIn) {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
+  // FIX (25 Nov 2026, WS-A, batch 1a): /login TIDAK LAGI memantul ke
+  // /dashboard dari middleware. Middleware jalan di Edge Runtime dan
+  // TIDAK BISA menjalankan cek tokenVersion di DB (Prisma melempar di
+  // edge; callback jwt di src/lib/auth.ts sengaja fail-open di sana),
+  // jadi sesi basi / sudah dicabut tetap terlihat "login" di sini.
+  // Dulu: /login dengan cookie basi memantul ke /dashboard, lalu
+  // auth() di Server Component (Node, cek DB penuh) menolak dan
+  // redirect balik ke /login → loop. Keputusan "sudah login" sekarang
+  // hanya diambil halaman /login sendiri (src/app/login/page.tsx,
+  // runtime Node, auth() penuh). Middleware di sini hanya
+  // membersihkan cookie sesi yang SUDAH TERBUKTI tidak valid di edge
+  // (req.auth null) supaya browser berhenti mengirimnya.
+  if (path === "/login") {
+    if (!isLoggedIn) {
+      const response = NextResponse.next();
+      clearStaleSessionCookies(req, response);
+      return response;
+    }
+    return NextResponse.next();
   }
 
-  // Redirect ke login jika belum login dan akses protected route 
+  // Redirect ke login jika belum login dan akses protected route.
+  // URL dibangun dari req.url (host request) — JANGAN hardcode domain
+  // di sini. Redirect /dashboard tanpa login yang dulu mendarat di
+  // https://masdarutama.tech/login TIDAK berasal dari baris ini
+  // (baris ini selalu memakai host request); sumber domain lama adalah
+  // env AUTH_URL / NEXTAUTH_URL di Vercel yang dipakai Auth.js untuk
+  // redirect-nya sendiri (lihat NOTES WS-A + src/app/api/auth/
+  // [...nextauth]/route.ts). Cookie sesi basi ikut dibersihkan pada
+  // respons redirect ini supaya tidak kembali ke /login.
   if (!isLoggedIn && path.startsWith("/dashboard")) {
-    return NextResponse.redirect(new URL("/login", req.url));
+    const response = NextResponse.redirect(new URL("/login", req.url));
+    clearStaleSessionCookies(req, response);
+    return response;
   }
 
   return NextResponse.next();

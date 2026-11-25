@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, Upload } from "lucide-react";
 import Link from "next/link";
 import { ProductStats } from "./ProductStats";
@@ -105,6 +106,7 @@ export function ProductsClient({
   suppliers,
   units,
 }: ProductsClientProps) {
+  const router = useRouter();
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [toast, setToast] = useState<{
@@ -172,16 +174,21 @@ export function ProductsClient({
   };
 
   // Handle success
+  // Item 64 (batch 2): daftar HARUS refresh otomatis setelah simpan.
+  // Sebelumnya refresh memakai window.location.href tertunda 1,5 detik
+  // ke "/dashboard/products?t=..." — full reload yang membuang filter /
+  // halaman aktif, dan tabel (state lokal di ProductTable) tetap
+  // menampilkan data lama sampai reload itu terjadi. Sekarang pakai
+  // router.refresh(): server component di-fetch ulang dengan URL yang
+  // sama (filter + halaman tetap), lalu ProductTable menyinkronkan
+  // state lokalnya dari initialProducts yang baru.
   const handleSuccess = (message: string) => {
     setToast({
       show: true,
       message,
       type: "success",
     });
-    // Refresh page after success
-    setTimeout(() => {
-      window.location.href = "/dashboard/products?t=" + Date.now();
-    }, 1500);
+    router.refresh();
   };
 
   // Handle error

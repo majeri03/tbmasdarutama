@@ -16,7 +16,7 @@ import { getPOSProducts, getProductByBarcode, getPOSCustomers } from "@/lib/acti
 // DEPENDENSI PKG-A (lihat pkg-c-NOTES.md): ensureUmumCustomer belum ada di
 // HEAD ini — disediakan paket PKG-A di src/lib/actions/customer.actions.ts.
 import { ensureUmumCustomer } from "@/lib/actions/customer.actions";
-import { CustomerType } from "@prisma/client";
+import { CustomerType, type Customer } from "@prisma/client";
 import { validateStock, getCustomerDiscount } from "@/lib/utils/pos-helpers";
 import {
     loadParkedCarts,
@@ -193,6 +193,37 @@ export default function POSPage() {
     const handleSearch = useCallback((query: string) => {
         loadProducts(query);
     }, [loadProducts]);
+
+    // Handle Enter di kolom pencarian utama (BUG #25, batch 1b): kalau
+    // pencarian cocok persis dengan satu kode/barcode, atau hasil yang
+    // tampil tinggal satu produk, produk itu langsung masuk keranjang.
+    // Kalau cocok lebih dari satu dan tidak ada yang persis, jangan tambah
+    // apa-apa — grid yang sudah terfilter tetap ditampilkan untuk dipilih
+    // manual. Cek grid dulu, lalu cari ulang sebagai fallback kalau Enter
+    // ditekan sebelum debounce pencarian (500ms) sempat memuat grid.
+    const handleSearchEnter = async (query: string) => {
+        const q = query.trim();
+        if (!q) return;
+        const lowerQ = q.toLowerCase();
+        const findMatch = (list: POSProduct[]) => {
+            const exact = list.find(
+                (p) => p.code.toLowerCase() === lowerQ || (p.barcode?.toLowerCase() === lowerQ)
+            );
+            if (exact) return exact;
+            if (list.length === 1) return list[0];
+            return null;
+        };
+        const fromGrid = findMatch(products);
+        if (fromGrid) {
+            handleAddToCart(fromGrid);
+            return;
+        }
+        const result = await getPOSProducts(q);
+        if (result.success && result.data) {
+            const fresh = findMatch(result.data);
+            if (fresh) handleAddToCart(fresh);
+        }
+    };
 
     // Handle barcode scan
     const handleBarcodeScanned = async (barcode: string) => {
@@ -380,10 +411,19 @@ export default function POSPage() {
             loadProducts();
         };
 
-        // Handle quick add customer
-        const handleQuickAddSuccess = () => {
-            // Reload customer list
-            loadDefaultCustomer();
+        // Handle quick add customer: customer yang baru dibuat langsung
+        // menjadi customer terpilih (BUG #28, batch 1b). Sebelumnya handler
+        // ini memanggil loadDefaultCustomer() yang me-reset pilihan ke
+        // customer Umum — customer baru (mis. TEST-Grosir) tidak pernah
+        // terpilih walau toast sukses muncul.
+        const handleQuickAddSuccess = (customer: Customer) => {
+            setSelectedCustomer({
+                ...customer,
+                createdAt: new Date(customer.createdAt),
+                updatedAt: new Date(customer.updatedAt),
+                points: customer.points ?? 0,
+                discountPercent: getCustomerDiscount(customer.type),
+            });
             setShowQuickAddCustomer(false);
         };
 
@@ -444,6 +484,7 @@ export default function POSPage() {
                         ref={searchRef}
                         onSearch={handleSearch}
                         onBarcodeScanned={handleBarcodeScanned}
+                        onSearchEnter={handleSearchEnter}
                         isLoading={isLoadingProducts}
                     />
 

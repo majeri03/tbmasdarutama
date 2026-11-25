@@ -6,6 +6,7 @@ import DateRangeFilter from "../_components/DateRangeFilter";
 import ReportDownloadButton from "../_components/ReportDownloadButton";
 import PurchasesReportContent from "./_components/PurchasesReportContent";
 import { getPurchasesReport } from "@/lib/actions/report.actions";
+import type { ReportStoreInfo } from "../_components/report-types";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { useReactToPrint } from 'react-to-print';
 interface PurchaseData {
@@ -15,8 +16,8 @@ interface PurchaseData {
   grandTotal: number;
   paidAmount: number;
   status: string;
-  supplier: { name: string };
-  admin: { name: string };
+  supplier: { name: string } | null;
+  admin: { name: string } | null;
 }
 
 interface PurchasesSummary {
@@ -31,17 +32,20 @@ interface PurchasesSummary {
 interface PurchasesReportData {
   purchases: PurchaseData[];
   summary: PurchasesSummary;
+  store?: ReportStoreInfo | null;
 }
 export default function PurchasesReportPage() {
   const printRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [reportData, setReportData] = useState<PurchasesReportData | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const today = new Date();
   const [dateFrom, setDateFrom] = useState(format(startOfMonth(today), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState(format(endOfMonth(today), "yyyy-MM-dd"));
 
   const handleGenerateReport = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const result = await getPurchasesReport({
         dateFrom: new Date(dateFrom),
@@ -50,9 +54,12 @@ export default function PurchasesReportPage() {
 
       if (result.success && result.data) {
         setReportData(result.data as unknown as PurchasesReportData);
+      } else {
+        setError(result.error || "Gagal mengambil data laporan pembelian");
       }
     } catch (error) {
       console.error(error);
+      setError("Terjadi kesalahan saat mengambil data laporan");
     } finally {
       setIsLoading(false);
     }
@@ -101,6 +108,9 @@ export default function PurchasesReportPage() {
       ) : (
         <div className="text-center py-12">
           <p className="text-gray-500">Pilih periode dan klik Tampilkan untuk generate laporan</p>
+          {error && (
+            <p className="mt-4 text-sm text-red-700">{error}</p>
+          )}
         </div>
       )}
     </ReportLayout>

@@ -87,6 +87,16 @@ export default function DebtNotificationTab() {
   const [lastLog, setLastLog] = useState<LastLogRow | null>(null);
   const [sendingTest, setSendingTest] = useState(false);
 
+  // FIX WS-K (25 Nov 2026, batch 6 item 174/176): ganti window.confirm
+  // dengan modal di dalam aplikasi + simpan hasil kirim tes di layar.
+  // window.confirm tidak muncul di browser tes otomatis (auto-dismiss)
+  // dan tidak bisa diandalkan di WebView/APK — itulah kenapa tombol
+  // Hapus diklik 3x tanpa modal/toast. testResult bertahan di layar
+  // (toast hanya 3 detik) supaya hasil kirim tes selalu terlihat.
+  const [deletingRecipient, setDeletingRecipient] = useState<RecipientRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; at: Date; message: string } | null>(null);
+
   const { toast, showToast, hideToast } = useToast();
 
   useEffect(() => {
@@ -178,7 +188,15 @@ export default function DebtNotificationTab() {
         showToast(result.message || "Penerima berhasil ditambahkan", "success");
         setNewEmail("");
         setNewName("");
-        fetchRecipients();
+        // FIX WS-K (25 Nov 2026, batch 6 item 7): daftar harus refresh
+        // otomatis setelah tambah. Sebelumnya fetchRecipients() dipanggil
+        // tanpa await (fire-and-forget) sehingga daftar kadang terlihat
+        // belum berubah sampai reload. Sekarang: tampilkan dulu hasil
+        // tambah secara optimistis, lalu refresh dari server.
+        if (result.data) {
+          setRecipients((prev) => [...prev, result.data as RecipientRow]);
+        }
+        await fetchRecipients();
       } else {
         throw new Error(result.error || "Gagal menambahkan penerima");
       }
@@ -194,23 +212,41 @@ export default function DebtNotificationTab() {
       const result = await toggleDebtRecipient(id);
       if (!result.success) throw new Error(result.error || "Gagal mengubah status penerima");
       showToast(result.message || "Status penerima diubah", "success");
-      fetchRecipients();
+      // FIX WS-K (25 Nov 2026, batch 6 item 7): refresh daftar otomatis
+      // setelah toggle (optimistis dulu, lalu refresh dari server).
+      setRecipients((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, isActive: !r.isActive } : r))
+      );
+      await fetchRecipients();
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Gagal mengubah status penerima", "error");
     }
   };
 
-  const handleDeleteRecipient = async (id: string, email: string) => {
-    if (!window.confirm(`Hapus "${email}" dari daftar penerima email pengingat utang?`)) {
-      return;
-    }
+  // FIX WS-K (25 Nov 2026, batch 6 item 174): hapus penerima pakai
+  // modal di dalam aplikasi, BUKAN window.confirm. window.confirm
+  // tidak muncul di browser tes otomatis (dialog auto-dismiss -> klik
+  // diam-diam batal, tanpa toast) dan tidak bisa diandalkan di
+  // WebView/APK. Pola yang sama menjelaskan item 166 (hapus salesman)
+  // yang juga pakai window.confirm dan gagal dengan gejala identik.
+  const handleDeleteRecipient = (recipient: RecipientRow) => {
+    setDeletingRecipient(recipient);
+  };
+
+  const handleConfirmDeleteRecipient = async () => {
+    if (!deletingRecipient) return;
+    setDeleting(true);
     try {
-      const result = await deleteDebtRecipient(id);
+      const result = await deleteDebtRecipient(deletingRecipient.id);
       if (!result.success) throw new Error(result.error || "Gagal menghapus penerima");
       showToast(result.message || "Penerima berhasil dihapus", "success");
-      fetchRecipients();
+      setRecipients((prev) => prev.filter((r) => r.id !== deletingRecipient.id));
+      setDeletingRecipient(null);
+      await fetchRecipients();
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Gagal menghapus penerima", "error");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -219,13 +255,25 @@ export default function DebtNotificationTab() {
     try {
       const result = await sendTestDebtEmail();
       if (result.success) {
-        showToast(result.message || "Email tes terkirim", "success");
+        // FIX WS-K (25 Nov 2026, batch 6 item 176): hasil kirim tes
+        // dicatat di layar (testResult) BUKAN hanya toast 3 detik —
+        // di tes batch 6 tombol sempat "Mengirim..." lalu normal tanpa
+        // konfirmasi apa pun yang terlihat. Catatan: email TES sengaja
+        // TIDAK menulis DebtEmailLog (dedup harian di
+        // NotificationService membaca tabel itu — satu baris tes akan
+        // menahan email ringkasan asli hari itu), jadi "Pengiriman
+        // Terakhir" di bawah tetap hanya menampilkan kirim harian asli.
+        const message = result.message || "Email tes terkirim";
+        showToast(message, "success");
+        setTestResult({ ok: true, at: new Date(), message });
         fetchLastLog();
       } else {
         throw new Error(result.error || "Gagal mengirim email tes");
       }
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Gagal mengirim email tes", "error");
+      const message = error instanceof Error ? error.message : "Gagal mengirim email tes";
+      showToast(message, "error");
+      setTestResult({ ok: false, at: new Date(), message });
     } finally {
       setSendingTest(false);
     }
@@ -410,7 +458,7 @@ export default function DebtNotificationTab() {
                     <td className="py-2 text-right whitespace-nowrap">
                       <button
                         type="button"
-                        onClick={() => handleDeleteRecipient(r.id, r.email)}
+                        onClick={() => handleDeleteRecipient(r)}
                         className="btn-secondary !py-1 !px-3 text-xs inline-flex items-center gap-1"
                       >
                         <Trash2 className="w-3 h-3" /> Hapus
@@ -437,11 +485,45 @@ export default function DebtNotificationTab() {
               Terakhir terkirim <strong>{formatTanggal(lastLog.sentAt)}</strong> ke{" "}
               <strong>{lastLog.recipientCount} penerima</strong>: {lastLog.customerOverdue} piutang
               jatuh tempo ({formatRupiah(lastLog.totalCustomer)}) dan {lastLog.supplierOverdue} utang
-              supplier jatuh tempo ({formatRupiah(lastLog.totalSupplier)}).
+              supplier jatuh tempo ({formatRupiah(lastLog.totalSupplier)}), plus{" "}
+              {lastLog.customerDueSoon} piutang dan {lastLog.supplierDueSoon} utang supplier yang
+              akan jatuh tempo.
             </p>
           </div>
         ) : (
-          <p className="text-sm text-gray-500">Belum pernah ada email ringkasan utang yang terkirim.</p>
+          // FIX WS-K (25 Nov 2026, batch 6 item 175): keadaan "belum
+          // pernah terkirim" ditulis jelas + alasannya, supaya tidak
+          // terlihat seperti bagian yang rusak/kosong. Email harian
+          // hanya terkirim pada hari ada utang yang tepat mencapai
+          // tonggak pengingat — jadi kosong itu keadaan normal kalau
+          // belum ada tonggak yang tercapai / belum ada penerima aktif.
+          <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+            <p className="text-sm text-gray-700 font-medium">Belum pernah ada email ringkasan utang yang terkirim.</p>
+            <p className="text-sm text-gray-500 mt-1">
+              Email ringkasan harian hanya dikirim (pukul 08:00 WITA) pada hari ada utang yang tepat
+              mencapai salah satu tonggak pengingat di atas, dan hanya ke{" "}
+              {recipients.filter((r) => r.isActive).length} penerima aktif saat ini. Pakai tombol
+              &ldquo;Kirim Email Tes&rdquo; di bawah untuk memastikan pengiriman email berfungsi.
+            </p>
+          </div>
+        )}
+        {testResult && (
+          <div
+            className={`flex items-start gap-3 p-4 rounded-lg border ${
+              testResult.ok ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
+            }`}
+          >
+            {testResult.ok ? (
+              <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+            ) : (
+              <ShieldAlert className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+            )}
+            <p className={`text-sm ${testResult.ok ? "text-green-800" : "text-red-800"}`}>
+              <strong>{testResult.ok ? "Email tes terkirim" : "Email tes gagal"}</strong>{" "}
+              ({formatTanggal(testResult.at)}): {testResult.message} Email tes tidak masuk ke
+              &ldquo;Pengiriman Terakhir&rdquo; di atas supaya tidak mengganggu jadwal harian.
+            </p>
+          </div>
         )}
         <p className="text-sm text-gray-600">
           Email tes memakai data utang saat ini (atau satu baris contoh kalau belum ada utang),
@@ -453,6 +535,49 @@ export default function DebtNotificationTab() {
           Kirim Email Tes
         </button>
       </div>
+
+      {/* ---------- Modal konfirmasi hapus penerima (item 174) ---------- */}
+      {deletingRecipient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 bg-red-600">
+              <h3 className="font-bold text-white text-lg">Hapus Penerima Email?</h3>
+            </div>
+            <div className="p-6 space-y-5">
+              <p className="text-sm text-gray-700 leading-relaxed">
+                Hapus <strong>{deletingRecipient.email}</strong> dari daftar penerima email pengingat
+                utang? Alamat ini tidak akan lagi menerima ringkasan utang harian.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDeletingRecipient(null)}
+                  disabled={deleting}
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 font-medium text-sm transition-colors disabled:opacity-40"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDeleteRecipient}
+                  disabled={deleting}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm transition-all disabled:opacity-50"
+                >
+                  {deleting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Menghapus...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" /> Ya, Hapus
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

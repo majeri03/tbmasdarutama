@@ -2,7 +2,7 @@
 
 import { Package } from "lucide-react";
 import Image from "next/image";
-// formatCurrency dan Tag tidak perlu diimport lagi karena harga dihapus
+import { formatCurrency } from "@/lib/utils";
 
 interface Product {
   id: string;
@@ -20,7 +20,7 @@ interface Props {
 
 export default function LandingProducts({ products }: Props) {
   return (
-    <section id="products" className="py-20 relative">
+    <section id="products" className="py-20 relative scroll-mt-24">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute inset-0" style={{
@@ -36,57 +36,95 @@ export default function LandingProducts({ products }: Props) {
           </h2>
           <div className="w-24 h-1 bg-gradient-to-r from-blue-600 to-purple-600 mx-auto rounded-full mb-6" />
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Pilihan terbaik untuk kebutuhan bangunan Anda
+            Pilihan terbaik untuk kebutuhan bangunan Anda — harga tertera per satuan
           </p>
         </div>
 
-        {/* Products Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {products.map((product, index) => (
-            <div
-              key={product.id}
-              className="glass-card overflow-hidden hover:scale-105 transition-all duration-300 animate-slide-up"
-              style={{ animationDelay: `${index * 100}ms` }}
-            >
-              {/* Image */}
-              <div className="relative h-48 bg-gray-100">
-                {product.imageUrl ? (
-                  <Image
-                    src={product.imageUrl}
-                    alt={product.name}
-                    fill
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Package className="w-16 h-16 text-gray-400" />
-                  </div>
-                )}
-
-                {/* Category Badge */}
-                <div className="absolute top-3 left-3 glass-card px-3 py-1">
-                  <span className="text-xs font-semibold text-gray-800">
-                    {product.category.name}
-                  </span>
-                </div>
-              </div>
-
-              {/* Content - Hanya Nama Saja */}
-              <div className="p-4 text-center">
-                <h3 className="font-bold text-lg text-gray-800 line-clamp-2">
-                  {product.name}
-                </h3>
-              </div>
+        {products.length === 0 ? (
+          // Section tetap dirender (dengan id="products") supaya tautan nav
+          // "Produk" tidak pernah mengarah ke anchor yang tidak ada.
+          <div className="glass-card max-w-xl mx-auto p-10 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              <Package className="w-8 h-8 text-white" />
             </div>
-          ))}
-        </div>
+            <h3 className="font-bold text-xl text-gray-800 mb-2">
+              Katalog produk segera hadir
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Produk unggulan belum tersedia saat ini. Hubungi kami untuk
+              daftar harga terbaru.
+            </p>
+            <a href="#contact" className="btn-primary px-6 py-3">
+              Hubungi Kami
+            </a>
+          </div>
+        ) : (
+          <>
+            {/* Products Grid */}
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {products.map((product, index) => (
+                <div
+                  key={product.id}
+                  className="glass-card overflow-hidden hover:scale-105 transition-all duration-300 animate-slide-up"
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
+                  {/* Image */}
+                  <div className="relative h-48 bg-gray-100">
+                    {product.imageUrl ? (
+                      <Image
+                        src={product.imageUrl}
+                        alt={product.name}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Package className="w-16 h-16 text-gray-400" />
+                      </div>
+                    )}
 
-        {/* CTA */}
-        <div className="text-center mt-12 animate-slide-up animation-delay-600">
-          <a href="#contact" className="btn-primary px-8 py-4 text-lg">
-            Hubungi Kami untuk Info Lebih Lanjut
-          </a>
-        </div>
+                    {/* Category Badge */}
+                    <div className="absolute top-3 left-3 glass-card px-3 py-1">
+                      <span className="text-xs font-semibold text-gray-800">
+                        {product.category.name}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Content: nama + deskripsi + harga */}
+                  <div className="p-4">
+                    <h3 className="font-bold text-lg text-gray-800 line-clamp-2">
+                      {product.name}
+                    </h3>
+                    {product.description && (
+                      <p className="text-sm text-gray-500 line-clamp-2 mt-1">
+                        {product.description}
+                      </p>
+                    )}
+                    <p className="mt-3 text-lg font-bold text-blue-600">
+                      {product.sellingPrice > 0
+                        ? formatCurrency(product.sellingPrice)
+                        : "Hubungi kami"}
+                      {product.sellingPrice > 0 && (
+                        <span className="text-sm font-medium text-gray-500">
+                          {" "}
+                          / {product.unit.name}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* CTA */}
+            <div className="text-center mt-12 animate-slide-up animation-delay-600">
+              <a href="#contact" className="btn-primary px-8 py-4 text-lg">
+                Hubungi Kami untuk Info Lebih Lanjut
+              </a>
+            </div>
+          </>
+        )}
       </div>
     </section>
   );

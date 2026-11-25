@@ -5,6 +5,7 @@ import ReportLayout from "../_components/ReportLayout";
 import ReportDownloadButton from "../_components/ReportDownloadButton";
 import InventoryReportContent from "./_components/InventoryReportContent";
 import { getInventoryReport } from "@/lib/actions/report.actions";
+import type { ReportStoreInfo } from "../_components/report-types";
 import { useReactToPrint } from 'react-to-print';
 
 // Tambah setelah import
@@ -14,9 +15,9 @@ interface ProductData {
     name: string;
     currentStock: number;
     minStock: number;
-    category: { name: string };
+    category: { name: string } | null;
     subCategory: { name: string } | null;
-    supplier: { name: string };
+    supplier: { name: string } | null;
     productUnits: Array<{
         buyPrice: number;
         sellPrice: number;
@@ -35,23 +36,29 @@ interface InventorySummary {
 interface InventoryReportData {
     products: ProductData[];
     summary: InventorySummary;
+    store?: ReportStoreInfo | null;
 }
 
 export default function InventoryReportPage() {
     const printRef = useRef<HTMLDivElement>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [reportData, setReportData] = useState<InventoryReportData | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     const handleGenerateReport = async () => {
         setIsLoading(true);
+        setError(null);
         try {
             const result = await getInventoryReport({});
 
             if (result.success && result.data) {
                 setReportData(result.data as unknown as InventoryReportData);
+            } else {
+                setError(result.error || "Gagal mengambil data laporan inventory");
             }
         } catch (error) {
             console.error(error);
+            setError("Terjadi kesalahan saat mengambil data laporan");
         } finally {
             setIsLoading(false);
         }
@@ -103,6 +110,9 @@ export default function InventoryReportPage() {
                     <button onClick={handleGenerateReport} className="inline-flex items-center gap-2 rounded-lg bg-[#111111] px-4 py-2 text-sm font-semibold text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-50">
                         Generate Laporan
                     </button>
+                    {error && (
+                        <p className="mt-4 text-sm text-red-700">{error}</p>
+                    )}
                 </div>
             )}
         </ReportLayout>

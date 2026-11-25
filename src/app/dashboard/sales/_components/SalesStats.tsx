@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { getTodaySalesStats } from "@/lib/actions/sale.actions";
 import { ShoppingCart, TrendingUp, Clock, DollarSign } from "lucide-react";
 
-export function SalesStats() {
+export function SalesStats({ refreshKey = 0 }: { refreshKey?: number }) {
   const [stats, setStats] = useState({
     totalSales: 0,
     totalRevenue: 0,
@@ -13,9 +13,14 @@ export function SalesStats() {
   });
   const [loading, setLoading] = useState(true);
 
+  // WS-D item 46: dulu useEffect([]) — kartu hanya dimuat sekali saat
+  // halaman dibuka, sehingga setelah penjualan baru dibuat/dibatalkan kartu
+  // tampil stale. Halaman induk menaikkan refreshKey setiap kali daftar
+  // berhasil dimuat ulang, supaya kartu ikut termuat ulang.
   useEffect(() => {
     loadStats();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]);
 
   const loadStats = async () => {
     try {
@@ -71,27 +76,36 @@ export function SalesStats() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      {statCards.map((stat, index) => {
-        const Icon = stat.icon;
-        return (
-          <div
-            key={index}
-            className="glass-card-hover p-6 animate-slide-up"
-            style={{ animationDelay: `${index * 100}ms` }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-gray-600">{stat.title}</h3>
-              <div
-                className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg`}
-              >
-                <Icon className="w-6 h-6 text-white" />
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {statCards.map((stat, index) => {
+          const Icon = stat.icon;
+          return (
+            <div
+              key={index}
+              className="glass-card-hover p-6 animate-slide-up"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-medium text-gray-600">{stat.title}</h3>
+                <div
+                  className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center shadow-lg`}
+                >
+                  <Icon className="w-6 h-6 text-white" />
+                </div>
               </div>
+              <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
             </div>
-            <p className="text-2xl font-bold text-gray-800">{stat.value}</p>
-          </div>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
+      {/* WS-D item 46 + 57: jelaskan apa yang dihitung kartu ini, supaya
+          angkanya bisa dicocokkan dengan daftar di bawahnya. */}
+      <p className="text-xs text-gray-500 -mt-4 mb-2">
+        Total &amp; pendapatan hanya menghitung penjualan aktif (Selesai +
+        Pending). Penjualan yang Dibatalkan atau di-Retur tidak dihitung.
+        &ldquo;Hari Ini&rdquo; memakai waktu WITA.
+      </p>
+    </>
   );
 }

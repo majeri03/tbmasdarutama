@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { CustomersClient } from "./_components/CustomersClient";
-import { CustomerType, Prisma } from "@prisma/client";
+import { CustomerType, DebtStatus, Prisma } from "@prisma/client";
 
 export const metadata: Metadata = {
   title: "Customer | TB Masdar Utama",
@@ -81,15 +81,25 @@ export default async function CustomersPage({ searchParams }: PageProps) {
   ]);
 
   // Fetch statistics
-  const [totalCustomers, activeCustomers, inactiveCustomers] =
+  const [totalCustomers, activeCustomers, inactiveCustomers, totalDebtsAgg] =
     await Promise.all([
       prisma.customer.count(),
       prisma.customer.count({ where: { isActive: true } }),
       prisma.customer.count({ where: { isActive: false } }),
+      // WS-F item 87 — dulu totalDebts hardcode 0 (TODO). Sekarang jumlah
+      // SISA piutang yang benar-benar belum dibayar: semua utang customer
+      // berstatus UNPAID / PARTIAL / OVERDUE. Utang PAID sisa 0, jadi tidak
+      // memengaruhi jumlah; pola yang sama seperti totalActive di
+      // getCustomerDebtStatistics.
+      prisma.customerDebt.aggregate({
+        _sum: { remainingDebt: true },
+        where: {
+          status: { in: [DebtStatus.UNPAID, DebtStatus.PARTIAL, DebtStatus.OVERDUE] },
+        },
+      }),
     ]);
 
-  // TODO: Calculate total debts when debt management is implemented
-  const totalDebts = 0;
+  const totalDebts = Number(totalDebtsAgg._sum.remainingDebt || 0);
 
   return (
     <CustomersClient

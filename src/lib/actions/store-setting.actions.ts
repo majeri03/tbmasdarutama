@@ -107,3 +107,40 @@ export async function updateStoreSetting(formData: unknown, externalSession?: Au
     };
   }
 }
+
+// FIX WS-K (25 Nov 2026, batch 6 item 153): hapus logo toko dari UI.
+// updateStoreSetting sebenarnya sudah mengubah string kosong menjadi
+// null untuk logoUrl, tapi memanggilnya dari tombol hapus berarti ikut
+// menyimpan SELURUH isi form (termasuk edit yang belum disimpan user).
+// Aksi khusus ini hanya mengosongkan logoUrl + menghapus file lama dari
+// R2 (jalur yang sama seperti saat logo diganti). Logo asli dikembalikan
+// user sendiri dengan upload ulang — aksi ini TIDAK mengupload apa pun.
+export async function clearStoreLogo(externalSession?: AuthSession | null) {
+  try {
+    const session = externalSession || (await auth());
+    requirePermission(session, "MANAGE_STORE_SETTINGS");
+
+    const existing = await prisma.storeSetting.findFirst();
+    if (!existing || !existing.logoUrl) {
+      return { success: true, message: "Logo sudah kosong." };
+    }
+
+    const oldLogoUrl = existing.logoUrl;
+    await prisma.storeSetting.update({
+      where: { id: existing.id },
+      data: { logoUrl: null },
+    });
+    await deleteR2FileByUrl(oldLogoUrl);
+
+    revalidatePath("/dashboard/settings");
+    revalidatePath("/");
+
+    return { success: true, message: "Logo berhasil dihapus. Upload logo asli toko untuk mengembalikannya." };
+  } catch (error) {
+    console.error("[CLEAR_STORE_LOGO_ERROR]", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Gagal menghapus logo",
+    };
+  }
+}

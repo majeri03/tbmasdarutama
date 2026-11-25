@@ -1,7 +1,9 @@
 import ReportHeader from "../../_components/ReportHeader";
 import ReportFooter from "../../_components/ReportFooter";
 import ReportSummary, { ReportSectionTitle } from "../../_components/ReportSummary";
-import { formatCurrency, formatDate } from "@/lib/utils/pdf-helpers";
+import type { ReportStoreInfo } from "../../_components/report-types";
+import { formatDateWita } from "../../_components/report-datetime";
+import { formatCurrency } from "@/lib/utils/pdf-helpers";
 
 interface PurchaseData {
   id: string;
@@ -10,8 +12,8 @@ interface PurchaseData {
   grandTotal: number;
   paidAmount: number;
   status: string;
-  supplier: { name: string };
-  admin: { name: string };
+  supplier: { name: string } | null;
+  admin: { name: string } | null;
 }
 
 interface PurchasesSummary {
@@ -27,18 +29,25 @@ interface PurchasesReportContentProps {
   data: {
     purchases: PurchaseData[];
     summary: PurchasesSummary;
+    store?: ReportStoreInfo | null;
   };
   dateFrom: string;
   dateTo: string;
 }
 
 export default function PurchasesReportContent({ data, dateFrom, dateTo }: PurchasesReportContentProps) {
-  const { purchases, summary } = data;
-  const period = `${formatDate(dateFrom)} - ${formatDate(dateTo)}`;
+  const { purchases, summary, store } = data;
+  const period = `${formatDateWita(dateFrom)} - ${formatDateWita(dateTo)}`;
 
   return (
     <div id="print-content" className="bg-white p-8 min-h-[297mm] text-[#111111]">
-      <ReportHeader title="Laporan Pembelian" period={period} />
+      <ReportHeader
+        title="Laporan Pembelian"
+        period={period}
+        storeName={store?.name}
+        storeAddress={store?.address}
+        storePhone={store?.phone}
+      />
 
       <ReportSummary
         title="Ringkasan"
@@ -80,9 +89,9 @@ export default function PurchasesReportContent({ data, dateFrom, dateTo }: Purch
               <tr key={purchase.id} className="border-b border-gray-200 even:bg-[#FAFAFA]">
                 <td className="px-3 py-2">{index + 1}</td>
                 <td className="px-3 py-2 font-mono text-xs">{purchase.invoiceNumber}</td>
-                <td className="px-3 py-2">{formatDate(purchase.purchaseDate)}</td>
-                <td className="px-3 py-2">{purchase.supplier.name}</td>
-                <td className="px-3 py-2">{purchase.admin.name}</td>
+                <td className="px-3 py-2">{formatDateWita(purchase.purchaseDate)}</td>
+                <td className="px-3 py-2">{purchase.supplier?.name ?? "—"}</td>
+                <td className="px-3 py-2">{purchase.admin?.name ?? "—"}</td>
                 <td className="px-3 py-2 text-right font-semibold tabular-nums">
                   {formatCurrency(purchase.grandTotal)}
                 </td>
@@ -108,7 +117,7 @@ export default function PurchasesReportContent({ data, dateFrom, dateTo }: Purch
         </table>
       </div>
 
-      <ReportFooter />
+      <ReportFooter storeName={store?.name ?? undefined} />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getCurrentDateTime } from "@/lib/utils/pdf-helpers";
+import { getCurrentDateTimeWita } from "./report-datetime";
 import { getStoreSetting } from "@/lib/actions/store-setting.actions";
 
 /**
@@ -56,7 +56,7 @@ export default function ReportFooter({ storeName: storeNameProp }: { storeName?:
         </div>
       </div>
       <p className="mt-8 text-center text-xs text-[#6B7280]">
-        Dicetak: {getCurrentDateTime()}
+        Dicetak: {getCurrentDateTimeWita()}
         {storeName ? ` • ${storeName}` : ""}
       </p>
     </div>

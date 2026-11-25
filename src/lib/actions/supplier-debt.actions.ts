@@ -175,6 +175,11 @@ export async function getSupplierDebtStatistics() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    // FIX (25 Nov 2026, batch 8 item 225): sama seperti kartu piutang —
+    // filter "Bulan Ini" sebelumnya tanpa batas atas, jadi pembayaran
+    // bertanggal bulan depan ikut terhitung di bulan ini. Sekarang
+    // dibatasi ke bulan berjalan saja.
+    const firstDayOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
 
     const [activeDebts, overdueCount, paidThisMonth, totalActive] =
       await Promise.all([
@@ -192,7 +197,7 @@ export async function getSupplierDebtStatistics() {
           _sum: { amount: true },
           where: {
             supplierDebtId: { not: null },
-            paymentDate: { gte: firstDayOfMonth },
+            paymentDate: { gte: firstDayOfMonth, lt: firstDayOfNextMonth },
           },
         }),
         prisma.supplierDebt.aggregate({
@@ -303,6 +308,37 @@ export async function getSupplierDebtById(id: string, externalSession?: AuthSess
   }
 }
 
+// WS-F minor batch 5 — jam riwayat pembayaran selalu 08:00.
+// Sama seperti di customer-debt.actions.ts: modal bayar memakai
+// <input type="date"> sehingga "YYYY-MM-DD" diparse sebagai tengah malam
+// UTC (00:00Z = 08:00 WITA). Kalau paymentDate datang tepat tengah malam
+// UTC (= tanggal saja, tanpa jam), isi jamnya dengan jam sebenarnya saat
+// pembayaran dicatat (jam WITA saat ini dipasang pada tanggal yang
+// dipilih); kalau sudah membawa jam, dipakai apa adanya.
+const WITA_OFFSET_MS = 8 * 60 * 60 * 1000;
+function resolvePaymentDate(input: Date): Date {
+  const d = new Date(input);
+  if (Number.isNaN(d.getTime())) return new Date();
+  const isMidnightUtc =
+    d.getUTCHours() === 0 &&
+    d.getUTCMinutes() === 0 &&
+    d.getUTCSeconds() === 0 &&
+    d.getUTCMilliseconds() === 0;
+  if (!isMidnightUtc) return d;
+  const nowWita = new Date(Date.now() + WITA_OFFSET_MS);
+  return new Date(
+    Date.UTC(
+      d.getUTCFullYear(),
+      d.getUTCMonth(),
+      d.getUTCDate(),
+      nowWita.getUTCHours(),
+      nowWita.getUTCMinutes(),
+      nowWita.getUTCSeconds(),
+      nowWita.getUTCMilliseconds()
+    ) - WITA_OFFSET_MS
+  );
+}
+
 export async function addSupplierDebtPayment(input: AddSupplierPaymentInput, externalSession?: AuthSession | null) {
   try {
     // FIX PENTEST (22 Nov 2026, M18): sesi dari route (Bearer mobile).
@@ -391,7 +427,7 @@ export async function addSupplierDebtPayment(input: AddSupplierPaymentInput, ext
           supplierDebtId: validated.debtId,
           amount: validated.amount,
           paymentMethod: validated.paymentMethod,
-          paymentDate: validated.paymentDate,
+          paymentDate: resolvePaymentDate(validated.paymentDate),
           notes: validated.notes,
           adminId: userId,
         },

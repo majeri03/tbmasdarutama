@@ -18,33 +18,65 @@ interface Props {
 
 export default function LandingHero({ landing }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [failedIds, setFailedIds] = useState<ReadonlySet<string>>(new Set<string>());
+  const [paused, setPaused] = useState(false);
+
   const images = landing?.heroImages || [];
-  const hasImages = images.length > 0;
+  // Gambar yang URL-nya rusak disembunyikan; kalau semuanya rusak,
+  // carousel jatuh ke fallback gradien (bukan kotak/frame pecah).
+  const visibleImages = images.filter((img) => !failedIds.has(img.id));
+  const hasImages = visibleImages.length > 0;
 
   useEffect(() => {
-    if (!hasImages) return;
+    if (!hasImages || visibleImages.length < 2 || paused) return;
 
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % images.length);
+      setCurrentIndex((prev) => (prev + 1) % visibleImages.length);
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [hasImages, images.length]);
+  }, [hasImages, visibleImages.length, paused]);
+
+  // Kalau jumlah slide berubah (mis. ada gambar yang gagal dimuat),
+  // kembalikan indeks ke slide pertama agar tidak menunjuk slide kosong.
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [visibleImages.length]);
+
+  const handleImageError = (id: string) => {
+    setFailedIds((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  };
 
   const goToPrevious = () => {
-    setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+    setCurrentIndex((prev) =>
+      prev === 0 ? visibleImages.length - 1 : prev - 1
+    );
   };
 
   const goToNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % images.length);
+    setCurrentIndex((prev) => (prev + 1) % visibleImages.length);
   };
 
   return (
-    <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+    <section
+      id="home"
+      className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20 scroll-mt-24"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      {/* Keyframes lokal untuk animasi gradien fallback — sengaja di sini
+          agar tidak perlu menyentuh globals.css (bukan file workstream ini). */}
+      <style>{`@keyframes ws-o-hero-gradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }`}</style>
+
       {/* Background Carousel */}
       {hasImages ? (
         <>
-          {images.map((image, index) => (
+          {visibleImages.map((image, index) => (
             <div
               key={image.id}
               className={`absolute inset-0 transition-opacity duration-1000 ${
@@ -57,6 +89,7 @@ export default function LandingHero({ landing }: Props) {
                 fill
                 className="object-cover"
                 priority={index === 0}
+                onError={() => handleImageError(image.id)}
               />
               {/* Overlay gradient */}
               <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
@@ -64,7 +97,7 @@ export default function LandingHero({ landing }: Props) {
           ))}
 
           {/* Navigation Arrows */}
-          {images.length > 1 && (
+          {visibleImages.length > 1 && (
             <>
               <button
                 onClick={goToPrevious}
@@ -84,7 +117,7 @@ export default function LandingHero({ landing }: Props) {
 
               {/* Dots Indicator */}
               <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-                {images.map((_, index) => (
+                {visibleImages.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentIndex(index)}
@@ -101,8 +134,20 @@ export default function LandingHero({ landing }: Props) {
           )}
         </>
       ) : (
-        // Fallback gradient background
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500" />
+        // Fallback saat belum ada gambar hero (saat ini 0/10):
+        // gradien tetap, tapi dibuat hidup (bergerak pelan) + hiasan lembut,
+        // supaya hero tidak terlihat seperti banner statis yang "mati".
+        <>
+          <div
+            className="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500"
+            style={{
+              backgroundSize: "200% 200%",
+              animation: "ws-o-hero-gradient 12s ease-in-out infinite",
+            }}
+          />
+          <div className="absolute -top-24 -left-24 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-32 -right-16 w-96 h-96 bg-black/10 rounded-full blur-3xl" />
+        </>
       )}
 
       {/* Hero Content */}

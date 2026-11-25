@@ -128,7 +128,7 @@ export async function getDashboardStats() {
         LEFT JOIN units u ON pu."unitId" = u.id
         WHERE p."isActive" = true
           AND p."deletedAt" IS NULL
-          AND p."currentStock" < p."minStock"
+          AND p."currentStock" <= p."minStock"
         ORDER BY p."currentStock" ASC
         LIMIT 5
       `,
@@ -148,6 +148,20 @@ export async function getDashboardStats() {
       Number(totalDebt._sum.remainingDebt || 0),
       Number(lastMonthDebt._sum.remainingDebt || 0)
     );
+
+    // Isi hari tanpa penjualan dengan 0 agar grafik jujur: query GROUP BY di
+    // atas hanya mengembalikan hari yang ADA penjualannya, sehingga hari Rp0
+    // hilang dari grafik. Window = 7 hari kalender terakhir (hari ini - 6).
+    const chartByDate = new Map<string, number>();
+    for (const item of salesChart as Array<{ date: Date; total: number }>) {
+      chartByDate.set(item.date.toISOString().split("T")[0], Number(item.total));
+    }
+    const chart: Array<{ date: string; total: number }> = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = subDays(now, i);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      chart.push({ date: key, total: chartByDate.get(key) ?? 0 });
+    }
 
     return {
       success: true,
@@ -170,12 +184,7 @@ export async function getDashboardStats() {
           total: Number(totalDebt._sum.remainingDebt || 0),
           change: debtChange,
         },
-        chart: (salesChart as Array<{ date: Date; total: number }>).map(
-          (item) => ({
-            date: item.date.toISOString().split("T")[0],
-            total: Number(item.total),
-          })
-        ),
+        chart,
         lowStock: lowStockProducts.map((p) => ({
           id: p.id,
           name: p.name,
@@ -194,7 +203,9 @@ export async function getDashboardStats() {
   }
 }
 
-function calculateGrowth(current: number, previous: number): number {
-  if (previous === 0) return current > 0 ? 100 : 0;
+// null = pertumbuhan tidak terdefinisi (bulan lalu 0, bulan ini > 0).
+// Jangan kembalikan placeholder 100% — dashboard menampilkannya sebagai "—".
+function calculateGrowth(current: number, previous: number): number | null {
+  if (previous === 0) return current > 0 ? null : 0;
   return Number((((current - previous) / previous) * 100).toFixed(1));
 }

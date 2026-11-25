@@ -6,6 +6,23 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { requireMinimumRole, requirePermission, type AuthSession } from "@/lib/utils/role";
 import { auth } from "@/lib/auth";
+// Item 70 (batch 2): nama satuan tidak boleh lagi "Zak" — ejaan yang
+// benar "Sak" (sesuai seed prisma/seed.sql: unit002 'Sak'). Invoice
+// mencetak item.unit.name apa adanya (tanpa snapshot nama satuan),
+// jadi satu baris units bernama "Zak" di database langsung tercetak
+// "1 Zak" di invoice. Normalisasi di sini menutup pintu masuknya:
+// semua jalur tulis satuan (UI Satuan, quick-add di import massal)
+// lewat createUnit/updateUnit. Baris "Zak" yang SUDAH ADA di database
+// TIDAK diperbaiki oleh kode ini — lihat NOTES.md (perlu UPDATE data).
+const UNIT_NAME_ALIASES: Record<string, string> = {
+  ZAK: "SAK",
+};
+
+function normalizeUnitName(name: string): string {
+  const upper = name.trim().toUpperCase();
+  return UNIT_NAME_ALIASES[upper] ?? upper;
+}
+
 // Schema untuk validasi di server
 const unitServerSchema = z.object({
   name: z.string().min(1).max(50).trim().toUpperCase(),
@@ -19,7 +36,8 @@ export async function createUnit(data: UnitFormData) {
   requireMinimumRole(session, "ADMIN"); // SUPER_ADMIN & ADMIN
   try {
     // Validate input
-    const validatedData = unitServerSchema.parse(data);
+    const parsed = unitServerSchema.parse(data);
+    const validatedData = { ...parsed, name: normalizeUnitName(parsed.name) };
 
     // Check duplicate name
     const existingUnit = await prisma.unit.findUnique({
@@ -165,7 +183,8 @@ export async function updateUnit(id: string, data: UnitFormData) {
   try {
     requireMinimumRole(session, "ADMIN");
     // Validate input
-    const validatedData = unitServerSchema.parse(data);
+    const parsed = unitServerSchema.parse(data);
+    const validatedData = { ...parsed, name: normalizeUnitName(parsed.name) };
 
     // Check if unit exists
     const existingUnit = await prisma.unit.findUnique({

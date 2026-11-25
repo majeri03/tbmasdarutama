@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Phone, Mail, Clock, Facebook, Instagram } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, Facebook, Instagram, ExternalLink } from "lucide-react";
 
 interface Props {
   store: {
@@ -17,7 +17,50 @@ interface Props {
   mapUrl?: string | null;
 }
 
+/**
+ * Hanya URL embed Google Maps yang boleh masuk ke <iframe>.
+ * - https://www.google.com/maps/embed?... (tombol "Bagikan > Sematkan peta")
+ * - https://maps.google.com/maps?...&output=embed
+ * - https://www.google.com/maps?...&output=embed
+ *
+ * URL lain (mis. tautan berbagi biasa https://maps.app.goo.gl/... atau
+ * https://www.google.com/maps/place/...) TIDAK bisa di-iframe: browser
+ * menampilkan halaman error, dan terlihat seperti "peta diblokir".
+ * Untuk URL seperti itu, tampilkan kartu fallback berisi tautan
+ * "Buka di Google Maps" — jangan iframe-kan.
+ */
+function getEmbedUrl(raw?: string | null): string | null {
+  if (!raw) return null;
+  try {
+    const url = new URL(raw.trim());
+    if (url.protocol !== "https:") return null;
+    const host = url.hostname;
+    const isGoogleHost =
+      host === "www.google.com" || host === "google.com";
+    if (isGoogleHost && url.pathname.startsWith("/maps/embed")) return url.toString();
+    if (
+      (host === "maps.google.com" && url.pathname === "/maps") ||
+      (isGoogleHost && url.pathname === "/maps")
+    ) {
+      if (url.searchParams.get("output") === "embed") return url.toString();
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export default function LandingContact({ store, mapUrl }: Props) {
+  const embedUrl = getEmbedUrl(mapUrl);
+  const fullAddress = [store?.address, store?.city, store?.province]
+    .filter(Boolean)
+    .join(", ");
+  // Tautan cadangan kalau iframe terblokir (mis. oleh CSP) — pengunjung
+  // tetap bisa membuka lokasi di Google Maps.
+  const mapsSearchUrl = fullAddress
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`
+    : "https://www.google.com/maps/search/?api=1&query=TB+Masdar+Utama";
+
   const contactInfo = [
     {
       icon: MapPin,
@@ -65,7 +108,7 @@ export default function LandingContact({ store, mapUrl }: Props) {
   ];
 
   return (
-    <section id="contact" className="py-20 bg-gradient-to-br from-blue-50 to-purple-50 relative overflow-hidden">
+    <section id="contact" className="py-20 bg-gradient-to-br from-blue-50 to-purple-50 relative overflow-hidden scroll-mt-24">
       {/* Decorative Elements */}
       <div className="absolute top-20 right-10 w-72 h-72 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob" />
       <div className="absolute bottom-20 left-10 w-72 h-72 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000" />
@@ -139,17 +182,49 @@ export default function LandingContact({ store, mapUrl }: Props) {
             <h3 className="font-semibold text-gray-800 mb-4">
               Lokasi Kami
             </h3>
-            {mapUrl ? (
-              <iframe
-                src={mapUrl}
-                width="100%"
-                height="400"
-                style={{ border: 0 }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                className="rounded-lg"
-              />
+            {embedUrl ? (
+              <>
+                <iframe
+                  src={embedUrl}
+                  width="100%"
+                  height="400"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="Peta lokasi TB Masdar Utama"
+                  className="rounded-lg"
+                />
+                <a
+                  href={mapsSearchUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Buka di Google Maps
+                </a>
+              </>
+            ) : mapUrl ? (
+              // URL peta ada tapi bukan URL embed yang valid -> jangan
+              // iframe-kan (akan tampil halaman error "diblokir").
+              <div className="w-full h-96 rounded-lg bg-gray-100 flex items-center justify-center">
+                <div className="text-center px-6">
+                  <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                  <p className="text-gray-500 mb-4">
+                    Peta tidak dapat ditampilkan di halaman ini.
+                  </p>
+                  <a
+                    href={mapUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-primary px-6 py-3 inline-flex items-center gap-2"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Buka di Google Maps
+                  </a>
+                </div>
+              </div>
             ) : (
               <div className="w-full h-96 rounded-lg bg-gray-100 flex items-center justify-center">
                 <div className="text-center">

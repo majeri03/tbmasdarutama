@@ -13,19 +13,30 @@ import { Prisma } from "@prisma/client";
 import { requireMinimumRole, requirePermission, type AuthSession } from "../utils/role";
 
 //GENERATE CUSTOMER CODE
+// WS-F item 83 (diterapkan juga di sini — pola yang sama persis dengan
+// generator supplier lama): dulu orderBy code desc + parseInt tanpa guard,
+// satu kode non-numerik / tanpa "-" menghasilkan NaN. Sekarang pindai
+// semua kode CUST-, ambil angka akhirnya, abaikan yang tidak bisa diparse.
+// Format dipertahankan CUST-00001 (5 digit, format generator yang sudah
+// berjalan) — hanya ketahanannya yang diperbaiki.
 async function generateCustomerCode(): Promise<string> {
-  const lastCustomer = await prisma.customer.findFirst({
-    orderBy: { code: "desc" },
+  const customers = await prisma.customer.findMany({
+    where: { code: { startsWith: "CUST-" } },
     select: { code: true },
   });
 
-  if (!lastCustomer) {
-    return "CUST-00001";
+  let maxNumber = 0;
+  for (const customer of customers) {
+    const match = customer.code.match(/(\d+)$/);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (!Number.isNaN(num) && num > maxNumber) {
+        maxNumber = num;
+      }
+    }
   }
 
-  const lastNumber = parseInt(lastCustomer.code.split("-")[1]);
-  const newNumber = lastNumber + 1;
-  return `CUST-${newNumber.toString().padStart(5, "0")}`;
+  return `CUST-${String(maxNumber + 1).padStart(5, "0")}`;
 }
 
 //   CREATE CUSTOMER  

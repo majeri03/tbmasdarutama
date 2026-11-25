@@ -5,6 +5,7 @@ import ReportLayout from "../_components/ReportLayout";
 import ReportDownloadButton from "../_components/ReportDownloadButton";
 import DebtsReportContent from "./_components/DebtsReportContent";
 import { getDebtsReport } from "@/lib/actions/report.actions";
+import type { ReportStoreInfo } from "../_components/report-types";
 import { useReactToPrint } from 'react-to-print';
 
 interface CustomerDebt {
@@ -41,23 +42,29 @@ interface DebtsReportData {
   supplierDebts: SupplierDebt[];
   customerDebtSummary: DebtSummary;
   supplierDebtSummary: DebtSummary;
+  store?: ReportStoreInfo | null;
 }
 
 export default function DebtsReportPage() {
   const printRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [reportData, setReportData] = useState<DebtsReportData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleGenerateReport = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const result = await getDebtsReport({});
 
       if (result.success && result.data) {
         setReportData(result.data as unknown as DebtsReportData);
+      } else {
+        setError(result.error || "Gagal mengambil data laporan utang");
       }
     } catch (error) {
       console.error(error);
+      setError("Terjadi kesalahan saat mengambil data laporan");
     } finally {
       setIsLoading(false);
     }
@@ -103,6 +110,9 @@ export default function DebtsReportPage() {
           <button onClick={handleGenerateReport} className="inline-flex items-center gap-2 rounded-lg bg-[#111111] px-4 py-2 text-sm font-semibold text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-50">
             Generate Laporan
           </button>
+          {error && (
+            <p className="mt-4 text-sm text-red-700">{error}</p>
+          )}
         </div>
       )}
     </ReportLayout>

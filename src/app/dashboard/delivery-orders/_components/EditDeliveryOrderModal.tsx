@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, CheckCircle, Upload, Camera, Trash2, Loader2, Calendar, User, Truck, FileText } from "lucide-react";
+import { X, CheckCircle, Upload, Camera, Trash2, Loader2, Calendar, User, Truck, FileText, MapPin, AlertCircle } from "lucide-react";
 import { DeliveryOrderData } from "@/types/delivery-order";
-import { DeliveryStatus } from "@prisma/client";
 import { updateDeliveryOrder } from "@/lib/actions/delivery-order.actions";
+import { updateCustomer } from "@/lib/actions/customer.actions";
 import { getFleetVehicles, FleetVehicleOption } from "@/lib/actions/fleet.actions";
 import { useToast } from "@/components/ui/toast";
 
@@ -13,6 +13,14 @@ interface EditDeliveryOrderModalProps {
   onClose: () => void;
   onSuccess: () => void;
   deliveryOrder: DeliveryOrderData | null;
+  // FIX WS-H (25 Nov 2026, batch 4 item 118): useToast() menyimpan state
+  // LOKAL, bukan context — showToast yang dipanggil dari dalam modal ini
+  // tidak pernah dirender (yang dirender hanya Toast milik
+  // DeliveryOrderClient). Itu sebabnya simpan yang gagal tampil "tanpa
+  // toast". Parent wajib mengoper showToast-nya lewat prop ini supaya
+  // pesan sukses/gagal benar-benar tampil. Fallback ke showToast lokal
+  // hanya bila prop tidak dioper.
+  notify?: (message: string, type: "success" | "error" | "info") => void;
 }
 
 export function EditDeliveryOrderModal({
@@ -20,19 +28,22 @@ export function EditDeliveryOrderModal({
   onClose,
   onSuccess,
   deliveryOrder,
+  notify: notifyProp,
 }: EditDeliveryOrderModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [fleetList, setFleetList] = useState<FleetVehicleOption[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
+  const notify = notifyProp ?? showToast;
+  // FIX WS-H (item 118): pesan galat inline di dalam modal, supaya
+  // kegagalan simpan SELALU terlihat — tidak lagi bergantung pada toast.
+  const [formError, setFormError] = useState<string>("");
 
   const [deliveryDate, setDeliveryDate] = useState("");
   const [driver, setDriver] = useState("");
   const [vehicle, setVehicle] = useState("");
-  const [status, setStatus] = useState<DeliveryStatus>("PENDING");
-  const [receivedBy, setReceivedBy] = useState("");
-  const [receivedDate, setReceivedDate] = useState("");
+  const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
   const [proofImage, setProofImage] = useState<string>("");
 
@@ -48,6 +59,7 @@ export function EditDeliveryOrderModal({
 
   useEffect(() => {
     if (deliveryOrder && isOpen) {
+      setFormError("");
       setDeliveryDate(
         deliveryOrder.deliveryDate
           ? new Date(deliveryOrder.deliveryDate).toISOString().split("T")[0]
@@ -55,13 +67,10 @@ export function EditDeliveryOrderModal({
       );
       setDriver(deliveryOrder.driver || "");
       setVehicle(deliveryOrder.vehicle || "");
-      setStatus(deliveryOrder.status);
-      setReceivedBy(deliveryOrder.receivedBy || "");
-      setReceivedDate(
-        deliveryOrder.receivedDate
-          ? new Date(deliveryOrder.receivedDate).toISOString().split("T")[0]
-          : ""
-      );
+      // FIX WS-H (item 118): kolom alamat — diisi dari alamat customer
+      // (model DeliveryOrder tidak punya kolom alamat sendiri; alamat yang
+      // tampil di detail & cetak DO adalah customer.address).
+      setAddress(deliveryOrder.customer.address || "");
 
       // Bersihkan tag [BUKTI_KIRIM] / [FOTO_LOKASI] dari notes untuk form input
       const cleanNotes = (deliveryOrder.notes || "")
@@ -119,11 +128,11 @@ export function EditDeliveryOrderModal({
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      showToast("File harus berupa gambar (JPG, PNG, WebP)", "error");
+      notify("File harus berupa gambar (JPG, PNG, WebP)", "error");
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      showToast("Ukuran foto maksimal 5MB", "error");
+      notify("Ukuran foto maksimal 5MB", "error");
       return;
     }
 
@@ -144,10 +153,10 @@ export function EditDeliveryOrderModal({
       }
 
       setProofImage(data.url);
-      showToast("Foto bukti pengiriman berhasil diperbarui", "success");
+      notify("Foto bukti pengiriman berhasil diperbarui", "success");
     } catch (err) {
       console.error("[Upload Proof Error]", err);
-      showToast(err instanceof Error ? err.message : "Gagal mengunggah foto bukti", "error");
+      notify(err instanceof Error ? err.message : "Gagal mengunggah foto bukti", "error");
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -157,12 +166,36 @@ export function EditDeliveryOrderModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setFormError("");
 
+    // FIX WS-H (25 Nov 2026, batch 4 item 118) — AKAR MASALAH SIMPAN MATI:
+    // modal ini dulu SELALU mengirim `status` (+ `receivedBy` /
+    // `receivedDate` saat Terkirim), sementara server `updateDeliveryOrder`
+    // menolak mentah-mentah request apa pun yang membawa field-field itu
+    // (guard M-13: status hanya boleh lewat Ubah Status, ada efek stoknya).
+    // Akibatnya SETIAP klik Simpan pasti gagal — dan karena toast dari
+    // useToast() lokal di modal ini tidak pernah dirender, kegagalan itu
+    // tampil "tanpa toast, modal tetap terbuka". Perbaikan: modal Edit
+    // TIDAK LAGI mengirim status / tanda terima sama sekali (pengubahan
+    // status & tanda terima hanya lewat modal Update Status), sehingga
+    // payload-nya lolos guard server. Field status & tanda terima dihapus
+    // dari form ini; DO Terkirim tetap bisa diedit metadata/fotonya
+    // (guard server untuk DELIVERED ikut dilonggarkan).
     try {
-      if (status === "DELIVERED" && !receivedBy.trim()) {
-        showToast("Nama penerima wajib diisi jika status Terkirim", "error");
-        setIsLoading(false);
-        return;
+      // Alamat pengiriman = alamat customer (DO tidak punya kolom alamat
+      // sendiri). Simpan dulu; kalau gagal, batalkan sebelum DO diubah.
+      const trimmedAddress = address.trim();
+      if (trimmedAddress !== (deliveryOrder.customer.address || "")) {
+        const addrResult = await updateCustomer(deliveryOrder.customerId, {
+          address: trimmedAddress || "",
+        });
+        if (!addrResult.success) {
+          const msg = addrResult.error || "Gagal memperbarui alamat customer";
+          setFormError(msg);
+          notify(msg, "error");
+          setIsLoading(false);
+          return;
+        }
       }
 
       const result = await updateDeliveryOrder({
@@ -170,23 +203,27 @@ export function EditDeliveryOrderModal({
         deliveryDate: deliveryDate ? new Date(deliveryDate) : undefined,
         driver: driver.trim() || null,
         vehicle: vehicle.trim() || null,
-        status,
-        receivedBy: receivedBy.trim() || null,
-        receivedDate: receivedDate ? new Date(receivedDate) : null,
         notes: notes.trim() || null,
+        // proofImage null = hapus foto bukti (kolom dibersihkan server dan
+        // file lama di R2 ikut dihapus). Sebelum perbaikan 118, hapus foto
+        // hanya mengosongkan form lokal karena simpan selalu gagal.
         proofImage: proofImage.trim() || null,
       });
 
       if (result.success) {
-        showToast(result.message || "Surat Jalan berhasil diperbarui!", "success");
+        notify(result.message || "Surat Jalan berhasil diperbarui!", "success");
         onSuccess();
         onClose();
       } else {
-        showToast(result.error || "Gagal memperbarui Surat Jalan", "error");
+        const msg = result.error || "Gagal memperbarui Surat Jalan";
+        setFormError(msg);
+        notify(msg, "error");
       }
     } catch (err) {
       console.error("Error editing delivery order:", err);
-      showToast("Terjadi kesalahan sistem saat menyimpan perubahan", "error");
+      const msg = "Terjadi kesalahan sistem saat menyimpan perubahan";
+      setFormError(msg);
+      notify(msg, "error");
     } finally {
       setIsLoading(false);
     }
@@ -216,39 +253,25 @@ export function EditDeliveryOrderModal({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5">
-          {/* Row 1: Tanggal Kirim & Status */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                Tanggal Pengiriman <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={deliveryDate}
-                  onChange={(e) => setDeliveryDate(e.target.value)}
-                  className="input-field pl-10"
-                  required
-                />
-                <Calendar className="w-4 h-4 text-gray-400 absolute left-3 top-3.5" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                Status Pengiriman <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as DeliveryStatus)}
-                className="input-field"
+          {/* FIX WS-H (item 118): dropdown Status & bagian Tanda Terima
+              DIHAPUS dari modal Edit — status/tanda terima hanya boleh
+              diubah lewat modal Update Status (ada efek stok & guard
+              server M-13 yang menolaknya di sini). Mengirimnya dari form
+              ini adalah yang membuat tombol Simpan selalu gagal. */}
+          {/* Row 1: Tanggal Kirim */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+              Tanggal Pengiriman <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <input
+                type="date"
+                value={deliveryDate}
+                onChange={(e) => setDeliveryDate(e.target.value)}
+                className="input-field pl-10"
                 required
-              >
-                <option value="PENDING">Menunggu (Pending)</option>
-                <option value="IN_TRANSIT">Dalam Pengiriman (In Transit)</option>
-                <option value="DELIVERED">Terkirim (Delivered)</option>
-                <option value="CANCELLED">Dibatalkan (Cancelled)</option>
-              </select>
+              />
+              <Calendar className="w-4 h-4 text-gray-400 absolute left-3 top-3.5" />
             </div>
           </div>
 
@@ -311,40 +334,29 @@ export function EditDeliveryOrderModal({
             </div>
           </div>
 
-          {/* Row 3: Detail Penerimaan (Aktif jika status DELIVERED) */}
-          {status === "DELIVERED" && (
-            <div className="p-4 bg-green-50/60 border border-green-200 rounded-xl space-y-4">
-              <span className="text-xs font-bold text-green-800 uppercase tracking-wider block">
-                ✓ Informasi Tanda Terima
-              </span>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Nama Penerima Barang <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={receivedBy}
-                    onChange={(e) => setReceivedBy(e.target.value)}
-                    placeholder="Nama orang yang menerima di lokasi"
-                    className="input-field"
-                    required={status === "DELIVERED"}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Tanggal Diterima
-                  </label>
-                  <input
-                    type="date"
-                    value={receivedDate}
-                    onChange={(e) => setReceivedDate(e.target.value)}
-                    className="input-field"
-                  />
-                </div>
-              </div>
+          {/* Row 3: Alamat Pengiriman (FIX WS-H item 118 — sebelumnya tidak
+              ada kolom alamat di form edit; alamat yang tampil di detail &
+              cetak DO adalah alamat customer, jadi field ini mengubah
+              alamat customer tersebut). */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+              Alamat Pengiriman
+            </label>
+            <div className="relative">
+              <textarea
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Alamat tujuan pengiriman"
+                rows={2}
+                maxLength={255}
+                className="input-field py-2 pl-10"
+              />
+              <MapPin className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
             </div>
-          )}
+            <p className="text-[11px] text-gray-500 mt-1">
+              Alamat customer — perubahan di sini juga mengubah alamat customer di data master.
+            </p>
+          </div>
 
           {/* Row 4: Foto Bukti Pengiriman */}
           <div>
@@ -445,6 +457,15 @@ export function EditDeliveryOrderModal({
               />
             </div>
           </div>
+
+          {/* Pesan galat inline (FIX WS-H item 118): kegagalan simpan harus
+              terlihat di dalam modal, bukan hanya lewat toast. */}
+          {formError && (
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+              <p className="text-sm text-red-800">{formError}</p>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex gap-3 pt-4 border-t border-gray-200">

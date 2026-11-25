@@ -66,6 +66,16 @@ export function ProductUnitDisplay({ units, variant = "compact" }: ProductUnitDi
   }
 
   // Full variant - show all units
+  // Item 67 (batch 2): konversi HARUS tampil dengan nama satuan yang
+  // jelas. Sebelumnya baris non-utama hanya menulis
+  // "Konversi: 1 = {n}x satuan utama" (tanpa nama satuan, arahnya
+  // ambigu) dan satuan utama tidak menampilkan konversi sama sekali —
+  // sehingga "1 Dus = 12 Pcs" tidak pernah terlihat di detail.
+  // Makna conversionValue (lihat prisma/schema.prisma + seed):
+  // 1 unit ini = conversionValue satuan utama.
+  const primaryUnit = sortedUnits.find((u) => u.isPrimary) || sortedUnits[0];
+  const primaryUnitName = primaryUnit.unit.name;
+
   return (
     <div className="space-y-2">
       {sortedUnits.map((unit) => (
@@ -90,11 +100,10 @@ export function ProductUnitDisplay({ units, variant = "compact" }: ProductUnitDi
                   </span>
                 )}
               </div>
-              {!unit.isPrimary && (
-                <p className="text-xs text-gray-600">
-                  Konversi: 1 = {unit.conversionValue}x satuan utama
-                </p>
-              )}
+              <p className="text-xs text-gray-600">
+                Konversi: 1 {unit.unit.name} = {unit.conversionValue} {primaryUnitName}
+                {unit.isPrimary ? " (satuan utama)" : ""}
+              </p>
             </div>
           </div>
           <div className="text-right">
