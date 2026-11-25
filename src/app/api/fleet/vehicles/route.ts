@@ -184,7 +184,8 @@ export async function GET(_request: NextRequest) {
 
 /**
  * POST /api/fleet/vehicles
- * Mendaftarkan armada baru. (Admin/Super Admin)
+ * Mendaftarkan armada baru. (Super Admin saja — WS-1, 25 Nov 2026: ADMIN
+ * hanya boleh lihat, tidak boleh tambah/edit/hapus kendaraan.)
  * Menerima driverUserId / coDriverUserId (nullable). Kalau driverUserId
  * diisi dan driverName kosong, nama + no HP diambil dari akun user.
  */
@@ -192,7 +193,8 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getAuthenticatedUser();
     if (!session) return unauthorizedResponse();
-    if (!hasMinimumRole(session, "ADMIN")) return forbiddenResponse();
+    // WS-1 (25 Nov 2026): tambah kendaraan = SUPER_ADMIN saja.
+    if (!hasMinimumRole(session, "SUPER_ADMIN")) return forbiddenResponse();
 
     const body = await request.json();
     const { plateNumber, vehicleType, brand, year, driverName, driverPhone, status } = body;

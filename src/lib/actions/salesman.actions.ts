@@ -32,15 +32,25 @@ const salesmanSelect = {
   _count: { select: { sales: true } },
 } as const;
 
-function serializeSalesman(s: {
-  id: string;
-  name: string;
-  phone: string | null;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  _count: { sales: number };
-}) {
+function serializeSalesman(
+  s: {
+    id: string;
+    name: string;
+    phone: string | null;
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    _count: { sales: number };
+  },
+  // WS-8 (25 Nov 2026): total per salesman — dihitung SERVER dengan rumus
+  // yang SAMA seperti getSalesmanDetail (calcSalesmanFee, semua penjualan
+  // apa pun statusnya), supaya angka di tabel daftar = angka di modal
+  // detail. Ini BUKAN perubahan rumus fee; hanya supaya tabel bisa
+  // menampilkan kolom Total Penjualan & Total Fee tanpa N+1 request
+  // detail per baris. Kalau totals tidak disertakan (mis. getSalesmanById),
+  // kedua field dihilangkan, bukan diisi 0.
+  totals?: { totalSales: number; totalFee: number }
+) {
   return {
     id: s.id,
     name: s.name,
@@ -49,6 +59,7 @@ function serializeSalesman(s: {
     createdAt: s.createdAt,
     updatedAt: s.updatedAt,
     salesCount: s._count.sales,
+    ...(totals ? { totalSales: totals.totalSales, totalFee: totals.totalFee } : {}),
   };
 }
 
@@ -65,7 +76,48 @@ export async function getSalesmen(
       select: salesmanSelect,
       orderBy: { name: "asc" },
     });
-    return { success: true, data: salesmen.map(serializeSalesman) };
+    // WS-8 (25 Nov 2026): hitung total penjualan + total fee per salesman
+    // di SERVER (satu query untuk semua penjualan yang punya salesman),
+    // dengan calcSalesmanFee yang sama seperti getSalesmanDetail — jadi
+    // total di daftar = total di modal detail. Rumus fee TIDAK berubah.
+    const [setting, allSales] = await Promise.all([
+      prisma.storeSetting.findFirst({
+        select: { salesmanFeeEnabled: true, salesmanFeePercent: true },
+      }),
+      prisma.sale.findMany({
+        where: { salesmanId: { not: null } },
+        select: {
+          salesmanId: true,
+          grandTotal: true,
+          salesmanFeeEnabled: true,
+          salesmanFeePercent: true,
+        },
+      }),
+    ]);
+    const globalEnabled = setting?.salesmanFeeEnabled ?? false;
+    const globalPercent = setting?.salesmanFeePercent ?? 2;
+    const totalsBySalesman = new Map<string, { totalSales: number; totalFee: number }>();
+    for (const s of allSales) {
+      if (!s.salesmanId) continue;
+      const grandTotal = Number(s.grandTotal);
+      const fee = calcSalesmanFee(
+        grandTotal,
+        globalEnabled,
+        globalPercent,
+        s.salesmanFeeEnabled,
+        s.salesmanFeePercent
+      );
+      const cur = totalsBySalesman.get(s.salesmanId) ?? { totalSales: 0, totalFee: 0 };
+      cur.totalSales += grandTotal;
+      cur.totalFee += fee.amount;
+      totalsBySalesman.set(s.salesmanId, cur);
+    }
+    return {
+      success: true,
+      data: salesmen.map((s) =>
+        serializeSalesman(s, totalsBySalesman.get(s.id) ?? { totalSales: 0, totalFee: 0 })
+      ),
+    };
   } catch (error) {
     console.error("[GET_SALESMEN_ERROR]", error);
     if (error instanceof Error && error.message.startsWith("Unauthorized")) {

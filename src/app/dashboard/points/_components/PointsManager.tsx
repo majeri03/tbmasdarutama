@@ -1,18 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Star, Save, Loader2, Plus, Minus } from "lucide-react";
+import { Star, Save, Loader2, Plus, Minus, Search } from "lucide-react";
 import { getStoreSetting, updateStoreSetting } from "@/lib/actions/store-setting.actions";
 import { getCustomers, adjustCustomerPoints } from "@/lib/actions/customer.actions";
 import { hasMinimumRole } from "@/lib/utils/role";
 import { useToast } from "@/components/ui/toast";
 import { Toast } from "@/components/ui/toast";
 
-// Dipindah dari SalesSettingsTab (tab "Sales & Poin" di Pengaturan, dihapus
-// 24 Nov 2026) ke halaman sendiri /dashboard/points, ditambah saldo poin
-// per customer + penyesuaian manual (action adjustCustomerPoints sudah ada,
-// sebelumnya UI-nya hanya di modal detail customer).
+// WS-8 (25 Nov 2026) — desain ulang tampilan poin loyalitas: tabel rapi
+// + filter/pencarian + ringkasan total. LOGIKA TIDAK BERUBAH: aturan dapat
+// poin, pengaturan Rp per poin, dan penyesuaian manual sama seperti
+// sebelumnya; saldo poin tetap dari server, kolom Total Belanja (lunas)
+// adalah agregat tampilan dari getCustomers (lihat customer.actions.ts).
+// Aksen visual: merah gelap #7F1D1D, latar putih / abu terang.
 // Aturan akses (tidak berubah, server tetap yang memutuskan):
 // - Pengaturan poin (aktif/mati + Rp per poin): SUPER_ADMIN saja
 //   (updateStoreSetting: MANAGE_STORE_SETTINGS). KASIR/ADMIN hanya melihat
@@ -24,13 +26,32 @@ import { Toast } from "@/components/ui/toast";
 // pointsRupiahPerPoint), hanya penjualan lunas (bukan CREDIT), bukan
 // customer Umum.
 
+// Tombol utama lokal (aksen #7F1D1D). Sengaja TIDAK memakai .btn-primary
+// global (gradien biru) supaya halaman ini memakai palet aplikasi yang
+// sama dengan APK; .btn-primary global tidak diubah agar halaman lain
+// tidak ikut berubah.
+const btnAccent =
+  "inline-flex items-center justify-center gap-2 rounded-xl bg-[#7F1D1D] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#991B1B] disabled:opacity-50";
+const btnAccentSm =
+  "inline-flex items-center gap-1 rounded-lg bg-[#7F1D1D] px-2 py-1 text-xs font-semibold text-white transition-colors hover:bg-[#991B1B] disabled:opacity-50";
+
 type CustomerRow = {
   id: string;
   code: string;
   name: string;
   type: string;
   points: number;
+  // Dikirim server (getCustomers, WS-8): jumlah grandTotal penjualan
+  // lunas (COMPLETED, bukan CREDIT). Opsional supaya data lama tanpa
+  // field ini tetap tampil (dianggap 0).
+  totalBelanja?: number;
 };
+
+type TypeFilter = "ALL" | "REGULER" | "GROSIR" | "PROYEK" | "UMUM";
+type PointsFilter = "ALL" | "HAS_POINTS" | "NO_POINTS";
+type SortKey = "name" | "points" | "belanja";
+
+const formatRp = (value: number) => `Rp ${value.toLocaleString("id-ID")}`;
 
 export default function PointsManager() {
   const { data: session } = useSession();
@@ -44,6 +65,9 @@ export default function PointsManager() {
 
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("ALL");
+  const [pointsFilter, setPointsFilter] = useState<PointsFilter>("ALL");
+  const [sortKey, setSortKey] = useState<SortKey>("name");
   const [adjustInputs, setAdjustInputs] = useState<Record<string, string>>({});
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
   const [adjustMessages, setAdjustMessages] = useState<Record<string, string>>({});
@@ -80,6 +104,7 @@ export default function PointsManager() {
             name: c.name,
             type: c.type,
             points: c.points ?? 0,
+            totalBelanja: c.totalBelanja ?? 0,
           }))
         );
       } else {
@@ -151,22 +176,61 @@ export default function PointsManager() {
     }
   };
 
-  const filteredCustomers = customers.filter((c) => {
+  // ---------- Tampilan: filter + urutan + total (klien saja) ----------
+  const filteredCustomers = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return true;
-    return c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q);
-  });
+    const list = customers.filter((c) => {
+      if (typeFilter !== "ALL" && c.type !== typeFilter) return false;
+      if (pointsFilter === "HAS_POINTS" && (c.points ?? 0) <= 0) return false;
+      if (pointsFilter === "NO_POINTS" && (c.points ?? 0) > 0) return false;
+      if (q && !c.name.toLowerCase().includes(q) && !c.code.toLowerCase().includes(q)) return false;
+      return true;
+    });
+    switch (sortKey) {
+      case "points":
+        return [...list].sort((a, b) => (b.points ?? 0) - (a.points ?? 0));
+      case "belanja":
+        return [...list].sort((a, b) => (b.totalBelanja ?? 0) - (a.totalBelanja ?? 0));
+      case "name":
+      default:
+        return [...list].sort((a, b) => a.name.localeCompare(b.name, "id-ID"));
+    }
+  }, [customers, search, typeFilter, pointsFilter, sortKey]);
+
+  // Total mengikuti filter yang aktif; customer UMUM tidak dihitung
+  // (tidak punya poin dan tidak masuk total belanja berpoin).
+  const totals = useMemo(() => {
+    const counted = filteredCustomers.filter((c) => c.type !== "UMUM");
+    return {
+      count: counted.length,
+      totalPoints: counted.reduce((sum, c) => sum + (c.points ?? 0), 0),
+      totalBelanja: counted.reduce((sum, c) => sum + (c.totalBelanja ?? 0), 0),
+    };
+  }, [filteredCustomers]);
+
+  const typeChips: { key: TypeFilter; label: string }[] = [
+    { key: "ALL", label: "Semua Tipe" },
+    { key: "REGULER", label: "Reguler" },
+    { key: "GROSIR", label: "Grosir" },
+    { key: "PROYEK", label: "Proyek" },
+    { key: "UMUM", label: "Umum" },
+  ];
+  const pointsChips: { key: PointsFilter; label: string }[] = [
+    { key: "ALL", label: "Semua Poin" },
+    { key: "HAS_POINTS", label: "Ada Poin" },
+    { key: "NO_POINTS", label: "Tanpa Poin" },
+  ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       {toast && (
         <Toast message={toast.message} type={toast.type} onClose={hideToast} />
       )}
 
       {/* ---------- Pengaturan Poin ---------- */}
-      <div className="space-y-4">
+      <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-2">
         <div className="flex items-center gap-2">
-          <Star className="w-5 h-5 text-amber-500" />
+          <Star className="w-5 h-5 text-[#7F1D1D]" />
           <h2 className="text-lg font-semibold text-gray-800">Poin Loyalitas Customer</h2>
         </div>
         <p className="text-sm text-gray-600">
@@ -176,13 +240,13 @@ export default function PointsManager() {
           = 25 poin.
         </p>
         {isSuperAdmin ? (
-          <form onSubmit={handleSavePoints} className="space-y-4">
+          <form onSubmit={handleSavePoints} className="space-y-3">
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={pointsEnabled}
                 onChange={(e) => setPointsEnabled(e.target.checked)}
-                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                className="w-4 h-4 accent-[#7F1D1D] rounded"
               />
               <span className="text-sm font-medium text-gray-700">Aktifkan pemberian poin</span>
             </label>
@@ -201,7 +265,7 @@ export default function PointsManager() {
                 />
               </div>
             </div>
-            <button type="submit" disabled={savingPoints} className="btn-primary inline-flex items-center gap-2">
+            <button type="submit" disabled={savingPoints} className={btnAccent}>
               {savingPoints ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Simpan Pengaturan Poin
             </button>
@@ -215,50 +279,144 @@ export default function PointsManager() {
         )}
       </div>
 
+      {/* ---------- Ringkasan total ---------- */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Customer (bukan Umum)</p>
+          <p className="mt-1 text-2xl font-bold text-gray-900">{totals.count}</p>
+          <p className="text-xs text-gray-500">dari {filteredCustomers.length} baris tampil</p>
+        </div>
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Total Saldo Poin</p>
+          <p className="mt-1 text-2xl font-bold text-[#7F1D1D]">
+            {totals.totalPoints.toLocaleString("id-ID")} poin
+          </p>
+          <p className="text-xs text-gray-500">Jumlah saldo semua customer</p>
+        </div>
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Total Belanja (Lunas)</p>
+          <p className="mt-1 text-2xl font-bold text-gray-900">{formatRp(totals.totalBelanja)}</p>
+          <p className="text-xs text-gray-500">Penjualan lunas saja (bukan CREDIT)</p>
+        </div>
+      </div>
+
       {/* ---------- Saldo Poin Customer ---------- */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         <h2 className="text-lg font-semibold text-gray-800">Saldo Poin Customer</h2>
         <p className="text-sm text-gray-600">
           Saldo poin semua customer. Penyesuaian manual (tambah/kurang) hanya
-          untuk SUPER_ADMIN; customer Umum tidak punya poin.
+          untuk SUPER_ADMIN; customer Umum tidak punya poin. Kolom Total
+          Belanja hanya menghitung penjualan lunas (bukan CREDIT, bukan
+          CANCELLED/RETURN) — basis yang sama dengan perolehan poin.
         </p>
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="glass-input w-64"
-          placeholder="Cari nama / kode customer…"
-        />
+
+        {/* Filter & pencarian */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="glass-input !pl-9 w-64"
+              placeholder="Cari nama / kode customer…"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-1 rounded-xl border border-gray-200 bg-white p-1">
+            {typeChips.map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                onClick={() => setTypeFilter(chip.key)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  typeFilter === chip.key
+                    ? "bg-[#7F1D1D] text-white"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1 rounded-xl border border-gray-200 bg-white p-1">
+            {pointsChips.map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                onClick={() => setPointsFilter(chip.key)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  pointsFilter === chip.key
+                    ? "bg-[#7F1D1D] text-white"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+          <select
+            value={sortKey}
+            onChange={(e) => setSortKey(e.target.value as SortKey)}
+            className="glass-input w-52"
+            title="Urutkan tabel"
+          >
+            <option value="name">Urutkan: Nama (A–Z)</option>
+            <option value="points">Urutkan: Saldo Poin ↓</option>
+            <option value="belanja">Urutkan: Total Belanja ↓</option>
+          </select>
+          <span className="text-xs text-gray-500">
+            Menampilkan {filteredCustomers.length} dari {customers.length} customer
+          </span>
+        </div>
+
         {loading ? (
           <p className="text-sm text-gray-500">Memuat saldo poin…</p>
         ) : filteredCustomers.length === 0 ? (
           <p className="text-sm text-gray-500">Tidak ada customer yang cocok.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-gray-500 border-b">
-                  <th className="py-2 pr-2 font-medium">Customer</th>
-                  <th className="py-2 pr-2 font-medium">Tipe</th>
-                  <th className="py-2 pr-2 font-medium">Saldo Poin</th>
-                  {isSuperAdmin && <th className="py-2 font-medium text-right">Penyesuaian Manual</th>}
+                <tr className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+                  <th className="px-4 py-3 font-semibold">Customer</th>
+                  <th className="px-4 py-3 font-semibold">Tipe</th>
+                  <th className="px-4 py-3 font-semibold text-right">Total Belanja (Lunas)</th>
+                  <th className="px-4 py-3 font-semibold text-right">Saldo Poin</th>
+                  {isSuperAdmin && <th className="px-4 py-3 font-semibold text-right">Penyesuaian Manual</th>}
                 </tr>
               </thead>
               <tbody>
                 {filteredCustomers.map((c) => {
                   const isUmum = c.type === "UMUM";
                   return (
-                    <tr key={c.id} className="border-b last:border-0">
-                      <td className="py-2 pr-2">
+                    <tr key={c.id} className="border-t border-gray-100 hover:bg-gray-50">
+                      <td className="px-4 py-3">
                         <p className="font-medium text-gray-800">{c.name}</p>
                         <p className="text-xs text-gray-500">{c.code}</p>
                       </td>
-                      <td className="py-2 pr-2 text-gray-600">{c.type}</td>
-                      <td className="py-2 pr-2 font-semibold text-gray-800">
-                        {isUmum ? "—" : `${c.points} poin`}
+                      <td className="px-4 py-3">
+                        <span
+                          className={`text-xs font-medium px-2 py-1 rounded-full ${
+                            isUmum
+                              ? "bg-gray-100 text-gray-500"
+                              : c.type === "GROSIR"
+                                ? "bg-amber-50 text-amber-700"
+                                : c.type === "PROYEK"
+                                  ? "bg-violet-50 text-violet-700"
+                                  : "bg-green-50 text-green-700"
+                          }`}
+                        >
+                          {c.type}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-gray-900 whitespace-nowrap">
+                        {isUmum ? "—" : formatRp(c.totalBelanja ?? 0)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-[#7F1D1D] whitespace-nowrap">
+                        {isUmum ? "—" : `${(c.points ?? 0).toLocaleString("id-ID")} poin`}
                       </td>
                       {isSuperAdmin && (
-                        <td className="py-2 text-right">
+                        <td className="px-4 py-3 text-right">
                           {isUmum ? (
                             <span className="text-xs text-gray-400">Umum tidak dapat poin</span>
                           ) : (
@@ -279,7 +437,7 @@ export default function PointsManager() {
                                   type="button"
                                   disabled={adjustingId === c.id}
                                   onClick={() => handleAdjustPoints(c.id, 1)}
-                                  className="btn-primary !py-1 !px-2 text-xs inline-flex items-center gap-1"
+                                  className={btnAccentSm}
                                   title="Tambah poin"
                                 >
                                   <Plus className="w-3 h-3" /> Tambah
@@ -305,6 +463,18 @@ export default function PointsManager() {
                   );
                 })}
               </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-gray-200 bg-gray-50 font-semibold text-gray-900">
+                  <td className="px-4 py-3" colSpan={2}>
+                    TOTAL ({totals.count} customer, bukan Umum)
+                  </td>
+                  <td className="px-4 py-3 text-right whitespace-nowrap">{formatRp(totals.totalBelanja)}</td>
+                  <td className="px-4 py-3 text-right text-[#7F1D1D] whitespace-nowrap">
+                    {totals.totalPoints.toLocaleString("id-ID")} poin
+                  </td>
+                  {isSuperAdmin && <td className="px-4 py-3" />}
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}

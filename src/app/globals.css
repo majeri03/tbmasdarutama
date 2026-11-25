@@ -248,7 +248,11 @@
   }
   .sidebar-link:hover,
   .sidebar-link.active {
-    background: rgba(59, 130, 246, 0.13);
+    /* Glassmorphism (26 Nov 2026): pil kaca putih transparan, bukan blok
+       biru solid — supaya tetap terlihat seperti kaca di atas sidebar
+       yang sudah transparan. Teks biru dipertahankan sebagai penanda
+       halaman aktif. */
+    background: rgba(255, 255, 255, 0.45);
     color: #2563eb;
     backdrop-filter: blur(8px);
     font-weight: 600;

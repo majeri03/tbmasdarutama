@@ -261,7 +261,11 @@ export class NotificationService {
   }
 
   /** Stok di bawah minimum. Return false kalau sudah dikirim <24 jam lalu. */
-  static async onLowStock(productName: string, currentStock: number, minStock: number): Promise<boolean> {
+  // WS-2 (25 Nov 2026): params WAJIB membawa productId — sebelumnya tidak
+  // ada params sama sekali, jadi ketukan notifikasi stok rendah di APK hanya
+  // membuka daftar produk umum (pengguna harus mencari sendiri produknya).
+  // Sekarang APK membuka modal detail produk itu langsung.
+  static async onLowStock(productId: string, productName: string, currentStock: number, minStock: number): Promise<boolean> {
     const title = '📉 Stok Rendah!';
     const body = `${productName} tersisa ${currentStock} (min. ${minStock}). Segera lakukan pembelian.`;
     if (await this.alreadyNotifiedRecently('LOW_STOCK', title, body)) return false;
@@ -271,6 +275,7 @@ export class NotificationService {
       body,
       type: 'LOW_STOCK',
       screen: 'Products',
+      params: { productId, productName },
       channelId: 'masdar_channel_v3',
     });
     return true;
@@ -281,12 +286,12 @@ export class NotificationService {
     if (productIds.length === 0) return 0;
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
-      select: { name: true, currentStock: true, minStock: true },
+      select: { id: true, name: true, currentStock: true, minStock: true },
     });
     let sent = 0;
     for (const p of products) {
       if (p.minStock > 0 && p.currentStock <= p.minStock) {
-        if (await this.onLowStock(p.name, p.currentStock, p.minStock)) sent++;
+        if (await this.onLowStock(p.id, p.name, p.currentStock, p.minStock)) sent++;
       }
     }
     return sent;
@@ -331,7 +336,7 @@ export class NotificationService {
     for (;;) {
       const page = await prisma.product.findMany({
         where: { isActive: true },
-        select: { name: true, currentStock: true, minStock: true },
+        select: { id: true, name: true, currentStock: true, minStock: true },
         orderBy: { name: 'asc' },
         take: STOCK_PAGE,
         skip: stockSkip,
@@ -339,7 +344,7 @@ export class NotificationService {
       if (page.length === 0) break;
       for (const p of page) {
         if (p.minStock > 0 && p.currentStock <= p.minStock) {
-          if (await this.onLowStock(p.name, p.currentStock, p.minStock)) stockSent++;
+          if (await this.onLowStock(p.id, p.name, p.currentStock, p.minStock)) stockSent++;
         }
       }
       stockSkip += page.length;

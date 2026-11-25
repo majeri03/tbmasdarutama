@@ -114,7 +114,7 @@ function normalizeDriverId(value: unknown): string | null | undefined {
 
 /**
  * PUT /api/fleet/vehicles/[id]
- * Memperbarui data armada.
+ * Memperbarui data armada. (Super Admin saja — WS-1, 25 Nov 2026.)
  * Menerima driverUserId / coDriverUserId (nullable): string = tugaskan,
  * null / "" = lepas penugasan, tidak dikirim = biarkan seperti semula.
  * Kalau sopir utama baru ditugaskan dan driverName tidak diketik, nama
@@ -125,7 +125,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
   try {
     const session = await getAuthenticatedUser();
     if (!session) return unauthorizedResponse();
-    if (!hasMinimumRole(session, "ADMIN")) return forbiddenResponse();
+    if (!hasMinimumRole(session, "SUPER_ADMIN")) return forbiddenResponse();
 
     const { id } = await context.params;
     const body = await request.json();
@@ -209,13 +209,13 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
 /**
  * DELETE /api/fleet/vehicles/[id]
- * Menghapus armada (soft-delete).
+ * Menghapus armada (soft-delete). (Super Admin saja — WS-1, 25 Nov 2026.)
  */
 export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
     const session = await getAuthenticatedUser();
     if (!session) return unauthorizedResponse();
-    if (!hasMinimumRole(session, "ADMIN")) return forbiddenResponse();
+    if (!hasMinimumRole(session, "SUPER_ADMIN")) return forbiddenResponse();
 
     const { id } = await context.params;
 

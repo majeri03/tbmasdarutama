@@ -26,6 +26,63 @@ function notificationScopeWhere(session: { user: { id: string; role: string } })
 }
 
 /**
+ * WS-2 (25 Nov 2026): sanitasi body saat dibaca. Ada baris notifikasi lama
+ * yang body-nya berisi string JSON mentah — persis objek `data` payload
+ * push Expo: {"id":"...","type":"NEW_ORDER","screen":"History",
+ * "params":{"saleId":"...","invoiceNumber":"..."}}. Di kode HEAD
+ * (e005dfc9) tidak ada penulis body seperti itu — semua penulis membangun
+ * teks bersih — jadi baris itu hampir pasti ditulis build/deploy lama dan
+ * bertahan di DB. Perilaku tampilannya harus diperbaiki di mana pun body
+ * dibaca (APK + halaman web ini, yang merender item.body mentah):
+ * JSON mentah TIDAK PERNAH dikembalikan sebagai pesan — diubah jadi pesan
+ * manusiawi dari params, atau '' (tampilkan judul saja) kalau tidak bisa
+ * dipahami. Isi DB tidak diubah (tidak ada migrasi/pembersihan data di sini).
+ */
+function humanizeNotificationBody(item: {
+  body: string;
+  type: string;
+  params?: unknown;
+}): string {
+  const body = typeof item.body === "string" ? item.body.trim() : "";
+  if (!body.startsWith("{") || !body.endsWith("}")) return item.body;
+  let parsed: Record<string, unknown>;
+  try {
+    const v: unknown = JSON.parse(body);
+    if (!v || typeof v !== "object" || Array.isArray(v)) return item.body;
+    parsed = v as Record<string, unknown>;
+  } catch {
+    return item.body;
+  }
+  const params = (
+    parsed.params && typeof parsed.params === "object" && !Array.isArray(parsed.params)
+      ? parsed.params
+      : (item.params && typeof item.params === "object" && !Array.isArray(item.params) ? item.params : {})
+  ) as Record<string, unknown>;
+  const type = String(parsed.type ?? item.type ?? "").toUpperCase();
+  if (type === "NEW_ORDER" || params.saleId || params.invoiceNumber) {
+    if (params.invoiceNumber) return `Pesanan baru — Invoice #${params.invoiceNumber}. Ketuk untuk melihat detail penjualan.`;
+    return "Pesanan baru masuk. Ketuk untuk melihat detail penjualan.";
+  }
+  if (type === "DELIVERY_UPDATE" || params.doId || params.doNumber) {
+    if (params.doNumber) return `Surat Jalan #${params.doNumber} diperbarui. Ketuk untuk melihat detail pengiriman.`;
+    return "Status pengiriman diperbarui. Ketuk untuk melihat detail.";
+  }
+  if (type === "LOW_STOCK" || params.productId || params.productName) {
+    if (params.productName) return `${params.productName} stoknya rendah. Ketuk untuk melihat produk.`;
+    return "Ada produk yang stoknya rendah. Ketuk untuk melihat produk.";
+  }
+  if (type === "DEBT_DUE" || params.customerName) {
+    if (params.customerName) return `${params.customerName} — ada piutang jatuh tempo. Ketuk untuk melihat.`;
+  }
+  if (type === "PAYMENT_RECEIVED" || params.customerName || params.supplierName) {
+    const name = params.customerName ?? params.supplierName;
+    if (name) return `${name} — ada pembayaran masuk. Ketuk untuk melihat.`;
+  }
+  // JSON tidak dikenal: sembunyikan isinya, tampilkan judul saja.
+  return "";
+}
+
+/**
  * GET /api/notifications
  * Mengambil daftar riwayat notifikasi dari database PostgreSQL.
  */
@@ -63,7 +120,8 @@ export async function GET(request: NextRequest) {
     ]);
 
     return successResponse({
-      items,
+      // WS-2: sanitasi body JSON mentah saat dibaca (lihat humanizeNotificationBody).
+      items: items.map((item) => ({ ...item, body: humanizeNotificationBody(item) })),
       pagination: {
         total,
         page,

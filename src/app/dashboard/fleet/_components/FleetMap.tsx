@@ -1,13 +1,14 @@
 // Peta armada live — tanpa dependensi peta baru. Tile OpenStreetMap
 // dirender langsung (rumus slippy map), marker dari posisi terakhir
 // kendaraan (GET /api/fleet/vehicles, polling 15 detik, sama seperti APK).
-// Posisi dikirim dari HP sopir yang ditugaskan (atau ADMIN) lewat
+// Posisi dikirim dari HP sopir yang ditugaskan lewat
 // POST /api/fleet/location saat tombol "Mulai GPS" di APK aktif.
 // FIX (22 Nov 2026, rombakan armada): API mengembalikan lokasi BERSARANG
 // (lastLocation: {latitude, longitude, address, updatedAt}) — versi lama
 // komponen ini membaca v.latitude datar sehingga marker tidak pernah muncul.
-// Manajemen kendaraan (tambah/edit/nonaktifkan, ADMIN+) juga ditambahkan
-// di halaman ini; seed kendaraan contoh sudah dihapus dari API.
+// Manajemen kendaraan (tambah/edit/nonaktifkan, SUPER_ADMIN saja —
+// WS-1, 25 Nov 2026) juga ditambahkan di halaman ini; seed kendaraan
+// contoh sudah dihapus dari API.
 
 "use client";
 
@@ -140,9 +141,15 @@ export function FleetMap() {
   const containerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ x: number; y: number; lat: number; lng: number } | null>(null);
 
-  // Manajemen kendaraan (ADMIN+ saja — server juga mengecek di API).
+  // Manajemen kendaraan (SUPER_ADMIN saja — WS-1, 25 Nov 2026: ADMIN hanya
+  // boleh lihat; server juga mengecek di API).
   const { data: session } = useSession();
-  const canManage = hasMinimumRole(session, "ADMIN");
+  const canManage = hasMinimumRole(session, "SUPER_ADMIN");
+  // KASIR hanya melihat kendaraannya sendiri (filter server M21) — kalau
+  // daftarnya kosong, hampir pasti karena belum ditugaskan, bukan karena
+  // belum ada armada. Bedakan pesan empty state-nya (WS-1).
+  const isKasir =
+    hasMinimumRole(session, "KASIR") && !hasMinimumRole(session, "ADMIN");
   const [drivers, setDrivers] = useState<DriverOption[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -548,10 +555,11 @@ export function FleetMap() {
             <p className="text-sm text-gray-500">Memuat...</p>
           ) : vehicles.length === 0 ? (
             <p className="text-sm text-gray-500">
-              Belum ada kendaraan.
-              {canManage
-                ? " Tekan \"Tambah Kendaraan\" untuk mendaftarkan armada pertama."
-                : " Minta ADMIN / SUPER_ADMIN untuk mendaftarkan kendaraan."}
+              {isKasir
+                ? "Kamu belum ditugaskan ke kendaraan apa pun — hubungi admin."
+                : canManage
+                  ? "Belum ada kendaraan. Tekan \"Tambah Kendaraan\" untuk mendaftarkan armada pertama."
+                  : "Belum ada kendaraan. Minta SUPER_ADMIN untuk mendaftarkan kendaraan."}
             </p>
           ) : (
             <div className="space-y-2">
@@ -613,13 +621,13 @@ export function FleetMap() {
             </div>
           )}
           <p className="text-xs text-gray-400 mt-4">
-            Lokasi dikirim otomatis dari HP sopir yang ditugaskan (atau ADMIN)
+            Lokasi dikirim otomatis dari HP sopir yang ditugaskan
             saat tombol &quot;Mulai GPS&quot; di APK aktif.
           </p>
         </div>
       </div>
 
-      {/* Form tambah / edit kendaraan (ADMIN+) */}
+      {/* Form tambah / edit kendaraan (SUPER_ADMIN saja) */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="glass-card w-full max-w-lg max-h-[90vh] overflow-y-auto p-5">

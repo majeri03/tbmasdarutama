@@ -21,6 +21,9 @@ import {
 // + TOTAL fee — semuanya dihitung di SERVER (getSalesmanDetail).
 // Fee TIDAK PERNAH dicetak di invoice/struk/surat jalan (internal saja).
 
+const btnAccentSm =
+  "inline-flex items-center gap-1 rounded-lg bg-[#7F1D1D] px-2 py-1 text-xs font-semibold text-white transition-colors hover:bg-[#991B1B] disabled:opacity-50";
+
 interface SalesmanDetailModalProps {
   salesman: { id: string; name: string; phone: string | null; isActive: boolean } | null;
   isOpen: boolean;
@@ -187,7 +190,7 @@ export function SalesmanDetailModal({ salesman, isOpen, onClose }: SalesmanDetai
         {/* Header */}
         <div className="sticky top-0 bg-white/80 backdrop-blur-sm border-b border-gray-200 p-6 flex items-center justify-between z-10">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <div className="w-12 h-12 rounded-xl bg-[#7F1D1D] flex items-center justify-center shadow-lg shadow-red-900/20">
               <User className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -230,8 +233,8 @@ export function SalesmanDetailModal({ salesman, isOpen, onClose }: SalesmanDetai
               </span>
             </div>
             {feeSetting && (
-              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 border border-blue-200">
-                <span className="text-sm font-semibold text-blue-700">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#7F1D1D]/5 border border-[#7F1D1D]/20">
+                <span className="text-sm font-semibold text-[#7F1D1D]">
                   Fee global: {feeSetting.enabled ? `AKTIF ${feeSetting.percent}%` : "NONAKTIF (fee Rp0)"}
                 </span>
               </div>
@@ -240,7 +243,7 @@ export function SalesmanDetailModal({ salesman, isOpen, onClose }: SalesmanDetai
 
           {loading ? (
             <div className="glass-card p-8 flex items-center justify-center gap-2">
-              <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+              <Loader2 className="w-5 h-5 animate-spin text-[#7F1D1D]" />
               <span className="text-sm text-gray-600">Memuat detail…</span>
             </div>
           ) : error ? (
@@ -248,7 +251,7 @@ export function SalesmanDetailModal({ salesman, isOpen, onClose }: SalesmanDetai
               <p className="text-sm text-red-600">{error}</p>
               <button
                 onClick={loadDetail}
-                className="mt-3 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700"
+                className="mt-3 px-4 py-2 bg-[#7F1D1D] text-white text-sm font-semibold rounded-lg hover:bg-[#991B1B]"
               >
                 Coba Lagi
               </button>
@@ -269,7 +272,7 @@ export function SalesmanDetailModal({ salesman, isOpen, onClose }: SalesmanDetai
                 </div>
                 <div className="glass-card p-3 text-center">
                   <p className="text-xs text-gray-500">Total Fee</p>
-                  <p className="text-sm font-bold text-blue-600 mt-1">
+                  <p className="text-sm font-bold text-[#7F1D1D] mt-1">
                     {formatCurrency(detail.totalFee)}
                   </p>
                 </div>
@@ -285,7 +288,7 @@ export function SalesmanDetailModal({ salesman, isOpen, onClose }: SalesmanDetai
               {/* Daftar penjualan */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <History className="w-5 h-5 text-blue-600" />
+                  <History className="w-5 h-5 text-[#7F1D1D]" />
                   Riwayat Transaksi
                 </h3>
                 {detail.sales.length === 0 ? (
@@ -325,7 +328,7 @@ export function SalesmanDetailModal({ salesman, isOpen, onClose }: SalesmanDetai
                                 key={row.id}
                                 className="border-b border-gray-100 last:border-0"
                               >
-                                <td className="px-4 py-3 font-mono font-semibold text-blue-600 whitespace-nowrap">
+                                <td className="px-4 py-3 font-mono font-semibold text-[#7F1D1D] whitespace-nowrap">
                                   {row.invoiceNumber}
                                 </td>
                                 <td className="px-4 py-3 text-gray-900 whitespace-nowrap">
@@ -350,7 +353,7 @@ export function SalesmanDetailModal({ salesman, isOpen, onClose }: SalesmanDetai
                                     </span>
                                   )}
                                 </td>
-                                <td className="px-4 py-3 text-right font-semibold text-blue-600 whitespace-nowrap">
+                                <td className="px-4 py-3 text-right font-semibold text-[#7F1D1D] whitespace-nowrap">
                                   {formatCurrency(row.feeAmount)}
                                 </td>
                                 {isSuperAdmin && (
@@ -390,7 +393,7 @@ export function SalesmanDetailModal({ salesman, isOpen, onClose }: SalesmanDetai
                                         type="button"
                                         disabled={savingSaleId === row.id}
                                         onClick={() => handlePercentSave(row.id)}
-                                        className="btn-primary !py-1 !px-2 text-xs"
+                                        className={btnAccentSm}
                                         title="Simpan persen khusus invoice ini"
                                       >
                                         {savingSaleId === row.id ? (

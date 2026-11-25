@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Users, Loader2, Plus, Pencil, Trash2, Eye, Percent, X } from "lucide-react";
+import { Users, Loader2, Plus, Pencil, Trash2, Eye, Percent, X, Search } from "lucide-react";
 import {
   toggleSalesmanStatus,
   getSalesmanFeeSetting,
@@ -13,8 +13,13 @@ import { hasMinimumRole } from "@/lib/utils/role";
 import { useToast } from "@/components/ui/toast";
 import { Toast } from "@/components/ui/toast";
 
-// Dipindah dari SalesSettingsTab (tab "Sales & Poin" di Pengaturan, dihapus
-// 24 Nov 2026) ke halaman sendiri /dashboard/salesmen.
+// WS-8 (25 Nov 2026) — desain ulang tampilan daftar salesman: tabel rapi
+// + filter/pencarian + ringkasan total. LOGIKA TIDAK BERUBAH: semua aksi
+// (tambah/ubah/hapus/toggle/fee) sama seperti sebelumnya, data tetap dari
+// GET /api/salesmen, angka Total Penjualan & Total Fee dihitung SERVER
+// (getSalesmen, rumus calcSalesmanFee yang sama seperti detail) — UI
+// hanya menampilkan. Aksen visual: merah gelap #7F1D1D, latar putih /
+// abu terang, tanpa gradien biru.
 // Aturan akses (tidak berubah, server tetap yang memutuskan):
 // - Baca daftar: KASIR+ (GET /api/salesmen + getSalesmen: requireMinimumRole KASIR).
 // - Tulis (tambah/ubah/nonaktifkan/hapus): SUPER_ADMIN saja — form dan
@@ -22,13 +27,31 @@ import { Toast } from "@/components/ui/toast";
 // Salesman tercatat internal di penjualan — TIDAK PERNAH dicetak di
 // invoice/struk/surat jalan.
 
+// Tombol utama lokal (aksen #7F1D1D). Sengaja TIDAK memakai .btn-primary
+// global (gradien biru) supaya halaman ini memakai palet aplikasi yang
+// sama dengan APK; .btn-primary global tidak diubah agar halaman lain
+// tidak ikut berubah.
+const btnAccent =
+  "inline-flex items-center justify-center gap-2 rounded-xl bg-[#7F1D1D] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#991B1B] disabled:opacity-50";
+const btnAccentSm =
+  "inline-flex items-center gap-1 rounded-lg bg-[#7F1D1D] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#991B1B] disabled:opacity-50";
+
 type SalesmanRow = {
   id: string;
   name: string;
   phone: string | null;
   isActive: boolean;
   salesCount: number;
+  // Dikirim server (getSalesmen, WS-8). Opsional supaya data lama tanpa
+  // field ini tetap tampil (dianggap 0).
+  totalSales?: number;
+  totalFee?: number;
 };
+
+type StatusFilter = "ALL" | "ACTIVE" | "INACTIVE";
+type SortKey = "name" | "sales" | "fee" | "count";
+
+const formatRp = (value: number) => `Rp ${value.toLocaleString("id-ID")}`;
 
 export default function SalesmenManager() {
   const { data: session } = useSession();
@@ -52,6 +75,11 @@ export default function SalesmenManager() {
   // terlihat dan bisa diklik.
   const [deleteTarget, setDeleteTarget] = useState<SalesmanRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Filter & urutan tampilan (hanya di sisi klien — tidak mengubah data).
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const [sortKey, setSortKey] = useState<SortKey>("name");
 
   // Pengaturan fee global (24 Nov 2026): default MATI, persen default 2%.
   // Hanya SUPER_ADMIN yang bisa mengubah (server yang memutuskan);
@@ -238,6 +266,50 @@ export default function SalesmenManager() {
     }
   };
 
+  // ---------- Tampilan: filter + urutan + total (klien saja) ----------
+  const filteredSalesmen = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const list = salesmen.filter((s) => {
+      if (statusFilter === "ACTIVE" && !s.isActive) return false;
+      if (statusFilter === "INACTIVE" && s.isActive) return false;
+      if (q && !s.name.toLowerCase().includes(q) && !(s.phone || "").toLowerCase().includes(q)) {
+        return false;
+      }
+      return true;
+    });
+    const byTotalSales = (s: SalesmanRow) => s.totalSales ?? 0;
+    const byTotalFee = (s: SalesmanRow) => s.totalFee ?? 0;
+    switch (sortKey) {
+      case "sales":
+        return [...list].sort((a, b) => byTotalSales(b) - byTotalSales(a));
+      case "fee":
+        return [...list].sort((a, b) => byTotalFee(b) - byTotalFee(a));
+      case "count":
+        return [...list].sort((a, b) => b.salesCount - a.salesCount);
+      case "name":
+      default:
+        return [...list].sort((a, b) => a.name.localeCompare(b.name, "id-ID"));
+    }
+  }, [salesmen, search, statusFilter, sortKey]);
+
+  // Total mengikuti filter yang sedang aktif (bukan selalu semua data).
+  const totals = useMemo(
+    () => ({
+      count: filteredSalesmen.length,
+      activeCount: filteredSalesmen.filter((s) => s.isActive).length,
+      salesCount: filteredSalesmen.reduce((sum, s) => sum + s.salesCount, 0),
+      totalSales: filteredSalesmen.reduce((sum, s) => sum + (s.totalSales ?? 0), 0),
+      totalFee: filteredSalesmen.reduce((sum, s) => sum + (s.totalFee ?? 0), 0),
+    }),
+    [filteredSalesmen]
+  );
+
+  const statusChips: { key: StatusFilter; label: string }[] = [
+    { key: "ALL", label: "Semua" },
+    { key: "ACTIVE", label: "Aktif" },
+    { key: "INACTIVE", label: "Nonaktif" },
+  ];
+
   return (
     <div className="space-y-4">
       {toast && (
@@ -245,7 +317,7 @@ export default function SalesmenManager() {
       )}
 
       <div className="flex items-center gap-2">
-        <Users className="w-5 h-5 text-blue-600" />
+        <Users className="w-5 h-5 text-[#7F1D1D]" />
         <h2 className="text-lg font-semibold text-gray-800">Salesman</h2>
       </div>
       <p className="text-sm text-gray-600">
@@ -255,10 +327,34 @@ export default function SalesmenManager() {
         {!isSuperAdmin && " Anda hanya bisa melihat daftar — perubahan hanya bisa dilakukan SUPER_ADMIN."}
       </p>
 
+      {/* Ringkasan total — mengikuti filter yang aktif di bawah */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Salesman Aktif</p>
+          <p className="mt-1 text-2xl font-bold text-gray-900">
+            {totals.activeCount}
+            <span className="text-base font-medium text-gray-400"> / {totals.count}</span>
+          </p>
+          <p className="text-xs text-gray-500">{totals.salesCount} transaksi tercatat</p>
+        </div>
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Total Penjualan</p>
+          <p className="mt-1 text-2xl font-bold text-gray-900">{formatRp(totals.totalSales)}</p>
+          <p className="text-xs text-gray-500">Jumlah grand total semua invoice</p>
+        </div>
+        <div className="rounded-xl border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Total Fee</p>
+          <p className="mt-1 text-2xl font-bold text-[#7F1D1D]">{formatRp(totals.totalFee)}</p>
+          <p className="text-xs text-gray-500">
+            {feeEnabled ? `Fee global aktif ${feePercent}%` : "Fee global nonaktif — fee Rp0"}
+          </p>
+        </div>
+      </div>
+
       {/* Pengaturan fee salesman (24 Nov 2026) */}
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-2">
+      <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-2">
         <div className="flex items-center gap-2">
-          <Percent className="w-5 h-5 text-blue-600" />
+          <Percent className="w-5 h-5 text-[#7F1D1D]" />
           <h3 className="text-sm font-semibold text-gray-800">Fee Salesman (per invoice)</h3>
         </div>
         {feeLoading ? (
@@ -270,7 +366,7 @@ export default function SalesmenManager() {
                 type="checkbox"
                 checked={feeEnabled}
                 onChange={(e) => setFeeEnabled(e.target.checked)}
-                className="w-4 h-4 accent-blue-600"
+                className="w-4 h-4 accent-[#7F1D1D]"
               />
               Fee salesman aktif
             </label>
@@ -291,7 +387,7 @@ export default function SalesmenManager() {
                 type="button"
                 onClick={handleSaveFeeSetting}
                 disabled={feeSaving}
-                className="btn-primary inline-flex items-center gap-2"
+                className={btnAccent}
               >
                 {feeSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 Simpan Fee
@@ -316,7 +412,7 @@ export default function SalesmenManager() {
       </div>
 
       {isSuperAdmin && (
-        <form onSubmit={handleAddSalesman} className="flex flex-wrap items-end gap-2">
+        <form onSubmit={handleAddSalesman} className="flex flex-wrap items-end gap-2 rounded-xl border border-gray-200 bg-white p-4">
           <div>
             <label className="label label-required">Nama salesman</label>
             <input
@@ -339,33 +435,83 @@ export default function SalesmenManager() {
               maxLength={30}
             />
           </div>
-          <button type="submit" disabled={adding} className="btn-primary inline-flex items-center gap-2">
+          <button type="submit" disabled={adding} className={btnAccent}>
             {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
             Tambah
           </button>
         </form>
       )}
 
+      {/* Filter & pencarian */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative">
+          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="glass-input !pl-9 w-64"
+            placeholder="Cari nama / no. HP…"
+          />
+        </div>
+        <div className="flex items-center gap-1 rounded-xl border border-gray-200 bg-white p-1">
+          {statusChips.map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={() => setStatusFilter(chip.key)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                statusFilter === chip.key
+                  ? "bg-[#7F1D1D] text-white"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
+        <select
+          value={sortKey}
+          onChange={(e) => setSortKey(e.target.value as SortKey)}
+          className="glass-input w-52"
+          title="Urutkan tabel"
+        >
+          <option value="name">Urutkan: Nama (A–Z)</option>
+          <option value="sales">Urutkan: Total Penjualan ↓</option>
+          <option value="fee">Urutkan: Total Fee ↓</option>
+          <option value="count">Urutkan: Transaksi ↓</option>
+        </select>
+        <span className="text-xs text-gray-500">
+          Menampilkan {filteredSalesmen.length} dari {salesmen.length} salesman
+        </span>
+      </div>
+
       {loading ? (
         <p className="text-sm text-gray-500">Memuat daftar salesman…</p>
-      ) : salesmen.length === 0 ? (
-        <p className="text-sm text-gray-500">Belum ada salesman. {isSuperAdmin ? "Tambahkan salesman pertama di atas." : ""}</p>
+      ) : filteredSalesmen.length === 0 ? (
+        <p className="text-sm text-gray-500">
+          {salesmen.length === 0
+            ? `Belum ada salesman. ${isSuperAdmin ? "Tambahkan salesman pertama di atas." : ""}`
+            : "Tidak ada salesman yang cocok dengan filter."}
+        </p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-gray-500 border-b">
-                <th className="py-2 pr-2 font-medium">Nama</th>
-                <th className="py-2 pr-2 font-medium">No. HP</th>
-                <th className="py-2 pr-2 font-medium">Penjualan</th>
-                <th className="py-2 pr-2 font-medium">Status</th>
-                <th className="py-2 font-medium text-right">Aksi</th>
+              <tr className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+                <th className="px-4 py-3 font-semibold">Nama</th>
+                <th className="px-4 py-3 font-semibold">No. HP</th>
+                <th className="px-4 py-3 font-semibold">Status</th>
+                <th className="px-4 py-3 font-semibold text-right">Transaksi</th>
+                <th className="px-4 py-3 font-semibold text-right">Total Penjualan</th>
+                <th className="px-4 py-3 font-semibold text-right">Total Fee</th>
+                <th className="px-4 py-3 font-semibold text-right">Aksi</th>
               </tr>
             </thead>
             <tbody>
-              {salesmen.map((s) => (
-                <tr key={s.id} className="border-b last:border-0">
-                  <td className="py-2 pr-2 font-medium text-gray-800">
+              {filteredSalesmen.map((s) => (
+                <tr key={s.id} className="border-t border-gray-100 hover:bg-gray-50">
+                  <td className="px-4 py-3 font-medium text-gray-800">
                     {editingId === s.id ? (
                       <input
                         type="text"
@@ -378,14 +524,14 @@ export default function SalesmenManager() {
                       <button
                         type="button"
                         onClick={() => setDetailSalesman(s)}
-                        className="text-blue-600 hover:underline text-left"
+                        className="text-[#7F1D1D] hover:underline text-left font-semibold"
                         title="Klik untuk melihat detail penjualan & fee"
                       >
                         {s.name}
                       </button>
                     )}
                   </td>
-                  <td className="py-2 pr-2 text-gray-600">
+                  <td className="px-4 py-3 text-gray-600">
                     {editingId === s.id ? (
                       <input
                         type="text"
@@ -398,8 +544,7 @@ export default function SalesmenManager() {
                       s.phone || "-"
                     )}
                   </td>
-                  <td className="py-2 pr-2 text-gray-600">{s.salesCount} transaksi</td>
-                  <td className="py-2 pr-2">
+                  <td className="px-4 py-3">
                     {isSuperAdmin ? (
                       <button
                         type="button"
@@ -421,13 +566,22 @@ export default function SalesmenManager() {
                       </span>
                     )}
                   </td>
-                  <td className="py-2 text-right whitespace-nowrap">
+                  <td className="px-4 py-3 text-right text-gray-700 whitespace-nowrap">
+                    {s.salesCount} transaksi
+                  </td>
+                  <td className="px-4 py-3 text-right font-semibold text-gray-900 whitespace-nowrap">
+                    {formatRp(s.totalSales ?? 0)}
+                  </td>
+                  <td className="px-4 py-3 text-right font-semibold text-[#7F1D1D] whitespace-nowrap">
+                    {formatRp(s.totalFee ?? 0)}
+                  </td>
+                  <td className="px-4 py-3 text-right whitespace-nowrap">
                     {editingId === s.id ? (
                       <>
                         <button
                           type="button"
                           onClick={() => handleSaveEdit(s.id)}
-                          className="btn-primary !py-1 !px-3 text-xs mr-2"
+                          className={`${btnAccentSm} mr-2`}
                         >
                           Simpan
                         </button>
@@ -477,6 +631,17 @@ export default function SalesmenManager() {
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-gray-200 bg-gray-50 font-semibold text-gray-900">
+                <td className="px-4 py-3" colSpan={3}>
+                  TOTAL ({totals.count} salesman)
+                </td>
+                <td className="px-4 py-3 text-right whitespace-nowrap">{totals.salesCount} transaksi</td>
+                <td className="px-4 py-3 text-right whitespace-nowrap">{formatRp(totals.totalSales)}</td>
+                <td className="px-4 py-3 text-right text-[#7F1D1D] whitespace-nowrap">{formatRp(totals.totalFee)}</td>
+                <td className="px-4 py-3" />
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
@@ -491,7 +656,7 @@ export default function SalesmenManager() {
       {deleteTarget && (
         <div className="modal-overlay">
           <div className="modal-container max-w-md animate-modal-slide-up">
-            <div className="modal-header bg-gradient-to-r from-red-500 to-red-600">
+            <div className="modal-header bg-[#7F1D1D]">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <Trash2 className="w-5 h-5" />
                 Hapus Salesman

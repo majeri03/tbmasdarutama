@@ -9,7 +9,7 @@ import {
   type CreateCustomerInput,
   type UpdateCustomerInput,
 } from "@/lib/validations/customer.schema";
-import { Prisma } from "@prisma/client";
+import { Prisma, PaymentMethod } from "@prisma/client";
 import { requireMinimumRole, requirePermission, type AuthSession } from "../utils/role";
 
 //GENERATE CUSTOMER CODE
@@ -357,7 +357,34 @@ export async function getCustomers(filters?: { status?: "ACTIVE" | "INACTIVE" },
       },
     });
 
-    return { success: true, data: customers };
+    // WS-8 (25 Nov 2026): total belanja lunas per customer — agregat
+    // TAMPILAN saja, satu query groupBy. Definisi: jumlah grandTotal
+    // penjualan customer dengan status COMPLETED dan paymentMethod BUKAN
+    // CREDIT — basis yang sama dengan syarat dapat poin (pos.actions.ts /
+    // sale.actions.ts: poin hanya dari penjualan lunas, bukan CREDIT,
+    // bukan Umum). CREDIT tidak masuk total ini supaya total belanja
+    // sejalan dengan poin yang didapat; CANCELLED / RETURN / PENDING
+    // juga tidak masuk. Rumus poin dan saldo poin TIDAK diubah.
+    const ids = customers.map((c) => c.id);
+    const belanjaTotals = ids.length
+      ? await prisma.sale.groupBy({
+          by: ["customerId"],
+          where: {
+            customerId: { in: ids },
+            status: "COMPLETED",
+            paymentMethod: { not: PaymentMethod.CREDIT },
+          },
+          _sum: { grandTotal: true },
+        })
+      : [];
+    const belanjaById = new Map(
+      belanjaTotals.map((t) => [t.customerId as string, Number(t._sum.grandTotal ?? 0)])
+    );
+
+    return {
+      success: true,
+      data: customers.map((c) => ({ ...c, totalBelanja: belanjaById.get(c.id) ?? 0 })),
+    };
   } catch (error) {
     console.error("[GET_CUSTOMERS_ERROR]", error);
     if (error instanceof Error && error.message.startsWith("Unauthorized")) {

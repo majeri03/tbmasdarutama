@@ -174,17 +174,19 @@ export default function Sidebar({
   // Sidebar content
   const sidebarContent = (
     <div className="flex flex-col h-full relative">
-      {/* Abstrak background */}
+      {/* Kilau kaca (glassmorphism) — hanya sheen putih transparan, tanpa
+          blob warna biru/hijau, supaya sidebar terlihat seperti kaca buram
+          yang bersinar, bukan panel berwarna. */}
       <div
         aria-hidden
         className="absolute inset-0 z-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse 80% 60% at 70% 10%,rgba(59,130,246,0.13),transparent 80%),radial-gradient(ellipse 60% 40% at 0% 100%,rgba(16,185,129,0.10),transparent 80%)",
+            "linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0.08) 35%, rgba(255,255,255,0.02) 70%, transparent), radial-gradient(ellipse 90% 28% at 50% 0%, rgba(255,255,255,0.55), transparent 70%)",
         }}
       />
       {/* Logo */}
-      <div className="h-16 flex items-center px-6 border-b border-gray-100/50">
+      <div className="h-16 flex items-center px-6">
         <Link href="/dashboard" className="flex items-center gap-3 group w-full">
           {storeLogo ? (
             // TAMPILKAN LOGO GAMBAR
@@ -218,8 +220,10 @@ export default function Sidebar({
           </span>
         </Link>
       </div>
-      {/* Menu Groups */}
-      <nav className="flex-1 overflow-y-auto px-2 pb-6 relative z-10 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+      {/* Menu Groups — scrollbar disembunyikan (tetap bisa di-scroll):
+          scrollbar-width:none (Firefox) + ::-webkit-scrollbar:hidden
+          (Chrome/Safari/Edge). */}
+      <nav className="flex-1 overflow-y-auto px-2 pb-6 relative z-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {status === "loading" ? (
           <div className="space-y-6 animate-pulse px-3 mt-4">
             {[1, 2, 3].map((g) => (
@@ -291,14 +295,14 @@ export default function Sidebar({
   return (
     <>
       {/* Desktop */}
-      {/* FIX (25 Nov 2026, minor batch 1a): JANGAN pakai class glass-card
-          di aside ini. glass-card = position:relative + overflow:hidden +
-          rounded-2xl — itu melawan `fixed` + `overflow-y-auto` di bawah
-          dan membuat sidebar docking terlihat seperti kartu mengambang
-          (sudut membulat + bayangan) yang menutupi ~250px kiri. Styling
-          kaca ditulis eksplisit (bg-white/70 + backdrop-blur-xl) supaya
-          tidak ada properti yang bertabrakan dengan position:fixed. */}
-      <aside className="fixed z-30 top-0 left-0 h-screen w-64 bg-white/70 shadow-2xl border-r border-white/30 hidden md:flex flex-col backdrop-blur-xl overflow-y-auto">
+      {/* Glassmorphism (26 Nov 2026, permintaan Jery): sidebar kaca buram
+          tanpa background putih dan tanpa garis tepi. JANGAN pakai class
+          glass-card di aside ini (position:relative + overflow:hidden +
+          rounded-2xl melawan `fixed` + membuat sidebar docking terlihat
+          seperti kartu mengambang). Styling kaca ditulis eksplisit:
+          gradien putih transparan + backdrop-blur-2xl, tanpa border-r
+          dan tanpa shadow. Scrollbar disembunyikan di nav (lihat atas). */}
+      <aside className="fixed z-30 top-0 left-0 h-screen w-64 hidden md:flex flex-col overflow-hidden bg-gradient-to-b from-white/25 via-white/10 to-white/5 backdrop-blur-2xl backdrop-saturate-150">
         {sidebarContent}
       </aside>
       {/* Mobile Drawer */}
@@ -325,7 +329,11 @@ export default function Sidebar({
               leaveFrom="translate-x-0"
               leaveTo="-translate-x-full"
             >
-              <Dialog.Panel className="relative w-64 h-full glass-card shadow-2xl border-r border-white/30 flex flex-col backdrop-blur-xl">
+              {/* Panel drawer kaca — sama seperti sidebar desktop: tanpa
+                  border-r, background putih transparan + blur kuat.
+                  `relative` + `overflow-hidden` ditulis eksplisit karena
+                  sebelumnya datang dari class glass-card. */}
+              <Dialog.Panel className="relative w-64 h-full overflow-hidden rounded-r-2xl bg-white/10 backdrop-blur-2xl backdrop-saturate-150 shadow-2xl flex flex-col">
                 {/* Close button */}
                 <button
                   className="absolute top-4 right-4 glass-card p-2 rounded-full shadow border border-white/30 z-20"
