@@ -18,6 +18,11 @@ model User {
   address       String?
   expoPushToken String?   // NEW: Untuk Push Notification
   isActive      Boolean   @default(true)
+  // WS-9 (26 Nov 2026, foto profil): URL publik foto profil user di R2
+  // (folder "avatars"). Null = belum ada foto. Diisi lewat
+  // POST /api/profile/avatar; dibaca ke sesi (NextAuth + token mobile)
+  // supaya web + APK menampilkannya tanpa query tambahan.
+  avatarUrl     String?
   // PKG-I (23 Nov 2026, OTP verifikasi email): dicatat saat akun baru
   // berhasil verifikasi email. Akun lama (sudah aktif) tidak punya nilai
   // ini — hanya akun yang dibuat setelah fitur OTP rilis.
@@ -615,6 +620,8 @@ enum R2FileOwnerType {
   PAYMENT_PROOF
   HERO
   LOGO
+  // WS-9 (26 Nov 2026, foto profil): file avatar user (folder "avatars").
+  AVATAR
   UNKNOWN
 }
 

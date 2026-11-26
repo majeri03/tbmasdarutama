@@ -1,17 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Store, Lock, Globe, User, ShieldAlert, Bell } from "lucide-react";
+import { Store, Globe, User, ShieldAlert, Bell } from "lucide-react";
 import StoreSettingsTab from "./_components/StoreSettingsTab";
 import DebtNotificationTab from "./_components/DebtNotificationTab";
-import PasswordSettingsTab from "./_components/PasswordSettingsTab";
 import LandingPageTab from "./_components/LandingPageTab";
 import ProfileSettingsTab from "./_components/ProfileSettingsTab";
 import DataManagementTab from "./_components/DataManagementTab";
 import InvoiceSettingsTab from "./_components/InvoiceSettingsTab";
 import PageGuard from "@/components/PageGuard";
 
-type TabType = "profile" | "store" | "invoice" | "password" | "landing" | "data" | "debt";
+// WS-9 (26 Nov 2026): tab "Ganti Password" DIHAPUS — formnya pindah ke
+// dalam tab Profil Akun (ProfileSettingsTab > ChangePasswordForm).
+// Hanya ada SATU tempat ganti password: di Profil.
+type TabType = "profile" | "store" | "invoice" | "landing" | "data" | "debt";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<TabType>("profile");
@@ -32,7 +34,6 @@ export default function SettingsPage() {
     { id: "profile" as TabType, label: "Profil Akun", icon: User },
     { id: "store" as TabType, label: "Info Toko", icon: Store },
     { id: "invoice" as TabType, label: "Pengaturan Invoice", icon: Store },
-    { id: "password" as TabType, label: "Ganti Password", icon: Lock },
     { id: "landing" as TabType, label: "Landing Page", icon: Globe },
     { id: "data" as TabType, label: "Manajemen Data", icon: ShieldAlert },
     // PKG-H (23 Nov 2026, email pengingat utang): daftar email penerima +
@@ -82,7 +83,6 @@ export default function SettingsPage() {
           {activeTab === "profile" && <ProfileSettingsTab />}
           {activeTab === "store" && <StoreSettingsTab />}
           {activeTab === "invoice" && <InvoiceSettingsTab />}
-          {activeTab === "password" && <PasswordSettingsTab />}
           {activeTab === "landing" && <LandingPageTab />}
           {activeTab === "data" && <DataManagementTab />}
           {activeTab === "debt" && <DebtNotificationTab />}

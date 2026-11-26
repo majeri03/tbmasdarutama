@@ -99,6 +99,7 @@ export async function getAuthenticatedUser() {
             email: payload.email,
             name: payload.name,
             role: payload.role as Role,
+            avatarUrl: payload.avatarUrl ?? null,
           },
         };
       }

@@ -24,6 +24,7 @@ export type R2OwnerType =
   | "PAYMENT_PROOF"
   | "HERO"
   | "LOGO"
+  | "AVATAR"
   | "UNKNOWN";
 
 /** Folder R2 -> tipe pemilik. Folder yang tidak dikenal = UNKNOWN. */
@@ -39,6 +40,8 @@ export function ownerTypeFromFolder(folder: string): R2OwnerType {
       return "HERO";
     case "logos":
       return "LOGO";
+    case "avatars":
+      return "AVATAR";
     default:
       return "UNKNOWN";
   }

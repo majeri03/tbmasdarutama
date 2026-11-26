@@ -51,6 +51,18 @@ export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
         if (result.code === "turnstile") {
           setError("Verifikasi keamanan gagal. Muat ulang halaman lalu coba lagi.");
           showToast("Verifikasi keamanan gagal", "error");
+        } else if (result.code === "locked") {
+          // WS-1 (26 Nov 2026, perbaikan APK ke-2): akun terkunci karena
+          // terlalu banyak percobaan login (5x gagal per IP+email atau
+          // 30x per IP dalam 15 menit). SEBELUMNYA authorize melempar
+          // Error biasa untuk kasus ini, Auth.js v5 tidak meneruskan
+          // pesannya ke client, dan cabang else di bawah menampilkan
+          // "Email atau password salah" — user yang sebenarnya terkunci
+          // disuruh menebak passwordnya. Sekarang kodenya "locked"
+          // (lihat LockedOutError di src/lib/auth.ts) dan pesan yang
+          // benar tampil: tunggu 15 menit, jangan coba lagi.
+          setError("Terlalu banyak percobaan login. Coba lagi 15 menit lagi.");
+          showToast("Terlalu banyak percobaan login", "error");
         } else if (result.code === "unverified") {
           setIsUnverified(true);
           setError("Akun belum terverifikasi. Masukkan kode OTP 6 digit yang dikirim ke email Anda.");

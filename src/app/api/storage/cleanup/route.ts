@@ -291,10 +291,16 @@ export async function GET() {
  *
  * PENTEST FIX (22 Nov 2026, M14 + L2 + L5):
  * - Role check denylist (role === "KASIR") diganti allowlist ADMIN+.
- * - olderThanDays WAJIB bilangan bulat 1-365 untuk SEMUA target destruktif
+ * - olderThanDays WAJIB bilangan bulat 0-365 untuk SEMUA target destruktif
  *   (termasuk ALL_PRODUCTS / PRODUCT_CATEGORY / HERO_IMAGES yang dulu tidak
  *   butuh itu sama sekali). Nilai -1 dulu menghasilkan cutoff di masa
  *   depan sehingga SEMUA bukti ikut terhapus.
+ * - FIX (26 Nov 2026, WS-8): 0 = eksplisit "semua umur" (hapus semua file
+ *   target tanpa batas umur) — dipakai tombol "Hapus Semua" di APK yang
+ *   memang berniat menghapus semuanya. Yang tetap dilarang adalah
+ *   olderThanDays yang HILANG (undefined): tanpa parameter itu request
+ *   ditolak 400, supaya penghapusan massal tidak pernah terjadi karena
+ *   parameter yang lupa dikirim.
  * - Baris DB hanya dihapus untuk file yang R2-nya benar-benar terhapus.
  *   Kalau hapus R2 gagal, baris dipertahankan + file ditandai
  *   DELETE_FAILED (bisa di-retry dari halaman Penyimpanan).
@@ -326,14 +332,22 @@ export async function POST(request: NextRequest) {
     }
 
     // olderThanDays wajib untuk semua target destruktif.
+    // 0 = eksplisit "semua umur" (hapus semua file target, tanpa batas
+    // umur) — hanya dari tombol "Hapus Semua" yang sudah dikonfirmasi
+    // pengguna. 1–365 = hanya file yang dibuat lebih dari N hari lalu.
+    // Yang dilarang adalah olderThanDays yang HILANG (undefined): tanpa
+    // parameter itu request ditolak, supaya penghapusan massal tidak
+    // pernah terjadi karena parameter yang lupa dikirim.
     const days = Number(olderThanDays);
-    if (!Number.isInteger(days) || days < 1 || days > 365) {
+    if (!Number.isInteger(days) || days < 0 || days > 365) {
       return NextResponse.json(
-        { error: "olderThanDays wajib diisi bilangan bulat 1–365 (hari)." },
+        { error: "olderThanDays wajib diisi bilangan bulat 0–365 (hari); 0 berarti semua umur." },
         { status: 400 }
       );
     }
     const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    // Label umur untuk pesan sukses (days = 0 bukan "lebih dari 0 hari").
+    const ageLabel = days === 0 ? "semua umur" : `lebih dari ${days} hari`;
 
     let deletedCount = 0;
     let skippedCount = 0; // baris DB dihapus tapi nilainya bukan file R2
@@ -435,7 +449,7 @@ export async function POST(request: NextRequest) {
         deletedCount,
         skippedCount,
         failedCount,
-        message: `Berhasil menghapus ${deletedCount} foto produk pada kategori "${category?.name || "Kategori"}" (lebih dari ${days} hari).${failedCount > 0 ? ` ${failedCount} gagal dihapus dari R2 dan dipertahankan — lihat status DELETE_FAILED di halaman Penyimpanan.` : ""}`,
+        message: `Berhasil menghapus ${deletedCount} foto produk pada kategori "${category?.name || "Kategori"}" (${ageLabel}).${failedCount > 0 ? ` ${failedCount} gagal dihapus dari R2 dan dipertahankan — lihat status DELETE_FAILED di halaman Penyimpanan.` : ""}`,
       });
     }
 
@@ -472,7 +486,7 @@ export async function POST(request: NextRequest) {
         deletedCount,
         skippedCount,
         failedCount,
-        message: `Berhasil menghapus ${deletedCount} foto produk (lebih dari ${days} hari) dari Cloudflare R2 & database.${failedCount > 0 ? ` ${failedCount} gagal dihapus dari R2 dan dipertahankan — lihat status DELETE_FAILED di halaman Penyimpanan.` : ""}`,
+        message: `Berhasil menghapus ${deletedCount} foto produk (${ageLabel}) dari Cloudflare R2 & database.${failedCount > 0 ? ` ${failedCount} gagal dihapus dari R2 dan dipertahankan — lihat status DELETE_FAILED di halaman Penyimpanan.` : ""}`,
       });
     }
 
@@ -565,7 +579,7 @@ export async function POST(request: NextRequest) {
         deletedCount,
         skippedCount,
         failedCount,
-        message: `Berhasil membersihkan ${deletedCount} foto bukti pengiriman (lebih dari ${days} hari) dari Cloudflare R2.${failedCount > 0 ? ` ${failedCount} gagal dihapus dari R2 dan dipertahankan — lihat status DELETE_FAILED di halaman Penyimpanan.` : ""}`,
+        message: `Berhasil membersihkan ${deletedCount} foto bukti pengiriman (${ageLabel}) dari Cloudflare R2.${failedCount > 0 ? ` ${failedCount} gagal dihapus dari R2 dan dipertahankan — lihat status DELETE_FAILED di halaman Penyimpanan.` : ""}`,
       });
     }
 
@@ -617,7 +631,7 @@ export async function POST(request: NextRequest) {
         deletedCount,
         skippedCount,
         failedCount,
-        message: `Berhasil membersihkan ${deletedCount} foto bukti transfer (lebih dari ${days} hari) dari Cloudflare R2.${failedCount > 0 ? ` ${failedCount} gagal dihapus dari R2 dan dipertahankan — lihat status DELETE_FAILED di halaman Penyimpanan.` : ""}`,
+        message: `Berhasil membersihkan ${deletedCount} foto bukti transfer (${ageLabel}) dari Cloudflare R2.${failedCount > 0 ? ` ${failedCount} gagal dihapus dari R2 dan dipertahankan — lihat status DELETE_FAILED di halaman Penyimpanan.` : ""}`,
       });
     }
 
@@ -652,7 +666,7 @@ export async function POST(request: NextRequest) {
         deletedCount,
         skippedCount,
         failedCount,
-        message: `Berhasil menghapus ${deletedCount} gambar hero (lebih dari ${days} hari) dari Cloudflare R2 & database.${failedCount > 0 ? ` ${failedCount} gagal dihapus dari R2 dan dipertahankan — lihat status DELETE_FAILED di halaman Penyimpanan.` : ""}`,
+        message: `Berhasil menghapus ${deletedCount} gambar hero (${ageLabel}) dari Cloudflare R2 & database.${failedCount > 0 ? ` ${failedCount} gagal dihapus dari R2 dan dipertahankan — lihat status DELETE_FAILED di halaman Penyimpanan.` : ""}`,
       });
     }
 

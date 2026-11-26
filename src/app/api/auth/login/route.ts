@@ -65,7 +65,15 @@ export async function POST(request: NextRequest) {
     const rateKey = loginRateKey(request, email);
     if (await isRateLimited(rateKey, LOGIN_MAX_FAILED, LOGIN_WINDOW_MS)) {
       return NextResponse.json(
-        { success: false, error: "Terlalu banyak percobaan login. Coba lagi 15 menit lagi." },
+        {
+          success: false,
+          // WS-1 (26 Nov 2026, perbaikan APK ke-2): kode mesin "locked"
+          // supaya APK bisa membedakan "terkunci 15 menit" dari
+          // "password salah" — pola yang sama seperti kode "unverified"
+          // di bawah. Pesan error-nya sendiri sudah benar sejak awal.
+          code: "locked",
+          error: "Terlalu banyak percobaan login. Coba lagi 15 menit lagi.",
+        },
         { status: 429 }
       );
     }
@@ -75,7 +83,13 @@ export async function POST(request: NextRequest) {
     const ipRateKey = `login-ip:${getClientIp(request.headers)}`;
     if (await isRateLimited(ipRateKey, LOGIN_IP_MAX_FAILED, LOGIN_WINDOW_MS)) {
       return NextResponse.json(
-        { success: false, error: "Terlalu banyak percobaan login. Coba lagi 15 menit lagi." },
+        {
+          success: false,
+          // WS-1 (26 Nov 2026): kode mesin "locked" — lihat catatan di
+          // cek rate limit per IP+email di atas.
+          code: "locked",
+          error: "Terlalu banyak percobaan login. Coba lagi 15 menit lagi.",
+        },
         { status: 429 }
       );
     }
@@ -89,6 +103,7 @@ export async function POST(request: NextRequest) {
         email: true,
         name: true,
         role: true,
+        avatarUrl: true,
         password: true,
         isActive: true,
         emailVerifiedAt: true,
@@ -159,6 +174,7 @@ export async function POST(request: NextRequest) {
       email: user.email,
       name: user.name,
       role: user.role,
+      avatarUrl: user.avatarUrl ?? null,
       tv: user.tokenVersion,
     });
 
@@ -184,6 +200,7 @@ export async function POST(request: NextRequest) {
             email: user.email,
             name: user.name,
             role: user.role,
+            avatarUrl: user.avatarUrl ?? null,
           },
           sessionToken,
           cookieName,

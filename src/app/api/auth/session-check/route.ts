@@ -30,6 +30,10 @@ export async function GET() {
             email: session.user.email,
             name: session.user.name,
             role: session.user.role,
+            // WS-9 (26 Nov 2026): avatarUrl ikut di sini supaya APK
+            // menampilkannya dari hasil checkSession (lihat
+            // getAuthenticatedUser + verifyMobileToken).
+            avatarUrl: (session.user as { avatarUrl?: string | null }).avatarUrl ?? null,
           },
           isAuthenticated: true,
         },

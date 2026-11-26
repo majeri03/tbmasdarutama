@@ -18,6 +18,8 @@ declare module "next-auth" {
       role: string;
       email: string;
       name: string;
+      /** URL foto profil (R2, folder "avatars") — null kalau belum ada. */
+      avatarUrl?: string | null;
     };
   }
 
@@ -25,6 +27,7 @@ declare module "next-auth" {
     id: string;
     role: string;
     tokenVersion?: number;
+    avatarUrl?: string | null;
   }
 }
 
@@ -36,6 +39,8 @@ declare module "@auth/core/jwt" {
      *  tanpa query tambahan (sebelumnya tidak pernah masuk ke token/sesi). */
     name?: string | null;
     email?: string | null;
+    /** URL foto profil — cara masuknya sama seperti nama/email di atas. */
+    avatarUrl?: string | null;
     /** Versi token (lihat User.tokenVersion). Naik tiap logout / ganti
      *  password / nonaktifkan akun / ganti role — token lama langsung mati. */
     tv?: number;
@@ -76,6 +81,22 @@ class UnverifiedAccountError extends CredentialsSignin {
 // yang benar (result.code === "turnstile"), bukan pesan generik.
 class TurnstileFailedError extends CredentialsSignin {
   code = "turnstile";
+}
+
+// WS-1 (26 Nov 2026, perbaikan APK ke-2): akun terkunci karena terlalu
+// banyak percobaan login — pola yang sama seperti UnverifiedAccountError.
+// SEBELUMNYA kedua cek rate limit di authorize melempar Error biasa
+// ("Terlalu banyak percobaan login..."). Auth.js v5 TIDAK meneruskan
+// pesan Error biasa ke client (sampainya hanya "CredentialsSignin" tanpa
+// code), sehingga LoginForm masuk cabang else dan menampilkan
+// "Email atau password salah" — user yang sebenarnya TERKUNCI 15 menit
+// disuruh menebak-nebak passwordnya dan mencoba lagi berkali-kali.
+// Dengan subclass ini, result.code === "locked" sampai ke LoginForm dan
+// pesan yang benar tampil. Rute mobile (/api/auth/login) tidak kena bug
+// ini: ia mengembalikan 429 + pesan yang benar langsung, dan APK sudah
+// menampilkannya apa adanya.
+class LockedOutError extends CredentialsSignin {
+  code = "locked";
 }
 
 export const authConfig: NextAuthConfig = {
@@ -147,14 +168,14 @@ export const authConfig: NextAuthConfig = {
           throw new TurnstileFailedError();
         }
         if (await isRateLimited(rateKey, WEB_LOGIN_MAX_FAILED, WEB_LOGIN_WINDOW_MS)) {
-          throw new Error("Terlalu banyak percobaan login. Coba lagi 15 menit lagi.");
+          throw new LockedOutError();
         }
         // HARDENING (24 Nov 2026): batas agregat per IP — dihitung untuk
         // SETIAP percobaan login (berhasil/gagal) dari IP ini, semua email.
         // 30x/15 menit sangat longgar untuk pemakaian normal.
         const ipRateKey = `login-ip:${ip}`;
         if (await isRateLimited(ipRateKey, WEB_LOGIN_IP_MAX_FAILED, WEB_LOGIN_WINDOW_MS)) {
-          throw new Error("Terlalu banyak percobaan login. Coba lagi 15 menit lagi.");
+          throw new LockedOutError();
         }
         await recordRateLimitHit(ipRateKey, WEB_LOGIN_WINDOW_MS);
 
@@ -206,6 +227,7 @@ export const authConfig: NextAuthConfig = {
           name: user.name,
           role: user.role,
           tokenVersion: user.tokenVersion,
+          avatarUrl: user.avatarUrl ?? null,
         };
       },
     }),
@@ -218,6 +240,7 @@ export const authConfig: NextAuthConfig = {
         token.role = user.role;
         token.name = user.name ?? undefined;
         token.email = user.email ?? undefined;
+        token.avatarUrl = (user as { avatarUrl?: string | null }).avatarUrl ?? null;
         token.tv = (user as { tokenVersion?: number }).tokenVersion;
         return token;
       }
@@ -236,7 +259,7 @@ export const authConfig: NextAuthConfig = {
       try {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { name: true, email: true, role: true, isActive: true, tokenVersion: true },
+          select: { name: true, email: true, role: true, isActive: true, tokenVersion: true, avatarUrl: true },
         });
         if (!dbUser || !dbUser.isActive) return null;
         if (dbUser.tokenVersion !== token.tv) return null;
@@ -245,6 +268,10 @@ export const authConfig: NextAuthConfig = {
         // patch ini) yang belum punya klaim nama/email.
         token.name = dbUser.name ?? undefined;
         token.email = dbUser.email ?? undefined;
+        // WS-9 (26 Nov 2026): isi ulang avatarUrl dari DB di setiap
+        // refresh — habis upload/ganti/hapus foto, session.update()
+        // di tab Profil langsung membawa URL baru tanpa login ulang.
+        token.avatarUrl = dbUser.avatarUrl ?? null;
         return token;
       } catch (error) {
         // Query DB gagal (mis. konteks runtime tanpa akses DB) — JANGAN
@@ -270,6 +297,7 @@ export const authConfig: NextAuthConfig = {
         session.user.role = token.role as string;
         session.user.name = (token.name as string | undefined) ?? "";
         session.user.email = (token.email as string | undefined) ?? "";
+        session.user.avatarUrl = (token.avatarUrl as string | null | undefined) ?? null;
       }
       return session;
     },

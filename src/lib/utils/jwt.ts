@@ -28,6 +28,8 @@ export type TokenPayload = {
   email: string;
   name: string;
   role: string;
+  /** URL foto profil (R2, folder "avatars") — null kalau belum ada. */
+  avatarUrl?: string | null;
   /** Versi token (lihat User.tokenVersion). Naik tiap ganti password /
    *  nonaktifkan akun / ganti role / logout — token lama langsung mati. */
   tv?: number;
@@ -156,7 +158,7 @@ export async function verifyMobileToken(token: string): Promise<TokenPayload | n
     const { default: prisma } = await import("@/lib/prisma");
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
-      select: { isActive: true, role: true, tokenVersion: true },
+      select: { isActive: true, role: true, tokenVersion: true, avatarUrl: true },
     });
     if (!user) {
       console.warn("[MOBILE_TOKEN_REJECT] no_user", { id: decoded.id });
@@ -184,6 +186,11 @@ export async function verifyMobileToken(token: string): Promise<TokenPayload | n
     }
 
     console.log("[MOBILE_TOKEN_OK]", { id: decoded.id, tv: decoded.tv });
+    // WS-9 (26 Nov 2026): avatar selalu dibaca dari DB, bukan dari klaim
+    // token — token lama (terbit sebelum patch ini) tidak punya klaim
+    // avatarUrl, dan foto yang baru diganti langsung terbaca tanpa
+    // login ulang di APK.
+    decoded.avatarUrl = user.avatarUrl ?? null;
     return decoded;
   } catch (error) {
     console.warn(

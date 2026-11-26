@@ -10,7 +10,13 @@ import {
   isStrongPassword,
 } from "@/lib/utils/password";
 import { Toast } from "@/components/ui/toast";
-export default function PasswordSettingsTab() {
+// WS-9 (26 Nov 2026): form ini PINDAH dari tab "Ganti Password" sendiri
+// ke dalam tab Profil Akun (dirender oleh ProfileSettingsTab). Isinya
+// TIDAK BERUBAH: tetap memakai server action changePassword + kebijakan
+// password yang sama (min 8, maks 128, 1 huruf besar, 1 angka, 1 simbol).
+// Tidak boleh ada dua tempat ganti password — tab "Ganti Password" di
+// halaman Settings sudah dihapus (lihat page.tsx).
+export default function ChangePasswordForm() {
     const [loading, setLoading] = useState(false);
     const [showCurrent, setShowCurrent] = useState(false);
     const [showNew, setShowNew] = useState(false);

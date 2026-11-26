@@ -27,6 +27,53 @@ import {
   generateDebtNumber,
 } from "@/lib/utils/stock-units";
 
+// WS-4 (26 Nov 2026): plat kendaraan adalah TURUNAN sopir — DO tidak
+// boleh menyimpan sopir A dengan plat sopir B. API create DO hanya
+// menerima string driver/vehicle (tidak ada driverUserId/vehicleId di
+// schema), jadi validasi pasangan dilakukan di sini terhadap tabel
+// FleetVehicle, tanpa perubahan schema database.
+function extractPlateNumber(vehicle: string): string {
+  return vehicle.replace(/\s*\([^)]*\)\s*$/, "").trim();
+}
+
+function normalizePlateNumber(plate: string): string {
+  return plate.trim().toUpperCase().replace(/\s+/g, " ");
+}
+
+/**
+ * Kembalikan pesan error bila pasangan sopir-kendaraan tidak cocok, atau
+ * null bila boleh disimpan. Sopir yang TIDAK ada di data armada dibiarkan
+ * lolos (sopir luar/borongan, plat diisi manual) — yang dicegah hanyalah
+ * plat milik sopir armada lain.
+ */
+async function validateDriverVehiclePair(
+  driver: string | null | undefined,
+  vehicle: string | null | undefined
+): Promise<string | null> {
+  const driverName = (driver || "").trim();
+  const vehicleRaw = (vehicle || "").trim();
+  if (!driverName || !vehicleRaw) return null;
+  const plate = normalizePlateNumber(extractPlateNumber(vehicleRaw));
+  if (!plate) return null;
+  const fleet = await prisma.fleetVehicle.findMany({
+    where: {
+      driverName: { equals: driverName, mode: "insensitive" },
+      isActive: true,
+    },
+    select: { driverName: true, plateNumber: true },
+  });
+  const mine = fleet.filter(
+    (f) => f.driverName.trim().toLowerCase() === driverName.toLowerCase()
+  );
+  if (mine.length === 0) return null;
+  const ok = mine.some(
+    (f) => normalizePlateNumber(f.plateNumber) === plate
+  );
+  if (ok) return null;
+  const plates = mine.map((f) => f.plateNumber).join(", ");
+  return `Plat ${plate} bukan kendaraan sopir ${driverName}. Kendaraan ${driverName}: ${plates}.`;
+}
+
 // Helper untuk mengekstrak Bukti Pengiriman dari field proofImage atau tag di notes
 function resolveProofImage(
   proofImage?: string | null,
@@ -399,6 +446,10 @@ export async function createDeliveryOrder(input: CreateDeliveryOrderInput, exter
 
     // 1. Validasi Input Zod
     const validated = createDeliveryOrderSchema.parse(input);
+
+    // 1b. WS-4: plat harus milik sopir yang dipilih (bila sopir ada di armada).
+    const pairError = await validateDriverVehiclePair(validated.driver, validated.vehicle);
+    if (pairError) return { success: false, error: pairError };
 
     // 2. VALIDASI STOK (FIX QA B-1: konversi DIBAGI ke satuan utama, agregat
     // per produk supaya 2 baris produk yang sama tidak lolos sendiri-sendiri)
@@ -1000,6 +1051,16 @@ export async function updateDeliveryOrder(
     // hanyalah DO yang DIBATALKAN.
     if (existingDO.status === "CANCELLED") {
       return { success: false, error: "Surat Jalan yang sudah dibatalkan tidak bisa diedit." };
+    }
+
+    // WS-4: validasi pasangan sopir-kendaraan hanya bila salah satunya
+    // diubah — DO lama yang pasangannya sudah terlanjur tidak cocok tetap
+    // bisa diedit field lain tanpa dipaksa memperbaiki pasangan ini.
+    if (validated.driver !== undefined || validated.vehicle !== undefined) {
+      const effDriver = validated.driver !== undefined ? validated.driver : existingDO.driver;
+      const effVehicle = validated.vehicle !== undefined ? validated.vehicle : existingDO.vehicle;
+      const pairError = await validateDriverVehiclePair(effDriver, effVehicle);
+      if (pairError) return { success: false, error: pairError };
     }
 
     // FIX (22 Nov 2026, R2): catat bukti lama SEBELUM ditimpa — ganti bukti
