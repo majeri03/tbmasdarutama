@@ -185,7 +185,7 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <HardDrive className="w-6 h-6 text-blue-600" />
+            <HardDrive className="w-6 h-6 text-[#7F1D1D]" />
             Penyimpanan Gambar
           </h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -255,7 +255,7 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
         </div>
         <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
           <div
-            className={`h-3 rounded-full ${usedPercent > 80 ? "bg-red-500" : usedPercent > 50 ? "bg-yellow-500" : "bg-blue-600"}`}
+            className={`h-3 rounded-full ${usedPercent > 80 ? "bg-red-500" : usedPercent > 50 ? "bg-yellow-500" : "bg-[#7F1D1D]"}`}
             style={{ width: `${Math.min(100, usedPercent)}%` }}
           />
         </div>
@@ -291,7 +291,7 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
               <button
                 key={f.folder}
                 onClick={() => applyFilters({ folder: f.folder, page: 1 })}
-                className="text-left p-3 rounded-lg border border-gray-200 hover:border-blue-400 transition-colors"
+                className="text-left p-3 rounded-lg border border-gray-200 hover:border-[#7F1D1D]/40 transition-colors"
               >
                 <p className="font-mono text-sm font-semibold text-gray-900 truncate">{f.folder}</p>
                 <p className="text-xs text-gray-500 mt-1">
@@ -306,7 +306,7 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
       {/* Rekonsiliasi */}
       <div className="glass-card p-5 space-y-3">
         <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-          <RefreshCw className="w-5 h-5 text-blue-600" />
+          <RefreshCw className="w-5 h-5 text-[#7F1D1D]" />
           Rekonsiliasi dengan isi R2
         </h2>
         <p className="text-sm text-gray-600">
@@ -321,7 +321,7 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
           onChange={(e) => setReconcileText(e.target.value)}
           rows={4}
           placeholder={"proofs_delivery/1699999999-abc.jpg\nproducts/1699999999-def.jpg"}
-          className="w-full p-3 border border-gray-300 rounded-lg font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full p-3 border border-gray-300 rounded-lg font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[#7F1D1D]"
         />
         <div>
           <button
@@ -334,7 +334,7 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
           </button>
         </div>
         {reconcileResult && (
-          <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 text-sm space-y-1">
+          <div className="p-3 rounded-lg bg-[#7F1D1D]/[0.06] border border-[#7F1D1D]/20 text-sm space-y-1">
             <p>
               Total di R2: <b>{reconcileResult.totalInR2}</b> • Tercatat di DB: <b>{reconcileResult.totalInDb}</b> •
               Cocok: <b>{reconcileResult.matched}</b>
@@ -390,7 +390,7 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
                 if (searchText !== filters.search) applyFilters({ search: searchText, page: 1 });
               }}
               placeholder="Cari key / ID pemilik... (Enter untuk mencari)"
-              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7F1D1D]"
             />
           </div>
         </div>

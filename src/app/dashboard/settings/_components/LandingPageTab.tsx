@@ -85,8 +85,8 @@ export default function LandingPageTab() {
             {/* Hero Images Manager */}
             <div className="glass-card p-6 space-y-4">
                 <div className="flex items-center gap-2">
-                    <ImageIcon className="w-5 h-5 text-blue-600" />
-                    <h3 className="font-semibold text-gray-800">Gambar Hero</h3>
+                    <ImageIcon className="w-5 h-5 text-[#7F1D1D]" />
+                    <h3 className="font-semibold text-[#1C1917]">Gambar Hero</h3>
                 </div>
                 <p className="text-sm text-gray-600">
                     Upload hingga 10 gambar untuk carousel hero section
@@ -99,8 +99,8 @@ export default function LandingPageTab() {
                 {/* Hero Section */}
                 <div className="glass-card p-6 space-y-4">
                     <div className="flex items-center gap-2">
-                        <Globe className="w-5 h-5 text-blue-600" />
-                        <h3 className="font-semibold text-gray-800">Hero Section</h3>
+                        <Globe className="w-5 h-5 text-[#7F1D1D]" />
+                        <h3 className="font-semibold text-[#1C1917]">Hero Section</h3>
                     </div>
 
                     <div className="space-y-4">
@@ -134,7 +134,7 @@ export default function LandingPageTab() {
 
                 {/* About Section */}
                 <div className="glass-card p-6 space-y-4">
-                    <h3 className="font-semibold text-gray-800">Tentang Kami</h3>
+                    <h3 className="font-semibold text-[#1C1917]">Tentang Kami</h3>
 
                     <div>
                         <label className="label">Deskripsi Tentang Kami</label>
@@ -163,7 +163,7 @@ export default function LandingPageTab() {
 
                 {/* Features */}
                 <div className="glass-card p-6 space-y-4">
-                    <h3 className="font-semibold text-gray-800">Fitur Tampilan</h3>
+                    <h3 className="font-semibold text-[#1C1917]">Fitur Tampilan</h3>
 
                     <label className="flex items-center gap-3 cursor-pointer group">
                         <input
@@ -171,10 +171,10 @@ export default function LandingPageTab() {
                             name="showFeaturedProducts"
                             checked={formData.showFeaturedProducts}
                             onChange={handleChange}
-                            className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                            className="w-5 h-5 rounded border-gray-300 accent-[#7F1D1D] focus:ring-2 focus:ring-[#7F1D1D]"
                         />
                         <div>
-                            <p className="font-medium text-gray-800 group-hover:text-blue-600 transition-colors">
+                            <p className="font-medium text-[#1C1917] group-hover:text-[#7F1D1D] transition-colors">
                                 Tampilkan Produk Unggulan
                             </p>
                             <p className="text-xs text-gray-500">
@@ -186,7 +186,7 @@ export default function LandingPageTab() {
 
                 {/* Contact Map */}
                 <div className="glass-card p-6 space-y-4">
-                    <h3 className="font-semibold text-gray-800">Lokasi Toko</h3>
+                    <h3 className="font-semibold text-[#1C1917]">Lokasi Toko</h3>
 
                     <div>
                         <label className="label">Google Maps Embed URL</label>

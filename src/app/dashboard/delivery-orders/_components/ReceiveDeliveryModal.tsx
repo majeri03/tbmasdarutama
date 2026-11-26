@@ -190,14 +190,14 @@ export function ReceiveDeliveryModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="modal-overlay">
+      <div className="modal-container w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">Update Status Pengiriman</h2>
+        <div className="sticky top-0 bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold tracking-tight text-stone-900">Update Status Pengiriman</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -207,15 +207,15 @@ export function ReceiveDeliveryModal({
           {/* DO Info */}
           <div className="glass-card p-4 space-y-2">
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">No. Surat Jalan:</span>
+              <span className="text-sm text-stone-600">No. Surat Jalan:</span>
               <span className="font-semibold">{deliveryOrder.doNumber}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Customer:</span>
+              <span className="text-sm text-stone-600">Customer:</span>
               <span className="font-semibold">{deliveryOrder.customer.name}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Tanggal Kirim:</span>
+              <span className="text-sm text-stone-600">Tanggal Kirim:</span>
               <span className="text-sm">
                 {format(new Date(deliveryOrder.deliveryDate), "dd MMM yyyy", {
                   locale: id,
@@ -223,8 +223,8 @@ export function ReceiveDeliveryModal({
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Total Items:</span>
-              <span className="font-semibold text-blue-600">
+              <span className="text-sm text-stone-600">Total Items:</span>
+              <span className="font-semibold text-red-900">
                 {deliveryOrder.deliveryItems.length} items
               </span>
             </div>
@@ -232,7 +232,7 @@ export function ReceiveDeliveryModal({
 
           {/* Status */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="label mb-2">
               Status Pengiriman <span className="text-red-500">*</span>
             </label>
             <select
@@ -257,7 +257,7 @@ export function ReceiveDeliveryModal({
               )}
             </select>
             {deliveryOrder.status === "DELIVERED" && (
-              <p className="text-xs text-gray-500 mt-1.5">
+              <p className="text-xs text-stone-500 mt-1.5">
                 Surat jalan ini sudah Terkirim — form ini dipakai untuk mengganti/menambah foto bukti atau memperbaiki nama penerima. Stok tidak dipotong lagi.
               </p>
             )}
@@ -267,7 +267,7 @@ export function ReceiveDeliveryModal({
           {status === "DELIVERED" && (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="label mb-2">
                   Diterima Oleh <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -281,7 +281,7 @@ export function ReceiveDeliveryModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="label mb-2">
                   Tanggal Diterima <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -295,7 +295,7 @@ export function ReceiveDeliveryModal({
 
               {/* Foto Bukti Pengiriman */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="label mb-2">
                   Foto Bukti Pengiriman (Opsional/Disarankan)
                 </label>
                 <input
@@ -312,7 +312,7 @@ export function ReceiveDeliveryModal({
                       <img
                         src={proofImage}
                         alt="Bukti Pengiriman"
-                        className="w-16 h-16 object-cover rounded-lg border border-gray-200 shadow-sm"
+                        className="w-16 h-16 object-cover rounded-xl border border-stone-200 shadow-sm"
                       />
                       <div className="min-w-0">
                         <span className="text-xs font-semibold text-green-700 uppercase tracking-wider block">
@@ -322,7 +322,7 @@ export function ReceiveDeliveryModal({
                           href={proofImage}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-xs text-blue-600 hover:underline truncate block max-w-[220px]"
+                          className="text-xs text-red-900 hover:underline truncate block max-w-[220px]"
                         >
                           Lihat Foto Penuh
                         </a>
@@ -331,7 +331,7 @@ export function ReceiveDeliveryModal({
                     <button
                       type="button"
                       onClick={() => setProofImage("")}
-                      className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                      className="p-2 text-red-800 hover:bg-red-100 rounded-xl transition-colors"
                       title="Hapus foto"
                     >
                       <Trash2 className="w-5 h-5" />
@@ -340,24 +340,24 @@ export function ReceiveDeliveryModal({
                 ) : (
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-gray-300 hover:border-blue-500 hover:bg-blue-50/30 rounded-xl p-5 text-center cursor-pointer transition-colors"
+                    className="border-2 border-dashed border-stone-300 hover:border-red-900 hover:bg-red-900/5 rounded-xl p-5 text-center cursor-pointer transition-colors"
                   >
                     {isUploading ? (
                       <div className="flex flex-col items-center gap-2">
-                        <Loader2 className="w-7 h-7 text-blue-600 animate-spin" />
-                        <span className="text-sm font-medium text-blue-600">
+                        <Loader2 className="w-7 h-7 text-red-900 animate-spin" />
+                        <span className="text-sm font-medium text-red-900">
                           Mengunggah bukti pengiriman...
                         </span>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center gap-2">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                        <div className="w-10 h-10 rounded-full bg-red-900/10 flex items-center justify-center text-red-900">
                           <Camera className="w-5 h-5" />
                         </div>
-                        <span className="text-sm font-semibold text-gray-700">
+                        <span className="text-sm font-semibold text-stone-700">
                           Pilih / Ambil Foto Bukti Pengiriman
                         </span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-stone-500">
                           Format JPG, PNG, atau WebP (Maksimal 5MB)
                         </span>
                       </div>
@@ -370,7 +370,7 @@ export function ReceiveDeliveryModal({
 
           {/* Warning for Cancel */}
           {status === "CANCELLED" && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
               <p className="text-sm text-red-800">
                 <strong>Perhatian!</strong> Pengiriman akan dibatalkan dan tidak dapat diubah lagi.
               </p>
@@ -380,14 +380,14 @@ export function ReceiveDeliveryModal({
           {/* Pesan galat inline (FIX WS-H): kegagalan update harus terlihat
               di dalam modal, bukan hanya lewat toast. */}
           {formError && (
-            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
-              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
+              <AlertCircle className="w-4 h-4 text-red-800 shrink-0 mt-0.5" />
               <p className="text-sm text-red-800">{formError}</p>
             </div>
           )}
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-gray-200">
+          <div className="flex gap-3 pt-4 -mx-6 -mb-6 px-6 pb-6 bg-stone-50 border-t border-stone-200 rounded-b-3xl">
             <button
               type="button"
               onClick={onClose}

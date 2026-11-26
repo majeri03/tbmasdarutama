@@ -56,19 +56,22 @@ export function useUnreadCount(pollMs = 60000): number {
   return count;
 }
 
-/** Lonceng lengkap (ikon + badge) untuk topbar. */
+/** Lonceng lengkap (ikon + badge) untuk topbar.
+    Redesain 26 Nov (WS-B): pil kaca putih + hairline, ikon stone-600,
+    badge angka merah gelap solid #7F1D1D (red-900). Logika polling/klik
+    TIDAK diubah. */
 export function NotificationBell({ className = "" }: { className?: string }) {
   const unread = useUnreadCount();
   return (
     <Link
       href="/dashboard/notifications"
-      className={`relative p-2 rounded-lg hover:bg-white/60 transition-colors ${className}`}
+      className={`relative flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(28,25,23,0.08)] bg-white/70 shadow-sm backdrop-blur-md transition-colors hover:bg-white/90 ${className}`}
       aria-label={`Notifikasi${unread > 0 ? `, ${unread} belum dibaca` : ""}`}
       title="Notifikasi"
     >
-      <Bell className="w-6 h-6 text-gray-700" />
+      <Bell className="h-5 w-5 text-stone-600" />
       {unread > 0 && (
-        <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[11px] font-bold flex items-center justify-center">
+        <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-900 text-white text-[11px] font-bold flex items-center justify-center ring-1 ring-white/70">
           {unread > 99 ? "99+" : unread}
         </span>
       )}
@@ -76,14 +79,17 @@ export function NotificationBell({ className = "" }: { className?: string }) {
   );
 }
 
-/** Ikon lonceng ber-badge untuk dipakai sebagai ikon menu sidebar. */
+/** Ikon lonceng ber-badge untuk dipakai sebagai ikon menu sidebar.
+    Redesain 26 Nov (WS-B): ikon 18px (selaras dengan ikon menu lain —
+    wrapper di Sidebar juga memaksa 18px), badge merah gelap solid
+    #7F1D1D (red-900) + ring putih tipis supaya terbaca di atas kaca. */
 export function NotificationBellIcon() {
   const unread = useUnreadCount();
   return (
     <span className="relative inline-flex">
-      <Bell className="w-5 h-5" />
+      <Bell className="h-[18px] w-[18px]" />
       {unread > 0 && (
-        <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center">
+        <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5 rounded-full bg-red-900 text-white text-[10px] font-bold flex items-center justify-center ring-1 ring-white/70">
           {unread > 99 ? "99+" : unread}
         </span>
       )}

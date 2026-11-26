@@ -26,7 +26,7 @@ import Link from "next/link";
 function GrowthBadge({ growth }: { growth: number | null | undefined }) {
   if (growth === null) {
     return (
-      <div className="flex items-center gap-1 text-gray-400 text-sm font-semibold">
+      <div className="flex items-center gap-1 text-stone-400 text-sm font-semibold">
         <span>—</span>
       </div>
     );
@@ -34,14 +34,14 @@ function GrowthBadge({ growth }: { growth: number | null | undefined }) {
   const value = growth ?? 0;
   if (value === 0) {
     return (
-      <div className="flex items-center gap-1 text-gray-400 text-sm font-semibold">
+      <div className="flex items-center gap-1 text-stone-400 text-sm font-semibold">
         <span>0%</span>
       </div>
     );
   }
   const up = value > 0;
   return (
-    <div className={`flex items-center gap-1 text-sm font-semibold ${up ? 'text-green-600' : 'text-red-600'}`}>
+    <div className={`flex items-center gap-1 text-sm font-semibold ${up ? 'text-[#15803D]' : 'text-[#991B1B]'}`}>
       {up ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
       <span>{value}%</span>
     </div>
@@ -72,18 +72,18 @@ export default async function DashboardPage() {
         <div className="glass-card p-6 animate-slide-up">
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gradient mb-2">
+              <h1 className="text-3xl font-bold tracking-tight text-[#1C1917] mb-2">
                 Dashboard
               </h1>
-              <p className="text-gray-600">
-                Selamat datang kembali, <span className="text-gray-900 font-semibold">{session.user.name}</span>
+              <p className="text-stone-600">
+                Selamat datang kembali, <span className="text-stone-900 font-semibold">{session.user.name}</span>
               </p>
               <div className="flex items-center gap-2 mt-3">
                 <div className="badge badge-info">
                   {session.user.role.replace('_', ' ')}
                 </div>
-                <span className="text-gray-400 text-sm">•</span>
-                <span className="text-gray-600 text-sm flex items-center gap-1">
+                <span className="text-stone-400 text-sm">•</span>
+                <span className="text-stone-600 text-sm flex items-center gap-1">
                   <Calendar className="w-3.5 h-3.5" />
                   {new Date().toLocaleDateString('id-ID', {
                     weekday: 'long',
@@ -94,11 +94,8 @@ export default async function DashboardPage() {
                 </span>
               </div>
             </div>
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-accent-blue to-accent-purple rounded-xl blur-xl opacity-50 group-hover:opacity-70 transition-all"></div>
-              <div className="relative glass-card p-4">
-                <Store className="w-8 h-8 text-blue-600" />
-              </div>
+            <div className="glass-card p-4">
+              <Store className="w-8 h-8 text-[#7F1D1D]" />
             </div>
           </div>
         </div>
@@ -108,19 +105,16 @@ export default async function DashboardPage() {
           {/* Total Penjualan */}
           <div className="stat-card group animate-slide-up">
             <div className="flex items-start justify-between mb-4">
-              <div className="p-3 rounded-xl transition-all group-hover:scale-110" style={{
-                background: 'rgba(96, 165, 250, 0.15)',
-                border: '1px solid rgba(96, 165, 250, 0.3)'
-              }}>
-                <TrendingUp className="w-6 h-6 text-blue-600" />
+              <div className="p-3 rounded-xl bg-stone-100 border border-[rgba(28,25,23,0.08)] transition-all group-hover:scale-110">
+                <TrendingUp className="w-6 h-6 text-stone-700" />
               </div>
               <GrowthBadge growth={stats?.sales?.growth} />
             </div>
-            <h3 className="text-gray-600 text-sm font-semibold mb-1">Total Penjualan</h3>
-            <p className="text-3xl font-bold text-gray-900 mb-1">
+            <h3 className="text-stone-600 text-sm font-semibold mb-1">Total Penjualan</h3>
+            <p className="text-3xl font-bold tabular-nums text-stone-900 mb-1">
               Rp {stats?.sales?.total ? (stats.sales.total / 1000000).toFixed(1) : '0'}M
             </p>
-            <p className="text-gray-500 text-xs">
+            <p className="text-stone-500 text-xs">
               {growthSubtext(stats?.sales?.growth, 'bulan lalu Rp0')}
             </p>
           </div>
@@ -128,19 +122,16 @@ export default async function DashboardPage() {
           {/* Total Produk */}
           <div className="stat-card group animate-slide-up animation-delay-200">
             <div className="flex items-start justify-between mb-4">
-              <div className="p-3 rounded-xl transition-all group-hover:scale-110" style={{
-                background: 'rgba(167, 139, 250, 0.15)',
-                border: '1px solid rgba(167, 139, 250, 0.3)'
-              }}>
-                <Package className="w-6 h-6 text-purple-600" />
+              <div className="p-3 rounded-xl bg-stone-100 border border-[rgba(28,25,23,0.08)] transition-all group-hover:scale-110">
+                <Package className="w-6 h-6 text-stone-700" />
               </div>
               <GrowthBadge growth={stats?.products?.growth} />
             </div>
-            <h3 className="text-gray-600 text-sm font-semibold mb-1">Total Produk</h3>
-            <p className="text-3xl font-bold text-gray-900 mb-1">
+            <h3 className="text-stone-600 text-sm font-semibold mb-1">Total Produk</h3>
+            <p className="text-3xl font-bold tabular-nums text-stone-900 mb-1">
               {stats?.products?.total.toLocaleString('id-ID') ?? '0'}
             </p>
-            <p className="text-gray-500 text-xs">
+            <p className="text-stone-500 text-xs">
               +{stats?.products?.newThisMonth ?? 0} produk baru
             </p>
           </div>
@@ -148,19 +139,16 @@ export default async function DashboardPage() {
           {/* Total Customer */}
           <div className="stat-card group animate-slide-up animation-delay-400">
             <div className="flex items-start justify-between mb-4">
-              <div className="p-3 rounded-xl transition-all group-hover:scale-110" style={{
-                background: 'rgba(244, 114, 182, 0.15)',
-                border: '1px solid rgba(244, 114, 182, 0.3)'
-              }}>
-                <Users className="w-6 h-6 text-pink-600" />
+              <div className="p-3 rounded-xl bg-stone-100 border border-[rgba(28,25,23,0.08)] transition-all group-hover:scale-110">
+                <Users className="w-6 h-6 text-stone-700" />
               </div>
               <GrowthBadge growth={stats?.customers?.growth} />
             </div>
-            <h3 className="text-gray-600 text-sm font-semibold mb-1">Total Customer</h3>
-            <p className="text-3xl font-bold text-gray-900 mb-1">
+            <h3 className="text-stone-600 text-sm font-semibold mb-1">Total Customer</h3>
+            <p className="text-3xl font-bold tabular-nums text-stone-900 mb-1">
               {stats?.customers?.total.toLocaleString('id-ID') ?? '0'}
             </p>
-            <p className="text-gray-500 text-xs">
+            <p className="text-stone-500 text-xs">
               +{stats?.customers?.newThisMonth ?? 0} customer baru
             </p>
           </div>
@@ -168,15 +156,12 @@ export default async function DashboardPage() {
           {/* Utang Customer */}
           <div className="stat-card group animate-slide-up animation-delay-600">
             <div className="flex items-start justify-between mb-4">
-              <div className="p-3 rounded-xl transition-all group-hover:scale-110" style={{
-                background: 'rgba(239, 68, 68, 0.15)',
-                border: '1px solid rgba(239, 68, 68, 0.3)'
-              }}>
-                <DollarSign className="w-6 h-6 text-red-600" />
+              <div className="p-3 rounded-xl bg-stone-100 border border-[rgba(28,25,23,0.08)] transition-all group-hover:scale-110">
+                <DollarSign className="w-6 h-6 text-[#7F1D1D]" />
               </div>
               <div className={`flex items-center gap-1 text-sm font-semibold ${debtChange === null || debtChange === undefined
-                  ? 'text-gray-400'
-                  : debtChange < 0 ? 'text-green-600' : debtChange > 0 ? 'text-red-600' : 'text-gray-400'
+                  ? 'text-stone-400'
+                  : debtChange < 0 ? 'text-[#15803D]' : debtChange > 0 ? 'text-[#991B1B]' : 'text-stone-400'
                 }`}>
                 {debtChange === null ? (
                   <span>—</span>
@@ -194,11 +179,11 @@ export default async function DashboardPage() {
                 )}
               </div>
             </div>
-            <h3 className="text-gray-600 text-sm font-semibold mb-1">Utang Customer</h3>
-            <p className="text-3xl font-bold text-gray-900 mb-1">
+            <h3 className="text-stone-600 text-sm font-semibold mb-1">Utang Customer</h3>
+            <p className="text-3xl font-bold tabular-nums text-stone-900 mb-1">
               Rp {stats?.debt?.total ? (stats.debt.total / 1000000).toFixed(1) : '0'}M
             </p>
-            <p className="text-gray-500 text-xs">
+            <p className="text-stone-500 text-xs">
               {growthSubtext(stats?.debt?.change, 'bulan lalu Rp0')}
             </p>
           </div>
@@ -210,19 +195,19 @@ export default async function DashboardPage() {
           <div className="glass-card p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-1">Grafik Penjualan</h2>
-                <p className="text-gray-600 text-sm">Performa penjualan 7 hari terakhir</p>
+                <h2 className="text-xl font-bold text-stone-900 mb-1">Grafik Penjualan</h2>
+                <p className="text-stone-600 text-sm">Performa penjualan 7 hari terakhir</p>
               </div>
               {/* Icon BarChart3 sudah dihapus sepenuhnya */}
             </div>
 
             {/* Chart Container */}
-            <div className="relative h-80 bg-gradient-to-b from-blue-50/20 to-transparent rounded-xl p-6">
+            <div className="relative h-80 bg-stone-100/60 rounded-xl p-6">
               {(!stats?.chart || stats.chart.length === 0) ? (
                 // Empty State - Safety check untuk error 'stats is possibly null'
                 <div className="flex flex-col items-center justify-center h-full">
-                  <p className="text-gray-500 text-sm">Belum ada data penjualan</p>
-                  <p className="text-gray-400 text-xs mt-1">Data akan muncul setelah ada transaksi</p>
+                  <p className="text-stone-500 text-sm">Belum ada data penjualan</p>
+                  <p className="text-stone-400 text-xs mt-1">Data akan muncul setelah ada transaksi</p>
                 </div>
               ) : (
                 <>
@@ -234,7 +219,7 @@ export default async function DashboardPage() {
                       const maxValue = Math.max(...chartData.map(d => d.total), 1);
                       const value = (maxValue * percent) / 100;
                       return (
-                        <div key={percent} className="text-xs text-gray-400 font-medium">
+                        <div key={percent} className="text-xs text-stone-400 font-medium">
                           {value >= 1000000
                             ? `${(value / 1000000).toFixed(1)}M`
                             : value >= 1000
@@ -254,7 +239,7 @@ export default async function DashboardPage() {
                         className="absolute w-full border-t border-dashed"
                         style={{
                           top: `${percent}%`,
-                          borderColor: 'rgba(156, 163, 175, 0.1)'
+                          borderColor: 'rgba(28, 25, 23, 0.08)'
                         }}
                       />
                     ))}
@@ -269,13 +254,13 @@ export default async function DashboardPage() {
                     >
                       <defs>
                         <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#3b82f6" />
-                          <stop offset="100%" stopColor="#8b5cf6" />
+                          <stop offset="0%" stopColor="#7F1D1D" />
+                          <stop offset="100%" stopColor="#7F1D1D" />
                         </linearGradient>
 
                         <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" stopColor="rgba(59, 130, 246, 0.2)" />
-                          <stop offset="100%" stopColor="rgba(59, 130, 246, 0)" />
+                          <stop offset="0%" stopColor="rgba(127, 29, 29, 0.12)" />
+                          <stop offset="100%" stopColor="rgba(127, 29, 29, 0)" />
                         </linearGradient>
                       </defs>
 
@@ -343,7 +328,7 @@ export default async function DashboardPage() {
                             <div
                               key={i}
                               title={`Rp ${data.total.toLocaleString('id-ID')} — ${new Date(data.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}`}
-                              className={`absolute w-2.5 h-2.5 rounded-full border-2 border-white shadow ${isZero ? 'bg-red-500' : 'bg-blue-600'}`}
+                              className={`absolute w-2.5 h-2.5 rounded-full border-2 border-white shadow ${isZero ? 'bg-[#991B1B]' : 'bg-[#7F1D1D]'}`}
                               style={{ left: `${x}%`, bottom: `${y}%`, transform: 'translate(-50%, 50%)' }}
                             />
                           );
@@ -360,12 +345,12 @@ export default async function DashboardPage() {
                         >
                           {/* Garis vertikal saat hover */}
                           <div className="absolute inset-x-0 top-0 bottom-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="w-px h-full mx-auto bg-blue-200" />
+                            <div className="w-px h-full mx-auto bg-stone-300" />
                           </div>
 
                           {/* Tooltip minimalis */}
                           <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-10">
-                            <div className="bg-gray-900 text-white px-3 py-1.5 rounded text-xs shadow-xl whitespace-nowrap">
+                            <div className="bg-stone-900 text-white px-3 py-1.5 rounded text-xs shadow-xl whitespace-nowrap">
                               <p className="font-bold">Rp {data.total.toLocaleString('id-ID')}</p>
                               <p className="text-[10px] opacity-70">
                                 {new Date(data.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
@@ -398,10 +383,10 @@ export default async function DashboardPage() {
                           className="absolute top-0 text-center whitespace-nowrap"
                           style={{ left: `${x}%`, transform }}
                         >
-                          <p className="text-[10px] font-semibold text-gray-500 leading-tight">
+                          <p className="text-[10px] font-semibold text-stone-500 leading-tight">
                             {new Date(data.date).toLocaleDateString('id-ID', { weekday: 'short' })}
                           </p>
-                          <p className="text-[10px] text-gray-400 leading-tight">
+                          <p className="text-[10px] text-stone-400 leading-tight">
                             {new Date(data.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
                           </p>
                         </div>
@@ -419,35 +404,25 @@ export default async function DashboardPage() {
         {/* Quick Actions */}
         <div className="glass-card p-6">
           <div className="flex items-center gap-2 mb-5">
-            <Sparkles className="w-5 h-5 text-blue-600" />
-            <h2 className="text-lg font-bold text-gray-900">Quick Actions</h2>
+            <Sparkles className="w-5 h-5 text-[#7F1D1D]" />
+            <h2 className="text-lg font-bold text-stone-900">Quick Actions</h2>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { icon: ShoppingCart, label: 'Buat Transaksi', color: 'blue', gradient: 'from-blue-500 to-blue-600', href: '/dashboard/pos' },
-              { icon: Package, label: 'Tambah Produk', color: 'purple', gradient: 'from-purple-500 to-purple-600', href: '/dashboard/products' },
-              { icon: Users, label: 'Data Customer', color: 'pink', gradient: 'from-pink-500 to-pink-600', href: '/dashboard/customers' },
-              { icon: BarChart3, label: 'Laporan', color: 'blue', gradient: 'from-blue-500 to-indigo-600', href: '/dashboard/reports' },
+              { icon: ShoppingCart, label: 'Buat Transaksi', href: '/dashboard/pos' },
+              { icon: Package, label: 'Tambah Produk', href: '/dashboard/products' },
+              { icon: Users, label: 'Data Customer', href: '/dashboard/customers' },
+              { icon: BarChart3, label: 'Laporan', href: '/dashboard/reports' },
             ].map((action, i) => (
               <Link
                 key={i}
                 href={action.href}
                 className="glass-card-hover p-5 text-center group relative overflow-hidden block"
               >
-                <div className={`absolute inset-0 bg-gradient-to-br ${action.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}></div>
-                <div
-                  className={`inline-flex p-3.5 rounded-xl mb-3 transition-all group-hover:scale-110`}
-                  style={{
-                    background: `rgba(${action.color === 'blue' ? '96, 165, 250' : action.color === 'purple' ? '167, 139, 250' : '244, 114, 182'}, 0.15)`,
-                    border: `1px solid rgba(${action.color === 'blue' ? '96, 165, 250' : action.color === 'purple' ? '167, 139, 250' : '244, 114, 182'}, 0.3)`
-                  }}
-                >
-                  <action.icon className={`w-6 h-6 ${action.color === 'blue' ? 'text-blue-600' :
-                    action.color === 'purple' ? 'text-purple-600' :
-                      'text-pink-600'
-                    }`} />
+                <div className="inline-flex p-3.5 rounded-xl mb-3 bg-stone-100 border border-[rgba(28,25,23,0.08)] transition-all group-hover:scale-110">
+                  <action.icon className="w-6 h-6 text-stone-700" />
                 </div>
-                <p className="text-gray-900 text-sm font-semibold">{action.label}</p>
+                <p className="text-stone-900 text-sm font-semibold">{action.label}</p>
               </Link>
             ))}
           </div>
@@ -456,8 +431,8 @@ export default async function DashboardPage() {
         {/* Stock Alert */}
         <div className="glass-card p-6">
           <div className="flex items-center gap-2 mb-5">
-            <AlertCircle className="w-5 h-5 text-red-600" />
-            <h2 className="text-lg font-bold text-gray-900">Peringatan Stock Rendah</h2>
+            <AlertCircle className="w-5 h-5 text-[#991B1B]" />
+            <h2 className="text-lg font-bold text-stone-900">Peringatan Stock Rendah</h2>
             <span className="badge badge-danger ml-auto">
               {stats?.lowStock.length ?? 0} Item
             </span>
@@ -466,29 +441,22 @@ export default async function DashboardPage() {
             {(stats?.lowStock ?? []).map((item, i) => (
               <div
                 key={i}
-                className="flex items-center justify-between p-4 rounded-xl transition-all hover:bg-white/60"
-                style={{
-                  background: 'rgba(239, 68, 68, 0.05)',
-                  border: '1px solid rgba(239, 68, 68, 0.1)'
-                }}
+                className="flex items-center justify-between p-4 rounded-xl border border-[rgba(28,25,23,0.08)] bg-[rgba(127,29,29,0.04)] transition-all hover:bg-white/60"
               >
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg" style={{
-                    background: 'rgba(239, 68, 68, 0.15)',
-                    border: '1px solid rgba(239, 68, 68, 0.3)'
-                  }}>
-                    <Package className="w-4 h-4 text-red-600" />
+                  <div className="p-2 rounded-lg bg-[rgba(127,29,29,0.08)] border border-[rgba(127,29,29,0.2)]">
+                    <Package className="w-4 h-4 text-[#991B1B]" />
                   </div>
                   <div>
-                    <p className="text-gray-900 text-sm font-semibold">{item.name}</p>
-                    <p className="text-gray-500 text-xs mt-0.5">
+                    <p className="text-stone-900 text-sm font-semibold">{item.name}</p>
+                    <p className="text-stone-500 text-xs mt-0.5">
                       Min. stock: {item.minStock} {item.unit}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-red-600 text-lg font-bold">{item.stock}</p>
-                  <p className="text-gray-500 text-xs">{item.unit}</p>
+                  <p className="text-[#991B1B] text-lg font-bold">{item.stock}</p>
+                  <p className="text-stone-500 text-xs">{item.unit}</p>
                 </div>
               </div>
             ))}

@@ -2,65 +2,97 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==================== PALET BARU (26 Nov 2026, redesain WS-A) ====================
+   paper #FAFAF8 (putih hangat) · ink #1C1917 (hitam hangat)
+   teks sekunder #57534E · teks redup #78716C
+   hairline rgba(28,25,23,0.08) · aksen merah gelap #7F1D1D · hover #991B1B
+   aksen lembut rgba(127,29,29,0.08)
+   TIDAK ADA biru/ungu/pink. Status fungsional (bukan aksen) tetap ada tapi redup:
+   sukses #15803D · peringatan #B45309 · bahaya #991B1B · info netral stone.
+   ============================================================ */
+:root {
+  --paper: #fafaf8;
+  --ink: #1c1917;
+  --text-secondary: #57534e;
+  --text-muted: #78716c;
+  --hairline: rgba(28, 25, 23, 0.08);
+  --accent: #7f1d1d;
+  --accent-hover: #991b1b;
+  --accent-soft: rgba(127, 29, 29, 0.08);
+  --status-success: #15803d;
+  --status-warning: #b45309;
+  --status-danger: #991b1b;
+}
+
 @layer base {
   * {
     @apply m-0 p-0 box-border;
+  }
+
+  html {
+    background: #fafaf8;
   }
 
   body {
     @apply antialiased;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
       sans-serif;
-    /* Light gradient background */
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    /* Dasar paper hangat; tekstur datang dari body::before di bawah. */
+    background: #fafaf8;
+    color: #1c1917;
     background-attachment: fixed;
     min-height: 100vh;
     position: relative;
+    /* Angka sejajar rapi (tabel, harga, total) */
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background: rgba(127, 29, 29, 0.15);
   }
 
   body::before {
     content: "";
     position: fixed;
     inset: 0;
-    background-image: 
-    /* Pola bata/grid bangunan */ repeating-linear-gradient(
-        90deg,
-        rgba(96, 165, 250, 0.03) 0px,
-        transparent 2px,
-        transparent 10px,
-        rgba(96, 165, 250, 0.03) 12px
-      ),
-      repeating-linear-gradient(
-        0deg,
-        rgba(167, 139, 250, 0.03) 0px,
-        transparent 2px,
-        transparent 10px,
-        rgba(167, 139, 250, 0.03) 12px
-      ),
-      radial-gradient(at 40% 20%, rgba(96, 165, 250, 0.08) 0px, transparent 50%),
-      radial-gradient(at 80% 0%, rgba(167, 139, 250, 0.08) 0px, transparent 50%),
-      radial-gradient(at 0% 50%, rgba(244, 114, 182, 0.06) 0px, transparent 50%),
+    /* Lapisan 1 (paling atas): grain/noise SVG ultra-halus, opacity ~0.03.
+       Lapisan 2: pola titik halus (dot grid stone, jarak 24px).
+       Lapisan 3-4: 2 bidang cahaya hangat SANGAT lembut (terracotta/stone,
+       4-6%) — cukup supaya kaca terbaca, cukup tenang supaya tabel tetap
+       mudah dibaca. Semua fixed, di belakang konten. */
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.11 0 0 0 0 0.10 0 0 0 0 0.09 0 0 0 0.03 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+      radial-gradient(circle, rgba(28, 25, 23, 0.05) 1px, transparent 1.5px),
       radial-gradient(
-        at 100% 100%,
-        rgba(96, 165, 250, 0.08) 0px,
-        transparent 50%
+        ellipse 60% 45% at 15% 0%,
+        rgba(214, 180, 150, 0.06) 0%,
+        transparent 70%
+      ),
+      radial-gradient(
+        ellipse 55% 40% at 90% 100%,
+        rgba(168, 162, 158, 0.06) 0%,
+        transparent 70%
       );
+    background-size: auto, 24px 24px, auto, auto;
+    background-repeat: repeat, repeat, no-repeat, no-repeat;
     pointer-events: none;
     z-index: 0;
   }
 }
 
 @layer components {
-  /* ==================== GLASS MORPHISM CARDS (LIGHT) ==================== */
+  /* ==================== GLASS MORPHISM CARDS (LIQUID GLASS) ==================== */
   .glass-card {
-    @apply relative overflow-hidden rounded-2xl;
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.8);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1),
-      inset 0 1px 0 rgba(255, 255, 255, 1),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.5);
+    @apply relative overflow-hidden;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    /* Garis luar hairline + bayangan lembut hangat */
+    box-shadow: 0 8px 32px rgba(28, 25, 23, 0.06),
+      0 0 0 1px rgba(28, 25, 23, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
   }
 
   .glass-card::before {
@@ -87,63 +119,84 @@
     );
   }
 
+  /* Alias gaya yang sama dengan .glass-card */
+  .glass-panel {
+    @apply glass-card;
+  }
+
+  /* Kaca lebih pekat — untuk area yang butuh keterbacaan tinggi (isi tabel). */
+  .glass-panel-strong {
+    @apply relative overflow-hidden;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    box-shadow: 0 8px 32px rgba(28, 25, 23, 0.06),
+      0 0 0 1px rgba(28, 25, 23, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
   .glass-card-hover {
     @apply glass-card transition-all duration-300;
   }
 
   .glass-card-hover:hover {
+    /* Tanpa lompat (tanpa translateY): hover cukup menaikkan opasitas
+       putih + bayangan sedikit. */
     background: rgba(255, 255, 255, 0.85);
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15),
-      inset 0 1px 0 rgba(255, 255, 255, 1),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.6);
-    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(28, 25, 23, 0.09),
+      0 0 0 1px rgba(28, 25, 23, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 1);
   }
 
-  /* ==================== GLASS INPUT (LIGHT) ==================== */
+  /* ==================== GLASS INPUT ==================== */
   .glass-input {
     @apply w-full px-4 py-3 rounded-xl outline-none transition-all duration-300;
-    background: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.8);
-    color: #1f2937;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05),
+    border: 1px solid rgba(28, 25, 23, 0.12);
+    color: #1c1917;
+    box-shadow: 0 2px 8px rgba(28, 25, 23, 0.04),
       inset 0 1px 0 rgba(255, 255, 255, 0.9);
   }
 
   .glass-input::placeholder {
-    @apply text-gray-400;
+    @apply text-stone-400;
   }
 
   .glass-input:focus {
-    background: rgba(255, 255, 255, 0.8);
-    border-color: rgba(96, 165, 250, 0.6);
-    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15),
-      0 4px 16px rgba(96, 165, 250, 0.2), inset 0 1px 0 rgba(255, 255, 255, 1);
+    background: rgba(255, 255, 255, 0.95);
+    border-color: #7f1d1d;
+    box-shadow: 0 0 0 3px rgba(127, 29, 29, 0.2),
+      0 4px 16px rgba(28, 25, 23, 0.06), inset 0 1px 0 rgba(255, 255, 255, 1);
   }
 
   .glass-input:disabled {
     @apply opacity-50 cursor-not-allowed;
   }
 
-  /* ==================== BUTTONS (LIGHT) ==================== */
+  /* ==================== BUTTONS ==================== */
   .btn-primary {
     @apply px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 relative overflow-hidden;
-    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+    /* Solid merah gelap — TANPA gradien. */
+    background: #7f1d1d;
     color: white;
-    border: 1px solid rgba(96, 165, 250, 0.3);
-    box-shadow: 0 4px 16px rgba(96, 165, 250, 0.3),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    border: 1px solid #7f1d1d;
+    box-shadow: 0 4px 16px rgba(127, 29, 29, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
   }
 
   .btn-primary:hover {
-    box-shadow: 0 8px 24px rgba(96, 165, 250, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.4);
-    transform: translateY(-2px);
+    background: #991b1b;
+    border-color: #991b1b;
+    box-shadow: 0 8px 24px rgba(127, 29, 29, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
 
   .btn-primary:active {
-    transform: translateY(0);
+    transform: none;
   }
 
   .btn-primary:disabled {
@@ -153,113 +206,119 @@
 
   .btn-secondary {
     @apply px-6 py-3 rounded-xl font-semibold transition-all duration-300;
-    background: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.72);
     backdrop-filter: blur(8px);
-    color: #1f2937;
-    border: 1px solid rgba(255, 255, 255, 0.8);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05),
+    color: #1c1917;
+    border: 1px solid rgba(28, 25, 23, 0.12);
+    box-shadow: 0 2px 8px rgba(28, 25, 23, 0.05),
       inset 0 1px 0 rgba(255, 255, 255, 0.9);
   }
-  .btn-danger {
-    @apply flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100;
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
-  }
 
-  .btn-danger:hover:not(:disabled) {
-    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
-  }
   .btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.8);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1),
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: 0 4px 12px rgba(28, 25, 23, 0.08),
       inset 0 1px 0 rgba(255, 255, 255, 1);
   }
 
   .btn-danger {
-    @apply px-6 py-3 rounded-xl font-semibold transition-all duration-300;
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    @apply px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2;
+    background: #991b1b;
     color: white;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    border: 1px solid #991b1b;
+    box-shadow: 0 4px 16px rgba(153, 27, 27, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
   }
 
   .btn-danger:hover {
-    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.4);
-    transform: translateY(-2px);
+    background: #7f1d1d;
+    box-shadow: 0 8px 24px rgba(153, 27, 27, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
 
-  /* ==================== TEXT (LIGHT) ==================== */
+  .btn-danger:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  /* ==================== TEXT ==================== */
+  /* Dulu gradien biru→ungu→pink. Sekarang teks ink solid — class tetap ada
+     karena dipakai 8 file (judul halaman dashboard + landing). */
   .text-gradient {
-    @apply bg-gradient-to-r from-accent-blue via-accent-purple to-accent-pink bg-clip-text text-transparent;
+    color: #1c1917;
+    background: none;
+    -webkit-text-fill-color: currentColor;
   }
 
   .text-glow {
-    @apply text-gray-800;
-    text-shadow: 0 2px 8px rgba(96, 165, 250, 0.3);
+    color: #1c1917;
+    text-shadow: none;
   }
 
-  /* ==================== BADGES (LIGHT) ==================== */
+  /* ==================== BADGES (redup, fungsional) ==================== */
   .badge {
     @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm;
   }
 
   .badge-success {
-    background: rgba(16, 185, 129, 0.15);
-    color: #059669;
-    border: 1px solid rgba(16, 185, 129, 0.3);
+    background: rgba(21, 128, 61, 0.12);
+    color: #15803d;
+    border: 1px solid rgba(21, 128, 61, 0.25);
   }
 
   .badge-warning {
-    background: rgba(245, 158, 11, 0.15);
-    color: #d97706;
-    border: 1px solid rgba(245, 158, 11, 0.3);
+    background: rgba(180, 83, 9, 0.12);
+    color: #b45309;
+    border: 1px solid rgba(180, 83, 9, 0.25);
   }
 
   .badge-danger {
-    background: rgba(239, 68, 68, 0.15);
-    color: #dc2626;
-    border: 1px solid rgba(239, 68, 68, 0.3);
+    background: rgba(153, 27, 27, 0.12);
+    color: #991b1b;
+    border: 1px solid rgba(153, 27, 27, 0.25);
   }
 
+  /* Info = netral stone, bukan biru. */
   .badge-info {
-    background: rgba(59, 130, 246, 0.15);
-    color: #2563eb;
-    border: 1px solid rgba(59, 130, 246, 0.3);
+    background: rgba(87, 83, 78, 0.12);
+    color: #57534e;
+    border: 1px solid rgba(87, 83, 78, 0.25);
   }
 
-  /* ==================== CARDS (LIGHT) ==================== */
+  /* ==================== CARDS ==================== */
   .stat-card {
     @apply glass-card p-6 transition-all duration-300;
   }
 
   .stat-card:hover {
     background: rgba(255, 255, 255, 0.85);
-    transform: translateY(-2px);
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12),
+    box-shadow: 0 12px 40px rgba(28, 25, 23, 0.09),
+      0 0 0 1px rgba(28, 25, 23, 0.06),
       inset 0 1px 0 rgba(255, 255, 255, 1);
   }
 
   /* Sidebar glass effect & nav link */
   .sidebar-link {
-    @apply flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-gray-700 transition-all duration-150;
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all duration-150;
+    color: #57534e;
     background: transparent;
   }
-  .sidebar-link:hover,
+  .sidebar-link:hover {
+    /* Sama seperti aktif tapi lebih redup. */
+    background: rgba(255, 255, 255, 0.4);
+    color: #7f1d1d;
+    backdrop-filter: blur(8px);
+  }
   .sidebar-link.active {
-    /* Glassmorphism (26 Nov 2026): pil kaca putih transparan, bukan blok
-       biru solid — supaya tetap terlihat seperti kaca di atas sidebar
-       yang sudah transparan. Teks biru dipertahankan sebagai penanda
-       halaman aktif. */
-    background: rgba(255, 255, 255, 0.45);
-    color: #2563eb;
+    /* Pil kaca putih + teks merah gelap (dulu biru #2563eb). */
+    background: rgba(255, 255, 255, 0.65);
+    color: #7f1d1d;
     backdrop-filter: blur(8px);
     font-weight: 600;
   }
   /* ==================== MOBILE POS FIXES ==================== */
   @media (max-width: 768px) {
-    .glass-card {
+    .glass-card,
+    .glass-panel,
+    .glass-panel-strong {
       border-radius: 12px;
     }
 
@@ -276,7 +335,7 @@
     }
   }
 
-  /* ==================== SCROLLBAR (LIGHT) ==================== */
+  /* ==================== SCROLLBAR ==================== */
   ::-webkit-scrollbar {
     @apply w-2;
   }
@@ -286,12 +345,12 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: rgba(96, 165, 250, 0.5);
+    background: rgba(120, 113, 108, 0.45);
     @apply rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(96, 165, 250, 0.7);
+    background: rgba(120, 113, 108, 0.65);
   }
   /* ==================== MODAL SYSTEM ==================== */
   .modal-overlay {
@@ -300,13 +359,22 @@
   }
 
   .modal-container {
-    @apply relative w-full bg-white rounded-2xl shadow-2xl overflow-hidden;
+    @apply relative w-full shadow-2xl overflow-hidden;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    box-shadow: 0 24px 64px rgba(28, 25, 23, 0.18),
+      0 0 0 1px rgba(28, 25, 23, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
     max-height: 90vh;
     animation: modal-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .modal-header {
-    @apply flex items-center justify-between p-6 border-b border-gray-200;
+    @apply flex items-center justify-between p-6 border-b;
+    border-color: rgba(28, 25, 23, 0.08);
   }
 
   .modal-body {
@@ -315,25 +383,36 @@
   }
 
   .modal-footer {
-    @apply flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50;
+    @apply flex items-center justify-end gap-3 p-6 border-t;
+    border-color: rgba(28, 25, 23, 0.08);
+    background: #fafaf8;
   }
 
   /* ==================== FORM INPUTS ==================== */
   .input-field {
-    @apply w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all;
+    @apply w-full px-4 py-2.5 rounded-xl transition-all;
+    border: 1px solid rgba(28, 25, 23, 0.12);
+    background: rgba(255, 255, 255, 0.8);
+    color: #1c1917;
+  }
+
+  .input-field:focus {
+    outline: none;
+    border-color: #7f1d1d;
+    box-shadow: 0 0 0 3px rgba(127, 29, 29, 0.2);
   }
 
   .input-field:disabled {
-    @apply bg-gray-100 cursor-not-allowed opacity-60;
+    @apply bg-stone-100 cursor-not-allowed opacity-60;
   }
 
   .label {
-    @apply block text-sm font-medium text-gray-700 mb-1.5;
+    @apply block text-sm font-medium text-stone-600 mb-1.5;
   }
 
   .label-required::after {
     content: " *";
-    @apply text-red-500;
+    color: #991b1b;
   }
 
   /* ==================== SEARCH BOX ==================== */
@@ -342,28 +421,48 @@
   }
 
   .search-icon {
-    @apply absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400;
+    @apply absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400;
   }
 
   .search-input {
-    @apply w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+    @apply w-full pl-10 pr-4 py-2.5 rounded-xl transition-all;
+    border: 1px solid rgba(28, 25, 23, 0.12);
+    background: rgba(255, 255, 255, 0.8);
+    color: #1c1917;
+  }
+
+  .search-input:focus {
+    outline: none;
+    border-color: #7f1d1d;
+    box-shadow: 0 0 0 3px rgba(127, 29, 29, 0.2);
   }
 
   /* ==================== DATA TABLE ==================== */
   .data-table {
     @apply w-full border-collapse;
+    font-variant-numeric: tabular-nums;
   }
 
   .data-table thead {
-    @apply bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200;
+    /* Tanpa gradien abu: latar paper hangat + pemisah hairline. */
+    background: #fafaf8;
+    border-bottom: 1px solid rgba(28, 25, 23, 0.08);
   }
 
   .data-table th {
-    @apply px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider;
+    @apply px-4 py-3 text-left font-semibold uppercase tracking-wider;
+    font-size: 11px;
+    color: #78716c;
   }
 
   .data-table tbody tr {
-    @apply border-b border-gray-100 hover:bg-blue-50/50 transition-colors;
+    border-bottom: 1px solid rgba(28, 25, 23, 0.08);
+    transition: background-color 0.15s ease;
+  }
+
+  .data-table tbody tr:hover {
+    /* Hover stone hangat, bukan blue-50. */
+    background: rgba(28, 25, 23, 0.03);
   }
 
   .data-table tbody tr:last-child {
@@ -371,7 +470,8 @@
   }
 
   .data-table td {
-    @apply px-4 py-3 text-sm text-gray-900;
+    @apply px-4 py-3 text-sm;
+    color: #1c1917;
   }
 
   /* ==================== ACTION BUTTONS ==================== */
@@ -380,19 +480,43 @@
   }
 
   .btn-icon-info {
-    @apply btn-icon bg-blue-100 text-blue-600 hover:bg-blue-200 hover:scale-110;
+    @apply btn-icon;
+    background: rgba(87, 83, 78, 0.1);
+    color: #57534e;
+  }
+
+  .btn-icon-info:hover {
+    background: rgba(87, 83, 78, 0.18);
   }
 
   .btn-icon-success {
-    @apply btn-icon bg-green-100 text-green-600 hover:bg-green-200 hover:scale-110;
+    @apply btn-icon;
+    background: rgba(21, 128, 61, 0.1);
+    color: #15803d;
+  }
+
+  .btn-icon-success:hover {
+    background: rgba(21, 128, 61, 0.18);
   }
 
   .btn-icon-danger {
-    @apply btn-icon bg-red-100 text-red-600 hover:bg-red-200 hover:scale-110;
+    @apply btn-icon;
+    background: rgba(153, 27, 27, 0.1);
+    color: #991b1b;
+  }
+
+  .btn-icon-danger:hover {
+    background: rgba(153, 27, 27, 0.18);
   }
 
   .btn-icon-warning {
-    @apply btn-icon bg-yellow-100 text-yellow-600 hover:bg-yellow-200 hover:scale-110;
+    @apply btn-icon;
+    background: rgba(180, 83, 9, 0.1);
+    color: #b45309;
+  }
+
+  .btn-icon-warning:hover {
+    background: rgba(180, 83, 9, 0.18);
   }
 
   /* ==================== UTILITY BUTTONS ==================== */
@@ -402,13 +526,14 @@
 
   .btn-info {
     @apply px-6 py-3 rounded-xl font-semibold text-white transition-all duration-300 flex items-center justify-center gap-2;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+    /* Solid ink — bukan biru. */
+    background: #1c1917;
+    box-shadow: 0 4px 16px rgba(28, 25, 23, 0.25);
   }
 
   .btn-info:hover {
-    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
-    transform: translateY(-2px);
+    background: #292524;
+    box-shadow: 0 8px 24px rgba(28, 25, 23, 0.3);
   }
 
   /* ==================== SPINNER ==================== */
@@ -417,7 +542,9 @@
   }
 
   .spinner-large {
-    @apply w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin;
+    @apply w-8 h-8 border-4 rounded-full animate-spin;
+    border-color: rgba(28, 25, 23, 0.12);
+    border-top-color: #7f1d1d;
   }
 
   /* ==================== RESPONSIVE TABLE ==================== */
@@ -502,20 +629,20 @@
   .settings-tab {
     @apply px-6 py-3 rounded-lg font-medium transition-all duration-200;
     background: transparent;
-    color: #6b7280;
+    color: #78716c;
     border-bottom: 2px solid transparent;
   }
 
   .settings-tab.active {
-    background: rgba(59, 130, 246, 0.1);
-    color: #2563eb;
-    border-bottom-color: #2563eb;
+    background: rgba(127, 29, 29, 0.06);
+    color: #7f1d1d;
+    border-bottom-color: #7f1d1d;
     backdrop-filter: blur(8px);
   }
 
   .settings-tab:hover:not(.active) {
-    background: rgba(59, 130, 246, 0.05);
-    color: #3b82f6;
+    background: rgba(127, 29, 29, 0.04);
+    color: #991b1b;
   }
 }
 
@@ -529,10 +656,6 @@
     animation: fade-in 0.5s ease-in-out;
   }
 
-  .animate-glow {
-    animation: glow 3s ease-in-out infinite;
-  }
-
   .animation-delay-200 {
     animation-delay: 0.2s;
   }
@@ -543,37 +666,25 @@
 
   .animation-delay-600 {
     animation-delay: 0.6s;
-  }
-
-  .animate-blob {
-    animation: blob 7s infinite;
   }
 
   .animation-delay-2000 {
     animation-delay: 2s;
   }
 
-  .animation-delay-200 {
-    animation-delay: 0.2s;
-  }
-
-  .animation-delay-400 {
-    animation-delay: 0.4s;
-  }
-
-  .animation-delay-600 {
-    animation-delay: 0.6s;
-  }
-
+  /* Dulu gradien biru→ungu (duplikat .text-gradient di layer components).
+     Sekarang teks ink solid — sama seperti definisi di atas. */
   .text-gradient {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #1c1917;
+    background: none;
+    -webkit-text-fill-color: currentColor;
   }
 }
 
 /* ==================== KEYFRAMES ==================== */
+/* DIHAPUS (26 Nov 2026): @keyframes blob + @keyframes glow beserta class
+   .animate-blob / .animate-glow — ciri "AI slop". Yang dipertahankan:
+   slide-up, fade-in, modal-slide-up. */
 @keyframes slide-up {
   from {
     opacity: 0;
@@ -594,16 +705,6 @@
   }
 }
 
-@keyframes glow {
-  0%,
-  100% {
-    opacity: 0.8;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
 @keyframes modal-slide-up {
   from {
     opacity: 0;
@@ -612,18 +713,5 @@
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes blob {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(30px, -50px) scale(1.1);
-  }
-  66% {
-    transform: translate(-20px, 20px) scale(0.9);
   }
 }

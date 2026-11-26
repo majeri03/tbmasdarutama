@@ -124,21 +124,21 @@ export function SaleViewModal({ saleId }: SaleViewModalProps) {
             {isOpen && (
                 <div className="modal-overlay">
                     <div className="modal-container max-w-4xl animate-modal-slide-up">
-                        <div className="modal-header bg-gradient-to-r from-blue-500 to-blue-600">
+                        <div className="modal-header bg-red-900">
                             <h2 className="text-xl font-bold text-white flex items-center gap-2">
                                 <Eye className="w-5 h-5" />
                                 Detail Penjualan
                             </h2>
                             <button
                                 onClick={() => setIsOpen(false)}
-                                className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+                                className="text-white hover:bg-white/20 p-2 rounded-full transition-colors"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
                         {error && (
                             <div className="modal-body" style={{ flex: 1, overflowY: 'auto' }}>
-                                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                                <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
                                     {error}
                                 </div>
                             </div>
@@ -155,14 +155,14 @@ export function SaleViewModal({ saleId }: SaleViewModalProps) {
                                 <div className="glass-card p-6 mb-6">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
-                                            <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                                            <h3 className="text-2xl font-bold text-stone-800 mb-2">
                                                 {sale.invoiceNumber}
                                             </h3>
                                             <div className="flex items-center gap-2 mb-2">
                                                 <SaleStatusBadge status={sale.status} />
                                                 <PaymentMethodBadge method={sale.paymentMethod} />
                                             </div>
-                                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                                            <div className="flex items-center gap-2 text-sm text-stone-600">
                                                 <Calendar className="w-4 h-4" />
                                                 {format(new Date(sale.saleDate), "dd MMMM yyyy, HH:mm", {
                                                     locale: localeId,
@@ -172,30 +172,30 @@ export function SaleViewModal({ saleId }: SaleViewModalProps) {
 
                                         <div className="space-y-2">
                                             <div className="flex items-start gap-2">
-                                                <User className="w-4 h-4 text-gray-400 mt-1" />
+                                                <User className="w-4 h-4 text-stone-400 mt-1" />
                                                 <div>
-                                                    <p className="text-xs text-gray-500">Customer</p>
-                                                    <p className="font-semibold text-gray-800">
+                                                    <p className="text-[11px] font-medium uppercase tracking-wide text-stone-500">Customer</p>
+                                                    <p className="font-semibold text-stone-800">
                                                         {sale.customer?.name || "Customer Umum"}
                                                     </p>
                                                     {sale.customer?.phone && (
-                                                        <p className="text-sm text-gray-600">{sale.customer.phone}</p>
+                                                        <p className="text-sm text-stone-600">{sale.customer.phone}</p>
                                                     )}
                                                 </div>
                                             </div>
                                             <div className="flex items-start gap-2">
-                                                <CreditCard className="w-4 h-4 text-gray-400 mt-1" />
+                                                <CreditCard className="w-4 h-4 text-stone-400 mt-1" />
                                                 <div>
-                                                    <p className="text-xs text-gray-500">Kasir</p>
-                                                    <p className="font-semibold text-gray-800">{sale.cashier.name}</p>
+                                                    <p className="text-[11px] font-medium uppercase tracking-wide text-stone-500">Kasir</p>
+                                                    <p className="font-semibold text-stone-800">{sale.cashier.name}</p>
                                                 </div>
                                             </div>
                                             {/* PKG-K (23 Nov 2026): sales yang menangani penjualan. */}
                                             <div className="flex items-start gap-2">
-                                                <User className="w-4 h-4 text-gray-400 mt-1" />
+                                                <User className="w-4 h-4 text-stone-400 mt-1" />
                                                 <div>
-                                                    <p className="text-xs text-gray-500">Sales</p>
-                                                    <p className="font-semibold text-gray-800">
+                                                    <p className="text-[11px] font-medium uppercase tracking-wide text-stone-500">Sales</p>
+                                                    <p className="font-semibold text-stone-800">
                                                         {sale.salesman?.name || "-"}
                                                     </p>
                                                 </div>
@@ -206,7 +206,7 @@ export function SaleViewModal({ saleId }: SaleViewModalProps) {
 
                                 {/* Items Table */}
                                 <div className="glass-card p-6 mb-6">
-                                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Detail Item</h3>
+                                    <h3 className="text-lg font-semibold text-stone-800 mb-4">Detail Item</h3>
                                     <div className="overflow-x-auto">
                                         <table className="data-table">
                                             <thead>
@@ -227,7 +227,7 @@ export function SaleViewModal({ saleId }: SaleViewModalProps) {
                                                         <td>
                                                             <div>
                                                                 <p className="font-medium">{item.product.name}</p>
-                                                                <p className="text-xs text-gray-500">{item.product.code}</p>
+                                                                <p className="text-xs text-stone-500">{item.product.code}</p>
                                                             </div>
                                                         </td>
                                                         <td>
@@ -256,48 +256,48 @@ export function SaleViewModal({ saleId }: SaleViewModalProps) {
                                 <div className="glass-card p-6">
                                     <div className="space-y-3 max-w-md ml-auto">
                                         <div className="flex justify-between text-sm">
-                                            <span className="text-gray-600">Total:</span>
+                                            <span className="text-stone-600">Total:</span>
                                             <span className="font-semibold">
                                                 Rp {Number(sale.totalAmount).toLocaleString("id-ID")}
                                             </span>
                                         </div>
                                         <div className="flex justify-between text-sm">
-                                            <span className="text-gray-600">Diskon:</span>
-                                            <span className="font-semibold text-red-600">
+                                            <span className="text-stone-600">Diskon:</span>
+                                            <span className="font-semibold text-red-800">
                                                 - Rp {Number(sale.discount).toLocaleString("id-ID")}
                                             </span>
                                         </div>
                                         <div className="flex justify-between text-sm">
-                                            <span className="text-gray-600">Pajak:</span>
+                                            <span className="text-stone-600">Pajak:</span>
                                             <span className="font-semibold">
                                                 Rp {Number(sale.tax).toLocaleString("id-ID")}
                                             </span>
                                         </div>
                                         <div className="border-t pt-3 flex justify-between">
                                             <span className="font-bold text-lg">Grand Total:</span>
-                                            <span className="font-bold text-xl text-blue-600">
+                                            <span className="font-bold text-xl text-red-900">
                                                 Rp {Number(sale.grandTotal).toLocaleString("id-ID")}
                                             </span>
                                         </div>
                                         <div className="flex justify-between text-sm border-t pt-2">
-                                            <span className="text-gray-600">Dibayar:</span>
-                                            <span className="font-semibold text-green-600">
+                                            <span className="text-stone-600">Dibayar:</span>
+                                            <span className="font-semibold text-green-700">
                                                 Rp {Number(sale.paidAmount).toLocaleString("id-ID")}
                                             </span>
                                         </div>
 
                                         {sale.customerDebt && sale.customerDebt.remainingDebt > 0 && (
                                             <div className="flex justify-between text-sm bg-yellow-50 p-2 rounded">
-                                                <span className="text-gray-700 font-medium">Sisa Hutang:</span>
-                                                <span className="font-bold text-red-600">
+                                                <span className="text-stone-700 font-medium">Sisa Hutang:</span>
+                                                <span className="font-bold text-red-800">
                                                     Rp {Number(sale.customerDebt.remainingDebt).toLocaleString("id-ID")}
                                                 </span>
                                             </div>
                                         )}
                                         {sale.changeAmount > 0 && (
                                             <div className="flex justify-between text-sm">
-                                                <span className="text-gray-600">Kembalian:</span>
-                                                <span className="font-semibold text-green-600">
+                                                <span className="text-stone-600">Kembalian:</span>
+                                                <span className="font-semibold text-green-700">
                                                     Rp {Number(sale.changeAmount).toLocaleString("id-ID")}
                                                 </span>
                                             </div>
@@ -306,7 +306,7 @@ export function SaleViewModal({ saleId }: SaleViewModalProps) {
 
                                     {sale.notes && (
                                         <div className="mt-4 pt-4 border-t">
-                                            <p className="text-sm text-gray-600">
+                                            <p className="text-sm text-stone-600">
                                                 <span className="font-semibold">Catatan:</span> {sale.notes}
                                             </p>
                                         </div>

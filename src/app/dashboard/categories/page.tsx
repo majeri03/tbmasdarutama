@@ -221,22 +221,22 @@ export default function CategoriesPage() {
         <div className="glass-card p-6 animate-slide-up">
           <div className="flex flex-col gap-2 mt-3 md:flex-row md:items-center md:gap-3">
             <div>
-              <h1 className="text-3xl font-bold text-gradient mb-2">
+              <h1 className="text-3xl font-semibold tracking-tight text-stone-900 mb-2">
                 Master Kategori & Sub-Kategori
               </h1>
-              <p className="text-gray-600">
+              <p className="text-stone-600">
                 Kelola kategori dan sub-kategori produk Anda
               </p>
               <div className="flex items-center gap-3 mt-3">
                 <div className="badge badge-info">
                   {pagination.total} Kategori
                 </div>
-                <span className="text-gray-400 text-sm">•</span>
+                <span className="text-stone-400 text-sm">•</span>
                 <div className="badge badge-secondary">
                   {totalSubCategories} Sub-Kategori
                 </div>
-                <span className="text-gray-400 text-sm">•</span>
-                <span className="text-gray-600 text-sm">
+                <span className="text-stone-400 text-sm">•</span>
+                <span className="text-stone-600 text-sm">
                   Halaman {pagination.page} dari {pagination.totalPages || 1}
                 </span>
               </div>
@@ -249,89 +249,65 @@ export default function CategoriesPage() {
           {/* Total Kategori */}
           <div className="stat-card animate-slide-up">
             <div className="flex items-start justify-between mb-4">
-              <div
-                className="p-3 rounded-xl"
-                style={{
-                  background: "rgba(96, 165, 250, 0.15)",
-                  border: "1px solid rgba(96, 165, 250, 0.3)",
-                }}
-              >
-                <FolderTree className="w-6 h-6 text-blue-600" />
+              <div className="p-3 rounded-xl bg-stone-100 border border-stone-200">
+                <FolderTree className="w-6 h-6 text-stone-600" />
               </div>
             </div>
-            <h3 className="text-gray-600 text-sm font-semibold mb-1">
+            <h3 className="text-stone-500 text-sm font-medium mb-1">
               Total Kategori
             </h3>
-            <p className="text-3xl font-bold text-gray-900 mb-1">
+            <p className="text-3xl font-semibold tabular-nums text-stone-900 mb-1">
               {pagination.total}
             </p>
-            <p className="text-gray-500 text-xs">Kategori utama</p>
+            <p className="text-stone-500 text-xs">Kategori utama</p>
           </div>
 
           {/* Total Sub-Kategori */}
           <div className="stat-card animate-slide-up animation-delay-200">
             <div className="flex items-start justify-between mb-4">
-              <div
-                className="p-3 rounded-xl"
-                style={{
-                  background: "rgba(167, 139, 250, 0.15)",
-                  border: "1px solid rgba(167, 139, 250, 0.3)",
-                }}
-              >
-                <Folder className="w-6 h-6 text-purple-600" />
+              <div className="p-3 rounded-xl bg-stone-100 border border-stone-200">
+                <Folder className="w-6 h-6 text-stone-600" />
               </div>
             </div>
-            <h3 className="text-gray-600 text-sm font-semibold mb-1">
+            <h3 className="text-stone-500 text-sm font-medium mb-1">
               Total Sub-Kategori
             </h3>
-            <p className="text-3xl font-bold text-gray-900 mb-1">
+            <p className="text-3xl font-semibold tabular-nums text-stone-900 mb-1">
               {totalSubCategories}
             </p>
-            <p className="text-gray-500 text-xs">Sub-kategori terdaftar</p>
+            <p className="text-stone-500 text-xs">Sub-kategori terdaftar</p>
           </div>
 
           {/* Kategori dengan Sub */}
           <div className="stat-card animate-slide-up animation-delay-400">
             <div className="flex items-start justify-between mb-4">
-              <div
-                className="p-3 rounded-xl"
-                style={{
-                  background: "rgba(34, 197, 94, 0.15)",
-                  border: "1px solid rgba(34, 197, 94, 0.3)",
-                }}
-              >
-                <FolderTree className="w-6 h-6 text-green-600" />
+              <div className="p-3 rounded-xl bg-stone-100 border border-stone-200">
+                <FolderTree className="w-6 h-6 text-stone-600" />
               </div>
             </div>
-            <h3 className="text-gray-600 text-sm font-semibold mb-1">
+            <h3 className="text-stone-500 text-sm font-medium mb-1">
               Kategori Aktif
             </h3>
-            <p className="text-3xl font-bold text-gray-900 mb-1">
+            <p className="text-3xl font-semibold tabular-nums text-stone-900 mb-1">
               {categoriesWithSub}
             </p>
-            <p className="text-gray-500 text-xs">Memiliki sub-kategori</p>
+            <p className="text-stone-500 text-xs">Memiliki sub-kategori</p>
           </div>
 
           {/* Total Produk */}
           <div className="stat-card animate-slide-up animation-delay-600">
             <div className="flex items-start justify-between mb-4">
-              <div
-                className="p-3 rounded-xl"
-                style={{
-                  background: "rgba(251, 146, 60, 0.15)",
-                  border: "1px solid rgba(251, 146, 60, 0.3)",
-                }}
-              >
-                <Package className="w-6 h-6 text-orange-600" />
+              <div className="p-3 rounded-xl bg-stone-100 border border-stone-200">
+                <Package className="w-6 h-6 text-stone-600" />
               </div>
             </div>
-            <h3 className="text-gray-600 text-sm font-semibold mb-1">
+            <h3 className="text-stone-500 text-sm font-medium mb-1">
               Total Produk
             </h3>
-            <p className="text-3xl font-bold text-gray-900 mb-1">
+            <p className="text-3xl font-semibold tabular-nums text-stone-900 mb-1">
               {totalProducts}
             </p>
-            <p className="text-gray-500 text-xs">Produk terkategori</p>
+            <p className="text-stone-500 text-xs">Produk terkategori</p>
           </div>
         </div>
 
@@ -411,14 +387,11 @@ export default function CategoriesPage() {
             setPreSelectedCategoryId("");
             setShowSubCategoryFormModal(true);
           }}
-          className="group relative p-4 rounded-full shadow-2xl transition-all hover:scale-110"
-          style={{
-            background: "linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%)",
-          }}
+          className="group relative p-4 rounded-full shadow-2xl transition-all hover:scale-110 bg-stone-800 hover:bg-stone-900"
           title="Tambah Sub-Kategori"
         >
           <Folder className="w-6 h-6 text-white" />
-          <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs font-semibold px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+          <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-stone-900 text-white text-xs font-semibold px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
             Tambah Sub-Kategori
           </span>
         </button>
@@ -426,14 +399,11 @@ export default function CategoriesPage() {
         {/* FAB - Kategori */}
         <button
           onClick={handleAddCategory}
-          className="group relative p-4 rounded-full shadow-2xl transition-all hover:scale-110"
-          style={{
-            background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)",
-          }}
+          className="group relative p-4 rounded-full shadow-2xl transition-all hover:scale-110 bg-red-900 hover:bg-red-800"
           title="Tambah Kategori"
         >
           <Plus className="w-6 h-6 text-white" />
-          <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs font-semibold px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+          <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-stone-900 text-white text-xs font-semibold px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
             Tambah Kategori
           </span>
         </button>

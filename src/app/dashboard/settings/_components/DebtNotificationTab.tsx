@@ -300,8 +300,8 @@ export default function DebtNotificationTab() {
       {/* ---------- Jadwal & Saklar ---------- */}
       <form onSubmit={handleSaveSettings} className="space-y-4">
         <div className="flex items-center gap-2">
-          <Bell className="w-5 h-5 text-red-700" />
-          <h2 className="text-lg font-semibold text-gray-800">Email Pengingat Utang</h2>
+          <Bell className="w-5 h-5 text-[#7F1D1D]" />
+          <h2 className="text-lg font-semibold text-[#1C1917]">Email Pengingat Utang</h2>
         </div>
         <p className="text-sm text-gray-600">
           Sekali sehari (pukul 08:00 WITA) sistem mengirim satu email ringkasan
@@ -315,7 +315,7 @@ export default function DebtNotificationTab() {
             type="checkbox"
             checked={debtEmailEnabled}
             onChange={(e) => setDebtEmailEnabled(e.target.checked)}
-            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+            className="w-4 h-4 accent-[#7F1D1D] rounded focus:ring-[#7F1D1D]"
           />
           <span className="text-sm font-medium text-gray-700">Aktifkan email pengingat utang</span>
         </label>
@@ -386,8 +386,8 @@ export default function DebtNotificationTab() {
       {/* ---------- Daftar Penerima ---------- */}
       <div className="space-y-4">
         <div className="flex items-center gap-2">
-          <Mail className="w-5 h-5 text-blue-600" />
-          <h2 className="text-lg font-semibold text-gray-800">Email Penerima</h2>
+          <Mail className="w-5 h-5 text-[#7F1D1D]" />
+          <h2 className="text-lg font-semibold text-[#1C1917]">Email Penerima</h2>
         </div>
         <p className="text-sm text-gray-600">
           Email ringkasan dikirim ke setiap alamat aktif di bawah ini (satu
@@ -475,8 +475,8 @@ export default function DebtNotificationTab() {
       {/* ---------- Terakhir Terkirim + Tes ---------- */}
       <div className="space-y-4">
         <div className="flex items-center gap-2">
-          <Send className="w-5 h-5 text-blue-600" />
-          <h2 className="text-lg font-semibold text-gray-800">Pengiriman Terakhir &amp; Tes</h2>
+          <Send className="w-5 h-5 text-[#7F1D1D]" />
+          <h2 className="text-lg font-semibold text-[#1C1917]">Pengiriman Terakhir &amp; Tes</h2>
         </div>
         {lastLog ? (
           <div className="flex items-start gap-3 p-4 rounded-lg bg-green-50 border border-green-200">
@@ -540,7 +540,7 @@ export default function DebtNotificationTab() {
       {deletingRecipient && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="px-6 py-4 bg-red-600">
+            <div className="px-6 py-4 bg-[#7F1D1D]">
               <h3 className="font-bold text-white text-lg">Hapus Penerima Email?</h3>
             </div>
             <div className="p-6 space-y-5">
@@ -561,7 +561,7 @@ export default function DebtNotificationTab() {
                   type="button"
                   onClick={handleConfirmDeleteRecipient}
                   disabled={deleting}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm transition-all disabled:opacity-50"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#7F1D1D] hover:bg-[#991B1B] text-white font-semibold text-sm transition-all disabled:opacity-50"
                 >
                   {deleting ? (
                     <>

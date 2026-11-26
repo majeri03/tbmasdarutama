@@ -21,10 +21,10 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
     // Stock badge color
     const stockColor =
         product.currentStock === 0
-            ? "bg-red-100 text-red-700"
+            ? "bg-red-100 text-[#991B1B]"
             : product.currentStock <= product.minStock
-                ? "bg-yellow-100 text-yellow-700"
-                : "bg-green-100 text-green-700";
+                ? "bg-[#B45309]/10 text-[#B45309]"
+                : "bg-[#15803D]/10 text-[#15803D]";
 
     return (
         <div
@@ -32,7 +32,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
             onClick={() => onAddToCart(product)}
         >
             {/* Product Image */}
-            <div className="relative h-24 md:h-40 bg-gradient-to-br from-gray-50 to-gray-100 rounded-t-lg overflow-hidden">
+            <div className="relative h-24 md:h-40 bg-stone-100 rounded-t-lg overflow-hidden">
                 {primaryImage ? (
                     <Image
                         src={primaryImage}
@@ -42,7 +42,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
                     />
                 ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <Package className="w-16 h-16 text-gray-300" />
+                        <Package className="w-16 h-16 text-stone-300" />
                     </div>
                 )}
 
@@ -57,20 +57,20 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
             {/* Product Info */}
             <div className="p-2 md:p-4">
                 {/* Product Name */}
-                <h3 className="text-xs md:text-sm font-semibold text-gray-900 line-clamp-2 min-h-[2rem] md:min-h-[3rem]">
+                <h3 className="text-xs md:text-sm font-semibold text-stone-900 line-clamp-2 min-h-[2rem] md:min-h-[3rem]">
                     {product.name}
                 </h3>
 
                 {/* Product Code */}
-                <p className="text-xs text-gray-500 mt-1">{product.code}</p>
+                <p className="text-xs text-stone-500 mt-1">{product.code}</p>
 
                 {/* Price & Unit */}
                 <div className="mt-3 space-y-3">
                     <div className="flex items-center justify-between">
                     <div>
-                        <p className="text-lg font-bold text-blue-600">{formatCurrency(displayPrice)}</p>
+                        <p className="text-lg font-bold tabular-nums text-[#7F1D1D]">{formatCurrency(displayPrice)}</p>
                         {primaryUnit && (
-                            <p className="text-xs text-gray-500">per {primaryUnit.unit.name}</p>
+                            <p className="text-xs text-stone-500">per {primaryUnit.unit.name}</p>
                         )}
                     </div>
                     </div>
@@ -81,7 +81,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
                             onAddToCart(product);
                         }}
                         disabled={product.currentStock <= 0}
-                        className="w-full py-2 md:py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1 md:gap-2"
+                        className="w-full py-2 md:py-2.5 bg-[#7F1D1D] text-white rounded-lg hover:bg-[#991B1B] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1 md:gap-2"
                     >
                         <ShoppingCart className="w-4 h-4 md:w-5 md:h-5" />
                         <span className="hidden md:inline text-sm md:text-base">Tambah</span>

@@ -479,24 +479,24 @@ export function DeliveryOrderFormModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl w-full max-w-6xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
+    <div className="modal-overlay">
+      <div className="modal-container w-full max-w-6xl max-h-[90vh] overflow-y-auto flex flex-col">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <Package className="w-5 h-5 text-blue-600" />
+        <div className="sticky top-0 bg-white border-b border-stone-100 px-6 py-4 flex items-center justify-between z-10">
+          <h2 className="text-xl font-semibold tracking-tight text-stone-900 flex items-center gap-2">
+            <Package className="w-5 h-5 text-red-900" />
             Buat Surat Jalan Baru
           </h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+          <button onClick={onClose} className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6 flex-1 overflow-y-auto">
           {/* Section: Pilih Penjualan POS (Otomatis DO) */}
-          <div className="p-4 bg-blue-50/70 border border-blue-200 rounded-xl space-y-2">
+          <div className="p-4 bg-red-900/5 border border-red-900/20 rounded-xl space-y-2">
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold uppercase tracking-wider text-blue-900">
+              <label className="block text-xs font-bold uppercase tracking-wider text-red-900">
                 Pilih Dari Transaksi Penjualan (DO Otomatis)
               </label>
               {selectedSaleId && (
@@ -510,7 +510,7 @@ export function DeliveryOrderFormModal({
                     setItems([{ productId: "", unitId: "", quantity: 1, notes: "" }]);
                     setSearchProducts([""]);
                   }}
-                  className="text-xs text-blue-600 hover:text-blue-800 underline font-medium"
+                  className="text-xs text-red-900 hover:text-red-800 underline font-medium"
                 >
                   Reset / Buat DO Manual
                 </button>
@@ -525,15 +525,15 @@ export function DeliveryOrderFormModal({
                   if (salesList.length > 0) setSaleDropdownOpen(true);
                 }}
                 placeholder="Ketik No. Invoice / nama pelanggan... (min. 2 huruf, kosong = DO Manual)"
-                className="w-full px-3 py-2 bg-white border border-blue-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                className="w-full px-3 py-2 bg-white border border-red-900/30 rounded-xl text-sm text-stone-800 focus:ring-2 focus:ring-red-900/20 focus:border-red-900 transition-all font-medium"
               />
               {saleDropdownOpen &&
                 (saleSearching || salesList.length > 0 || saleSearch.trim().length >= 2) && (
-                  <div className="absolute z-20 mt-1 w-full bg-white border border-blue-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                  <div className="absolute z-20 mt-1 w-full bg-white border border-red-900/20 rounded-xl shadow-lg max-h-64 overflow-y-auto">
                     {saleSearching ? (
-                      <div className="px-3 py-2 text-sm text-gray-500">Mencari...</div>
+                      <div className="px-3 py-2 text-sm text-stone-500">Mencari...</div>
                     ) : salesList.length === 0 ? (
-                      <div className="px-3 py-2 text-sm text-gray-500">
+                      <div className="px-3 py-2 text-sm text-stone-500">
                         Tidak ada transaksi yang cocok. Coba kata kunci lain, atau kosongkan untuk DO Manual.
                       </div>
                     ) : (
@@ -542,11 +542,11 @@ export function DeliveryOrderFormModal({
                           type="button"
                           key={sale.id}
                           onClick={() => handleSaleSelect(sale.id)}
-                          className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm text-gray-800 border-b border-gray-100 last:border-b-0"
+                          className="w-full text-left px-3 py-2 hover:bg-red-900/5 text-sm text-stone-800 border-b border-stone-100 last:border-b-0"
                         >
                           <span className="font-semibold">{sale.invoiceNumber}</span> •{" "}
                           {sale.customer?.name || "Pelanggan"}
-                          <span className="block text-xs text-gray-500">
+                          <span className="block text-xs text-stone-500">
                             {new Date(sale.saleDate).toLocaleDateString("id-ID")} • Rp{" "}
                             {Number((sale as any).grandTotal || 0).toLocaleString("id-ID")} •{" "}
                             {(sale as any).status}
@@ -557,7 +557,7 @@ export function DeliveryOrderFormModal({
                   </div>
                 )}
             </div>
-            <p className="text-xs text-blue-700">
+            <p className="text-xs text-red-800">
               {selectedSaleId
                 ? "✓ Data customer dan barang terisi otomatis dari transaksi penjualan yang dipilih."
                 : "💡 Anda juga bisa membuat DO secara manual tanpa memilih penjualan (invoice & hutang otomatis terbuat dan tersinkron)."}
@@ -565,9 +565,9 @@ export function DeliveryOrderFormModal({
           </div>
 
           {/* Customer & Date */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-4 rounded-lg border border-gray-100">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-stone-50 p-4 rounded-xl border border-stone-100">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="label mb-1.5">
                 Customer <span className="text-red-500">*</span>
               </label>
               <select
@@ -575,7 +575,7 @@ export function DeliveryOrderFormModal({
                 onChange={(e) => setCustomerId(e.target.value)}
                 disabled={!!selectedSaleId}
                 title={selectedSaleId ? "Pelanggan terkunci dari invoice yang dipilih" : undefined}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all disabled:bg-gray-100 disabled:text-gray-500"
+                className="w-full px-3 py-2 border border-stone-300 rounded-xl focus:ring-2 focus:ring-red-900/20 focus:border-red-900 transition-all disabled:bg-stone-100 disabled:text-stone-500"
                 required
               >
                 <option value="">Pilih Customer</option>
@@ -586,34 +586,34 @@ export function DeliveryOrderFormModal({
                 ))}
               </select>
               {selectedSaleId && (
-                <p className="text-xs text-blue-700 mt-1">
+                <p className="text-xs text-red-800 mt-1">
                   Pelanggan terkunci dari invoice yang dipilih. Pilih "Reset / Buat DO Manual" untuk mengganti.
                 </p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="label mb-1.5">
                 Tanggal Kirim <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 value={deliveryDate}
                 onChange={(e) => setDeliveryDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                className="w-full px-3 py-2 border border-stone-300 rounded-xl focus:ring-2 focus:ring-red-900/20 focus:border-red-900 transition-all"
                 required
               />
             </div>
 
             {/* Driver & Vehicle: Dropdown Database Armada */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="label mb-1.5">
                 Pengemudi / Sopir (Fitur Armada)
               </label>
               <select
                 value={driver}
                 onChange={(e) => handleDriverSelect(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                className="w-full px-3 py-2 border border-stone-300 rounded-xl focus:ring-2 focus:ring-red-900/20 focus:border-red-900 transition-all"
               >
                 <option value="">-- Pilih Sopir dari Armada --</option>
                 {Array.from(new Set(fleetList.map((f) => f.driverName).filter(Boolean))).map(
@@ -630,13 +630,13 @@ export function DeliveryOrderFormModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="label mb-1.5">
                 Kendaraan / Plat Nomor (Fitur Armada)
               </label>
               <select
                 value={vehicle}
                 onChange={(e) => handleVehicleSelect(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                className="w-full px-3 py-2 border border-stone-300 rounded-xl focus:ring-2 focus:ring-red-900/20 focus:border-red-900 transition-all"
               >
                 <option value="">-- Pilih Kendaraan dari Armada --</option>
                 {fleetList.map((f) => {
@@ -654,13 +654,13 @@ export function DeliveryOrderFormModal({
           {/* Items Section */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="label">
                 Daftar Barang
               </label>
               <button
                 type="button"
                 onClick={handleAddItem}
-                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200"
+                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-red-900/5 text-red-900 rounded-xl hover:bg-red-900/10 transition-colors border border-red-900/20"
               >
                 <Plus className="w-3.5 h-3.5" /> Tambah Baris
               </button>
@@ -668,7 +668,7 @@ export function DeliveryOrderFormModal({
 
             <div className="space-y-4">
               {items.map((item, index) => (
-                <div key={index} className="relative bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:border-blue-300 transition-all">
+                <div key={index} className="relative bg-white p-4 rounded-xl border border-stone-200 shadow-sm hover:border-red-900/30 transition-all">
 
                   {items.length > 1 && (
                     <button
@@ -684,15 +684,15 @@ export function DeliveryOrderFormModal({
 
                     {/* 1. PRODUCT SEARCH (Input Text + Datalist) */}
                     <div className="md:col-span-5 relative">
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Produk</label>
+                      <label className="block text-xs font-medium text-stone-500 mb-1">Produk</label>
                       <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
                         <input
                           type="text"
                           value={searchProducts[index] || ""}
                           onChange={(e) => handleSearchChange(index, e.target.value)}
                           onFocus={() => handleSearchChange(index, searchProducts[index] || "")}
-                          className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                          className="w-full pl-9 pr-3 py-2 border border-stone-300 rounded-xl text-sm focus:ring-2 focus:ring-red-900/20 focus:border-red-900"
                           placeholder="Ketik nama produk..."
                           list={`products-${index}`}
                         />
@@ -712,11 +712,11 @@ export function DeliveryOrderFormModal({
 
                       {/* Helper UI: Jika produk ada di hasil search, tampilkan tombol pilih manual (opsional tapi membantu UX) */}
                       {searchProducts[index] && !item.productId && products.length > 0 && (
-                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                        <div className="absolute z-50 w-full mt-1 bg-white border border-stone-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
                           {products.map((product) => (
                             <div
                               key={product.id}
-                              className="px-4 py-2 text-sm hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0"
+                              className="px-4 py-2 text-sm hover:bg-red-900/5 cursor-pointer border-b border-stone-50 last:border-0"
                               onClick={() => {
                                 // Set Product ID manual saat diklik
                                 handleItemChange(index, "productId", product.id);
@@ -731,11 +731,11 @@ export function DeliveryOrderFormModal({
 
                     {/* 2. UNIT (Dropdown) */}
                     <div className="md:col-span-3">
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Satuan</label>
+                      <label className="block text-xs font-medium text-stone-500 mb-1">Satuan</label>
                       <select
                         value={item.unitId}
                         onChange={(e) => handleItemChange(index, "unitId", e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50"
+                        className="w-full px-3 py-2 border border-stone-300 rounded-xl text-sm bg-stone-50"
                         required
                         disabled={!item.productId}
                       >
@@ -751,12 +751,12 @@ export function DeliveryOrderFormModal({
 
                     {/* 3. QTY (No Decimal) */}
                     <div className="md:col-span-2">
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Jumlah</label>
+                      <label className="block text-xs font-medium text-stone-500 mb-1">Jumlah</label>
                       <input
                         type="number"
                         value={item.quantity}
                         onChange={(e) => handleItemChange(index, "quantity", e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-center"
+                        className="w-full px-3 py-2 border border-stone-300 rounded-xl text-sm text-center"
                         min="1"
                         step="1"
                         required
@@ -770,12 +770,12 @@ export function DeliveryOrderFormModal({
 
                     {/* 4. NOTES */}
                     <div className="md:col-span-2">
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Catatan</label>
+                      <label className="block text-xs font-medium text-stone-500 mb-1">Catatan</label>
                       <input
                         type="text"
                         value={item.notes}
                         onChange={(e) => handleItemChange(index, "notes", e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        className="w-full px-3 py-2 border border-stone-300 rounded-xl text-sm"
                         placeholder="..."
                       />
                     </div>
@@ -784,13 +784,13 @@ export function DeliveryOrderFormModal({
                 </div>
               ))}
                     <div className="mt-6">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="label mb-2">
                         Catatan Pengiriman
                       </label>
                       <textarea
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                        className="w-full px-3 py-2 border border-stone-300 rounded-xl text-sm focus:ring-2 focus:ring-red-900/20 focus:border-red-900 transition-all"
                         rows={3}
                         placeholder="Catatan tambahan untuk pengiriman (opsional)"
                       />
@@ -798,10 +798,10 @@ export function DeliveryOrderFormModal({
 
                     {/* Foto Bukti Pengiriman */}
                     <div className="mt-6">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="label mb-2">
                         Foto Bukti Pengiriman (Opsional)
                       </label>
-                      <p className="text-xs text-gray-500 mb-2">
+                      <p className="text-xs text-stone-500 mb-2">
                         Unggah foto bukti muat barang / pengiriman (Maksimal 5MB, format JPG/PNG/WebP)
                       </p>
 
@@ -814,7 +814,7 @@ export function DeliveryOrderFormModal({
                       />
 
                       {proofImage ? (
-                        <div className="relative inline-block border rounded-xl overflow-hidden shadow-sm bg-gray-50 group">
+                        <div className="relative inline-block border rounded-xl overflow-hidden shadow-sm bg-stone-50 group">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={proofImage}
@@ -826,7 +826,7 @@ export function DeliveryOrderFormModal({
                               type="button"
                               onClick={() => fileInputRef.current?.click()}
                               disabled={isUploading}
-                              className="px-2.5 py-1 text-xs bg-white text-gray-800 font-medium rounded shadow hover:bg-gray-100"
+                              className="px-2.5 py-1 text-xs bg-white text-stone-800 font-medium rounded shadow hover:bg-stone-100"
                             >
                               Ganti
                             </button>
@@ -834,7 +834,7 @@ export function DeliveryOrderFormModal({
                               type="button"
                               onClick={() => setProofImage("")}
                               disabled={isUploading}
-                              className="px-2.5 py-1 text-xs bg-red-600 text-white font-medium rounded shadow hover:bg-red-700"
+                              className="px-2.5 py-1 text-xs bg-red-900 text-white font-medium rounded shadow hover:bg-red-800"
                             >
                               Hapus
                             </button>
@@ -845,16 +845,16 @@ export function DeliveryOrderFormModal({
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
                           disabled={isUploading}
-                          className="w-full py-4 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-500 hover:bg-blue-50/50 transition-colors flex flex-col items-center justify-center gap-2 text-gray-600 cursor-pointer disabled:opacity-50"
+                          className="w-full py-4 border-2 border-dashed border-stone-300 rounded-xl hover:border-red-900 hover:bg-red-900/5 transition-colors flex flex-col items-center justify-center gap-2 text-stone-600 cursor-pointer disabled:opacity-50"
                         >
                           {isUploading ? (
                             <>
-                              <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-                              <span className="text-sm font-medium text-blue-600">Mengunggah foto bukti...</span>
+                              <Loader2 className="w-6 h-6 animate-spin text-red-900" />
+                              <span className="text-sm font-medium text-red-900">Mengunggah foto bukti...</span>
                             </>
                           ) : (
                             <>
-                              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                              <div className="w-10 h-10 rounded-full bg-red-900/5 flex items-center justify-center text-red-900">
                                 <Camera className="w-5 h-5" />
                               </div>
                               <span className="text-sm font-medium">Klik untuk upload foto bukti pengiriman</span>
@@ -867,18 +867,18 @@ export function DeliveryOrderFormModal({
           </div>
 
           {/* Footer Actions */}
-          <div className="sticky bottom-0 bg-white border-t border-gray-100 pt-4 mt-6 flex justify-end gap-3">
+          <div className="sticky bottom-0 bg-stone-50 border-t border-stone-200 pt-4 mt-6 flex justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-stone-700 bg-white border border-stone-300 rounded-xl hover:bg-stone-50 transition-colors"
               disabled={isLoading}
             >
               Batal
             </button>
             <button
               type="submit" // Trigger handleSubmit
-              className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              className="px-6 py-2 text-sm font-medium text-white bg-red-900 rounded-xl hover:bg-red-800 transition-colors flex items-center gap-2"
               disabled={isLoading}
             >
               {isLoading ? "Memproses..." : "Simpan Surat Jalan"}

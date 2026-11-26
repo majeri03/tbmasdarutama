@@ -113,7 +113,7 @@ export function DeleteSaleDialog({ sale, onSuccess }: DeleteSaleDialogProps) {
                   Apakah Anda yakin ingin membatalkan penjualan ini?
                 </p>
                 <p className="text-xs text-gray-500 mb-2">
-                  Invoice: <span className="font-semibold text-blue-600">{sale.invoiceNumber}</span>
+                  Invoice: <span className="font-semibold text-red-900">{sale.invoiceNumber}</span>
                 </p>
                 <p className="text-xs text-red-600 bg-red-50 border border-red-100 p-2.5 rounded-lg mt-1 text-left leading-relaxed">
                   <strong>Pemberitahuan Tutup Buku:</strong> Transaksi ini TIDAK dihapus dari database — hanya ditandai sebagai <strong>DIBATALKAN</strong> dan tetap tampil di daftar penjualan sebagai arsip. Stok barang akan dikembalikan ke gudang dan sisa piutang akan dibatalkan. Pembatalan tidak dapat diurungkan dari halaman ini.

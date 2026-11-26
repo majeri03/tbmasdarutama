@@ -9,32 +9,27 @@ export function PurchaseStatusBadge({ status }: PurchaseStatusBadgeProps) {
     switch (status) {
       case "PENDING":
         return {
-          bg: "bg-yellow-100",
-          text: "text-yellow-800",
+          className: "badge-warning",
           label: "Pending",
         };
       case "RECEIVED":
         return {
-          bg: "bg-green-100",
-          text: "text-green-800",
+          className: "badge-success",
           label: "Received",
         };
       case "PARTIAL":
         return {
-          bg: "bg-blue-100",
-          text: "text-blue-800",
+          className: "badge-info",
           label: "Partial",
         };
       case "CANCELLED":
         return {
-          bg: "bg-red-100",
-          text: "text-red-800",
+          className: "badge-danger",
           label: "Cancelled",
         };
       default:
         return {
-          bg: "bg-gray-100",
-          text: "text-gray-800",
+          className: "badge-info",
           label: status,
         };
     }
@@ -43,7 +38,7 @@ export function PurchaseStatusBadge({ status }: PurchaseStatusBadgeProps) {
   const style = getStatusStyle();
 
   return (
-    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${style.bg} ${style.text}`}>
+    <span className={`badge ${style.className}`}>
       {style.label}
     </span>
   );

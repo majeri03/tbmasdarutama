@@ -138,31 +138,31 @@ export function BarcodeScannerModal({ isOpen, onClose, onScanned }: BarcodeScann
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl w-full max-w-lg overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Camera className="w-5 h-5 text-blue-600" />
+    <div className="modal-overlay z-[60]">
+      <div className="modal-container w-full max-w-lg overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-stone-200">
+          <h2 className="text-lg font-semibold text-stone-900 flex items-center gap-2">
+            <Camera className="w-5 h-5 text-red-900" />
             Scan Barcode / QR
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="Tutup">
+          <button onClick={onClose} className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 transition-colors" aria-label="Tutup">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="p-4 space-y-4">
           {status === "starting" && (
-            <div className="aspect-video bg-gray-900 rounded-lg flex items-center justify-center">
+            <div className="aspect-video bg-stone-900 rounded-xl flex items-center justify-center">
               <Loader2 className="w-8 h-8 animate-spin text-white" />
             </div>
           )}
 
           {(status === "scanning" || status === "starting") && (
-            <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+            <div className="relative aspect-video bg-black rounded-xl overflow-hidden">
               <video ref={videoRef} playsInline muted className="w-full h-full object-cover" />
               {status === "scanning" && (
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                  <div className="w-3/4 h-1/2 border-2 border-green-400 rounded-lg" />
+                  <div className="w-3/4 h-1/2 border-2 border-green-400 rounded-xl" />
                 </div>
               )}
               <p className="absolute bottom-2 left-0 right-0 text-center text-xs text-white bg-black/50 py-1">
@@ -172,7 +172,7 @@ export function BarcodeScannerModal({ isOpen, onClose, onScanned }: BarcodeScann
           )}
 
           {status === "unsupported" && (
-            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
               Browser ini tidak mendukung scan kamera (butuh BarcodeDetector —
               Chrome/Edge terbaru). Pakai input manual di bawah atau scanner
               barcode fisik (ketik + Enter).
@@ -180,14 +180,14 @@ export function BarcodeScannerModal({ isOpen, onClose, onScanned }: BarcodeScann
           )}
 
           {status === "error" && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
               {errorMessage}
             </div>
           )}
 
           {/* Fallback input manual — selalu ada */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="label mb-1">
               <Keyboard className="w-4 h-4 inline mr-1" />
               Atau ketik kode manual
             </label>
@@ -200,12 +200,12 @@ export function BarcodeScannerModal({ isOpen, onClose, onScanned }: BarcodeScann
                   if (e.key === "Enter") handleManualSubmit();
                 }}
                 placeholder="Kode / barcode produk..."
-                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-3 py-2 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-900"
               />
               <button
                 onClick={handleManualSubmit}
                 disabled={!manualCode.trim()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                className="px-4 py-2 bg-red-900 text-white rounded-xl hover:bg-red-800 disabled:opacity-50"
               >
                 Cari
               </button>

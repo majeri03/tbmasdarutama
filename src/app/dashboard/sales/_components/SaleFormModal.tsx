@@ -282,7 +282,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
                 <div className="modal-overlay overflow-y-auto">
                     <div className="modal-container max-w-7xl my-8 animate-modal-slide-up">
                         <form onSubmit={handleSubmit}>
-                            <div className="modal-header bg-gradient-to-r from-blue-500 to-blue-600">
+                            <div className="modal-header bg-red-900">
                                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
                                     <ShoppingCart className="w-5 h-5" />
                                     Tambah Penjualan Baru
@@ -290,7 +290,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
                                 <button
                                     type="button"
                                     onClick={() => setIsOpen(false)}
-                                    className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+                                    className="text-white hover:bg-white/20 p-2 rounded-full transition-colors"
                                 >
                                     <X className="w-5 h-5" />
                                 </button>
@@ -298,12 +298,12 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
 
                             <div className="modal-body" style={{ maxHeight: 'calc(90vh - 180px)' }}>
                                 {error && (
-                                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
                                         {error}
                                     </div>
                                 )}
                                 {success && (
-                                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+                                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm">
                                         {success}
                                     </div>
                                 )}
@@ -378,13 +378,13 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
                                         </div>
 
                                         {showProductDropdown && searchProduct && filteredProducts.length > 0 && (
-                                            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-64 overflow-y-auto">
+                                            <div className="absolute z-50 w-full mt-1 bg-white border border-stone-200 rounded-xl shadow-xl max-h-64 overflow-y-auto">
                                                 {filteredProducts.slice(0, 10).map((product) => (
-                                                    <div key={product.id} className="p-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+                                                    <div key={product.id} className="p-3 border-b border-stone-100 last:border-0 hover:bg-stone-50 transition-colors">
                                                         <div className="flex items-start justify-between mb-2">
                                                             <div>
-                                                                <p className="font-medium text-sm text-gray-900">{product.name}</p>
-                                                                <p className="text-xs text-gray-500">{product.code} • Stock: {product.currentStock}</p>
+                                                                <p className="font-medium text-sm text-stone-900">{product.name}</p>
+                                                                <p className="text-xs text-stone-500">{product.code} • Stock: {product.currentStock}</p>
                                                             </div>
                                                         </div>
                                                         <div className="flex gap-2 flex-wrap">
@@ -393,7 +393,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
                                                                     key={unit.id}
                                                                     type="button"
                                                                     onClick={() => addToCart(product, unit.unitId)}
-                                                                    className="px-3 py-1.5 text-xs font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors"
+                                                                    className="px-3 py-1.5 text-xs font-medium text-white bg-red-800 hover:bg-red-900 rounded-xl transition-colors"
                                                                 >
                                                                     + {unit.unit.symbol || unit.unit.name} - Rp {Number(unit.sellPrice).toLocaleString("id-ID")}
                                                                 </button>
@@ -408,10 +408,10 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
 
                                 {/* Cart Table */}
                                 {cart.length > 0 && (
-                                    <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+                                    <div className="bg-white border border-stone-200 rounded-xl p-4 mb-4">
                                         <div className="flex items-center justify-between mb-3">
-                                            <h3 className="font-semibold text-gray-900">Keranjang Belanja</h3>
-                                            <span className="text-sm text-gray-500">{cart.length} item</span>
+                                            <h3 className="font-semibold text-stone-900">Keranjang Belanja</h3>
+                                            <span className="text-sm text-stone-500">{cart.length} item</span>
                                         </div>
                                         <div className="overflow-x-auto">
                                             <table className="data-table">
@@ -431,7 +431,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
                                                         <tr key={index}>
                                                             <td>
                                                                 <p className="font-medium">{item.productName}</p>
-                                                                <p className="text-xs text-gray-500">{item.productCode}</p>
+                                                                <p className="text-xs text-stone-500">{item.productCode}</p>
                                                             </td>
                                                             <td>
                                                                 <span className="badge badge-info">{item.unitName}</span>
@@ -502,7 +502,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
                                         />
                                     </div>
 
-                                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                    <div className="bg-stone-50 border border-stone-200 rounded-xl p-4">
                                         <div className="space-y-3">
                                             <div className="grid grid-cols-2 gap-2">
                                                 <label className="label">Diskon Global (%)</label>
@@ -537,7 +537,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
                                                 </div>
                                                 <div className="flex justify-between text-sm">
                                                     <span>Diskon:</span>
-                                                    <span className="text-red-600">
+                                                    <span className="text-red-800">
                                                         - Rp {totals.discountAmount.toLocaleString("id-ID")}
                                                     </span>
                                                 </div>
@@ -547,7 +547,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
                                                 </div>
                                                 <div className="flex justify-between font-bold text-lg border-t pt-2">
                                                     <span>Grand Total:</span>
-                                                    <span className="text-blue-600">
+                                                    <span className="text-red-900">
                                                         Rp {totals.grandTotal.toLocaleString("id-ID")}
                                                     </span>
                                                 </div>
@@ -566,7 +566,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
                                             </div>
 
                                             {totals.changeAmount > 0 && (
-                                                <div className="flex justify-between text-sm text-green-600">
+                                                <div className="flex justify-between text-sm text-green-700">
                                                     <span>Kembalian:</span>
                                                     <span className="font-semibold">
                                                         Rp {totals.changeAmount.toLocaleString("id-ID")}

@@ -91,7 +91,7 @@ export function DeleteDeliveryDialog({
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">Total Items:</span>
-                <span className="font-semibold text-blue-600">
+                <span className="font-semibold text-red-900">
                   {deliveryOrder.deliveryItems.length} items
                 </span>
               </div>

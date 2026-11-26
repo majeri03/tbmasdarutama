@@ -88,7 +88,7 @@ export function CategoryTable({
       <div className="glass-card p-4">
         <form onSubmit={handleSearch} className="flex gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400" />
             <input
               type="text"
               value={searchInput}
@@ -101,7 +101,7 @@ export function CategoryTable({
               <button
                 type="button"
                 onClick={handleSearchClear}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition-colors"
               >
                 <span className="text-lg">×</span>
               </button>
@@ -129,25 +129,21 @@ export function CategoryTable({
         {loading ? (
           // Loading State
           <div className="p-12 text-center">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-3" />
-            <p className="text-gray-600 text-sm">Memuat data kategori...</p>
+            <Loader2 className="w-8 h-8 animate-spin text-stone-600 mx-auto mb-3" />
+            <p className="text-stone-600 text-sm">Memuat data kategori...</p>
           </div>
         ) : categories.length === 0 ? (
           // Empty State
           <div className="p-12 text-center">
             <div
-              className="inline-flex p-4 rounded-2xl mb-4"
-              style={{
-                background: "rgba(96, 165, 250, 0.1)",
-                border: "1px solid rgba(96, 165, 250, 0.2)",
-              }}
+              className="inline-flex p-4 rounded-2xl mb-4 bg-stone-100 border border-stone-200"
             >
-              <FolderTree className="w-8 h-8 text-blue-600" />
+              <FolderTree className="w-8 h-8 text-stone-400" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">
+            <h3 className="text-lg font-bold text-stone-900 mb-2">
               Belum Ada Data Kategori
             </h3>
-            <p className="text-gray-600 text-sm">
+            <p className="text-stone-600 text-sm">
               {searchInput
                 ? `Tidak ada hasil untuk "${searchInput}"`
                 : "Tambahkan kategori produk pertama Anda"}
@@ -159,24 +155,24 @@ export function CategoryTable({
             <div className="hidden lg:block overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700 w-12"></th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">
+                  <tr className="border-b border-stone-200">
+                    <th className="text-left p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500 w-12"></th>
+                    <th className="text-left p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
                       Nama Kategori
                     </th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">
+                    <th className="text-left p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
                       Deskripsi
                     </th>
-                    <th className="text-center p-4 text-sm font-semibold text-gray-700">
+                    <th className="text-center p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
                       Sub-Kategori
                     </th>
-                    <th className="text-center p-4 text-sm font-semibold text-gray-700">
+                    <th className="text-center p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
                       Produk
                     </th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">
+                    <th className="text-left p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
                       Dibuat
                     </th>
-                    <th className="text-right p-4 text-sm font-semibold text-gray-700">
+                    <th className="text-right p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
                       Aksi
                     </th>
                   </tr>
@@ -190,7 +186,7 @@ export function CategoryTable({
                       <React.Fragment key={category.id}>
                         <tr
                           key={category.id}
-                          className={`border-b border-gray-100 hover:bg-blue-50/30 transition-colors ${
+                          className={`border-b border-stone-100 hover:bg-stone-50 transition-colors ${
                             index % 2 === 0 ? "bg-white/20" : ""
                           }`}
                         >
@@ -198,12 +194,12 @@ export function CategoryTable({
                             {hasSubCategories && (
                               <button
                                 onClick={() => toggleExpand(category.id)}
-                                className="p-1 hover:bg-blue-100 rounded transition-colors"
+                                className="p-1 hover:bg-stone-100 rounded transition-colors"
                               >
                                 {isExpanded ? (
-                                  <ChevronDown className="w-4 h-4 text-gray-600" />
+                                  <ChevronDown className="w-4 h-4 text-stone-600" />
                                 ) : (
-                                  <ChevronRight className="w-4 h-4 text-gray-600" />
+                                  <ChevronRight className="w-4 h-4 text-stone-600" />
                                 )}
                               </button>
                             )}
@@ -211,21 +207,17 @@ export function CategoryTable({
                           <td className="p-4">
                             <div className="flex items-center gap-3">
                               <div
-                                className="p-2 rounded-lg"
-                                style={{
-                                  background: "rgba(96, 165, 250, 0.1)",
-                                  border: "1px solid rgba(96, 165, 250, 0.2)",
-                                }}
+                                className="p-2 rounded-lg bg-stone-100 border border-stone-200"
                               >
-                                <FolderTree className="w-4 h-4 text-blue-600" />
+                                <FolderTree className="w-4 h-4 text-stone-600" />
                               </div>
-                              <span className="font-semibold text-gray-900">
+                              <span className="font-semibold text-stone-900">
                                 {category.name}
                               </span>
                             </div>
                           </td>
                           <td className="p-4">
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm text-stone-600">
                               {category.description || "-"}
                             </span>
                           </td>
@@ -233,8 +225,8 @@ export function CategoryTable({
                             <span
                               className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
                                 category._count.subCategories > 0
-                                  ? "bg-purple-100 text-purple-700 border border-purple-200"
-                                  : "bg-gray-100 text-gray-600 border border-gray-200"
+                                  ? "bg-stone-100 text-stone-600 border border-stone-200"
+                                  : "bg-stone-100 text-stone-600 border border-stone-200"
                               }`}
                             >
                               {category._count.subCategories}
@@ -245,14 +237,14 @@ export function CategoryTable({
                               className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
                                 category._count.products > 0
                                   ? "bg-green-100 text-green-700 border border-green-200"
-                                  : "bg-gray-100 text-gray-600 border border-gray-200"
+                                  : "bg-stone-100 text-stone-600 border border-stone-200"
                               }`}
                             >
                               {category._count.products}
                             </span>
                           </td>
                           <td className="p-4">
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <div className="flex items-center gap-2 text-sm text-stone-600">
                               <Calendar className="w-4 h-4" />
                               <span>
                                 {format(new Date(category.createdAt), "dd MMM yyyy", {
@@ -265,17 +257,17 @@ export function CategoryTable({
                             <div className="flex items-center justify-end gap-2">
                               <button
                                 onClick={() => onEdit(category)}
-                                className="p-2 rounded-lg hover:bg-blue-100 transition-colors group"
+                                className="p-2 rounded-lg hover:bg-stone-100 transition-colors group"
                                 title="Edit"
                               >
-                                <Edit className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
+                                <Edit className="w-4 h-4 text-stone-600 group-hover:scale-110 transition-transform" />
                               </button>
                               <button
                                 onClick={() => onDelete(category)}
-                                className="p-2 rounded-lg hover:bg-red-100 transition-colors group"
+                                className="p-2 rounded-lg hover:bg-red-50 transition-colors group"
                                 title="Hapus"
                               >
-                                <Trash2 className="w-4 h-4 text-red-600 group-hover:scale-110 transition-transform" />
+                                <Trash2 className="w-4 h-4 text-red-800 group-hover:scale-110 transition-transform" />
                               </button>
                             </div>
                           </td>
@@ -283,7 +275,7 @@ export function CategoryTable({
                         {isExpanded && hasSubCategories && category.subCategories && (
                           <tr>
                             <td colSpan={7} className="p-0">
-                              <div className="bg-gray-50/50 p-4 border-l-4 border-purple-300">
+                              <div className="bg-stone-50/50 p-4 border-l-4 border-stone-300">
                                 <SubCategoryList
                                   categoryId={category.id}
                                   categoryName={category.name}
@@ -319,29 +311,25 @@ export function CategoryTable({
                         {hasSubCategories && (
                           <button
                             onClick={() => toggleExpand(category.id)}
-                            className="p-1 hover:bg-blue-100 rounded transition-colors flex-shrink-0"
+                            className="p-1 hover:bg-stone-100 rounded transition-colors flex-shrink-0"
                           >
                             {isExpanded ? (
-                              <ChevronDown className="w-4 h-4 text-gray-600" />
+                              <ChevronDown className="w-4 h-4 text-stone-600" />
                             ) : (
-                              <ChevronRight className="w-4 h-4 text-gray-600" />
+                              <ChevronRight className="w-4 h-4 text-stone-600" />
                             )}
                           </button>
                         )}
                         <div
-                          className="p-2 rounded-lg flex-shrink-0"
-                          style={{
-                            background: "rgba(96, 165, 250, 0.1)",
-                            border: "1px solid rgba(96, 165, 250, 0.2)",
-                          }}
+                          className="p-2 rounded-lg flex-shrink-0 bg-stone-100 border border-stone-200"
                         >
-                          <FolderTree className="w-4 h-4 text-blue-600" />
+                          <FolderTree className="w-4 h-4 text-stone-600" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h4 className="font-semibold text-gray-900">
+                          <h4 className="font-semibold text-stone-900">
                             {category.name}
                           </h4>
-                          <p className="text-xs text-gray-600 mt-0.5 line-clamp-1">
+                          <p className="text-xs text-stone-600 mt-0.5 line-clamp-1">
                             {category.description || "Tidak ada deskripsi"}
                           </p>
                         </div>
@@ -349,7 +337,7 @@ export function CategoryTable({
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold px-2 py-1 rounded-full bg-purple-100 text-purple-700">
+                      <span className="text-xs font-semibold px-2 py-1 rounded-full bg-stone-100 text-stone-600">
                         {category._count.subCategories} Sub
                       </span>
                       <span className="text-xs font-semibold px-2 py-1 rounded-full bg-green-100 text-green-700 flex items-center gap-1">
@@ -358,8 +346,8 @@ export function CategoryTable({
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                      <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <div className="flex items-center justify-between pt-3 border-t border-stone-200">
+                      <div className="flex items-center gap-2 text-xs text-stone-600">
                         <Calendar className="w-3.5 h-3.5" />
                         <span>
                           {format(new Date(category.createdAt), "dd MMM yyyy", {
@@ -370,21 +358,21 @@ export function CategoryTable({
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => onEdit(category)}
-                          className="p-2 rounded-lg hover:bg-blue-100 transition-colors"
+                          className="p-2 rounded-lg hover:bg-stone-100 transition-colors"
                         >
-                          <Edit className="w-4 h-4 text-blue-600" />
+                          <Edit className="w-4 h-4 text-stone-600" />
                         </button>
                         <button
                           onClick={() => onDelete(category)}
-                          className="p-2 rounded-lg hover:bg-red-100 transition-colors"
+                          className="p-2 rounded-lg hover:bg-red-50 transition-colors"
                         >
-                          <Trash2 className="w-4 h-4 text-red-600" />
+                          <Trash2 className="w-4 h-4 text-red-800" />
                         </button>
                       </div>
                     </div>
 
                     {isExpanded && hasSubCategories && category.subCategories && (
-                      <div className="pt-3 border-t border-gray-200">
+                      <div className="pt-3 border-t border-stone-200">
                         <SubCategoryList
                           categoryId={category.id}
                           categoryName={category.name}
@@ -407,7 +395,7 @@ export function CategoryTable({
       {!loading && categories.length > 0 && pagination.totalPages > 1 && (
         <div className="glass-card p-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-stone-600">
               Menampilkan {(pagination.page - 1) * pagination.limit + 1} -{" "}
               {Math.min(pagination.page * pagination.limit, pagination.total)} dari{" "}
               {pagination.total} kategori
@@ -416,7 +404,7 @@ export function CategoryTable({
               <button
                 onClick={() => onPageChange(pagination.page - 1)}
                 disabled={pagination.page === 1}
-                className="px-4 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-100"
+                className="px-4 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-stone-100"
               >
                 Prev
               </button>
@@ -432,14 +420,14 @@ export function CategoryTable({
                 .map((page, index, array) => (
                   <div key={page} className="flex items-center gap-2">
                     {index > 0 && array[index - 1] !== page - 1 && (
-                      <span className="text-gray-400">...</span>
+                      <span className="text-stone-400">...</span>
                     )}
                     <button
                       onClick={() => onPageChange(page)}
                       className={`w-10 h-10 rounded-lg font-semibold text-sm transition-all ${
                         pagination.page === page
-                          ? "bg-blue-600 text-white shadow-lg"
-                          : "hover:bg-blue-100 text-gray-700"
+                          ? "bg-red-900 text-white shadow-lg"
+                          : "hover:bg-stone-100 text-stone-700"
                       }`}
                     >
                       {page}
@@ -449,7 +437,7 @@ export function CategoryTable({
               <button
                 onClick={() => onPageChange(pagination.page + 1)}
                 disabled={pagination.page === pagination.totalPages}
-                className="px-4 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-100"
+                className="px-4 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-stone-100"
               >
                 Next
               </button>

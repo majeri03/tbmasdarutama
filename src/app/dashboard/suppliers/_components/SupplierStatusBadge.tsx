@@ -22,10 +22,10 @@ export function SupplierStatusBadge({ isActive, size = "md" }: SupplierStatusBad
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full font-semibold ${sizes[size]} ${
+      className={`badge ${sizes[size]} ${
         isActive
-          ? "bg-green-100 text-green-700 border border-green-200"
-          : "bg-red-100 text-red-700 border border-red-200"
+          ? "badge-success"
+          : "badge-danger"
       }`}
     >
       {isActive ? (

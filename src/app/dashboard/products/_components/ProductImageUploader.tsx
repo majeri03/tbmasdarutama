@@ -152,7 +152,7 @@ export function ProductImageUploader({
       {/* Upload Area */}
       <div
         className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-colors ${dragActive
-          ? "border-blue-500 bg-blue-50"
+          ? "border-red-900 bg-red-900/5"
           : "border-gray-300 bg-gray-50 hover:bg-gray-100"
           } ${images.length >= maxImages ? "opacity-50 pointer-events-none" : ""}`}
         onDragEnter={handleDrag}
@@ -174,11 +174,11 @@ export function ProductImageUploader({
           <div
             className="inline-flex p-4 rounded-full"
             style={{
-              background: "rgba(59, 130, 246, 0.1)",
-              border: "1px solid rgba(59, 130, 246, 0.2)",
+              background: "rgba(127, 29, 29, 0.1)",
+              border: "1px solid rgba(127, 29, 29, 0.2)",
             }}
           >
-            <Upload className="w-8 h-8 text-blue-600" />
+            <Upload className="w-8 h-8 text-red-900" />
           </div>
 
           <div>
@@ -186,7 +186,7 @@ export function ProductImageUploader({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading || images.length >= maxImages}
-              className="text-blue-600 font-semibold hover:text-blue-700 transition-colors"
+              className="text-red-900 font-semibold hover:text-red-800 transition-colors"
             >
               {uploading ? "Mengupload..." : "Klik untuk upload"}
             </button>
@@ -214,7 +214,7 @@ export function ProductImageUploader({
             {images.map((image, index) => (
               <div
                 key={index}
-                className={`relative group rounded-lg overflow-hidden border-2 ${image.isPrimary ? "border-blue-500" : "border-gray-200"
+                className={`relative group rounded-lg overflow-hidden border-2 ${image.isPrimary ? "border-red-900" : "border-gray-200"
                   }`}
               >
                 {/* Image */}
@@ -234,7 +234,7 @@ export function ProductImageUploader({
                     type="button"
                     onClick={() => handleSetPrimary(index)}
                     className={`p-2 rounded-full transition-all opacity-0 group-hover:opacity-100 ${image.isPrimary
-                      ? "bg-blue-600 text-white"
+                      ? "bg-red-900 text-white"
                       : "bg-white/90 text-gray-700 hover:bg-white"
                       }`}
                     title={image.isPrimary ? "Gambar utama" : "Jadikan utama"}
@@ -256,7 +256,7 @@ export function ProductImageUploader({
 
                 {/* Primary Badge */}
                 {image.isPrimary && (
-                  <div className="absolute top-2 left-2 px-2 py-1 rounded-lg bg-blue-600 text-white text-xs font-semibold flex items-center gap-1">
+                  <div className="absolute top-2 left-2 px-2 py-1 rounded-lg bg-red-900 text-white text-xs font-semibold flex items-center gap-1">
                     <Star className="w-3 h-3 fill-current" />
                     <span>Utama</span>
                   </div>
@@ -312,7 +312,7 @@ export function ProductImageUploader({
       )}
 
       {/* Info Box */}
-      <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+      <div className="p-3 rounded-lg bg-stone-100 border border-stone-200">
         <p className="text-sm text-gray-700">
           <span className="font-semibold">💡 Tips:</span> Gambar pertama akan
           otomatis menjadi gambar utama. Anda bisa mengubahnya dengan klik icon

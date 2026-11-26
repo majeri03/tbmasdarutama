@@ -30,19 +30,19 @@ export function ProductStockBadge({
     if (currentStock === 0) {
       return {
         label: "Habis",
-        className: "bg-red-100 text-red-700 border border-red-200",
+        className: "badge-danger",
         icon: <XCircle className={iconSizes[size]} />,
       };
     } else if (currentStock <= minStock) {
       return {
         label: "Menipis",
-        className: "bg-orange-100 text-orange-700 border border-orange-200",
+        className: "badge-warning",
         icon: <AlertTriangle className={iconSizes[size]} />,
       };
     } else {
       return {
         label: "Tersedia",
-        className: "bg-green-100 text-green-700 border border-green-200",
+        className: "badge-success",
         icon: <Package className={iconSizes[size]} />,
       };
     }
@@ -52,7 +52,7 @@ export function ProductStockBadge({
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full font-semibold ${sizes[size]} ${status.className}`}
+      className={`badge ${sizes[size]} ${status.className}`}
     >
       {status.icon}
       <span>{status.label}</span>

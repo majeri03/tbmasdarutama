@@ -8,7 +8,7 @@ export default function PointsPage() {
     <PageGuard pageKey="points">
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Poin Loyalitas</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-stone-900">Poin Loyalitas</h1>
           <p className="page-subtitle">
             Pengaturan poin, saldo poin customer, dan penyesuaian manual poin
           </p>

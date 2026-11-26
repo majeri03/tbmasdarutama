@@ -14,14 +14,14 @@ export function ProductGrid({ products, onAddToCart, isLoading }: ProductGridPro
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-[#7F1D1D]" />
       </div>
     );
   }
 
   if (products.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+      <div className="flex flex-col items-center justify-center h-64 text-stone-400">
         <PackageX className="w-16 h-16 mb-4" />
         <p className="text-lg font-medium">Produk tidak ditemukan</p>
         <p className="text-sm">Coba kata kunci lain atau scan barcode</p>
@@ -30,10 +30,12 @@ export function ProductGrid({ products, onAddToCart, isLoading }: ProductGridPro
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4">
-      {products.map((product) => (
-        <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} />
-      ))}
+    <div className="glass-panel-strong rounded-2xl p-2 md:p-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4">
+        {products.map((product) => (
+          <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} />
+        ))}
+      </div>
     </div>
   );
 }

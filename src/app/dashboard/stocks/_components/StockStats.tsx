@@ -42,59 +42,35 @@ export function StockStats({
       title: "Total Produk",
       value: totalProducts.toLocaleString("id-ID"),
       icon: Package,
-      color: "blue",
-      bgColor: "bg-blue-50",
-      iconColor: "text-blue-600",
-      borderColor: "border-blue-200",
     },
     {
       title: "Nilai Modal Stock",
       value: formatCurrency(totalBuyValue),
       icon: DollarSign,
-      color: "green",
-      bgColor: "bg-green-50",
-      iconColor: "text-green-600",
-      borderColor: "border-green-200",
       subtitle: `Jual: ${formatCurrency(totalSellValue)}`,
     },
     {
       title: "Stock Masuk (Bulan Ini)",
       value: stockInMonth.toLocaleString("id-ID"),
       icon: TrendingUp,
-      color: "emerald",
-      bgColor: "bg-emerald-50",
-      iconColor: "text-emerald-600",
-      borderColor: "border-emerald-200",
       subtitle: "unit",
     },
     {
       title: "Stock Keluar (Bulan Ini)",
       value: stockOutMonth.toLocaleString("id-ID"),
       icon: TrendingDown,
-      color: "orange",
-      bgColor: "bg-orange-50",
-      iconColor: "text-orange-600",
-      borderColor: "border-orange-200",
       subtitle: "unit",
     },
     {
       title: "Stock Rendah",
       value: lowStockCount.toLocaleString("id-ID"),
       icon: AlertTriangle,
-      color: "red",
-      bgColor: "bg-red-50",
-      iconColor: "text-red-600",
-      borderColor: "border-red-200",
       subtitle: "produk perlu restock",
     },
     {
       title: "Pergerakan Hari Ini",
       value: movementsToday.toLocaleString("id-ID"),
       icon: Activity,
-      color: "purple",
-      bgColor: "bg-purple-50",
-      iconColor: "text-purple-600",
-      borderColor: "border-purple-200",
       subtitle: "transaksi",
     },
   ];
@@ -106,22 +82,22 @@ export function StockStats({
         return (
           <div
             key={index}
-            className={`glass-card border-2 ${stat.borderColor} hover:shadow-lg transition-all duration-200`}
+            className="glass-card hover:shadow-lg transition-all duration-200"
           >
             <div className="flex items-start justify-between p-6">
               <div className="flex-1">
-                <p className="text-sm font-medium text-gray-600 mb-1">
+                <p className="text-sm font-medium text-stone-500 mb-1">
                   {stat.title}
                 </p>
-                <p className="text-2xl font-bold text-gray-900 mb-1">
+                <p className="text-2xl font-semibold tabular-nums text-stone-900 mb-1">
                   {stat.value}
                 </p>
                 {stat.subtitle && (
-                  <p className="text-xs text-gray-500">{stat.subtitle}</p>
+                  <p className="text-xs text-stone-500">{stat.subtitle}</p>
                 )}
               </div>
               <div
-                className={`${stat.bgColor} ${stat.iconColor} p-3 rounded-xl`}
+                className="bg-stone-100 text-stone-600 p-3 rounded-xl border border-stone-200"
               >
                 <Icon className="w-6 h-6" />
               </div>

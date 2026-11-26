@@ -197,8 +197,8 @@ export default function StockOpnamePage() {
     <PageGuard pageKey="stock_opname">
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <ClipboardCheck className="w-6 h-6 text-blue-600" />
+          <h1 className="text-2xl font-semibold tracking-tight text-stone-900 flex items-center gap-2">
+            <ClipboardCheck className="w-6 h-6 text-stone-600" />
             Stock Opname
           </h1>
           <p className="page-subtitle">
@@ -222,7 +222,7 @@ export default function StockOpnamePage() {
         <div className="glass-card p-4">
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
               <input
                 type="text"
                 value={search}
@@ -232,18 +232,18 @@ export default function StockOpnamePage() {
                 }}
                 onFocus={() => setShowResults(true)}
                 placeholder="Cari produk (nama / kode / barcode)..."
-                className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-9 pr-3 py-2.5 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
               />
               {showResults && results.length > 0 && (
-                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                <div className="absolute z-20 w-full mt-1 bg-white border border-stone-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
                   {results.map((p) => (
                     <button
                       key={p.id}
                       onClick={() => addProduct(p)}
-                      className="w-full text-left p-3 hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                      className="w-full text-left p-3 hover:bg-stone-50 border-b border-stone-100 last:border-0"
                     >
                       <p className="font-medium text-sm">{p.name}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-stone-500">
                         {p.code} • Stok sistem: {p.currentStock} {primaryUnitName(p)}
                       </p>
                     </button>
@@ -275,7 +275,7 @@ export default function StockOpnamePage() {
         <div className="glass-card overflow-hidden">
           <div className="overflow-x-auto">
             {rows.length === 0 ? (
-              <p className="text-center text-gray-500 py-12">
+              <p className="text-center text-stone-500 py-12">
                 Belum ada produk. Cari produk di atas atau scan barcode untuk menambahkannya.
               </p>
             ) : (
@@ -297,7 +297,7 @@ export default function StockOpnamePage() {
                       <tr key={row.productId}>
                         <td>
                           <p className="font-medium">{row.name}</p>
-                          <p className="text-xs text-gray-500">{row.code}</p>
+                          <p className="text-xs text-stone-500">{row.code}</p>
                         </td>
                         <td className="text-right">
                           {row.systemStock} {row.unitName}
@@ -309,18 +309,18 @@ export default function StockOpnamePage() {
                             value={row.counted}
                             onChange={(e) => updateCounted(row.productId, e.target.value)}
                             placeholder="0"
-                            className="w-24 px-2 py-1.5 border border-gray-200 rounded-lg text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-24 px-2 py-1.5 border border-stone-200 rounded-lg text-right focus:outline-none focus:ring-2 focus:ring-red-800"
                           />
                         </td>
                         <td
                           className={`text-right font-semibold ${
                             diff === null
-                              ? "text-gray-400"
+                              ? "text-stone-400"
                               : diff === 0
-                                ? "text-gray-500"
+                                ? "text-stone-500"
                                 : diff > 0
                                   ? "text-green-600"
-                                  : "text-red-600"
+                                  : "text-red-800"
                           }`}
                         >
                           {diff === null ? "—" : diff > 0 ? `+${diff}` : diff}
@@ -344,8 +344,8 @@ export default function StockOpnamePage() {
             )}
           </div>
           {rows.length > 0 && (
-            <div className="p-4 border-t border-gray-200 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-gray-600">
+            <div className="p-4 border-t border-stone-200 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-stone-600">
                 {changedRows.length} dari {rows.length} produk berubah
               </p>
               <button
@@ -372,20 +372,20 @@ export default function StockOpnamePage() {
         {/* Riwayat opname terakhir */}
         {recent.length > 0 && (
           <div className="glass-card p-4">
-            <h2 className="font-semibold text-gray-900 mb-3">Opname Terakhir</h2>
+            <h2 className="font-semibold text-stone-900 mb-3">Opname Terakhir</h2>
             <div className="space-y-2">
               {recent.slice(0, 10).map((m) => (
-                <div key={m.id} className="flex items-center justify-between text-sm border-b border-gray-100 pb-2 last:border-0">
+                <div key={m.id} className="flex items-center justify-between text-sm border-b border-stone-100 pb-2 last:border-0">
                   <div>
                     <p className="font-medium">{m.product.name}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-stone-500">
                       {format(new Date(m.createdAt), "dd MMM yyyy, HH:mm", { locale: localeId })}
                       {m.notes ? ` • ${m.notes}` : ""}
                     </p>
                   </div>
                   <span
                     className={`font-semibold ${
-                      m.type === "IN" ? "text-green-600" : "text-red-600"
+                      m.type === "IN" ? "text-green-600" : "text-red-800"
                     }`}
                   >
                     {m.type === "IN" ? "+" : "-"}

@@ -59,7 +59,7 @@ export default function PageGuard({ pageKey, children }: PageGuardProps) {
   if (status === "loading" || (!isSuperAdmin && isEffectiveAllowed === null)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-900"></div>
         <p className="text-gray-500 text-sm">Memverifikasi hak akses halaman...</p>
       </div>
     );
@@ -75,7 +75,7 @@ export default function PageGuard({ pageKey, children }: PageGuardProps) {
         </p>
         <button
           onClick={() => router.replace("/dashboard")}
-          className="mt-6 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition shadow"
+          className="mt-6 px-5 py-2.5 bg-red-900 hover:bg-red-800 text-white font-semibold rounded-lg transition shadow"
         >
           Kembali ke Beranda
         </button>

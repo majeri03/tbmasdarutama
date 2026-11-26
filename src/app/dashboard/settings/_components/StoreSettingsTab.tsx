@@ -205,19 +205,19 @@ export default function StoreSettingsTab() {
                                     type="button"
                                     onClick={() => setConfirmDeleteLogo(true)}
                                     disabled={uploading || deletingLogo}
-                                    className="btn-secondary inline-flex items-center gap-2 cursor-pointer ml-2 !text-red-600"
+                                    className="btn-secondary inline-flex items-center gap-2 cursor-pointer ml-2 !text-[#991B1B]"
                                 >
                                     <Trash2 className="w-4 h-4" />
                                     Hapus Logo
                                 </button>
                                 {confirmDeleteLogo && (
                                     <span className="inline-flex flex-wrap items-center gap-2 ml-2 text-xs">
-                                        <span className="text-red-600 font-medium">Yakin hapus logo toko?</span>
+                                        <span className="text-[#991B1B] font-medium">Yakin hapus logo toko?</span>
                                         <button
                                             type="button"
                                             onClick={handleDeleteLogo}
                                             disabled={deletingLogo}
-                                            className="px-2 py-1 rounded bg-red-600 text-white font-semibold disabled:opacity-50"
+                                            className="px-2 py-1 rounded bg-[#7F1D1D] text-white font-semibold disabled:opacity-50"
                                         >
                                             {deletingLogo ? "Menghapus..." : "Ya, hapus"}
                                         </button>
@@ -242,8 +242,8 @@ export default function StoreSettingsTab() {
 
             {/* Informasi Dasar */}
             <div className="glass-card p-6 space-y-4">
-                <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-                    <Building2 className="w-5 h-5 text-blue-600" />
+                <h3 className="font-semibold text-[#1C1917] flex items-center gap-2">
+                    <Building2 className="w-5 h-5 text-[#7F1D1D]" />
                     Informasi Dasar
                 </h3>
 
@@ -325,7 +325,7 @@ export default function StoreSettingsTab() {
 
             {/* Alamat */}
             <div className="glass-card p-6 space-y-4">
-                <h3 className="font-semibold text-gray-800">Alamat</h3>
+                <h3 className="font-semibold text-[#1C1917]">Alamat</h3>
 
                 <div className="space-y-4">
                     <div>
@@ -382,7 +382,7 @@ export default function StoreSettingsTab() {
 
             {/* Social Media */}
             <div className="glass-card p-6 space-y-4">
-                <h3 className="font-semibold text-gray-800">Social Media</h3>
+                <h3 className="font-semibold text-[#1C1917]">Social Media</h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -413,7 +413,7 @@ export default function StoreSettingsTab() {
 
             {/* Informasi Bank & Pajak */}
             <div className="glass-card p-6 space-y-4">
-                <h3 className="font-semibold text-gray-800">Bank & Pajak</h3>
+                <h3 className="font-semibold text-[#1C1917]">Bank & Pajak</h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>

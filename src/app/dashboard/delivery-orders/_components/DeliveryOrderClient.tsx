@@ -153,8 +153,8 @@ export function DeliveryOrderClient() {
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-4 text-gray-600">Memuat data...</p>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-900 mx-auto"></div>
+                    <p className="mt-4 text-stone-600">Memuat data...</p>
                 </div>
             </div>
         );
@@ -165,8 +165,8 @@ export function DeliveryOrderClient() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Surat Jalan</h1>
-                    <p className="text-gray-600 mt-1">
+                    <h1 className="text-2xl font-semibold tracking-tight text-stone-900">Surat Jalan</h1>
+                    <p className="text-stone-600 mt-1">
                         Kelola surat jalan dan tracking pengiriman
                     </p>
                 </div>
@@ -187,7 +187,7 @@ export function DeliveryOrderClient() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     {/* Search */}
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
                         <input
                             type="text"
                             value={searchQuery}
@@ -199,7 +199,7 @@ export function DeliveryOrderClient() {
 
                     {/* Status Filter */}
                     <div className="relative">
-                        <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value as DeliveryStatus | "ALL")}
@@ -215,7 +215,7 @@ export function DeliveryOrderClient() {
 
                     {/* Date From */}
                     <div className="relative">
-                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
                         <input
                             type="date"
                             value={dateFrom}
@@ -227,7 +227,7 @@ export function DeliveryOrderClient() {
 
                     {/* Date To */}
                     <div className="relative">
-                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
                         <input
                             type="date"
                             value={dateTo}
@@ -241,12 +241,12 @@ export function DeliveryOrderClient() {
                 {/* Filter Info & Clear */}
                 {(searchQuery || statusFilter !== "ALL" || dateFrom || dateTo) && (
                     <div className="mt-3 flex items-center justify-between">
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-stone-600">
                             Menampilkan {filteredOrders.length} dari {deliveryOrders.length} surat jalan
                         </p>
                         <button
                             onClick={clearFilters}
-                            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                            className="text-sm text-red-900 hover:text-red-900 font-medium"
                         >
                             Reset Filter
                         </button>

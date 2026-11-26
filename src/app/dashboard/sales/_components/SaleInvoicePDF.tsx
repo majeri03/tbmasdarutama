@@ -199,7 +199,7 @@ export function SaleInvoicePDF({ isOpen, onClose, saleId }: SaleInvoicePDFProps)
               onClick={() => handleLayoutChange("SURAT_JALAN")}
               className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap ${
                 activeLayout === "SURAT_JALAN"
-                  ? "bg-blue-600 text-white shadow-sm"
+                  ? "bg-red-900 text-white shadow-sm"
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
@@ -210,7 +210,7 @@ export function SaleInvoicePDF({ isOpen, onClose, saleId }: SaleInvoicePDFProps)
               onClick={() => handleLayoutChange("INVOICE_BESAR")}
               className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap ${
                 activeLayout === "INVOICE_BESAR"
-                  ? "bg-blue-600 text-white shadow-sm"
+                  ? "bg-red-900 text-white shadow-sm"
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
@@ -221,7 +221,7 @@ export function SaleInvoicePDF({ isOpen, onClose, saleId }: SaleInvoicePDFProps)
               onClick={() => handleLayoutChange("FAKTUR_NCR")}
               className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap ${
                 activeLayout === "FAKTUR_NCR"
-                  ? "bg-blue-600 text-white shadow-sm"
+                  ? "bg-red-900 text-white shadow-sm"
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
@@ -232,7 +232,7 @@ export function SaleInvoicePDF({ isOpen, onClose, saleId }: SaleInvoicePDFProps)
               onClick={() => handleLayoutChange("STRUK_KECIL")}
               className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap ${
                 activeLayout === "STRUK_KECIL"
-                  ? "bg-blue-600 text-white shadow-sm"
+                  ? "bg-red-900 text-white shadow-sm"
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
@@ -261,7 +261,7 @@ export function SaleInvoicePDF({ isOpen, onClose, saleId }: SaleInvoicePDFProps)
           ) : isLoading ? (
             <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10">
               <div className="text-center">
-                <Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" />
+                <Loader2 className="w-8 h-8 animate-spin mx-auto text-red-900" />
                 <p className="text-sm text-gray-500 mt-2">Menyiapkan invoice...</p>
               </div>
             </div>
@@ -315,7 +315,7 @@ export function SaleInvoicePDF({ isOpen, onClose, saleId }: SaleInvoicePDFProps)
           <button
             onClick={handlePrint}
             disabled={isLoading || !htmlContent || isProcessingPdf}
-            className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className="flex-1 px-4 py-3 bg-red-900 hover:bg-red-800 text-white rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
             <Printer className="w-4 h-4" />
             <span>Print Invoice</span>

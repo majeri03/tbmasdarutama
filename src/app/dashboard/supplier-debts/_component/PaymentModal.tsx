@@ -88,14 +88,14 @@ export function PaymentModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="modal-overlay">
+      <div className="modal-container w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">Bayar Utang Supplier</h2>
+        <div className="sticky top-0 bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold tracking-tight text-stone-900">Bayar Utang Supplier</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -105,28 +105,28 @@ export function PaymentModal({
           {/* Debt Info */}
           <div className="glass-card p-4 space-y-2">
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Supplier:</span>
+              <span className="text-sm text-stone-600">Supplier:</span>
               <span className="font-semibold">{debt.supplier.name}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">No. Utang:</span>
+              <span className="text-sm text-stone-600">No. Utang:</span>
               <span className="font-semibold">{debt.debtNumber}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Total Utang:</span>
+              <span className="text-sm text-stone-600">Total Utang:</span>
               <span className="font-semibold">
                 {formatCurrency(debt.totalDebt)}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Sudah Dibayar:</span>
-              <span className="text-green-600 font-semibold">
+              <span className="text-sm text-stone-600">Sudah Dibayar:</span>
+              <span className="text-green-700 font-semibold">
                 {formatCurrency(debt.paidAmount)}
               </span>
             </div>
-            <div className="flex justify-between pt-2 border-t border-gray-200">
-              <span className="text-sm text-gray-600">Sisa Utang:</span>
-              <span className="text-lg font-bold text-red-600">
+            <div className="flex justify-between pt-2 border-t border-stone-200">
+              <span className="text-sm text-stone-600">Sisa Utang:</span>
+              <span className="text-lg font-bold text-red-800">
                 {formatCurrency(debt.remainingDebt)}
               </span>
             </div>
@@ -134,35 +134,35 @@ export function PaymentModal({
 
           {/* Quick Amount Buttons */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="label mb-2">
               Pilih Cepat
             </label>
             <div className="grid grid-cols-4 gap-2">
               <button
                 type="button"
                 onClick={() => handleQuickAmount(25)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium"
+                className="px-4 py-2 border border-stone-300 rounded-xl hover:bg-stone-50 text-sm font-medium"
               >
                 25%
               </button>
               <button
                 type="button"
                 onClick={() => handleQuickAmount(50)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium"
+                className="px-4 py-2 border border-stone-300 rounded-xl hover:bg-stone-50 text-sm font-medium"
               >
                 50%
               </button>
               <button
                 type="button"
                 onClick={() => handleQuickAmount(75)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium"
+                className="px-4 py-2 border border-stone-300 rounded-xl hover:bg-stone-50 text-sm font-medium"
               >
                 75%
               </button>
               <button
                 type="button"
                 onClick={() => handleQuickAmount(100)}
-                className="px-4 py-2 border border-blue-500 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 text-sm font-medium"
+                className="px-4 py-2 border border-red-900 bg-red-900/5 text-red-900 rounded-xl hover:bg-red-900/10 text-sm font-medium"
               >
                 Lunas
               </button>
@@ -171,7 +171,7 @@ export function PaymentModal({
 
           {/* Amount */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="label mb-2">
               Jumlah Bayar <span className="text-red-500">*</span>
             </label>
             <input
@@ -188,7 +188,7 @@ export function PaymentModal({
 
           {/* Payment Method */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="label mb-2">
               Metode Pembayaran <span className="text-red-500">*</span>
             </label>
             <select
@@ -206,7 +206,7 @@ export function PaymentModal({
 
           {/* Payment Date */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="label mb-2">
               Tanggal Bayar <span className="text-red-500">*</span>
             </label>
             <input
@@ -220,7 +220,7 @@ export function PaymentModal({
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="label mb-2">
               Catatan
             </label>
             <textarea
@@ -233,7 +233,7 @@ export function PaymentModal({
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-gray-200">
+          <div className="flex gap-3 pt-4 -mx-6 -mb-6 px-6 pb-6 bg-stone-50 border-t border-stone-200 rounded-b-3xl">
             <button
               type="button"
               onClick={onClose}

@@ -27,14 +27,14 @@ export function CustomerStats({
       <div className="glass-card p-6 hover-card">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-gray-600 mb-1">Total Customer</p>
-            <h3 className="text-3xl font-bold text-gray-900">
+            <p className="text-sm text-stone-500 mb-1">Total Customer</p>
+            <h3 className="text-3xl font-semibold tabular-nums text-stone-900">
               {totalCustomers}
             </h3>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+          <div className="w-12 h-12 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center">
             <svg
-              className="w-6 h-6 text-white"
+              className="w-6 h-6 text-stone-600"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -54,14 +54,14 @@ export function CustomerStats({
       <div className="glass-card p-6 hover-card">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-gray-600 mb-1">Customer Aktif</p>
-            <h3 className="text-3xl font-bold text-green-600">
+            <p className="text-sm text-stone-500 mb-1">Customer Aktif</p>
+            <h3 className="text-3xl font-semibold tabular-nums text-stone-900">
               {activeCustomers}
             </h3>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg shadow-green-500/30">
+          <div className="w-12 h-12 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center">
             <svg
-              className="w-6 h-6 text-white"
+              className="w-6 h-6 text-stone-600"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -81,14 +81,14 @@ export function CustomerStats({
       <div className="glass-card p-6 hover-card">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-gray-600 mb-1">Customer Nonaktif</p>
-            <h3 className="text-3xl font-bold text-red-600">
+            <p className="text-sm text-stone-500 mb-1">Customer Nonaktif</p>
+            <h3 className="text-3xl font-semibold tabular-nums text-stone-900">
               {inactiveCustomers}
             </h3>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg shadow-red-500/30">
+          <div className="w-12 h-12 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center">
             <svg
-              className="w-6 h-6 text-white"
+              className="w-6 h-6 text-stone-600"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -108,14 +108,14 @@ export function CustomerStats({
       <div className="glass-card p-6 hover-card">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-gray-600 mb-1">Total Piutang</p>
-            <h3 className="text-2xl font-bold text-orange-600">
+            <p className="text-sm text-stone-500 mb-1">Total Piutang</p>
+            <h3 className="text-2xl font-semibold tabular-nums text-stone-900">
               {formatCurrency(totalDebts)}
             </h3>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/30">
+          <div className="w-12 h-12 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center">
             <svg
-              className="w-6 h-6 text-white"
+              className="w-6 h-6 text-stone-600"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"

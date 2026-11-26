@@ -446,14 +446,14 @@ export default function POSPage() {
                             {/* Salesman (internal saja — TIDAK dicetak di invoice/struk).
                                 Opsional, default "Tanpa Sales". */}
                             <div className="glass-card p-2 md:p-3 flex items-center gap-3">
-                                <label htmlFor="pos-salesman" className="text-sm text-gray-500 whitespace-nowrap">
+                                <label htmlFor="pos-salesman" className="text-sm text-stone-500 whitespace-nowrap">
                                     Sales
                                 </label>
                                 <select
                                     id="pos-salesman"
                                     value={selectedSalesmanId}
                                     onChange={(e) => setSelectedSalesmanId(e.target.value)}
-                                    className="flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="flex-1 min-w-0 px-2 py-1.5 border border-stone-200 rounded-lg text-sm font-medium text-stone-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#7F1D1D]"
                                 >
                                     <option value="">Tanpa Sales</option>
                                     {salesmen.map((salesman) => (
@@ -502,7 +502,7 @@ export default function POSPage() {
                         <div className="fixed bottom-6 right-[25rem] z-40 flex items-center gap-2">
                             <button
                                 onClick={handleParkCart}
-                                className="px-5 py-4 bg-white text-gray-800 border border-gray-200 rounded-full shadow-lg hover:bg-gray-50 transition-all flex items-center gap-2 text-base font-semibold"
+                                className="px-5 py-4 bg-white text-stone-800 border border-stone-200 rounded-full shadow-lg hover:bg-stone-50 transition-all flex items-center gap-2 text-base font-semibold"
                                 title="Tahan keranjang ini dan layani pelanggan berikutnya"
                             >
                                 <Pause className="w-5 h-5" />
@@ -510,7 +510,7 @@ export default function POSPage() {
                             </button>
                             <button
                                 onClick={handleCheckout}
-                                className="px-8 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-full shadow-lg hover:from-green-700 hover:to-green-800 transition-all transform hover:scale-105 flex items-center gap-2 text-lg font-semibold"
+                                className="px-8 py-4 bg-[#7F1D1D] text-white rounded-full shadow-lg hover:bg-[#991B1B] transition-all flex items-center gap-2 text-lg font-semibold"
                             >
                                 <span>Checkout ({cartItems.length} item)</span>
                                 <kbd className="px-2 py-1 bg-white/20 rounded text-sm">F9</kbd>
@@ -520,7 +520,7 @@ export default function POSPage() {
                     {parkedCarts.length > 0 && (
                         <button
                             onClick={() => setShowHoldPanel(true)}
-                            className="fixed bottom-6 left-6 z-40 px-4 py-3 bg-amber-500 text-white rounded-full shadow-lg hover:bg-amber-600 transition-all flex items-center gap-2 font-semibold"
+                            className="fixed bottom-6 left-6 z-40 px-4 py-3 bg-[#B45309] text-white rounded-full shadow-lg hover:bg-[#92400E] transition-all flex items-center gap-2 font-semibold"
                         >
                             <Pause className="w-5 h-5" />
                             <span>Ditahan ({parkedCarts.length})</span>
@@ -579,11 +579,11 @@ export default function POSPage() {
                 {showMobileCart && (
                     <div className="md:hidden fixed inset-0 bg-black/50 z-50 flex flex-col">
                         {/* Header */}
-                        <div className="glass-card p-4 flex items-center justify-between border-b border-gray-200">
-                            <h2 className="text-lg font-semibold text-gray-900">Keranjang Belanja</h2>
+                        <div className="glass-card p-4 flex items-center justify-between border-b border-stone-200">
+                            <h2 className="text-lg font-semibold text-stone-900">Keranjang Belanja</h2>
                             <button
                                 onClick={() => setShowMobileCart(false)}
-                                className="text-gray-400 hover:text-gray-600"
+                                className="text-stone-400 hover:text-stone-600"
                             >
                                 <X className="w-6 h-6" />
                             </button>
@@ -606,13 +606,13 @@ export default function POSPage() {
 
                         {/* Checkout Button */}
                         {cartItems.length > 0 && (
-                            <div className="p-4 glass-card border-t border-gray-200">
+                            <div className="p-4 glass-card border-t border-stone-200">
                                 <button
                                     onClick={() => {
                                         setShowMobileCart(false);
                                         handleCheckout();
                                     }}
-                                    className="w-full py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-semibold text-lg"
+                                    className="w-full py-4 bg-[#7F1D1D] text-white rounded-lg font-semibold text-lg"
                                 >
                                     Checkout ({cartItems.length} item)
                                 </button>

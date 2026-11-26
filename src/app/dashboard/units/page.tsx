@@ -151,24 +151,23 @@ export default function UnitsPage() {
         <div className="glass-card p-6 animate-slide-up">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gradient mb-2">
+              <h1 className="text-3xl font-semibold tracking-tight text-stone-900 mb-2">
                 Master Satuan
               </h1>
-              <p className="text-gray-600">
+              <p className="text-stone-600">
                 Kelola satuan produk untuk sistem inventori
               </p>
               <div className="flex items-center gap-3 mt-3">
                 <div className="badge badge-info">
                   {pagination.total} Total Satuan
                 </div>
-                <span className="text-gray-400 text-sm">•</span>
-                <span className="text-gray-600 text-sm">
+                <span className="text-stone-400 text-sm">•</span>
+                <span className="text-stone-600 text-sm">
                   Halaman {pagination.page} dari {pagination.totalPages || 1}
                 </span>
               </div>
             </div>
             <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-accent-blue to-accent-purple rounded-xl blur-xl opacity-50 group-hover:opacity-70 transition-all"></div>
               <button
                 onClick={handleAddNew}
                 className="relative btn-primary"
@@ -184,65 +183,47 @@ export default function UnitsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="stat-card animate-slide-up">
             <div className="flex items-start justify-between mb-4">
-              <div
-                className="p-3 rounded-xl"
-                style={{
-                  background: "rgba(96, 165, 250, 0.15)",
-                  border: "1px solid rgba(96, 165, 250, 0.3)",
-                }}
-              >
-                <Package className="w-6 h-6 text-blue-600" />
+              <div className="p-3 rounded-xl bg-stone-100 border border-stone-200">
+                <Package className="w-6 h-6 text-stone-600" />
               </div>
             </div>
-            <h3 className="text-gray-600 text-sm font-semibold mb-1">
+            <h3 className="text-stone-500 text-sm font-medium mb-1">
               Total Satuan
             </h3>
-            <p className="text-3xl font-bold text-gray-900 mb-1">
+            <p className="text-3xl font-semibold tabular-nums text-stone-900 mb-1">
               {pagination.total}
             </p>
-            <p className="text-gray-500 text-xs">Satuan terdaftar</p>
+            <p className="text-stone-500 text-xs">Satuan terdaftar</p>
           </div>
 
           <div className="stat-card animate-slide-up animation-delay-200">
             <div className="flex items-start justify-between mb-4">
-              <div
-                className="p-3 rounded-xl"
-                style={{
-                  background: "rgba(16, 185, 129, 0.15)",
-                  border: "1px solid rgba(16, 185, 129, 0.3)",
-                }}
-              >
-                <Package className="w-6 h-6 text-green-600" />
+              <div className="p-3 rounded-xl bg-stone-100 border border-stone-200">
+                <Package className="w-6 h-6 text-stone-600" />
               </div>
             </div>
-            <h3 className="text-gray-600 text-sm font-semibold mb-1">
+            <h3 className="text-stone-500 text-sm font-medium mb-1">
               Sedang Digunakan
             </h3>
-            <p className="text-3xl font-bold text-gray-900 mb-1">
+            <p className="text-3xl font-semibold tabular-nums text-stone-900 mb-1">
               {globalStats.used}
             </p>
-            <p className="text-gray-500 text-xs">Satuan aktif</p>
+            <p className="text-stone-500 text-xs">Satuan aktif</p>
           </div>
 
           <div className="stat-card animate-slide-up animation-delay-400">
             <div className="flex items-start justify-between mb-4">
-              <div
-                className="p-3 rounded-xl"
-                style={{
-                  background: "rgba(156, 163, 175, 0.15)",
-                  border: "1px solid rgba(156, 163, 175, 0.3)",
-                }}
-              >
-                <Package className="w-6 h-6 text-gray-600" />
+              <div className="p-3 rounded-xl bg-stone-100 border border-stone-200">
+                <Package className="w-6 h-6 text-stone-600" />
               </div>
             </div>
-            <h3 className="text-gray-600 text-sm font-semibold mb-1">
+            <h3 className="text-stone-500 text-sm font-medium mb-1">
               Tidak Digunakan
             </h3>
-            <p className="text-3xl font-bold text-gray-900 mb-1">
+            <p className="text-3xl font-semibold tabular-nums text-stone-900 mb-1">
               {globalStats.unused}
             </p>
-            <p className="text-gray-500 text-xs">Satuan tersedia</p>
+            <p className="text-stone-500 text-xs">Satuan tersedia</p>
           </div>
         </div>
 

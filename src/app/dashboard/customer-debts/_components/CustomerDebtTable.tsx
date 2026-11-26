@@ -23,7 +23,7 @@ export function CustomerDebtTable({
   if (debts.length === 0) {
     return (
       <div className="glass-card p-12 text-center">
-        <p className="text-gray-500">Tidak ada data piutang</p>
+        <p className="text-stone-500">Tidak ada data piutang</p>
       </div>
     );
   }
@@ -36,82 +36,82 @@ export function CustomerDebtTable({
     <div className="glass-card overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-stone-50 border-b border-stone-200">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                 No. Piutang
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                 Customer
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                 Invoice
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                 Total Piutang
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                 Terbayar
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                 Sisa
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                 Jatuh Tempo
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                 Aksi
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white divide-y divide-stone-200">
             {debts.map((debt) => (
-              <tr key={debt.id} className="hover:bg-gray-50 transition-colors">
+              <tr key={debt.id} className="hover:bg-stone-50 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm font-medium text-gray-900">
+                  <span className="text-sm font-medium text-stone-900">
                     {debt.debtNumber}
                   </span>
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm">
-                    <p className="font-medium text-gray-900">
+                    <p className="font-medium text-stone-900">
                       {debt.customer.name}
                     </p>
-                    <p className="text-gray-500">{debt.customer.code}</p>
+                    <p className="text-stone-500">{debt.customer.code}</p>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm text-gray-900">
+                  <span className="text-sm text-stone-900 tabular-nums">
                     {debt.sale.invoiceNumber}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm font-semibold text-stone-900">
                     {formatCurrency(debt.totalDebt)}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm text-green-600">
+                  <span className="text-sm text-green-700 tabular-nums">
                     {formatCurrency(debt.paidAmount)}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm font-semibold text-red-600">
+                  <span className="text-sm font-semibold text-red-800">
                     {formatCurrency(debt.remainingDebt)}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm">
-                    <p className={isOverdue(debt.dueDate) ? "text-red-600 font-semibold" : "text-gray-900"}>
+                    <p className={isOverdue(debt.dueDate) ? "text-red-800 font-semibold" : "text-stone-900"}>
                       {format(new Date(debt.dueDate), "dd MMM yyyy", {
                         locale: id,
                       })}
                     </p>
                     {isOverdue(debt.dueDate) && debt.status !== "PAID" && (
-                      <p className="text-xs text-red-600">Lewat jatuh tempo</p>
+                      <p className="text-xs text-red-800">Lewat jatuh tempo</p>
                     )}
                   </div>
                 </td>
@@ -122,7 +122,7 @@ export function CustomerDebtTable({
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => onView(debt)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      className="p-2 text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
                       title="Lihat Detail"
                     >
                       <Eye className="w-4 h-4" />
@@ -139,7 +139,7 @@ export function CustomerDebtTable({
                     {debt.status === "UNPAID" && debt._count?.payments === 0 && (
                       <button
                         onClick={() => onDelete(debt)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2 text-red-800 hover:bg-red-50 rounded-lg transition-colors"
                         title="Hapus"
                       >
                         <Trash2 className="w-4 h-4" />

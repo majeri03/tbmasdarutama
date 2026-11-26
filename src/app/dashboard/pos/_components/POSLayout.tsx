@@ -11,19 +11,19 @@ interface POSLayoutProps {
 
 export function POSLayout({ children, cart, customer, cartItemsCount }: POSLayoutProps) {
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 space-y-2 p-6">
+    <div className="h-screen flex flex-col bg-[#FAFAF8] space-y-2 p-6">
       {/* Header */}
-      <div className="flex-shrink-0 h-14 md:h-16 glass-card border-b border-gray-200 flex items-center justify-between px-3 md:px-6">
+      <div className="flex-shrink-0 h-14 md:h-16 glass-card border-b border-stone-200 flex items-center justify-between px-3 md:px-6">
         <div>
-          <h1 className="text-lg md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+          <h1 className="text-lg md:text-2xl font-bold text-[#1C1917] tracking-tight">
             Point of Sale
           </h1>
-          <p className="text-[10px] md:text-xs text-gray-500 hidden md:block">Sistem Kasir TB Masdar Utama</p>
+          <p className="text-[10px] md:text-xs text-stone-500 hidden md:block">Sistem Kasir TB Masdar Utama</p>
         </div>
         <div className="flex items-center gap-2 md:gap-4">
           <div className="text-right">
-            <p className="text-[10px] text-gray-500 hidden md:block">Tanggal</p>
-            <p className="text-xs md:text-sm font-semibold text-gray-900">
+            <p className="text-[10px] text-stone-500 hidden md:block">Tanggal</p>
+            <p className="text-xs md:text-sm font-semibold text-stone-900">
               {new Date().toLocaleDateString("id-ID", {
                 day: "numeric",
                 month: "short",
@@ -45,20 +45,20 @@ export function POSLayout({ children, cart, customer, cartItemsCount }: POSLayou
         </div>
 
         {/* Right Side - Cart (Mobile: Hidden, Desktop: Sidebar) */}
-        <div className="hidden md:flex md:w-96 flex-shrink-0 glass-card border-l border-gray-200 flex-col mb-2">
+        <div className="hidden md:flex md:w-96 flex-shrink-0 glass-panel-strong rounded-2xl flex-col mb-2">
           {cart}
         </div>
       </div>
 
       {/* Mobile Cart Button (Fixed Bottom) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 p-3 glass-card border-t border-gray-200 z-50">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 p-3 glass-card border-t border-stone-200 z-50">
         <button
           onClick={() => {
             // Akan ditambahkan fungsi untuk buka cart modal
             const event = new CustomEvent('openMobileCart');
             window.dispatchEvent(event);
           }}
-          className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2"
+          className="w-full py-3 bg-[#7F1D1D] text-white rounded-lg font-semibold flex items-center justify-center gap-2"
         >
           <span>Lihat Keranjang ({cartItemsCount})</span>
         </button>

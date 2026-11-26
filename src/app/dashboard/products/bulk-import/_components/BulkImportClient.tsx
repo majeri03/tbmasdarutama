@@ -106,8 +106,8 @@ function FieldWrapper({
   return (
     <div className="relative flex items-center w-full">
       {isActive && (
-        <div className="absolute top-11 left-0 bg-purple-600 text-white text-xs px-3 py-1.5 rounded-lg shadow-lg animate-bounce whitespace-nowrap z-[100] flex items-center gap-1.5 font-medium">
-          <div className="absolute -top-1 left-4 w-2.5 h-2.5 bg-purple-600 rotate-45"></div>
+        <div className="absolute top-11 left-0 bg-stone-600 text-white text-xs px-3 py-1.5 rounded-lg shadow-lg animate-bounce whitespace-nowrap z-[100] flex items-center gap-1.5 font-medium">
+          <div className="absolute -top-1 left-4 w-2.5 h-2.5 bg-stone-600 rotate-45"></div>
           {voiceSession?.status === "listening" ? <Mic className="w-3.5 h-3.5 animate-pulse" /> : <Loader2 className="w-3.5 h-3.5 animate-spin" />}
           {voiceSession?.status === "listening" ? `Sebutkan ${label}...` : `Memproses...`}
         </div>
@@ -124,7 +124,7 @@ function FieldWrapper({
             else onStartVoice(rowId, field, false);
           }}
           className={`absolute right-1 p-1.5 rounded-md transition-all z-10 flex-shrink-0 ${
-            isActive ? "text-purple-600 bg-purple-100 animate-pulse" : "text-gray-400 hover:text-purple-600 hover:bg-purple-50"
+            isActive ? "text-stone-600 bg-stone-100 animate-pulse" : "text-stone-400 hover:text-stone-600 hover:bg-stone-100"
           }`}
           title={`Dikte ${label}`}
         >
@@ -342,7 +342,7 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
 
   const getInputClass = (rowId: string, field: string) => {
     const isActive = voiceSession?.rowId === rowId && voiceSession?.field === field;
-    return `w-full glass-input text-sm py-1.5 pr-9 transition-all duration-300 ${isActive ? "ring-2 ring-purple-500 bg-purple-50 border-purple-300 shadow-inner" : ""}`;
+    return `w-full glass-input text-sm py-1.5 pr-9 transition-all duration-300 ${isActive ? "ring-2 ring-stone-500 bg-stone-100 border-stone-300 shadow-inner" : ""}`;
   };
 
   // Label kolom untuk tooltip voice di FieldWrapper (level modul).
@@ -489,11 +489,11 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
           <span className="hidden sm:inline">Kembali</span>
         </Link>
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Package className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 flex-shrink-0" />
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-stone-900 flex items-center gap-2">
+            <Package className="w-6 h-6 sm:w-7 sm:h-7 text-stone-600 flex-shrink-0" />
             Import Massal
           </h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">
+          <p className="text-xs sm:text-sm text-stone-500 mt-1">
             Gunakan <strong>Voice Input</strong> dengan klik ikon Mic di dalam kolom, atau klik Mic biru di kanan untuk otomatis.
           </p>
         </div>
@@ -502,19 +502,19 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
       {/* Save Results Banner */}
       {saveResults && (
         <div className={`rounded-xl p-4 border flex items-center gap-3 ${
-          failCount === 0 ? "bg-green-50 border-green-200" : "bg-yellow-50 border-yellow-200"
+          failCount === 0 ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"
         }`}>
           {failCount === 0 ? (
             <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
           ) : (
-            <AlertCircle className="w-6 h-6 text-yellow-600 flex-shrink-0" />
+            <AlertCircle className="w-6 h-6 text-amber-700 flex-shrink-0" />
           )}
           <div>
-            <p className="font-bold text-gray-900">
+            <p className="font-bold text-stone-900">
               {successCount} produk berhasil disimpan
               {failCount > 0 && `, ${failCount} gagal`}
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-stone-500">
               Produk yang berhasil sudah tersimpan ke database
             </p>
           </div>
@@ -531,23 +531,23 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
 
       {/* Table */}
       <div className="glass-card rounded-2xl overflow-visible">
-        <div className="flex items-center justify-between p-4 border-b border-gray-100">
+        <div className="flex items-center justify-between p-4 border-b border-stone-100">
           <div className="flex items-center gap-2">
-            <Package className="w-5 h-5 text-blue-600" />
-            <h2 className="font-bold text-gray-900">Daftar Produk ({rows.length})</h2>
+            <Package className="w-5 h-5 text-stone-600" />
+            <h2 className="font-bold text-stone-900">Daftar Produk ({rows.length})</h2>
           </div>
         </div>
 
         <div className="overflow-x-auto overflow-y-visible pb-24" style={{ minHeight: "350px" }}>
           <table className="w-full text-sm">
-            <thead className="bg-gray-50/80">
-              <tr className="text-left text-xs text-gray-500 uppercase tracking-wider">
+            <thead className="bg-stone-50/80">
+              <tr className="text-left text-[11px] text-stone-500 uppercase tracking-wider">
                 <th className="px-3 py-3 w-8">#</th>
                 <th className="px-3 py-3 min-w-[180px]">Nama Produk *</th>
                 <th className="px-3 py-3 min-w-[150px]">
                   <div className="flex items-center justify-between">
                      <span>Kategori *</span>
-                     <button onClick={handleQuickAddCategory} className="p-1 hover:bg-gray-200 rounded text-blue-600 transition-colors" title="Tambah Kategori Baru">
+                     <button onClick={handleQuickAddCategory} className="p-1 hover:bg-stone-200 rounded text-red-900 transition-colors" title="Tambah Kategori Baru">
                         <Plus className="w-3.5 h-3.5" />
                      </button>
                   </div>
@@ -555,7 +555,7 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
                 <th className="px-3 py-3 min-w-[130px]">
                   <div className="flex items-center justify-between">
                      <span>Satuan *</span>
-                     <button onClick={handleQuickAddUnit} className="p-1 hover:bg-gray-200 rounded text-blue-600 transition-colors" title="Tambah Satuan Baru">
+                     <button onClick={handleQuickAddUnit} className="p-1 hover:bg-stone-200 rounded text-red-900 transition-colors" title="Tambah Satuan Baru">
                         <Plus className="w-3.5 h-3.5" />
                      </button>
                   </div>
@@ -568,7 +568,7 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
                 <th className="px-3 py-3 w-28 text-center">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-stone-50">
               {rows.map((row, idx) => (
                 <tr
                   key={row.id}
@@ -577,7 +577,7 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
                       ? "bg-green-50/50"
                       : row._status === "error"
                       ? "bg-red-50/50"
-                      : "hover:bg-gray-50/50"
+                      : "hover:bg-stone-50/50"
                   }`}
                 >
                   <td className="px-3 py-2 text-center">
@@ -588,7 +588,7 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
                         <XCircle className="w-4 h-4 text-red-500 mx-auto" />
                       </span>
                     ) : (
-                      <span className="text-gray-400 text-xs font-medium">{idx + 1}</span>
+                      <span className="text-stone-400 text-xs font-medium">{idx + 1}</span>
                     )}
                   </td>
 
@@ -604,7 +604,7 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
                       />
                     </FieldWrapper>
                     {row._status === "error" && row._error && (
-                      <p className="text-xs text-red-600 mt-0.5">{row._error}</p>
+                      <p className="text-xs text-red-800 mt-0.5">{row._error}</p>
                     )}
                   </td>
 
@@ -705,7 +705,7 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
                           <img
                             src={row.imageUrl}
                             alt=""
-                            className="w-9 h-9 object-cover rounded-lg border border-gray-200"
+                            className="w-9 h-9 object-cover rounded-lg border border-stone-200"
                           />
                           <button
                             onClick={() => updateRow(row.id, "imageUrl", "")}
@@ -728,7 +728,7 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
                           />
                           <button
                             onClick={() => imageInputRefs.current[row.id]?.click()}
-                            className="w-9 h-9 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-blue-400 hover:text-blue-500 transition-colors"
+                            className="w-9 h-9 rounded-lg border-2 border-dashed border-stone-300 flex items-center justify-center text-stone-400 hover:border-red-400 hover:text-red-800 transition-colors"
                             title="Upload gambar (opsional)"
                           >
                             <ImageIcon className="w-4 h-4" />
@@ -755,8 +755,8 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
                         }}
                         className={`p-2 rounded-lg transition-all shadow-sm ${
                           voiceSession?.rowId === row.id && voiceSession?.isSequential
-                            ? "bg-purple-600 text-white animate-pulse ring-2 ring-purple-300" 
-                            : "bg-gradient-to-br from-blue-600 to-purple-600 text-white hover:scale-105"
+                            ? "bg-stone-600 text-white animate-pulse ring-2 ring-stone-300"
+                            : "bg-red-900 text-white hover:bg-red-800 hover:scale-105"
                         }`}
                         title={voiceSession?.rowId === row.id && voiceSession?.isSequential ? "Stop Voice Otomatis" : "Mulai Voice Otomatis (Cari Kolom Kosong)"}
                       >
@@ -764,7 +764,7 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
                       </button>
                       <button
                         onClick={() => duplicateRow(row.id)}
-                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
                         title="Duplikasi baris"
                       >
                         <Plus className="w-4 h-4" />
@@ -772,7 +772,7 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
                       <button
                         onClick={() => removeRow(row.id)}
                         disabled={rows.length === 1}
-                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="p-1.5 text-stone-400 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                         title="Hapus baris"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -786,10 +786,10 @@ export function BulkImportClient({ categories, subCategories, suppliers, units }
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between">
-          <div className="flex items-center gap-4 text-xs text-gray-500">
+        <div className="p-4 border-t border-stone-100 bg-stone-50/50 flex items-center justify-between">
+          <div className="flex items-center gap-4 text-xs text-stone-500">
             <span className="flex items-center gap-1">
-              <Mic className="w-3.5 h-3.5 text-purple-500" />
+              <Mic className="w-3.5 h-3.5 text-stone-500" />
               Tip: Hover (arahkan mouse) ke dalam kotak input untuk melihat Mic manual, atau gunakan tombol biru di kanan untuk otomatis.
             </span>
           </div>

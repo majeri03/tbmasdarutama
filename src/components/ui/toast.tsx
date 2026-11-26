@@ -23,13 +23,13 @@ export function Toast({ message, type = "success", duration = 3000, onClose }: T
   const icons = {
     success: <CheckCircle className="w-5 h-5 text-green-600" />,
     error: <AlertCircle className="w-5 h-5 text-red-600" />,
-    info: <Info className="w-5 h-5 text-blue-600" />,
+    info: <Info className="w-5 h-5 text-stone-600" />,
   };
 
   const styles = {
     success: "bg-green-50 border-green-200",
     error: "bg-red-50 border-red-200",
-    info: "bg-blue-50 border-blue-200",
+    info: "bg-stone-100 border-stone-200",
   };
 
   return (

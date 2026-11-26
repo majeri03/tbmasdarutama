@@ -93,10 +93,10 @@ function ResetPasswordForm() {
           <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+          <h2 className="text-2xl font-bold tracking-tight text-[#1C1917] mb-2">
             Password Berhasil Direset!
           </h2>
-          <p className="text-gray-600 mb-6">
+          <p className="text-stone-600 mb-6">
             Anda akan diarahkan ke halaman login...
           </p>
           <Link href="/login" className="btn-primary inline-flex">
@@ -115,11 +115,11 @@ function ResetPasswordForm() {
 
       <div className="glass-card p-8 max-w-md w-full">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 rounded-full bg-[#7F1D1D] flex items-center justify-center mx-auto mb-4">
             <Lock className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800">Reset Password</h1>
-          <p className="text-gray-600 mt-2">Masukkan password baru Anda</p>
+          <h1 className="text-2xl font-bold tracking-tight text-[#1C1917]">Reset Password</h1>
+          <p className="text-stone-600 mt-2">Masukkan password baru Anda</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -208,7 +208,7 @@ function ResetPasswordForm() {
         <div className="mt-6 text-center">
           <Link
             href="/login"
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            className="text-sm text-stone-600 hover:text-[#7F1D1D] font-medium"
           >
             ← Kembali ke Login
           </Link>

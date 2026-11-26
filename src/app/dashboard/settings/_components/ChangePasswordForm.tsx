@@ -88,12 +88,12 @@ export default function ChangePasswordForm() {
             )}
 
             {/* Info Card */}
-            <div className="glass-card p-6 bg-blue-50/50">
+            <div className="glass-card p-6 bg-red-900/5">
                 <div className="flex items-start gap-3">
-                    <Shield className="w-5 h-5 text-blue-600 mt-0.5" />
+                    <Shield className="w-5 h-5 text-red-900 mt-0.5" />
                     <div>
-                        <h3 className="font-semibold text-blue-900">Keamanan Akun</h3>
-                        <p className="text-sm text-blue-700 mt-1">
+                        <h3 className="font-semibold text-red-900">Keamanan Akun</h3>
+                        <p className="text-sm text-red-800 mt-1">
                             Password baru harus minimal 8 karakter, maksimal 128 karakter,
                             dan mengandung minimal 1 huruf besar, 1 angka, dan 1 simbol.
                         </p>
@@ -119,7 +119,7 @@ export default function ChangePasswordForm() {
                         <button
                             type="button"
                             onClick={() => setShowCurrent(!showCurrent)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700"
                         >
                             {showCurrent ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                         </button>
@@ -142,7 +142,7 @@ export default function ChangePasswordForm() {
                         <button
                             type="button"
                             onClick={() => setShowNew(!showNew)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700"
                         >
                             {showNew ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                         </button>
@@ -168,7 +168,7 @@ export default function ChangePasswordForm() {
                         <button
                             type="button"
                             onClick={() => setShowConfirm(!showConfirm)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-700"
                         >
                             {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                         </button>

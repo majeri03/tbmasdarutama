@@ -245,15 +245,15 @@ function ProductsLoading() {
     return (
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <div className="relative">
-                <Package className="w-16 h-16 text-blue-600 animate-bounce" />
+                <Package className="w-16 h-16 text-stone-400 animate-bounce" />
                 <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-20 h-20 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                    <div className="w-20 h-20 border-4 border-stone-200 border-t-stone-600 rounded-full animate-spin"></div>
                 </div>
             </div>
-            <p className="mt-6 text-lg font-semibold text-gray-700 animate-pulse">
+            <p className="mt-6 text-lg font-semibold text-stone-700 animate-pulse">
                 Memuat data produk...
             </p>
-            <p className="text-sm text-gray-500 mt-2">Harap tunggu sebentar</p>
+            <p className="text-sm text-stone-500 mt-2">Harap tunggu sebentar</p>
         </div>
     );
 }

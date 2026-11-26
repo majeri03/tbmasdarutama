@@ -18,11 +18,11 @@ interface DeliveryOrderTableProps {
 const statusConfig: Record<DeliveryStatus, { label: string; className: string }> = {
   PENDING: {
     label: "Menunggu",
-    className: "bg-yellow-100 text-yellow-800",
+    className: "bg-amber-100 text-amber-800",
   },
   IN_TRANSIT: {
     label: "Dalam Pengiriman",
-    className: "bg-blue-100 text-blue-800",
+    className: "bg-stone-100 text-stone-600 border border-stone-200",
   },
   DELIVERED: {
     label: "Terkirim",
@@ -45,7 +45,7 @@ export function DeliveryOrderTable({
   if (deliveryOrders.length === 0) {
     return (
       <div className="glass-card p-12 text-center">
-        <p className="text-gray-500">Tidak ada data surat jalan</p>
+        <p className="text-stone-500">Tidak ada data surat jalan</p>
       </div>
     );
   }
@@ -54,57 +54,57 @@ export function DeliveryOrderTable({
     <div className="glass-card overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-stone-50 border-b border-stone-200">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                 No. Surat Jalan
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                 Customer
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                 Tanggal Kirim
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                 Pengemudi
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                 Kendaraan
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                 Items
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                 Aksi
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white divide-y divide-stone-200">
             {deliveryOrders.map((order) => (
-              <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+              <tr key={order.id} className="hover:bg-stone-50 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <p className="font-semibold text-gray-900">
+                      <p className="font-semibold text-stone-900">
                         {order.doNumber}
                       </p>
                       {(order.proofImage ||
                         order.notes?.includes("[BUKTI_KIRIM]") ||
                         order.notes?.includes("[FOTO_LOKASI]")) && (
                         <span
-                          className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200"
+                          className="inline-flex items-center gap-1 text-[10px] font-semibold text-green-700 bg-green-50 px-1.5 py-0.5 rounded border border-green-200"
                           title="Ada Bukti Foto Pengiriman"
                         >
-                          <Camera className="w-3 h-3 text-emerald-600" />
+                          <Camera className="w-3 h-3 text-green-600" />
                           Foto Bukti
                         </span>
                       )}
                     </div>
                     {order.sale && (
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-stone-500">
                         Invoice: {order.sale.invoiceNumber}
                       </p>
                     )}
@@ -112,31 +112,31 @@ export function DeliveryOrderTable({
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm">
-                    <p className="font-medium text-gray-900">
+                    <p className="font-medium text-stone-900">
                       {order.customer.name}
                     </p>
-                    <p className="text-gray-500">{order.customer.code}</p>
+                    <p className="text-stone-500">{order.customer.code}</p>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm text-gray-900">
+                  <span className="text-sm text-stone-900">
                     {format(new Date(order.deliveryDate), "dd MMM yyyy", {
                       locale: id,
                     })}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm text-gray-900">
+                  <span className="text-sm text-stone-900">
                     {order.driver || "-"}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm text-gray-900">
+                  <span className="text-sm text-stone-900">
                     {order.vehicle || "-"}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm font-semibold text-blue-600">
+                  <span className="text-sm font-semibold text-stone-600">
                     {order.deliveryItems.length} items
                   </span>
                 </td>
@@ -153,14 +153,14 @@ export function DeliveryOrderTable({
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => onView(order)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      className="p-2 text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
                       title="Lihat Detail"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => onPrint(order)}
-                      className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                      className="p-2 text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
                       title="Print Surat Jalan"
                     >
                       <Printer className="w-4 h-4" />
@@ -168,7 +168,7 @@ export function DeliveryOrderTable({
                     {onEdit && (
                       <button
                         onClick={() => onEdit(order)}
-                        className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                        className="p-2 text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
                         title="Edit Surat Jalan (Admin/Superadmin)"
                       >
                         <Pencil className="w-4 h-4" />
@@ -192,7 +192,7 @@ export function DeliveryOrderTable({
                     {order.status === "PENDING" && (
                       <button
                         onClick={() => onDelete(order)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2 text-red-800 hover:bg-red-50 rounded-lg transition-colors"
                         title="Hapus"
                       >
                         <Trash2 className="w-4 h-4" />

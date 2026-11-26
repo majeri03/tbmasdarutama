@@ -62,7 +62,7 @@ export default function LandingNavbar({ store }: Props) {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
             {showLogo ? (
-              <div className="relative w-12 h-12 rounded-xl overflow-hidden ring-2 ring-white/20 group-hover:ring-blue-400 transition-all bg-white">
+              <div className="relative w-12 h-12 rounded-xl overflow-hidden ring-1 ring-black/[0.08] group-hover:ring-[#7F1D1D]/30 transition-all bg-white">
                 <Image
                   src={store!.logoUrl as string}
                   alt={store?.name || "Logo toko"}
@@ -73,12 +73,12 @@ export default function LandingNavbar({ store }: Props) {
                 />
               </div>
             ) : (
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl">
+              <div className="w-12 h-12 rounded-xl bg-[#7F1D1D] flex items-center justify-center text-white font-bold text-xl">
                 {store?.name.charAt(0) || "T"}
               </div>
             )}
             <div className="hidden sm:block">
-              <h1 className="text-xl font-bold text-gray-800 group-hover:text-blue-600 transition-colors">
+              <h1 className="text-xl font-bold tracking-tight text-[#1C1917] group-hover:text-[#7F1D1D] transition-colors">
                 {store?.name || "TB Masdar Utama"}
               </h1>
             </div>
@@ -90,7 +90,7 @@ export default function LandingNavbar({ store }: Props) {
               <a
                 key={link.href}
                 href={link.href}
-                className="text-gray-700 hover:text-blue-600 font-medium transition-colors"
+                className="text-stone-700 hover:text-[#7F1D1D] font-medium transition-colors"
               >
                 {link.label}
               </a>
@@ -100,7 +100,7 @@ export default function LandingNavbar({ store }: Props) {
             {store?.phone && (
               <a
                 href={`tel:${store.phone}`}
-                className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors"
+                className="flex items-center gap-2 text-stone-600 hover:text-[#7F1D1D] transition-colors"
               >
                 <Phone className="w-4 h-4" />
                 <span className="text-sm">{store.phone}</span>
@@ -137,7 +137,7 @@ export default function LandingNavbar({ store }: Props) {
                 key={link.href}
                 href={link.href}
                 onClick={() => setIsOpen(false)}
-                className="block py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors"
+                className="block py-2 text-stone-700 hover:text-[#7F1D1D] font-medium transition-colors"
               >
                 {link.label}
               </a>
@@ -146,7 +146,7 @@ export default function LandingNavbar({ store }: Props) {
             {store?.phone && (
               <a
                 href={`tel:${store.phone}`}
-                className="flex items-center gap-2 py-2 text-gray-600 hover:text-blue-600 transition-colors"
+                className="flex items-center gap-2 py-2 text-stone-600 hover:text-[#7F1D1D] transition-colors"
               >
                 <Phone className="w-4 h-4" />
                 {store.phone}
@@ -156,7 +156,7 @@ export default function LandingNavbar({ store }: Props) {
             {store?.email && (
               <a
                 href={`mailto:${store.email}`}
-                className="flex items-center gap-2 py-2 text-gray-600 hover:text-blue-600 transition-colors"
+                className="flex items-center gap-2 py-2 text-stone-600 hover:text-[#7F1D1D] transition-colors"
               >
                 <Mail className="w-4 h-4" />
                 {store.email}

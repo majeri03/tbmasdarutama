@@ -318,9 +318,9 @@ export default function SalesmenManager() {
 
       <div className="flex items-center gap-2">
         <Users className="w-5 h-5 text-[#7F1D1D]" />
-        <h2 className="text-lg font-semibold text-gray-800">Salesman</h2>
+        <h2 className="text-lg font-semibold text-stone-800">Salesman</h2>
       </div>
-      <p className="text-sm text-gray-600">
+      <p className="text-sm text-stone-600">
         Salesman dipilih per transaksi di POS dan tercatat di dalam
         penjualan. Nama salesman TIDAK PERNAH dicetak di invoice, struk,
         atau surat jalan.
@@ -329,39 +329,39 @@ export default function SalesmenManager() {
 
       {/* Ringkasan total — mengikuti filter yang aktif di bawah */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Salesman Aktif</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">
+        <div className="rounded-xl border border-stone-200 bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Salesman Aktif</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-stone-900">
             {totals.activeCount}
-            <span className="text-base font-medium text-gray-400"> / {totals.count}</span>
+            <span className="text-base font-medium text-stone-400"> / {totals.count}</span>
           </p>
-          <p className="text-xs text-gray-500">{totals.salesCount} transaksi tercatat</p>
+          <p className="text-xs text-stone-500">{totals.salesCount} transaksi tercatat</p>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Total Penjualan</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">{formatRp(totals.totalSales)}</p>
-          <p className="text-xs text-gray-500">Jumlah grand total semua invoice</p>
+        <div className="rounded-xl border border-stone-200 bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Total Penjualan</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-stone-900">{formatRp(totals.totalSales)}</p>
+          <p className="text-xs text-stone-500">Jumlah grand total semua invoice</p>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Total Fee</p>
-          <p className="mt-1 text-2xl font-bold text-[#7F1D1D]">{formatRp(totals.totalFee)}</p>
-          <p className="text-xs text-gray-500">
+        <div className="rounded-xl border border-stone-200 bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Total Fee</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-[#7F1D1D]">{formatRp(totals.totalFee)}</p>
+          <p className="text-xs text-stone-500">
             {feeEnabled ? `Fee global aktif ${feePercent}%` : "Fee global nonaktif — fee Rp0"}
           </p>
         </div>
       </div>
 
       {/* Pengaturan fee salesman (24 Nov 2026) */}
-      <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-2">
+      <div className="rounded-xl border border-stone-200 bg-white p-4 space-y-2">
         <div className="flex items-center gap-2">
           <Percent className="w-5 h-5 text-[#7F1D1D]" />
-          <h3 className="text-sm font-semibold text-gray-800">Fee Salesman (per invoice)</h3>
+          <h3 className="text-sm font-semibold text-stone-800">Fee Salesman (per invoice)</h3>
         </div>
         {feeLoading ? (
-          <p className="text-sm text-gray-500">Memuat pengaturan fee…</p>
+          <p className="text-sm text-stone-500">Memuat pengaturan fee…</p>
         ) : isSuperAdmin ? (
           <>
-            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-stone-700 cursor-pointer">
               <input
                 type="checkbox"
                 checked={feeEnabled}
@@ -393,7 +393,7 @@ export default function SalesmenManager() {
                 Simpan Fee
               </button>
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-stone-500">
               Fee = floor(grand total × persen / 100) per invoice, hanya untuk
               penjualan yang punya salesman. Contoh: Rp57.850 × 2% = Rp1.157.
               Kalau fee dimatikan di sini, fee SEMUA invoice jadi Rp0 — apa pun
@@ -401,9 +401,9 @@ export default function SalesmenManager() {
             </p>
           </>
         ) : (
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-stone-600">
             Fee salesman saat ini:{" "}
-            <span className="font-semibold text-gray-800">
+            <span className="font-semibold text-stone-800">
               {feeEnabled ? `AKTIF — ${feePercent}% per invoice` : "NONAKTIF — fee Rp0"}
             </span>
             . Hanya SUPER_ADMIN yang bisa mengubahnya.
@@ -412,7 +412,7 @@ export default function SalesmenManager() {
       </div>
 
       {isSuperAdmin && (
-        <form onSubmit={handleAddSalesman} className="flex flex-wrap items-end gap-2 rounded-xl border border-gray-200 bg-white p-4">
+        <form onSubmit={handleAddSalesman} className="flex flex-wrap items-end gap-2 rounded-xl border border-stone-200 bg-white p-4">
           <div>
             <label className="label label-required">Nama salesman</label>
             <input
@@ -445,7 +445,7 @@ export default function SalesmenManager() {
       {/* Filter & pencarian */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             value={search}
@@ -454,7 +454,7 @@ export default function SalesmenManager() {
             placeholder="Cari nama / no. HP…"
           />
         </div>
-        <div className="flex items-center gap-1 rounded-xl border border-gray-200 bg-white p-1">
+        <div className="flex items-center gap-1 rounded-xl border border-stone-200 bg-white p-1">
           {statusChips.map((chip) => (
             <button
               key={chip.key}
@@ -463,7 +463,7 @@ export default function SalesmenManager() {
               className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                 statusFilter === chip.key
                   ? "bg-[#7F1D1D] text-white"
-                  : "text-gray-600 hover:bg-gray-100"
+                  : "text-stone-600 hover:bg-stone-100"
               }`}
             >
               {chip.label}
@@ -481,24 +481,24 @@ export default function SalesmenManager() {
           <option value="fee">Urutkan: Total Fee ↓</option>
           <option value="count">Urutkan: Transaksi ↓</option>
         </select>
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-stone-500">
           Menampilkan {filteredSalesmen.length} dari {salesmen.length} salesman
         </span>
       </div>
 
       {loading ? (
-        <p className="text-sm text-gray-500">Memuat daftar salesman…</p>
+        <p className="text-sm text-stone-500">Memuat daftar salesman…</p>
       ) : filteredSalesmen.length === 0 ? (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-stone-500">
           {salesmen.length === 0
             ? `Belum ada salesman. ${isSuperAdmin ? "Tambahkan salesman pertama di atas." : ""}`
             : "Tidak ada salesman yang cocok dengan filter."}
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+              <tr className="bg-stone-50 text-left text-[11px] uppercase tracking-wide text-stone-500">
                 <th className="px-4 py-3 font-semibold">Nama</th>
                 <th className="px-4 py-3 font-semibold">No. HP</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
@@ -510,8 +510,8 @@ export default function SalesmenManager() {
             </thead>
             <tbody>
               {filteredSalesmen.map((s) => (
-                <tr key={s.id} className="border-t border-gray-100 hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-800">
+                <tr key={s.id} className="border-t border-stone-100 hover:bg-stone-50">
+                  <td className="px-4 py-3 font-medium text-stone-800">
                     {editingId === s.id ? (
                       <input
                         type="text"
@@ -531,7 +531,7 @@ export default function SalesmenManager() {
                       </button>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-stone-600">
                     {editingId === s.id ? (
                       <input
                         type="text"
@@ -550,7 +550,7 @@ export default function SalesmenManager() {
                         type="button"
                         onClick={() => handleToggleActive(s.id)}
                         className={`text-xs font-medium px-2 py-1 rounded-full ${
-                          s.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                          s.isActive ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"
                         }`}
                         title="Klik untuk mengubah status"
                       >
@@ -559,17 +559,17 @@ export default function SalesmenManager() {
                     ) : (
                       <span
                         className={`text-xs font-medium px-2 py-1 rounded-full ${
-                          s.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                          s.isActive ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-500"
                         }`}
                       >
                         {s.isActive ? "Aktif" : "Nonaktif"}
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-700 whitespace-nowrap">
+                  <td className="px-4 py-3 text-right text-stone-700 whitespace-nowrap">
                     {s.salesCount} transaksi
                   </td>
-                  <td className="px-4 py-3 text-right font-semibold text-gray-900 whitespace-nowrap">
+                  <td className="px-4 py-3 text-right font-semibold text-stone-900 whitespace-nowrap">
                     {formatRp(s.totalSales ?? 0)}
                   </td>
                   <td className="px-4 py-3 text-right font-semibold text-[#7F1D1D] whitespace-nowrap">
@@ -632,7 +632,7 @@ export default function SalesmenManager() {
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t-2 border-gray-200 bg-gray-50 font-semibold text-gray-900">
+              <tr className="border-t-2 border-stone-200 bg-stone-50 font-semibold text-stone-900">
                 <td className="px-4 py-3" colSpan={3}>
                   TOTAL ({totals.count} salesman)
                 </td>
@@ -671,18 +671,18 @@ export default function SalesmenManager() {
               </button>
             </div>
             <div className="modal-body">
-              <p className="text-gray-700 text-sm">
+              <p className="text-stone-700 text-sm">
                 Hapus salesman{" "}
-                <span className="font-semibold text-gray-900">{deleteTarget.name}</span>?
+                <span className="font-semibold text-stone-900">{deleteTarget.name}</span>?
               </p>
               {deleteTarget.salesCount > 0 ? (
-                <p className="text-xs text-red-600 bg-red-50 border border-red-100 p-2.5 rounded-lg mt-3 leading-relaxed">
+                <p className="text-xs text-red-800 bg-red-50 border border-red-100 p-2.5 rounded-lg mt-3 leading-relaxed">
                   Salesman ini sudah tercatat di {deleteTarget.salesCount} transaksi
                   penjualan, jadi <strong>tidak bisa dihapus</strong>. Gunakan tombol
                   status &ldquo;Nonaktif&rdquo; supaya tidak muncul lagi di POS.
                 </p>
               ) : (
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-stone-500 mt-2">
                   Salesman ini belum tercatat di penjualan mana pun, jadi aman dihapus.
                 </p>
               )}

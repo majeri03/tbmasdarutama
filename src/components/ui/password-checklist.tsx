@@ -37,14 +37,12 @@ export default function PasswordChecklist({
         {checklist.map((item) => (
           <li
             key={item.id}
-            className={`flex items-center gap-1.5 text-xs ${
-              item.passed ? "text-green-600" : "text-gray-500"
-            }`}
+            className={`flex items-center gap-1.5 text-xs ${ item.passed ? "text-green-700" : "text-stone-500" }`}
           >
             {item.passed ? (
               <Check className="w-3.5 h-3.5 shrink-0" />
             ) : (
-              <X className="w-3.5 h-3.5 shrink-0 text-red-400" />
+              <X className="w-3.5 h-3.5 shrink-0 text-red-700" />
             )}
             <span className={item.passed ? "line-through opacity-70" : ""}>
               {item.label}
@@ -55,13 +53,13 @@ export default function PasswordChecklist({
 
       {showStrength && password.length > 0 && (
         <div className="flex items-center gap-2 pt-1">
-          <div className="flex-1 h-1.5 rounded-full bg-gray-200 overflow-hidden">
+          <div className="flex-1 h-1.5 rounded-full bg-stone-200 overflow-hidden">
             <div
               className={`h-full rounded-full transition-all ${strengthColor}`}
               style={{ width: `${(strength.score / 5) * 100}%` }}
             />
           </div>
-          <span className="text-xs font-medium text-gray-600 whitespace-nowrap">
+          <span className="text-xs font-medium text-stone-600 whitespace-nowrap">
             Kekuatan: {strength.label}
           </span>
         </div>

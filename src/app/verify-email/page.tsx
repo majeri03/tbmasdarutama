@@ -102,10 +102,10 @@ function VerifyEmailForm() {
           <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+          <h2 className="text-2xl font-bold tracking-tight text-[#1C1917] mb-2">
             Email Terverifikasi!
           </h2>
-          <p className="text-gray-600 mb-6">
+          <p className="text-stone-600 mb-6">
             Akun Anda sudah aktif. Anda akan diarahkan ke halaman login...
           </p>
           <Link href="/login" className="btn-primary inline-flex">
@@ -124,11 +124,11 @@ function VerifyEmailForm() {
 
       <div className="glass-card p-8 max-w-md w-full">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 rounded-full bg-[#7F1D1D] flex items-center justify-center mx-auto mb-4">
             <Mail className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800">Verifikasi Email</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-2xl font-bold tracking-tight text-[#1C1917]">Verifikasi Email</h1>
+          <p className="text-stone-600 mt-2">
             Masukkan kode 6 digit yang dikirim ke email Anda. Kode berlaku 15 menit.
           </p>
         </div>
@@ -187,7 +187,7 @@ function VerifyEmailForm() {
             type="button"
             onClick={handleResend}
             disabled={resending || resendCooldown > 0}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-sm text-[#7F1D1D] hover:text-[#991B1B] font-medium inline-flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {resending ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -201,7 +201,7 @@ function VerifyEmailForm() {
           <div>
             <Link
               href="/login"
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              className="text-sm text-stone-600 hover:text-[#7F1D1D] font-medium"
             >
               ← Kembali ke Login
             </Link>

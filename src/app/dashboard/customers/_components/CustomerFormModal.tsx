@@ -111,15 +111,15 @@ export function CustomerFormModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-      <div className="glass-card w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-slide-up">
+    <div className="modal-overlay">
+      <div className="modal-container w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-slide-up">
         {/* Header */}
-        <div className="sticky top-0 bg-white/80 backdrop-blur-sm border-b border-gray-200 p-6 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-white/80 backdrop-blur-sm border-b border-stone-200 p-6 flex items-center justify-between z-10">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">
+            <h2 className="text-2xl font-bold text-stone-900">
               {mode === "create" ? "Tambah Customer Baru" : "Edit Customer"}
             </h2>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-sm text-stone-600 mt-1">
               {mode === "create"
                 ? "Isi informasi customer yang akan ditambahkan"
                 : `Edit data customer: ${customer?.code}`}
@@ -128,9 +128,9 @@ export function CustomerFormModal({
           <button
             onClick={onClose}
             disabled={loading}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+            className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 transition-colors disabled:opacity-50"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5 text-stone-500" />
           </button>
         </div>
 
@@ -138,15 +138,15 @@ export function CustomerFormModal({
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Basic Information Section */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <User className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-stone-900 mb-4 flex items-center gap-2">
+              <User className="w-5 h-5 text-red-900" />
               Informasi Dasar
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Customer Name */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="label mb-2">
                   Nama Customer <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -164,7 +164,7 @@ export function CustomerFormModal({
 
               {/* Customer Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="label mb-2">
                   Tipe Customer <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -183,7 +183,7 @@ export function CustomerFormModal({
                   <option value={CustomerType.GROSIR}>Grosir</option>
                   <option value={CustomerType.PROYEK}>Proyek</option>
                 </select>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-stone-500 mt-1">
                   {formData.type === CustomerType.REGULER &&
                     "Customer dengan pembelian normal"}
                   {formData.type === CustomerType.GROSIR &&
@@ -195,7 +195,7 @@ export function CustomerFormModal({
 
               {/* Phone */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="label mb-2">
                   <Phone className="w-4 h-4 inline mr-1" />
                   Nomor Telepon
                 </label>
@@ -213,7 +213,7 @@ export function CustomerFormModal({
 
               {/* Email */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="label mb-2">
                   <Mail className="w-4 h-4 inline mr-1" />
                   Email
                 </label>
@@ -233,15 +233,15 @@ export function CustomerFormModal({
 
           {/* Address Section */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-stone-900 mb-4 flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-red-900" />
               Alamat
             </h3>
 
             <div className="space-y-4">
               {/* Address */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="label mb-2">
                   Alamat Lengkap
                 </label>
                 <textarea
@@ -259,7 +259,7 @@ export function CustomerFormModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* City */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="label mb-2">
                     <Building2 className="w-4 h-4 inline mr-1" />
                     Kota/Kabupaten
                   </label>
@@ -277,7 +277,7 @@ export function CustomerFormModal({
 
                 {/* Province */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="label mb-2">
                     <Building2 className="w-4 h-4 inline mr-1" />
                     Provinsi
                   </label>
@@ -297,7 +297,7 @@ export function CustomerFormModal({
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-6 border-t border-gray-200">
+          <div className="flex gap-3 pt-6 -mx-6 -mb-6 px-6 pb-6 bg-stone-50 border-t border-stone-200 rounded-b-3xl">
             <button
               type="button"
               onClick={onClose}

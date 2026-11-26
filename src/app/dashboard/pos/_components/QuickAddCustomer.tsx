@@ -91,7 +91,7 @@ export function QuickAddCustomer({ isOpen, onClose, onSuccess, showToast }: Quic
                                 required
                                 disabled={isLoading}
                                 placeholder="Masukkan nama customer"
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-900"
                             />
                         </div>
 
@@ -106,7 +106,7 @@ export function QuickAddCustomer({ isOpen, onClose, onSuccess, showToast }: Quic
                                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                 disabled={isLoading}
                                 placeholder="08xxxxxxxxxx"
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-900"
                             />
                         </div>
 
@@ -119,7 +119,7 @@ export function QuickAddCustomer({ isOpen, onClose, onSuccess, showToast }: Quic
                                 value={formData.type}
                                 onChange={(e) => setFormData({ ...formData, type: e.target.value as CustomerType })}
                                 disabled={isLoading}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-900"
                             >
                                 <option value="REGULER">Regular (Diskon 0%)</option>
                                 <option value="GROSIR">Grosir (Diskon 5%)</option>
@@ -140,7 +140,7 @@ export function QuickAddCustomer({ isOpen, onClose, onSuccess, showToast }: Quic
                             <button
                                 type="submit"
                                 disabled={isLoading || !formData.name}
-                                className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                                className="flex-1 px-4 py-2 bg-red-900 hover:bg-red-800 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
                             >
                                 {isLoading ? (
                                     <>

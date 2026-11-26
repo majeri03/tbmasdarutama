@@ -155,13 +155,13 @@ export default function DataManagementTab() {
       <div className="glass-card p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-blue-600" />
-            <h3 className="font-semibold text-gray-800">Ringkasan Data Transaksi Saat Ini</h3>
+            <BarChart3 className="w-5 h-5 text-[#7F1D1D]" />
+            <h3 className="font-semibold text-[#1C1917]">Ringkasan Data Transaksi Saat Ini</h3>
           </div>
           <button
             onClick={loadStats}
             disabled={loadingStats}
-            className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 transition-colors"
+            className="flex items-center gap-1.5 text-sm text-[#7F1D1D] hover:text-[#991B1B] transition-colors"
           >
             <RefreshCw className={`w-4 h-4 ${loadingStats ? "animate-spin" : ""}`} />
             Refresh
@@ -170,7 +170,7 @@ export default function DataManagementTab() {
 
         {loadingStats ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+            <Loader2 className="w-6 h-6 animate-spin text-[#7F1D1D]" />
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -384,9 +384,9 @@ export default function DataManagementTab() {
               {/* STEP 3: Password */}
               {step === "password" && (
                 <div className="space-y-4">
-                  <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-xl border border-blue-200">
-                    <ShieldAlert className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
-                    <p className="text-sm text-blue-800">
+                  <div className="flex items-start gap-3 p-4 bg-[#7F1D1D]/[0.06] rounded-xl border border-[#7F1D1D]/20">
+                    <ShieldAlert className="w-5 h-5 text-[#7F1D1D] mt-0.5 shrink-0" />
+                    <p className="text-sm text-[#7F1D1D]">
                       Masukkan password akun Anda untuk mengotorisasi operasi ini.
                     </p>
                   </div>

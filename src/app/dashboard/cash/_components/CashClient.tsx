@@ -148,29 +148,29 @@ export default function CashClient() {
       {/* Ringkasan */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="glass-card p-6">
-          <p className="text-sm text-gray-600 mb-1">Saldo Kas</p>
-          <p className="text-2xl font-bold text-blue-600">
+          <p className="text-sm text-stone-600 mb-1">Saldo Kas</p>
+          <p className="text-2xl font-bold text-red-900">
             {data ? formatCurrency(data.balance) : "—"}
           </p>
-          <p className="text-gray-500 text-xs mt-1">
+          <p className="text-stone-500 text-xs mt-1">
             Total semua kas masuk − total semua kas keluar
           </p>
         </div>
         <div className="glass-card p-6">
-          <p className="text-sm text-gray-600 mb-1">Kas Masuk (periode ini)</p>
-          <p className="text-2xl font-bold text-green-600">
+          <p className="text-sm text-stone-600 mb-1">Kas Masuk (periode ini)</p>
+          <p className="text-2xl font-bold text-green-700">
             {data ? formatCurrency(data.totalIn) : "—"}
           </p>
-          <p className="text-gray-500 text-xs mt-1">
+          <p className="text-stone-500 text-xs mt-1">
             {dateFrom} s.d. {dateTo}
           </p>
         </div>
         <div className="glass-card p-6">
-          <p className="text-sm text-gray-600 mb-1">Kas Keluar (periode ini)</p>
-          <p className="text-2xl font-bold text-red-600">
+          <p className="text-sm text-stone-600 mb-1">Kas Keluar (periode ini)</p>
+          <p className="text-2xl font-bold text-red-800">
             {data ? formatCurrency(data.totalOut) : "—"}
           </p>
-          <p className="text-gray-500 text-xs mt-1">
+          <p className="text-stone-500 text-xs mt-1">
             {dateFrom} s.d. {dateTo}
           </p>
         </div>
@@ -178,7 +178,7 @@ export default function CashClient() {
 
       {/* Form catat kas */}
       <div className="glass-card p-6">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">
+        <h2 className="text-lg font-bold text-stone-900 mb-4">
           Catat Kas Masuk / Keluar
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -186,29 +186,21 @@ export default function CashClient() {
             <button
               type="button"
               onClick={() => setFormType("IN")}
-              className={`px-4 py-2.5 rounded-lg font-semibold text-sm transition ${
-                formType === "IN"
-                  ? "bg-green-600 text-white shadow"
-                  : "bg-green-50 text-green-700 border border-green-200 hover:bg-green-100"
-              }`}
+              className={`px-4 py-2.5 rounded-xl font-semibold text-sm transition ${ formType === "IN" ? "bg-green-700 text-white shadow" : "bg-green-50 text-green-700 border border-green-200 hover:bg-green-100" }`}
             >
               Kas Masuk
             </button>
             <button
               type="button"
               onClick={() => setFormType("OUT")}
-              className={`px-4 py-2.5 rounded-lg font-semibold text-sm transition ${
-                formType === "OUT"
-                  ? "bg-red-600 text-white shadow"
-                  : "bg-red-50 text-red-700 border border-red-200 hover:bg-red-100"
-              }`}
+              className={`px-4 py-2.5 rounded-xl font-semibold text-sm transition ${ formType === "OUT" ? "bg-red-900 text-white shadow" : "bg-red-50 text-red-700 border border-red-200 hover:bg-red-100" }`}
             >
               Kas Keluar
             </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="label mb-2">
                 Jumlah (Rp) <span className="text-red-500">*</span>
               </label>
               <input
@@ -223,7 +215,7 @@ export default function CashClient() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="label mb-2">
                 Kategori (opsional)
               </label>
               <input
@@ -237,7 +229,7 @@ export default function CashClient() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="label mb-2">
               Keterangan <span className="text-red-500">*</span>
             </label>
             <input
@@ -251,12 +243,12 @@ export default function CashClient() {
             />
           </div>
           {formError && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <p className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
               {formError}
             </p>
           )}
           {formSuccess && (
-            <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+            <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-3 py-2">
               {formSuccess}
             </p>
           )}
@@ -274,7 +266,7 @@ export default function CashClient() {
       <div className="glass-card p-6">
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="label mb-2">
               Dari tanggal
             </label>
             <input
@@ -285,7 +277,7 @@ export default function CashClient() {
             />
           </div>
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="label mb-2">
               Sampai tanggal
             </label>
             <input
@@ -296,7 +288,7 @@ export default function CashClient() {
             />
           </div>
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="label mb-2">
               Jenis
             </label>
             <select
@@ -320,15 +312,15 @@ export default function CashClient() {
 
         {isLoading ? (
           <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Memuat data kas...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-900 mx-auto"></div>
+            <p className="mt-4 text-stone-600">Memuat data kas...</p>
           </div>
         ) : error ? (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          <p className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
             {error}
           </p>
         ) : !data || data.transactions.length === 0 ? (
-          <p className="text-center text-gray-500 py-12">
+          <p className="text-center text-stone-500 py-12">
             Belum ada arus kas pada periode ini.
           </p>
         ) : (
@@ -360,7 +352,7 @@ export default function CashClient() {
                 {data.transactions.map((t) => (
                   <tr
                     key={t.id}
-                    className="border-b border-gray-200 even:bg-[#FAFAFA]"
+                    className="border-b border-stone-200 even:bg-[#FAFAFA]"
                   >
                     <td className="px-3 py-2 whitespace-nowrap">
                       {formatDateTime(t.createdAt)}
@@ -368,17 +360,17 @@ export default function CashClient() {
                     <td className="px-3 py-2">{t.description}</td>
                     <td className="px-3 py-2">{t.category || "—"}</td>
                     <td className="px-3 py-2">{t.createdByName}</td>
-                    <td className="px-3 py-2 text-right font-semibold tabular-nums text-green-600">
+                    <td className="px-3 py-2 text-right font-semibold tabular-nums text-green-700">
                       {t.type === "IN" ? formatCurrency(t.amount) : "—"}
                     </td>
-                    <td className="px-3 py-2 text-right font-semibold tabular-nums text-red-600">
+                    <td className="px-3 py-2 text-right font-semibold tabular-nums text-red-800">
                       {t.type === "OUT" ? formatCurrency(t.amount) : "—"}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <p className="text-xs text-gray-500 mt-3">
+            <p className="text-xs text-stone-500 mt-3">
               Menampilkan {data.transactions.length} transaksi terakhir
               (maksimal 100 dari API).
             </p>

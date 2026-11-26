@@ -86,7 +86,7 @@ export function SalesTable() {
   return (
     <div className="glass-card">
       {/* Filters */}
-      <div className="p-6 border-b border-gray-200">
+      <div className="p-6 border-b border-stone-200">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="md:col-span-2">
             <div className="search-box">
@@ -145,7 +145,7 @@ export function SalesTable() {
           </div>
         ) : sales.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-500">Tidak ada data penjualan</p>
+            <p className="text-stone-500">Tidak ada data penjualan</p>
           </div>
         ) : (
           <table className="data-table">
@@ -165,7 +165,7 @@ export function SalesTable() {
               {sales.map((sale) => (
                 <tr key={sale.id}>
                   <td>
-                    <span className="font-semibold text-blue-600">
+                    <span className="font-semibold text-red-900">
                       {sale.invoiceNumber}
                     </span>
                   </td>
@@ -178,11 +178,11 @@ export function SalesTable() {
                     <div>
                       <p className="font-medium">{sale.customer?.name || "Customer Umum"}</p>
                       {sale.customer?.code && (
-                        <p className="text-xs text-gray-500">{sale.customer.code}</p>
+                        <p className="text-xs text-stone-500">{sale.customer.code}</p>
                       )}
                     </div>
                   </td>
-                  <td className="font-semibold">
+                  <td className="text-right font-semibold tabular-nums">
                     Rp {Number(sale.grandTotal).toLocaleString("id-ID")}
                   </td>
                   <td>
@@ -207,8 +207,8 @@ export function SalesTable() {
 
       {/* Pagination */}
       {!loading && sales.length > 0 && (
-        <div className="p-4 border-t border-gray-200 flex items-center justify-between">
-          <p className="text-sm text-gray-600">
+        <div className="p-4 border-t border-stone-200 flex items-center justify-between">
+          <p className="text-sm text-stone-600">
             Halaman {page} dari {totalPages}
           </p>
           <div className="flex gap-2">

@@ -153,8 +153,8 @@ export function PurchasesClient() {
             {/* Header & Actions */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Purchase Orders</h1>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <h1 className="text-2xl font-semibold tracking-tight text-stone-900">Purchase Orders</h1>
+                    <p className="text-sm text-stone-500 mt-1">
                         Kelola pembelian barang dari supplier
                     </p>
                 </div>
@@ -162,7 +162,7 @@ export function PurchasesClient() {
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setShowFilters(!showFilters)}
-                        className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+                        className="px-4 py-2 border border-stone-200 rounded-lg hover:bg-stone-50 transition-colors flex items-center gap-2"
                     >
                         <Filter className="w-4 h-4" />
                         Filter
@@ -170,7 +170,7 @@ export function PurchasesClient() {
 
                     <button
                         onClick={handleCreate}
-                        className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all flex items-center gap-2"
+                        className="px-4 py-2 bg-red-900 text-white rounded-lg hover:bg-red-800 transition-all flex items-center gap-2"
                     >
                         <Plus className="w-4 h-4" />
                         Buat PO
@@ -184,30 +184,30 @@ export function PurchasesClient() {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         {/* Search */}
                         <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-stone-700 mb-2">
                                 Cari PO / Supplier
                             </label>
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
                                 <input
                                     type="text"
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     placeholder="Ketik PO number atau nama supplier..."
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full pl-10 pr-4 py-2 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
                                 />
                             </div>
                         </div>
 
                         {/* Supplier Filter */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-stone-700 mb-2">
                                 Supplier
                             </label>
                             <select
                                 value={selectedSupplier}
                                 onChange={(e) => setSelectedSupplier(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-3 py-2 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
                             >
                                 <option value="">Semua Supplier</option>
                                 {suppliers.map((supplier) => (
@@ -220,13 +220,13 @@ export function PurchasesClient() {
 
                         {/* Status Filter */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-stone-700 mb-2">
                                 Status
                             </label>
                             <select
                                 value={selectedStatus}
                                 onChange={(e) => setSelectedStatus(e.target.value as PurchaseStatus)}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-3 py-2 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
                             >
                                 <option value="">Semua Status</option>
                                 <option value="PENDING">Pending</option>
@@ -240,12 +240,12 @@ export function PurchasesClient() {
                     {/* Clear Filters */}
                     {(search || selectedSupplier || selectedStatus) && (
                         <div className="mt-4 flex items-center justify-between">
-                            <p className="text-sm text-gray-500">
+                            <p className="text-sm text-stone-500">
                                 Menampilkan {purchases.length} hasil
                             </p>
                             <button
                                 onClick={handleClearFilters}
-                                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                                className="text-sm text-red-900 hover:text-red-900 font-medium"
                             >
                                 Reset Filter
                             </button>
@@ -258,8 +258,8 @@ export function PurchasesClient() {
             {isLoading ? (
                 <div className="glass-card p-8">
                     <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                        <span className="ml-3 text-gray-600">Memuat data...</span>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-900"></div>
+                        <span className="ml-3 text-stone-600">Memuat data...</span>
                     </div>
                 </div>
             ) : (

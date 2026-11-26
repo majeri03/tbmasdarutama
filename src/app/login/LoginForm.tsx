@@ -93,18 +93,11 @@ export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
         <Toast message={toast.message} type={toast.type} onClose={hideToast} />
       )}
 
-      {/* Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob" />
-        <div className="absolute top-40 right-10 w-72 h-72 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000" />
-        <div className="absolute bottom-20 left-1/2 w-72 h-72 bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000" />
-      </div>
-
       {/* Login Card */}
-      <div className="glass-card p-8 w-full max-w-md relative z-10 animate-slide-up">
+      <div className="glass-card rounded-[24px] p-8 w-full max-w-md relative z-10 animate-slide-up">
         {/* Logo & Title */}
         <div className="text-center mb-8">
-          <div className="w-20 h-20 flex items-center justify-center mx-auto mb-2 ">
+          <div className="w-20 h-20 flex items-center justify-center mx-auto mb-2 rounded-2xl bg-stone-100">
              {logoUrl ? (
             <Image
               src={logoUrl}
@@ -115,13 +108,13 @@ export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
               priority
             />
           ) : (
-            <Store className="w-10 h-10 text-white" />
+            <Store className="w-10 h-10 text-[#7F1D1D]" />
           )}
           </div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+          <h1 className="text-3xl font-bold tracking-tight text-[#1C1917] mb-2">
             TB MASDAR UTAMA
           </h1>
-          <p className="text-gray-600 flex items-center justify-center gap-2">
+          <p className="text-stone-600 flex items-center justify-center gap-2">
             Sistem Manajemen Toko Bangunan
           </p>
         </div>
@@ -164,7 +157,7 @@ export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
 
           {/* Error Message */}
           {error && (
-            <div className="glass-card bg-red-50 border border-red-200 p-3 text-sm text-red-600">
+            <div className="glass-card bg-red-50 border border-red-200 p-3 text-sm text-[#991B1B]">
               {error}
             </div>
           )}
@@ -219,18 +212,18 @@ export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
         <div className="mt-6 text-center space-y-3">
           <Link
             href="/forgot-password"
-            className="text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors inline-flex items-center gap-1"
+            className="text-sm text-stone-600 hover:text-[#7F1D1D] hover:underline transition-colors inline-flex items-center gap-1"
           >
             <Lock className="w-4 h-4" />
             Lupa Password?
           </Link>
-          <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+          <div className="rounded-lg border border-[#7F1D1D]/20 bg-[#7F1D1D]/[0.06] px-4 py-3">
             {/* PKG-I (23 Nov 2026, OTP): akun baru harus verifikasi email dulu.
-                Link dibuat menonjol (kotak biru) supaya pemilik akun baru
+                Link dibuat menonjol (kotak aksen) supaya pemilik akun baru
                 langsung menemukan tempat memasukkan kode OTP. */}
             <Link
               href={verifyHref}
-              className="text-sm font-semibold text-blue-700 hover:text-blue-800 hover:underline transition-colors inline-flex items-center gap-1"
+              className="text-sm font-semibold text-[#7F1D1D] hover:text-[#991B1B] hover:underline transition-colors inline-flex items-center gap-1"
             >
               <Mail className="w-4 h-4" />
               Belum terima kode? Verifikasi email / masukkan kode OTP
@@ -239,7 +232,7 @@ export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
         </div>
 
         {/* Footer */}
-        <div className="mt-8 pt-6 border-t border-gray-200 text-center text-sm text-gray-500">
+        <div className="mt-8 pt-6 border-t border-stone-200 text-center text-sm text-stone-500">
           © {new Date().getFullYear()} TB Masdar Utama. All rights reserved.
         </div>
       </div>

@@ -75,25 +75,25 @@ export function UnitFormModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-fade-in">
-      <div className="glass-card p-6 w-full max-w-lg animate-slide-up">
+    <div className="modal-overlay">
+      <div className="modal-container p-6 w-full max-w-lg animate-slide-up">
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-center gap-3">
             <div
               className="p-3 rounded-xl"
               style={{
-                background: "rgba(96, 165, 250, 0.15)",
+                background: "rgba(127, 29, 29, 0.08)",
                 border: "1px solid rgba(96, 165, 250, 0.3)",
               }}
             >
-              <Package className="w-6 h-6 text-blue-600" />
+              <Package className="w-6 h-6 text-red-900" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-gray-900">
+              <h3 className="text-xl font-semibold tracking-tight text-stone-900">
                 {isEdit ? "Edit Satuan" : "Tambah Satuan"}
               </h3>
-              <p className="text-sm text-gray-600 mt-0.5">
+              <p className="text-sm text-stone-600 mt-0.5">
                 {isEdit
                   ? "Perbarui informasi satuan"
                   : "Tambahkan satuan produk baru"}
@@ -103,7 +103,7 @@ export function UnitFormModal({
           <button
             onClick={onClose}
             disabled={loading}
-            className="text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+            className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 transition-colors disabled:opacity-50"
           >
             <X className="w-5 h-5" />
           </button>
@@ -115,7 +115,7 @@ export function UnitFormModal({
           <div className="space-y-2">
             <label
               htmlFor="name"
-              className="block text-sm font-semibold text-gray-700"
+              className="label"
             >
               Nama Satuan <span className="text-red-500">*</span>
             </label>
@@ -128,12 +128,12 @@ export function UnitFormModal({
               {...register("name")}
             />
             {errors.name && (
-              <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+              <p className="text-xs text-red-800 mt-1 flex items-center gap-1">
                 <X className="w-3 h-3" />
                 {errors.name.message}
               </p>
             )}
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-stone-500">
               Nama akan otomatis diubah ke huruf kapital
             </p>
           </div>
@@ -142,9 +142,9 @@ export function UnitFormModal({
           <div className="space-y-2">
             <label
               htmlFor="description"
-              className="block text-sm font-semibold text-gray-700"
+              className="label"
             >
-              Deskripsi <span className="text-gray-400">(Opsional)</span>
+              Deskripsi <span className="text-stone-400">(Opsional)</span>
             </label>
             <textarea
               id="description"
@@ -155,7 +155,7 @@ export function UnitFormModal({
               {...register("description")}
             />
             {errors.description && (
-              <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+              <p className="text-xs text-red-800 mt-1 flex items-center gap-1">
                 <X className="w-3 h-3" />
                 {errors.description.message}
               </p>
@@ -163,7 +163,7 @@ export function UnitFormModal({
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-gray-200">
+          <div className="flex gap-3 pt-4 -mx-6 -mb-6 px-6 pb-6 bg-stone-50 border-t border-stone-200 rounded-b-3xl">
             <button
               type="button"
               onClick={onClose}

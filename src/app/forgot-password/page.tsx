@@ -51,25 +51,19 @@ export default function ForgotPasswordPage() {
   if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 relative">
-        {/* Animated Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob" />
-          <div className="absolute top-40 right-10 w-72 h-72 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000" />
-        </div>
-
         {/* Success Card */}
-        <div className="glass-card p-8 max-w-md w-full text-center relative z-10 animate-slide-up">
+        <div className="glass-card rounded-[24px] p-8 max-w-md w-full text-center relative z-10 animate-slide-up">
           <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+          <h2 className="text-2xl font-bold tracking-tight text-[#1C1917] mb-2">
             Email Terkirim!
           </h2>
-          <p className="text-gray-600 mb-4">
+          <p className="text-stone-600 mb-4">
             Kami telah mengirim link reset password ke:
           </p>
-          <p className="font-semibold text-blue-600 mb-6">{email}</p>
-          <div className="glass-card bg-blue-50 p-4 mb-6 text-sm text-gray-600">
+          <p className="font-semibold text-[#7F1D1D] mb-6">{email}</p>
+          <div className="glass-card bg-[#7F1D1D]/[0.06] p-4 mb-6 text-sm text-stone-600">
             <p className="mb-2">📧 Silakan cek inbox atau folder spam Anda</p>
             <p>🔗 Link reset password berlaku selama 1 jam</p>
           </div>
@@ -89,24 +83,17 @@ export default function ForgotPasswordPage() {
         <Toast message={toast.message} type={toast.type} onClose={hideToast} />
       )}
 
-      {/* Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob" />
-        <div className="absolute top-40 right-10 w-72 h-72 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000" />
-        <div className="absolute bottom-20 left-1/2 w-72 h-72 bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000" />
-      </div>
-
       {/* Form Card */}
-      <div className="glass-card p-8 max-w-md w-full relative z-10 animate-slide-up">
+      <div className="glass-card rounded-[24px] p-8 max-w-md w-full relative z-10 animate-slide-up">
         {/* Logo & Title */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 rounded-full bg-[#7F1D1D] flex items-center justify-center mx-auto mb-4">
             <Mail className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">
+          <h1 className="text-2xl font-bold tracking-tight text-[#1C1917] mb-2">
             Lupa Password?
           </h1>
-          <p className="text-gray-600">
+          <p className="text-stone-600">
             Masukkan email Anda dan kami akan mengirim link untuk reset password
           </p>
         </div>
@@ -157,7 +144,7 @@ export default function ForgotPasswordPage() {
         <div className="mt-6 text-center">
           <Link
             href="/login"
-            className="text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors inline-flex items-center gap-1"
+            className="text-sm text-stone-600 hover:text-[#7F1D1D] hover:underline transition-colors inline-flex items-center gap-1"
           >
             <ArrowLeft className="w-4 h-4" />
             Kembali ke Login
@@ -165,7 +152,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         {/* Footer */}
-        <div className="mt-8 pt-6 border-t border-gray-200 text-center text-sm text-gray-500">
+        <div className="mt-8 pt-6 border-t border-stone-200 text-center text-sm text-stone-500">
           © {new Date().getFullYear()} TB Masdar Utama. All rights reserved.
         </div>
       </div>

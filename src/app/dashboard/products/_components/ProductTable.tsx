@@ -287,7 +287,7 @@ export function ProductTable({
         <div className="flex flex-col md:flex-row gap-3">
           {/* Search Input */}
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400" />
             <input
               type="text"
               value={search}
@@ -300,13 +300,13 @@ export function ProductTable({
           {/* Filter Toggle Button */}
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`btn-secondary relative ${activeFilterCount > 0 ? "ring-2 ring-blue-500" : ""
+            className={`btn-secondary relative ${activeFilterCount > 0 ? "ring-2 ring-red-800" : ""
               }`}
           >
             <Filter className="w-4 h-4" />
             <span>Filter</span>
             {activeFilterCount > 0 && (
-              <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
+              <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-900 text-white text-xs font-bold flex items-center justify-center">
                 {activeFilterCount}
               </span>
             )}
@@ -316,7 +316,7 @@ export function ProductTable({
               (soft-delete) supaya bisa direstore. */}
           <button
             onClick={() => handleToggleDeleted(!showDeleted)}
-            className={`btn-secondary relative ${showDeleted ? "ring-2 ring-orange-500" : ""}`}
+            className={`btn-secondary relative ${showDeleted ? "ring-2 ring-amber-500" : ""}`}
             title="Tampilkan produk yang sudah dihapus (bisa direstore)"
           >
             <Undo2 className="w-4 h-4" />
@@ -326,11 +326,11 @@ export function ProductTable({
 
         {/* Advanced Filters */}
         {showFilters && (
-          <div className="mt-4 pt-4 border-t border-gray-200 animate-slide-down">
+          <div className="mt-4 pt-4 border-t border-stone-200 animate-slide-down">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               {/* Category Filter */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
+                <label className="block text-xs font-medium text-stone-700 mb-1">
                   Kategori
                 </label>
                 <select
@@ -365,7 +365,7 @@ export function ProductTable({
 
               {/* Supplier Filter */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
+                <label className="block text-xs font-medium text-stone-700 mb-1">
                   Supplier
                 </label>
                 <select
@@ -400,7 +400,7 @@ export function ProductTable({
 
               {/* Status Filter */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
+                <label className="block text-xs font-medium text-stone-700 mb-1">
                   Status
                 </label>
                 <select
@@ -433,7 +433,7 @@ export function ProductTable({
 
               {/* Low Stock Filter */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
+                <label className="block text-xs font-medium text-stone-700 mb-1">
                   Stok
                 </label>
                 <label className="flex items-center gap-2 glass-input text-sm cursor-pointer">
@@ -457,7 +457,7 @@ export function ProductTable({
                         });
                       }, 0);
                     }}
-                    className="w-4 h-4 text-blue-600 rounded"
+                    className="w-4 h-4 text-red-900 rounded"
                   />
                   <span>Stok Menipis</span>
                 </label>
@@ -469,7 +469,7 @@ export function ProductTable({
               <div className="mt-3 flex justify-end">
                 <button
                   onClick={handleResetFilters}
-                  className="text-sm text-blue-600 hover:text-blue-700 font-semibold"
+                  className="text-sm text-red-900 hover:text-red-900 font-semibold"
                 >
                   Reset Semua Filter
                 </button>
@@ -481,14 +481,14 @@ export function ProductTable({
 
       {/* Banner mode produk dihapus */}
       {showDeleted && (
-        <div className="mt-4 p-3 rounded-lg bg-orange-50 border border-orange-200 text-sm text-orange-800 flex items-center justify-between gap-3">
+        <div className="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800 flex items-center justify-between gap-3">
           <span>
             Menampilkan produk yang sudah dihapus. Klik tombol pulihkan
             untuk mengembalikan produk ke daftar.
           </span>
           <button
             onClick={() => handleToggleDeleted(false)}
-            className="font-semibold text-orange-700 hover:text-orange-900 whitespace-nowrap"
+            className="font-semibold text-amber-800 hover:text-amber-900 whitespace-nowrap"
           >
             Kembali ke daftar produk
           </button>
@@ -500,33 +500,33 @@ export function ProductTable({
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <tr className="bg-stone-50 border-b border-stone-200">
+                <th className="px-4 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                   Produk
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                   Kategori
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                   Satuan & Harga
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-4 py-3 text-center text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                   Stok
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-4 py-3 text-center text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-4 py-3 text-center text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
                   Aksi
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-stone-200">
               {(showDeleted ? deletedProducts : products).length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center">
-                    <div className="flex flex-col items-center justify-center text-gray-500">
-                      <Search className="w-12 h-12 mb-3 text-gray-300" />
+                    <div className="flex flex-col items-center justify-center text-stone-500">
+                      <Search className="w-12 h-12 mb-3 text-stone-300" />
                       <p className="text-lg font-semibold">Tidak ada produk</p>
                       <p className="text-sm">
                         {loadingDeleted
@@ -544,7 +544,7 @@ export function ProductTable({
                 (showDeleted ? deletedProducts : products).map((product) => (
                   <tr
                     key={product.id}
-                    className="hover:bg-gray-50 transition-colors"
+                    className="hover:bg-stone-50 transition-colors"
                   >
                     {/* Product Info */}
                     <td className="px-4 py-4">
@@ -555,26 +555,26 @@ export function ProductTable({
                           variant="thumbnail"
                         />
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-gray-900 truncate">
+                          <p className="font-semibold text-stone-900 truncate">
                             {product.name}
                           </p>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs font-mono text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
+                            <span className="text-xs font-mono text-stone-600 bg-stone-100 px-2 py-0.5 rounded">
                               {product.code}
                             </span>
                             {product.barcode && (
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-stone-500">
                                 | {product.barcode}
                               </span>
                             )}
                           </div>
                           {product.supplier && (
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-stone-500 mt-1">
                               Supplier: {product.supplier.name}
                             </p>
                           )}
                           {showDeleted && product.deletedAt && (
-                            <p className="text-xs text-orange-600 mt-1">
+                            <p className="text-xs text-amber-700 mt-1">
                               Dihapus: {new Date(product.deletedAt).toLocaleDateString("id-ID", {
                                 day: "numeric",
                                 month: "short",
@@ -589,11 +589,11 @@ export function ProductTable({
                     {/* Category */}
                     <td className="px-4 py-4">
                       <div>
-                        <p className="text-sm font-semibold text-gray-900">
+                        <p className="text-sm font-semibold text-stone-900">
                           {product.category.name}
                         </p>
                         {product.subCategory && (
-                          <p className="text-xs text-gray-600 mt-0.5">
+                          <p className="text-xs text-stone-600 mt-0.5">
                             {product.subCategory.name}
                           </p>
                         )}
@@ -611,7 +611,7 @@ export function ProductTable({
                     {/* Stock */}
                     <td className="px-4 py-4 text-center">
                       <div className="flex flex-col items-center gap-1">
-                        <span className="text-lg font-bold text-gray-900">
+                        <span className="text-lg font-bold text-stone-900">
                           {product.currentStock}
                         </span>
                         <ProductStockBadge
@@ -619,7 +619,7 @@ export function ProductTable({
                           minStock={product.minStock}
                           size="sm"
                         />
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-stone-500">
                           Min: {product.minStock}
                         </span>
                       </div>
@@ -638,7 +638,7 @@ export function ProductTable({
                           disabled={togglingStatus === product.id}
                           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${product.isActive
                             ? "bg-green-100 text-green-700 hover:bg-green-200"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            : "bg-stone-100 text-stone-700 hover:bg-stone-200"
                             } ${togglingStatus === product.id
                               ? "opacity-50 cursor-not-allowed"
                               : ""
@@ -657,7 +657,7 @@ export function ProductTable({
                           <button
                             onClick={() => handleRestore(product)}
                             disabled={restoringId === product.id}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Pulihkan produk ke daftar"
                           >
                             <RotateCcw className="w-4 h-4" />
@@ -668,17 +668,17 @@ export function ProductTable({
                         <div className="flex items-center justify-center gap-1">
                           <button
                             onClick={() => onView(product)}
-                            className="p-2 rounded-lg hover:bg-blue-100 transition-colors group"
+                            className="p-2 rounded-lg hover:bg-stone-100 transition-colors group"
                             title="Lihat Detail"
                           >
-                            <Eye className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
+                            <Eye className="w-4 h-4 text-stone-600 group-hover:scale-110 transition-transform" />
                           </button>
                           <button
                             onClick={() => onEdit(product)}
-                            className="p-2 rounded-lg hover:bg-yellow-100 transition-colors group"
+                            className="p-2 rounded-lg hover:bg-stone-100 transition-colors group"
                             title="Edit"
                           >
-                            <Edit2 className="w-4 h-4 text-yellow-600 group-hover:scale-110 transition-transform" />
+                            <Edit2 className="w-4 h-4 text-stone-600 group-hover:scale-110 transition-transform" />
                           </button>
                           <button
                             onClick={() => setDeleteProduct(product)}
@@ -689,7 +689,7 @@ export function ProductTable({
                             className={`p-2 rounded-lg transition-colors group ${product._count.saleItems > 0 ||
                               product._count.purchaseItems > 0
                               ? "opacity-50 cursor-not-allowed"
-                              : "hover:bg-red-100"
+                              : "hover:bg-red-50"
                               }`}
                             title={
                               product._count.saleItems > 0 ||
@@ -701,8 +701,8 @@ export function ProductTable({
                             <Trash2
                               className={`w-4 h-4 ${product._count.saleItems > 0 ||
                                 product._count.purchaseItems > 0
-                                ? "text-gray-400"
-                                : "text-red-600 group-hover:scale-110 transition-transform"
+                                ? "text-stone-400"
+                                : "text-red-800 group-hover:scale-110 transition-transform"
                                 }`}
                             />
                           </button>
@@ -718,9 +718,9 @@ export function ProductTable({
 
         {/* Pagination (hanya untuk daftar normal, bukan mode produk dihapus) */}
         {!showDeleted && totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
+          <div className="px-4 py-3 border-t border-stone-200 bg-stone-50">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-700">
+              <p className="text-sm text-stone-700">
                 Menampilkan <span className="font-semibold">{products.length}</span> dari{" "}
                 <span className="font-semibold">{initialTotal}</span> produk
               </p>
@@ -747,8 +747,8 @@ export function ProductTable({
                           key={page}
                           onClick={() => handlePageChange(page)}
                           className={`px-3 py-1 rounded-lg text-sm font-semibold transition-colors ${page === currentPage
-                            ? "bg-blue-600 text-white"
-                            : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+                            ? "bg-red-900 text-white"
+                            : "bg-white text-stone-700 hover:bg-stone-100 border border-stone-300"
                             }`}
                         >
                           {page}
@@ -759,7 +759,7 @@ export function ProductTable({
                       page === currentPage + 2
                     ) {
                       return (
-                        <span key={page} className="px-2 text-gray-500">
+                        <span key={page} className="px-2 text-stone-500">
                           ...
                         </span>
                       );

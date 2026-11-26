@@ -20,38 +20,22 @@ export function ProductStats({
       label: "Total Produk",
       value: totalProducts,
       icon: Package,
-      color: "blue",
-      bgColor: "bg-blue-100",
-      textColor: "text-blue-600",
-      borderColor: "border-blue-200",
     },
     {
       label: "Produk Aktif",
       value: activeProducts,
       icon: TrendingUp,
-      color: "green",
-      bgColor: "bg-green-100",
-      textColor: "text-green-600",
-      borderColor: "border-green-200",
     },
     {
       label: "Stok Menipis",
       value: lowStockProducts,
       icon: AlertTriangle,
-      color: "orange",
-      bgColor: "bg-orange-100",
-      textColor: "text-orange-600",
-      borderColor: "border-orange-200",
       alert: lowStockProducts > 0,
     },
     {
       label: "Produk Nonaktif",
       value: inactiveProducts,
       icon: PowerOff,
-      color: "gray",
-      bgColor: "bg-gray-100",
-      textColor: "text-gray-600",
-      borderColor: "border-gray-200",
     },
   ];
 
@@ -62,28 +46,26 @@ export function ProductStats({
         return (
           <div
             key={stat.label}
-            className={`glass-card p-6 border-2 ${stat.borderColor} ${
-              stat.alert ? "animate-pulse-slow" : ""
-            }`}
+            className={`glass-card p-6 ${stat.alert ? "animate-pulse-slow" : ""}`}
           >
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <p className="text-sm font-medium text-gray-600 mb-1">
+                <p className="text-sm font-medium text-stone-500 mb-1">
                   {stat.label}
                 </p>
-                <p className={`text-3xl font-bold ${stat.textColor}`}>
+                <p className="text-3xl font-semibold tabular-nums text-stone-900">
                   {stat.value.toLocaleString("id-ID")}
                 </p>
                 {stat.alert && stat.value > 0 && (
-                  <p className="text-xs text-orange-600 font-semibold mt-1">
+                  <p className="text-xs text-amber-700 font-semibold mt-1">
                     ⚠️ Perlu perhatian!
                   </p>
                 )}
               </div>
               <div
-                className={`${stat.bgColor} p-4 rounded-xl border-2 ${stat.borderColor}`}
+                className="bg-stone-100 p-4 rounded-xl border border-stone-200"
               >
-                <Icon className={`w-8 h-8 ${stat.textColor}`} />
+                <Icon className="w-8 h-8 text-stone-600" />
               </div>
             </div>
           </div>

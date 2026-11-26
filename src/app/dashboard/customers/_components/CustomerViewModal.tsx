@@ -216,10 +216,10 @@ export function CustomerViewModal({
 
   const getCustomerTypeLabel = (type: CustomerType) => {
     const types = {
-      [CustomerType.UMUM]: { label: "Umum", color: "gray" },
-      [CustomerType.REGULER]: { label: "Reguler", color: "blue" },
+      [CustomerType.UMUM]: { label: "Umum", color: "stone" },
+      [CustomerType.REGULER]: { label: "Reguler", color: "red" },
       [CustomerType.GROSIR]: { label: "Grosir", color: "green" },
-      [CustomerType.PROYEK]: { label: "Proyek", color: "purple" },
+      [CustomerType.PROYEK]: { label: "Proyek", color: "stone" },
     };
     return types[type];
   };
@@ -243,7 +243,7 @@ export function CustomerViewModal({
     COMPLETED: "bg-green-50 text-green-700 border-green-200",
     PENDING: "bg-amber-50 text-amber-700 border-amber-200",
     CANCELLED: "bg-red-50 text-red-700 border-red-200",
-    RETURN: "bg-gray-50 text-gray-700 border-gray-200",
+    RETURN: "bg-stone-50 text-stone-700 border-stone-200",
   };
 
   const debtStatusStyle: Record<string, string> = {
@@ -254,26 +254,26 @@ export function CustomerViewModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-      <div className="glass-card w-full max-w-3xl max-h-[90vh] overflow-y-auto animate-slide-up">
+    <div className="modal-overlay">
+      <div className="modal-container w-full max-w-3xl max-h-[90vh] overflow-y-auto animate-slide-up">
         {/* Header */}
-        <div className="sticky top-0 bg-white/80 backdrop-blur-sm border-b border-gray-200 p-6 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-white/80 backdrop-blur-sm border-b border-stone-200 p-6 flex items-center justify-between z-10">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <div className="w-12 h-12 rounded-xl bg-red-900 flex items-center justify-center shadow-lg shadow-red-900/20">
               <User className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">
+              <h2 className="text-2xl font-bold text-stone-900">
                 Detail Customer
               </h2>
-              <p className="text-sm text-gray-600 mt-1">{customer.code}</p>
+              <p className="text-sm text-stone-600 mt-1">{customer.code}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 transition-colors"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5 text-stone-500" />
           </button>
         </div>
 
@@ -283,21 +283,15 @@ export function CustomerViewModal({
           <div className="flex items-center gap-3 flex-wrap">
             {/* Status Badge */}
             <div
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
-                customer.isActive
-                  ? "bg-green-50 border border-green-200"
-                  : "bg-red-50 border border-red-200"
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl ${ customer.isActive ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200" }`}
             >
               {customer.isActive ? (
-                <CheckCircle className="w-5 h-5 text-green-600" />
+                <CheckCircle className="w-5 h-5 text-green-700" />
               ) : (
-                <XCircle className="w-5 h-5 text-red-600" />
+                <XCircle className="w-5 h-5 text-red-800" />
               )}
               <span
-                className={`text-sm font-semibold ${
-                  customer.isActive ? "text-green-700" : "text-red-700"
-                }`}
+                className={`text-sm font-semibold ${ customer.isActive ? "text-green-700" : "text-red-700" }`}
               >
                 {customer.isActive ? "Aktif" : "Nonaktif"}
               </span>
@@ -305,7 +299,7 @@ export function CustomerViewModal({
 
             {/* Type Badge */}
             <div
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg bg-${typeInfo.color}-50 border border-${typeInfo.color}-200`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl bg-${typeInfo.color}-50 border border-${typeInfo.color}-200`}
             >
               <Tag className={`w-5 h-5 text-${typeInfo.color}-600`} />
               <span className={`text-sm font-semibold text-${typeInfo.color}-700`}>
@@ -316,35 +310,33 @@ export function CustomerViewModal({
 
           {/* Basic Information */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <User className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-stone-900 mb-4 flex items-center gap-2">
+              <User className="w-5 h-5 text-red-900" />
               Informasi Dasar
             </h3>
             <div className="glass-card p-4 space-y-3">
-              <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-sm text-gray-600">Nama Customer:</span>
-                <span className="text-sm font-semibold text-gray-900">
+              <div className="flex justify-between py-2 border-b border-stone-100">
+                <span className="text-sm text-stone-600">Nama Customer:</span>
+                <span className="text-sm font-semibold text-stone-900">
                   {customer.name}
                 </span>
               </div>
-              <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-sm text-gray-600">Kode Customer:</span>
-                <span className="text-sm font-mono font-semibold text-blue-600">
+              <div className="flex justify-between py-2 border-b border-stone-100">
+                <span className="text-sm text-stone-600">Kode Customer:</span>
+                <span className="text-sm font-mono font-semibold text-red-900">
                   {customer.code}
                 </span>
               </div>
-              <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-sm text-gray-600">Tipe Customer:</span>
+              <div className="flex justify-between py-2 border-b border-stone-100">
+                <span className="text-sm text-stone-600">Tipe Customer:</span>
                 <span className={`text-sm font-semibold text-${typeInfo.color}-600`}>
                   {typeInfo.label}
                 </span>
               </div>
               <div className="flex justify-between py-2">
-                <span className="text-sm text-gray-600">Status:</span>
+                <span className="text-sm text-stone-600">Status:</span>
                 <span
-                  className={`text-sm font-semibold ${
-                    customer.isActive ? "text-green-600" : "text-red-600"
-                  }`}
+                  className={`text-sm font-semibold ${ customer.isActive ? "text-green-700" : "text-red-800" }`}
                 >
                   {customer.isActive ? "Aktif" : "Nonaktif"}
                 </span>
@@ -354,25 +346,25 @@ export function CustomerViewModal({
 
           {/* Contact Information */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Phone className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-stone-900 mb-4 flex items-center gap-2">
+              <Phone className="w-5 h-5 text-red-900" />
               Informasi Kontak
             </h3>
             <div className="glass-card p-4 space-y-3">
-              <div className="flex items-center gap-3 py-2 border-b border-gray-100">
-                <Phone className="w-4 h-4 text-gray-400" />
+              <div className="flex items-center gap-3 py-2 border-b border-stone-100">
+                <Phone className="w-4 h-4 text-stone-400" />
                 <div className="flex-1 flex justify-between">
-                  <span className="text-sm text-gray-600">Telepon:</span>
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm text-stone-600">Telepon:</span>
+                  <span className="text-sm font-semibold text-stone-900">
                     {customer.phone || "-"}
                   </span>
                 </div>
               </div>
               <div className="flex items-center gap-3 py-2">
-                <Mail className="w-4 h-4 text-gray-400" />
+                <Mail className="w-4 h-4 text-stone-400" />
                 <div className="flex-1 flex justify-between">
-                  <span className="text-sm text-gray-600">Email:</span>
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm text-stone-600">Email:</span>
+                  <span className="text-sm font-semibold text-stone-900">
                     {customer.email || "-"}
                   </span>
                 </div>
@@ -382,33 +374,33 @@ export function CustomerViewModal({
 
           {/* Address Information */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-stone-900 mb-4 flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-red-900" />
               Alamat
             </h3>
             <div className="glass-card p-4 space-y-3">
-              <div className="py-2 border-b border-gray-100">
-                <span className="text-sm text-gray-600 block mb-1">
+              <div className="py-2 border-b border-stone-100">
+                <span className="text-sm text-stone-600 block mb-1">
                   Alamat Lengkap:
                 </span>
-                <span className="text-sm text-gray-900">
+                <span className="text-sm text-stone-900">
                   {customer.address || "-"}
                 </span>
               </div>
-              <div className="flex items-center gap-3 py-2 border-b border-gray-100">
-                <Building2 className="w-4 h-4 text-gray-400" />
+              <div className="flex items-center gap-3 py-2 border-b border-stone-100">
+                <Building2 className="w-4 h-4 text-stone-400" />
                 <div className="flex-1 flex justify-between">
-                  <span className="text-sm text-gray-600">Kota:</span>
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm text-stone-600">Kota:</span>
+                  <span className="text-sm font-semibold text-stone-900">
                     {customer.city || "-"}
                   </span>
                 </div>
               </div>
               <div className="flex items-center gap-3 py-2">
-                <Building2 className="w-4 h-4 text-gray-400" />
+                <Building2 className="w-4 h-4 text-stone-400" />
                 <div className="flex-1 flex justify-between">
-                  <span className="text-sm text-gray-600">Provinsi:</span>
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm text-stone-600">Provinsi:</span>
+                  <span className="text-sm font-semibold text-stone-900">
                     {customer.province || "-"}
                   </span>
                 </div>
@@ -418,22 +410,22 @@ export function CustomerViewModal({
 
           {/* Timestamps */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-stone-900 mb-4 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-red-900" />
               Informasi Waktu
             </h3>
             <div className="glass-card p-4 space-y-3">
-              <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-sm text-gray-600">Dibuat pada:</span>
-                <span className="text-sm text-gray-900">
+              <div className="flex justify-between py-2 border-b border-stone-100">
+                <span className="text-sm text-stone-600">Dibuat pada:</span>
+                <span className="text-sm text-stone-900">
                   {formatDate(customer.createdAt)}
                 </span>
               </div>
               <div className="flex justify-between py-2">
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-stone-600">
                   Terakhir diperbarui:
                 </span>
-                <span className="text-sm text-gray-900">
+                <span className="text-sm text-stone-900">
                   {formatDate(customer.updatedAt)}
                 </span>
               </div>
@@ -442,24 +434,24 @@ export function CustomerViewModal({
 
           {/* Poin Customer */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Star className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-stone-900 mb-4 flex items-center gap-2">
+              <Star className="w-5 h-5 text-red-900" />
               Poin Customer
             </h3>
             <div className="glass-card p-4 space-y-3">
               <div className="flex justify-between items-center py-2">
-                <span className="text-sm text-gray-600">Saldo poin:</span>
+                <span className="text-sm text-stone-600">Saldo poin:</span>
                 <span className="text-lg font-bold text-amber-600">
                   {points.toLocaleString("id-ID")} poin
                 </span>
               </div>
               {isUmum ? (
-                <p className="text-xs text-gray-500 border-t border-gray-100 pt-3">
+                <p className="text-xs text-stone-500 border-t border-stone-100 pt-3">
                   Customer Umum tidak mendapatkan poin.
                 </p>
               ) : isSuperAdmin ? (
-                <div className="border-t border-gray-100 pt-3">
-                  <p className="text-xs text-gray-500 mb-2">
+                <div className="border-t border-stone-100 pt-3">
+                  <p className="text-xs text-stone-500 mb-2">
                     Atur poin (hanya SUPER_ADMIN):
                   </p>
                   <div className="flex items-center gap-2">
@@ -469,12 +461,12 @@ export function CustomerViewModal({
                       value={pointsInput}
                       onChange={(e) => setPointsInput(e.target.value)}
                       placeholder="Jumlah poin"
-                      className="w-32 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-32 px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-900"
                     />
                     <button
                       onClick={() => handleAdjustPoints(1)}
                       disabled={adjustingPoints}
-                      className="px-3 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-1"
+                      className="px-3 py-2 bg-green-700 text-white text-sm font-semibold rounded-xl hover:bg-green-700 disabled:opacity-50 flex items-center gap-1"
                     >
                       <Plus className="w-4 h-4" />
                       Tambah
@@ -482,17 +474,17 @@ export function CustomerViewModal({
                     <button
                       onClick={() => handleAdjustPoints(-1)}
                       disabled={adjustingPoints}
-                      className="px-3 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-1"
+                      className="px-3 py-2 bg-red-900 text-white text-sm font-semibold rounded-xl hover:bg-red-800 disabled:opacity-50 flex items-center gap-1"
                     >
                       <Minus className="w-4 h-4" />
                       Kurangi
                     </button>
                     {adjustingPoints && (
-                      <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                      <Loader2 className="w-4 h-4 animate-spin text-red-900" />
                     )}
                   </div>
                   {pointsMessage && (
-                    <p className="text-xs text-gray-600 mt-2">{pointsMessage}</p>
+                    <p className="text-xs text-stone-600 mt-2">{pointsMessage}</p>
                   )}
                 </div>
               ) : null}
@@ -501,31 +493,31 @@ export function CustomerViewModal({
 
           {/* Transaction History */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <History className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-stone-900 mb-4 flex items-center gap-2">
+              <History className="w-5 h-5 text-red-900" />
               Riwayat Transaksi
             </h3>
             {loadingHistory ? (
               <div className="glass-card p-8 flex items-center justify-center gap-2">
-                <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-                <span className="text-sm text-gray-600">Memuat riwayat...</span>
+                <Loader2 className="w-5 h-5 animate-spin text-red-900" />
+                <span className="text-sm text-stone-600">Memuat riwayat...</span>
               </div>
             ) : historyError ? (
               <div className="glass-card p-8 text-center">
-                <p className="text-sm text-red-600">{historyError}</p>
+                <p className="text-sm text-red-800">{historyError}</p>
                 <button
                   onClick={() => loadHistory()}
-                  className="mt-3 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700"
+                  className="mt-3 px-4 py-2 bg-red-900 text-white text-sm font-semibold rounded-xl hover:bg-red-800"
                 >
                   Coba Lagi
                 </button>
               </div>
             ) : sales.length === 0 && debts.length === 0 ? (
               <div className="glass-card p-8 text-center">
-                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                  <Calendar className="w-8 h-8 text-gray-400" />
+                <div className="w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center mx-auto mb-3">
+                  <Calendar className="w-8 h-8 text-stone-400" />
                 </div>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-stone-600">
                   Belum ada transaksi untuk customer ini
                 </p>
               </div>
@@ -534,18 +526,18 @@ export function CustomerViewModal({
                 {/* Ringkasan */}
                 <div className="grid grid-cols-3 gap-3">
                   <div className="glass-card p-3 text-center">
-                    <p className="text-xs text-gray-500">Transaksi</p>
-                    <p className="text-lg font-bold text-gray-900">{sales.length}</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-stone-500">Transaksi</p>
+                    <p className="text-lg font-bold text-stone-900">{sales.length}</p>
                   </div>
                   <div className="glass-card p-3 text-center">
-                    <p className="text-xs text-gray-500">Total Belanja</p>
-                    <p className="text-sm font-bold text-gray-900 mt-1">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-stone-500">Total Belanja</p>
+                    <p className="text-sm font-bold text-stone-900 mt-1">
                       {formatCurrency(totalBelanja)}
                     </p>
                   </div>
                   <div className="glass-card p-3 text-center">
-                    <p className="text-xs text-gray-500">Sisa Utang</p>
-                    <p className="text-sm font-bold text-red-600 mt-1">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-stone-500">Sisa Utang</p>
+                    <p className="text-sm font-bold text-red-800 mt-1">
                       {formatCurrency(totalSisaUtang)}
                     </p>
                   </div>
@@ -557,7 +549,7 @@ export function CustomerViewModal({
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="border-b border-gray-100 text-left text-gray-500">
+                          <tr className="border-b border-stone-100 text-left text-stone-500">
                             <th className="px-4 py-3 font-medium">Tanggal</th>
                             <th className="px-4 py-3 font-medium">Invoice</th>
                             <th className="px-4 py-3 font-medium">Pembayaran</th>
@@ -567,22 +559,22 @@ export function CustomerViewModal({
                         </thead>
                         <tbody>
                           {sales.map((sale) => (
-                            <tr key={sale.id} className="border-b border-gray-100 last:border-0">
-                              <td className="px-4 py-3 text-gray-900 whitespace-nowrap">
+                            <tr key={sale.id} className="border-b border-stone-100 last:border-0">
+                              <td className="px-4 py-3 text-stone-900 whitespace-nowrap">
                                 {formatShortDate(sale.saleDate)}
                               </td>
-                              <td className="px-4 py-3 font-mono font-semibold text-blue-600">
+                              <td className="px-4 py-3 font-mono font-semibold text-red-900">
                                 {sale.invoiceNumber}
                               </td>
-                              <td className="px-4 py-3 text-gray-900">{sale.paymentMethod}</td>
+                              <td className="px-4 py-3 text-stone-900">{sale.paymentMethod}</td>
                               <td className="px-4 py-3">
                                 <span
-                                  className={`px-2 py-0.5 rounded border text-xs font-medium ${saleStatusStyle[sale.status] || "bg-gray-50 text-gray-700 border-gray-200"}`}
+                                  className={`px-2 py-0.5 rounded border text-xs font-medium ${saleStatusStyle[sale.status] || "bg-stone-50 text-stone-700 border-stone-200"}`}
                                 >
                                   {sale.status}
                                 </span>
                               </td>
-                              <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                              <td className="px-4 py-3 text-right font-semibold text-stone-900">
                                 {formatCurrency(sale.grandTotal)}
                               </td>
                             </tr>
@@ -596,14 +588,14 @@ export function CustomerViewModal({
                 {/* Daftar utang */}
                 {debts.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                    <h4 className="text-sm font-semibold text-stone-900 mb-2">
                       Utang Customer
                     </h4>
                     <div className="glass-card overflow-hidden">
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                           <thead>
-                            <tr className="border-b border-gray-100 text-left text-gray-500">
+                            <tr className="border-b border-stone-100 text-left text-stone-500">
                               <th className="px-4 py-3 font-medium">No. Utang</th>
                               <th className="px-4 py-3 font-medium">Invoice</th>
                               <th className="px-4 py-3 font-medium">Jatuh Tempo</th>
@@ -613,24 +605,24 @@ export function CustomerViewModal({
                           </thead>
                           <tbody>
                             {debts.map((debt) => (
-                              <tr key={debt.id} className="border-b border-gray-100 last:border-0">
-                                <td className="px-4 py-3 font-mono font-semibold text-blue-600">
+                              <tr key={debt.id} className="border-b border-stone-100 last:border-0">
+                                <td className="px-4 py-3 font-mono font-semibold text-red-900">
                                   {debt.debtNumber}
                                 </td>
-                                <td className="px-4 py-3 font-mono text-gray-900">
+                                <td className="px-4 py-3 font-mono text-stone-900">
                                   {debt.saleInvoiceNumber}
                                 </td>
-                                <td className="px-4 py-3 text-gray-900 whitespace-nowrap">
+                                <td className="px-4 py-3 text-stone-900 whitespace-nowrap">
                                   {formatShortDate(debt.dueDate)}
                                 </td>
                                 <td className="px-4 py-3">
                                   <span
-                                    className={`px-2 py-0.5 rounded border text-xs font-medium ${debtStatusStyle[debt.status] || "bg-gray-50 text-gray-700 border-gray-200"}`}
+                                    className={`px-2 py-0.5 rounded border text-xs font-medium ${debtStatusStyle[debt.status] || "bg-stone-50 text-stone-700 border-stone-200"}`}
                                   >
                                     {debt.status}
                                   </span>
                                 </td>
-                                <td className="px-4 py-3 text-right font-semibold text-red-600">
+                                <td className="px-4 py-3 text-right font-semibold text-red-800">
                                   {formatCurrency(debt.remainingDebt)}
                                 </td>
                               </tr>
@@ -647,7 +639,7 @@ export function CustomerViewModal({
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-white/80 backdrop-blur-sm border-t border-gray-200 p-6">
+        <div className="sticky bottom-0 bg-stone-50/90 backdrop-blur-sm border-t border-stone-200 p-6">
           <button onClick={onClose} className="w-full btn-secondary">
             Tutup
           </button>

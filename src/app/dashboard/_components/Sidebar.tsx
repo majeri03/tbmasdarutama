@@ -204,18 +204,21 @@ export default function Sidebar({
             // tidak tampil "T" biru padahal logo sebenarnya ada.
             <div
               aria-hidden
-              className="w-8 h-8 rounded-lg bg-gray-200/70 animate-pulse flex-shrink-0"
+              className="w-8 h-8 rounded-lg bg-stone-200/70 animate-pulse flex-shrink-0"
             />
           ) : (
             // FALLBACK JIKA TIDAK ADA LOGO (Inisial Huruf) — hanya tampil
             // setelah fetch selesai dan terbukti tidak ada logo.
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white shadow-md shadow-blue-200 flex-shrink-0 transition-transform group-hover:scale-110">
+            // Redesain 26 Nov (WS-B): merah gelap #7F1D1D (red-900),
+            // bukan gradien biru→ungu.
+            <div className="w-8 h-8 rounded-lg bg-red-900 flex items-center justify-center text-white shadow-md shadow-red-900/25 flex-shrink-0 transition-transform group-hover:scale-110">
               <span className="font-bold text-sm">{storeName.charAt(0)}</span>
             </div>
           )}
 
-          {/* NAMA TOKO */}
-          <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-800 to-gray-600 truncate">
+          {/* NAMA TOKO — redesain 26 Nov (WS-B): teks solid stone-900
+              (#1C1917), bukan gradien abu-abu. */}
+          <span className="text-lg font-bold text-stone-900 truncate">
             {storeName}
           </span>
         </Link>
@@ -228,18 +231,18 @@ export default function Sidebar({
           <div className="space-y-6 animate-pulse px-3 mt-4">
             {[1, 2, 3].map((g) => (
               <div key={g} className="space-y-3">
-                <div className="h-3 w-16 bg-gray-200/50 rounded" />
+                <div className="h-3 w-16 bg-stone-200/50 rounded" />
                 <div className="space-y-2">
                   {[1, 2].map((i) => (
-                    <div key={i} className="flex items-center gap-3 h-10 px-3 rounded-lg bg-gray-100/30" />
+                    <div key={i} className="flex items-center gap-3 h-10 px-3 rounded-lg bg-stone-100/30" />
                   ))}
                 </div>
               </div>
             ))}
           </div>
         ) : filteredMenuGroups.length === 0 ? (
-          <div className="px-4 py-8 text-center text-xs text-gray-500 bg-red-50/10 rounded-xl border border-red-500/10 m-2">
-            Tidak ada akses menu.<br/>Coba <button className="underline text-blue-600 font-bold hover:text-blue-700" onClick={async () => {
+          <div className="px-4 py-8 text-center text-xs text-stone-500 bg-red-900/[0.06] rounded-xl border border-red-900/10 m-2">
+            Tidak ada akses menu.<br/>Coba <button className="underline text-red-900 font-bold hover:text-red-800" onClick={async () => {
               const { logout } = await import("@/lib/actions/auth.actions");
               await logout();
             }}>Logout</button> dan login kembali.
@@ -247,7 +250,9 @@ export default function Sidebar({
         ) : (
           filteredMenuGroups.map((group) => (
             <div key={group.label} className="mb-4">
-              <div className="px-3 py-1 text-xs font-bold text-gray-500 uppercase tracking-wider select-none">
+              {/* Label grup — redesain 26 Nov (WS-B): 10px, uppercase,
+                  tracking lebar, stone-400 (#A8A29E). */}
+              <div className="px-3 py-1 text-[10px] font-semibold text-stone-400 uppercase tracking-wider select-none">
                 {group.label}
               </div>
               <div className="space-y-1">
@@ -262,7 +267,10 @@ export default function Sidebar({
                       onClose?.();
                     }}
                   >
-                    <span className="w-5 h-5">{item.icon}</span>
+                    {/* Ikon diseragamkan 18px + stroke tipis (1.75) lewat
+                        CSS — berlaku untuk semua ikon lucide termasuk
+                        NotificationBellIcon, tanpa mengubah data menu. */}
+                    <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center [&>svg]:h-[18px] [&>svg]:w-[18px] [&>svg]:[stroke-width:1.75]">{item.icon}</span>
                     <span>{item.label}</span>
                   </Link>
                 ))}
@@ -271,21 +279,22 @@ export default function Sidebar({
           ))
         )}
       </nav>
-      {/* Logout Button */}
+      {/* Logout Button — redesain 26 Nov (WS-B): netral (stone-600),
+          hover latar merah gelap sangat lembut + teks #7F1D1D. */}
       <div className="px-4 pb-4 relative z-10">
         <button
           onClick={async () => {
             const { logout } = await import("@/lib/actions/auth.actions");
             await logout();
           }}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-red-600 hover:bg-red-50 transition-all"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-stone-600 hover:bg-red-900/[0.08] hover:text-red-900 transition-all"
         >
-          <LogOut className="w-5 h-5" />
+          <LogOut className="h-[18px] w-[18px]" />
           <span>Logout</span>
         </button>
       </div>
       {/* Footer */}
-      <div className="px-6 py-4 text-xs text-gray-400 relative z-10">
+      <div className="px-6 py-4 text-xs text-stone-400 relative z-10">
         &copy; {new Date().getFullYear()} TB Masdar Utama
       </div>
     </div>
@@ -295,14 +304,17 @@ export default function Sidebar({
   return (
     <>
       {/* Desktop */}
-      {/* Glassmorphism (26 Nov 2026, permintaan Jery): sidebar kaca buram
-          tanpa background putih dan tanpa garis tepi. JANGAN pakai class
-          glass-card di aside ini (position:relative + overflow:hidden +
-          rounded-2xl melawan `fixed` + membuat sidebar docking terlihat
-          seperti kartu mengambang). Styling kaca ditulis eksplisit:
-          gradien putih transparan + backdrop-blur-2xl, tanpa border-r
-          dan tanpa shadow. Scrollbar disembunyikan di nav (lihat atas). */}
-      <aside className="fixed z-30 top-0 left-0 h-screen w-64 hidden md:flex flex-col overflow-hidden bg-gradient-to-b from-white/25 via-white/10 to-white/5 backdrop-blur-2xl backdrop-saturate-150">
+      {/* Glassmorphism (26 Nov 2026, permintaan Jery) + redesain 26 Nov
+          (WS-B): sidebar kaca buram dengan opasitas putih sedikit
+          dinaikkan supaya terbaca di atas background baru, plus hairline
+          tipis di tepi kanan supaya panel tidak hilang di atas background
+          terang. JANGAN pakai class glass-card di aside ini
+          (position:relative + overflow:hidden + rounded-2xl melawan
+          `fixed` + membuat sidebar docking terlihat seperti kartu
+          mengambang). Styling kaca ditulis eksplisit: gradien putih
+          transparan + backdrop-blur-2xl + hairline, tanpa shadow.
+          Scrollbar disembunyikan di nav (lihat atas). */}
+      <aside className="fixed z-30 top-0 left-0 h-screen w-64 hidden md:flex flex-col overflow-hidden border-r border-[rgba(28,25,23,0.08)] bg-gradient-to-b from-white/40 via-white/20 to-white/10 backdrop-blur-2xl backdrop-saturate-150">
         {sidebarContent}
       </aside>
       {/* Mobile Drawer */}
@@ -317,7 +329,7 @@ export default function Sidebar({
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
           </Transition.Child>
           <div className="fixed inset-0 flex">
             <Transition.Child
@@ -329,18 +341,21 @@ export default function Sidebar({
               leaveFrom="translate-x-0"
               leaveTo="-translate-x-full"
             >
-              {/* Panel drawer kaca — sama seperti sidebar desktop: tanpa
-                  border-r, background putih transparan + blur kuat.
+              {/* Panel drawer kaca — sama seperti sidebar desktop:
+                  gradien putih transparan + blur kuat + hairline kanan.
                   `relative` + `overflow-hidden` ditulis eksplisit karena
                   sebelumnya datang dari class glass-card. */}
-              <Dialog.Panel className="relative w-64 h-full overflow-hidden rounded-r-2xl bg-white/10 backdrop-blur-2xl backdrop-saturate-150 shadow-2xl flex flex-col">
-                {/* Close button */}
+              <Dialog.Panel className="relative w-64 h-full overflow-hidden rounded-r-2xl border-r border-[rgba(28,25,23,0.08)] bg-gradient-to-b from-white/40 via-white/20 to-white/10 backdrop-blur-2xl backdrop-saturate-150 shadow-2xl flex flex-col">
+                {/* Close button — redesain 26 Nov (WS-B): pil kaca putih
+                    eksplisit (Tailwind) + ikon stone-600 netral, bukan
+                    class glass-card (milik globals.css / WS-A) dan bukan
+                    ikon biru. */}
                 <button
-                  className="absolute top-4 right-4 glass-card p-2 rounded-full shadow border border-white/30 z-20"
+                  className="absolute top-4 right-4 bg-white/70 backdrop-blur-md border border-[rgba(28,25,23,0.08)] p-2 rounded-full shadow-sm z-20"
                   onClick={() => { setDrawerOpen(false); onClose?.(); }}
                   aria-label="Tutup menu"
                 >
-                  <X className="w-6 h-6 text-blue-600" />
+                  <X className="h-5 w-5 text-stone-600" />
                 </button>
                 {sidebarContent}
               </Dialog.Panel>

@@ -59,11 +59,11 @@ export default function ReportsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-[#111111] flex items-center gap-3">
-            <TrendingUp className="w-8 h-8 text-[#111111]" />
+          <h1 className="text-3xl font-bold text-[#1C1917] flex items-center gap-3">
+            <TrendingUp className="w-8 h-8 text-[#1C1917]" />
             Laporan
           </h1>
-          <p className="text-[#6B7280] mt-2">
+          <p className="text-[#57534E] mt-2">
             Pilih laporan yang ingin dilihat atau dicetak.
           </p>
         </div>
@@ -78,23 +78,23 @@ export default function ReportsPage() {
             <Link
               key={menu.href}
               href={menu.href}
-              className="group rounded-xl border border-gray-200 bg-white p-6 transition-all hover:border-[#111111] hover:shadow-md"
+              className="group glass-card p-6 transition-all hover:shadow-md"
             >
               {/* Icon */}
-              <div className="w-14 h-14 rounded-xl border border-[#111111] bg-white flex items-center justify-center mb-4">
-                <Icon className="w-7 h-7 text-[#111111]" />
+              <div className="w-14 h-14 rounded-xl border border-[rgba(28,25,23,0.08)] bg-stone-100 flex items-center justify-center mb-4">
+                <Icon className="w-7 h-7 text-[#1C1917]" />
               </div>
 
               {/* Content */}
-              <h3 className="text-xl font-bold text-[#111111] mb-2">
+              <h3 className="text-xl font-bold text-[#1C1917] mb-2">
                 {menu.title}
               </h3>
-              <p className="text-[#6B7280] text-sm leading-relaxed">
+              <p className="text-[#57534E] text-sm leading-relaxed">
                 {menu.description}
               </p>
 
               {/* Arrow */}
-              <div className="mt-4 flex items-center gap-1 text-[#111111] font-semibold text-sm group-hover:text-red-900 transition-colors">
+              <div className="mt-4 flex items-center gap-1 text-[#1C1917] font-semibold text-sm group-hover:text-[#7F1D1D] transition-colors">
                 <span>Lihat Laporan</span>
                 <span className="group-hover:translate-x-1 transition-transform">→</span>
               </div>
@@ -104,14 +104,14 @@ export default function ReportsPage() {
       </div>
 
       {/* Info Box */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6">
+      <div className="glass-card p-6">
         <div className="flex items-start gap-4">
-          <div className="rounded-lg border border-[#111111] bg-white p-3">
-            <FileText className="w-6 h-6 text-[#111111]" />
+          <div className="rounded-lg border border-[rgba(28,25,23,0.08)] bg-stone-100 p-3">
+            <FileText className="w-6 h-6 text-[#1C1917]" />
           </div>
           <div>
-            <h3 className="font-bold text-[#111111] mb-2">Tips Penggunaan Laporan</h3>
-            <ul className="text-sm text-[#6B7280] space-y-1">
+            <h3 className="font-bold text-[#1C1917] mb-2">Tips Penggunaan Laporan</h3>
+            <ul className="text-sm text-[#57534E] space-y-1">
               <li>• Pilih periode tanggal untuk laporan yang lebih spesifik</li>
               <li>• Gunakan tombol <strong>Print</strong> untuk mencetak laporan</li>
               <li>• Gunakan tombol <strong>Download PDF</strong> untuk menyimpan laporan</li>

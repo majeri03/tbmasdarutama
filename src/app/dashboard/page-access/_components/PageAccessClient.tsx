@@ -63,9 +63,9 @@ export default function PageAccessClient({ initialMatrix }: PageAccessClientProp
       {error && <div className="p-3 bg-red-100 text-red-700 rounded-lg text-sm">{error}</div>}
       {msg && <div className="p-3 bg-green-100 text-green-700 rounded-lg text-sm transition-opacity">{msg}</div>}
 
-      <div className="bg-white border rounded-xl overflow-hidden shadow">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="glass-card overflow-hidden">
+        <table className="min-w-full divide-y divide-stone-200">
+          <thead className="bg-stone-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Halaman</th>
               <th className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase">Admin</th>
@@ -73,7 +73,7 @@ export default function PageAccessClient({ initialMatrix }: PageAccessClientProp
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Update Terakhir</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="divide-y divide-stone-200">
             {PAGE_KEYS.map((page) => {
               const rAdmin = matrix.find((m) => m.pageKey === page.key && m.role === "ADMIN");
               const rKasir = matrix.find((m) => m.pageKey === page.key && m.role === "KASIR");
@@ -83,14 +83,14 @@ export default function PageAccessClient({ initialMatrix }: PageAccessClientProp
                   : rAdmin || rKasir;
 
               return (
-                <tr key={page.key} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 font-semibold text-gray-900">{page.label}</td>
+                <tr key={page.key} className="hover:bg-stone-50">
+                  <td className="px-6 py-4 font-semibold text-[#1C1917]">{page.label}</td>
                   <td className="px-6 py-4 text-center">
                     <button
                       onClick={() => toggle(page.key, Role.ADMIN, !!rAdmin?.enabled)}
                       disabled={updating !== null}
                       className={`px-3 py-1 rounded text-xs font-bold text-white transition ${
-                        rAdmin?.enabled ? "bg-green-600 hover:bg-green-700" : "bg-gray-400 hover:bg-gray-500"
+                        rAdmin?.enabled ? "bg-[#7F1D1D] hover:bg-[#991B1B]" : "bg-stone-400 hover:bg-stone-500"
                       } ${updating === `${page.key}-ADMIN` ? "opacity-50" : ""}`}
                     >
                       {rAdmin?.enabled ? "AKTIF" : "NONAKTIF"}
@@ -101,7 +101,7 @@ export default function PageAccessClient({ initialMatrix }: PageAccessClientProp
                       onClick={() => toggle(page.key, Role.KASIR, !!rKasir?.enabled)}
                       disabled={updating !== null}
                       className={`px-3 py-1 rounded text-xs font-bold text-white transition ${
-                        rKasir?.enabled ? "bg-green-600 hover:bg-green-700" : "bg-gray-400 hover:bg-gray-500"
+                        rKasir?.enabled ? "bg-[#7F1D1D] hover:bg-[#991B1B]" : "bg-stone-400 hover:bg-stone-500"
                       } ${updating === `${page.key}-KASIR` ? "opacity-50" : ""}`}
                     >
                       {rKasir?.enabled ? "AKTIF" : "NONAKTIF"}

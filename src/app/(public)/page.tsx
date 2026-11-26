@@ -19,7 +19,7 @@ export default async function LandingPage() {
   const { landing, store, products } = result.data;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[#FAFAF8] text-[#1C1917]">
       {/* Navbar */}
       <LandingNavbar store={store} />
 

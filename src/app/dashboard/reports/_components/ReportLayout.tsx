@@ -26,15 +26,15 @@ export default function ReportLayout({
     <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header layar */}
-        <div className="no-print rounded-xl border border-gray-200 bg-white p-6">
+        <div className="no-print glass-card p-6">
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-4">
-              <div className="rounded-lg bg-[#111111] p-3">
+              <div className="rounded-lg bg-[#1C1917] p-3">
                 <FileText className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-[#111111]">{title}</h1>
-                <p className="mt-1 text-[#6B7280]">{description}</p>
+                <h1 className="text-2xl font-bold text-[#1C1917]">{title}</h1>
+                <p className="mt-1 text-[#57534E]">{description}</p>
               </div>
             </div>
 
@@ -44,7 +44,7 @@ export default function ReportLayout({
                 <button
                   onClick={onPrint}
                   disabled={isLoading}
-                  className="inline-flex items-center gap-2 rounded-lg border border-[#111111] bg-white px-4 py-2 text-sm font-semibold text-[#111111] hover:bg-[#FAFAFA] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-lg border border-[rgba(28,25,23,0.16)] bg-white px-4 py-2 text-sm font-semibold text-[#1C1917] hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Printer className="w-4 h-4" />
                   Print
@@ -54,7 +54,7 @@ export default function ReportLayout({
                 <button
                   onClick={onDownload}
                   disabled={isLoading}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#111111] px-4 py-2 text-sm font-semibold text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#7F1D1D] px-4 py-2 text-sm font-semibold text-white hover:bg-[#991B1B] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Download className="w-4 h-4" />
                   Download PDF
@@ -64,11 +64,11 @@ export default function ReportLayout({
           </div>
 
           {/* Filters */}
-          {filters && <div className="mt-6 pt-6 border-t border-gray-200 no-print">{filters}</div>}
+          {filters && <div className="mt-6 pt-6 border-t border-stone-200 no-print">{filters}</div>}
         </div>
 
         {/* Content */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
+        <div className="glass-card p-6">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="spinner-large" />

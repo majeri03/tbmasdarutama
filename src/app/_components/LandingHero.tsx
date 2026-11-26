@@ -69,10 +69,6 @@ export default function LandingHero({ landing }: Props) {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      {/* Keyframes lokal untuk animasi gradien fallback — sengaja di sini
-          agar tidak perlu menyentuh globals.css (bukan file workstream ini). */}
-      <style>{`@keyframes ws-o-hero-gradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }`}</style>
-
       {/* Background Carousel */}
       {hasImages ? (
         <>
@@ -138,21 +134,17 @@ export default function LandingHero({ landing }: Props) {
         // gradien tetap, tapi dibuat hidup (bergerak pelan) + hiasan lembut,
         // supaya hero tidak terlihat seperti banner statis yang "mati".
         <>
-          <div
-            className="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500"
-            style={{
-              backgroundSize: "200% 200%",
-              animation: "ws-o-hero-gradient 12s ease-in-out infinite",
-            }}
-          />
-          <div className="absolute -top-24 -left-24 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
-          <div className="absolute -bottom-32 -right-16 w-96 h-96 bg-black/10 rounded-full blur-3xl" />
+          {/* Fallback saat belum ada gambar hero: panel gelap netral (ink),
+              bukan gradien warna. */}
+          <div className="absolute inset-0 bg-[#1C1917]" />
+          <div className="absolute -top-24 -left-24 w-96 h-96 bg-white/[0.06] rounded-full blur-3xl" />
+          <div className="absolute -bottom-32 -right-16 w-96 h-96 bg-[#7F1D1D]/20 rounded-full blur-3xl" />
         </>
       )}
 
       {/* Hero Content */}
       <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
-        <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 animate-slide-up">
+        <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-6 animate-slide-up">
           {landing?.heroTitle || "TB Masdar Utama"}
         </h1>
         <p className="text-xl md:text-2xl text-white/90 mb-8 animate-slide-up animation-delay-200">

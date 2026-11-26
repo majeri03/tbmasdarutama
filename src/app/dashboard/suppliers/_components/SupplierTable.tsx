@@ -95,7 +95,7 @@ export function SupplierTable({
           {/* Search */}
           <form onSubmit={handleSearch} className="flex-1 flex gap-3">
             <div className="flex-1 relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400" />
               <input
                 type="text"
                 value={searchInput}
@@ -108,7 +108,7 @@ export function SupplierTable({
                 <button
                   type="button"
                   onClick={handleSearchClear}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition-colors"
                 >
                   <span className="text-lg">×</span>
                 </button>
@@ -136,8 +136,8 @@ export function SupplierTable({
               onClick={() => onFilterStatus(null)}
               className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
                 activeFilter === null
-                  ? "bg-blue-600 text-white shadow-lg"
-                  : "bg-white/50 text-gray-700 hover:bg-white/80"
+                  ? "bg-red-900 text-white shadow-lg"
+                  : "bg-white/50 text-stone-700 hover:bg-white/80"
               }`}
               disabled={loading}
             >
@@ -147,8 +147,8 @@ export function SupplierTable({
               onClick={() => onFilterStatus(true)}
               className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
                 activeFilter === true
-                  ? "bg-green-600 text-white shadow-lg"
-                  : "bg-white/50 text-gray-700 hover:bg-white/80"
+                  ? "bg-red-900 text-white shadow-lg"
+                  : "bg-white/50 text-stone-700 hover:bg-white/80"
               }`}
               disabled={loading}
             >
@@ -158,8 +158,8 @@ export function SupplierTable({
               onClick={() => onFilterStatus(false)}
               className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
                 activeFilter === false
-                  ? "bg-red-600 text-white shadow-lg"
-                  : "bg-white/50 text-gray-700 hover:bg-white/80"
+                  ? "bg-red-900 text-white shadow-lg"
+                  : "bg-white/50 text-stone-700 hover:bg-white/80"
               }`}
               disabled={loading}
             >
@@ -174,25 +174,21 @@ export function SupplierTable({
         {loading ? (
           // Loading State
           <div className="p-12 text-center">
-            <Loader2 className="w-8 h-8 animate-spin text-green-600 mx-auto mb-3" />
-            <p className="text-gray-600 text-sm">Memuat data supplier...</p>
+            <Loader2 className="w-8 h-8 animate-spin text-stone-600 mx-auto mb-3" />
+            <p className="text-stone-600 text-sm">Memuat data supplier...</p>
           </div>
         ) : suppliers.length === 0 ? (
           // Empty State
           <div className="p-12 text-center">
             <div
-              className="inline-flex p-4 rounded-2xl mb-4"
-              style={{
-                background: "rgba(34, 197, 94, 0.1)",
-                border: "1px solid rgba(34, 197, 94, 0.2)",
-              }}
+              className="inline-flex p-4 rounded-2xl mb-4 bg-stone-100 border border-stone-200"
             >
-              <Truck className="w-8 h-8 text-green-600" />
+              <Truck className="w-8 h-8 text-stone-600" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">
+            <h3 className="text-lg font-bold text-stone-900 mb-2">
               Belum Ada Data Supplier
             </h3>
-            <p className="text-gray-600 text-sm">
+            <p className="text-stone-600 text-sm">
               {searchInput
                 ? `Tidak ada hasil untuk "${searchInput}"`
                 : "Tambahkan supplier pertama Anda"}
@@ -204,29 +200,29 @@ export function SupplierTable({
             <div className="hidden xl:block overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">
+                  <tr className="border-b border-stone-200">
+                    <th className="text-left p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
                       Kode
                     </th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">
+                    <th className="text-left p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
                       Nama Supplier
                     </th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">
+                    <th className="text-left p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
                       Kontak
                     </th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">
+                    <th className="text-left p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
                       Lokasi
                     </th>
-                    <th className="text-center p-4 text-sm font-semibold text-gray-700">
+                    <th className="text-center p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
                       Produk
                     </th>
-                    <th className="text-center p-4 text-sm font-semibold text-gray-700">
+                    <th className="text-center p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
                       Transaksi
                     </th>
-                    <th className="text-center p-4 text-sm font-semibold text-gray-700">
+                    <th className="text-center p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
                       Status
                     </th>
-                    <th className="text-right p-4 text-sm font-semibold text-gray-700">
+                    <th className="text-right p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
                       Aksi
                     </th>
                   </tr>
@@ -235,32 +231,28 @@ export function SupplierTable({
                   {suppliers.map((supplier, index) => (
                     <tr
                       key={supplier.id}
-                      className={`border-b border-gray-100 hover:bg-green-50/30 transition-colors ${
+                      className={`border-b border-stone-100 hover:bg-stone-50 transition-colors ${
                         index % 2 === 0 ? "bg-white/20" : ""
                       }`}
                     >
                       <td className="p-4">
-                        <span className="font-mono text-sm font-semibold text-gray-900">
+                        <span className="font-mono text-sm font-semibold text-stone-900">
                           {supplier.code}
                         </span>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <div
-                            className="p-2 rounded-lg"
-                            style={{
-                              background: "rgba(34, 197, 94, 0.1)",
-                              border: "1px solid rgba(34, 197, 94, 0.2)",
-                            }}
+                            className="p-2 rounded-lg bg-stone-100 border border-stone-200"
                           >
-                            <Truck className="w-4 h-4 text-green-600" />
+                            <Truck className="w-4 h-4 text-stone-600" />
                           </div>
                           <div>
-                            <p className="font-semibold text-gray-900">
+                            <p className="font-semibold text-stone-900">
                               {supplier.name}
                             </p>
                             {supplier.description && (
-                              <p className="text-xs text-gray-600 line-clamp-1">
+                              <p className="text-xs text-stone-600 line-clamp-1">
                                 {supplier.description}
                               </p>
                             )}
@@ -270,14 +262,14 @@ export function SupplierTable({
                       <td className="p-4">
                         <div className="space-y-1">
                           {supplier.phone && (
-                            <div className="flex items-center gap-2 text-sm text-gray-700">
-                              <Phone className="w-3.5 h-3.5 text-gray-400" />
+                            <div className="flex items-center gap-2 text-sm text-stone-700">
+                              <Phone className="w-3.5 h-3.5 text-stone-400" />
                               <span>{supplier.phone}</span>
                             </div>
                           )}
                           {supplier.email && (
-                            <div className="flex items-center gap-2 text-xs text-gray-600">
-                              <Mail className="w-3.5 h-3.5 text-gray-400" />
+                            <div className="flex items-center gap-2 text-xs text-stone-600">
+                              <Mail className="w-3.5 h-3.5 text-stone-400" />
                               <span>{supplier.email}</span>
                             </div>
                           )}
@@ -285,25 +277,25 @@ export function SupplierTable({
                       </td>
                       <td className="p-4">
                         {supplier.city || supplier.province ? (
-                          <div className="flex items-start gap-2 text-sm text-gray-700">
-                            <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                          <div className="flex items-start gap-2 text-sm text-stone-700">
+                            <MapPin className="w-3.5 h-3.5 text-stone-400 mt-0.5 flex-shrink-0" />
                             <div>
                               {supplier.city && <p>{supplier.city}</p>}
                               {supplier.province && (
-                                <p className="text-xs text-gray-600">{supplier.province}</p>
+                                <p className="text-xs text-stone-600">{supplier.province}</p>
                               )}
                             </div>
                           </div>
                         ) : (
-                          <span className="text-sm text-gray-400">-</span>
+                          <span className="text-sm text-stone-400">-</span>
                         )}
                       </td>
                       <td className="p-4 text-center">
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
                             supplier._count.products > 0
-                              ? "bg-blue-100 text-blue-700 border border-blue-200"
-                              : "bg-gray-100 text-gray-600 border border-gray-200"
+                              ? "bg-stone-100 text-stone-600 border border-stone-200"
+                              : "bg-stone-100 text-stone-600 border border-stone-200"
                           }`}
                         >
                           <Package className="w-3 h-3" />
@@ -314,8 +306,8 @@ export function SupplierTable({
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
                             supplier._count.purchases > 0
-                              ? "bg-purple-100 text-purple-700 border border-purple-200"
-                              : "bg-gray-100 text-gray-600 border border-gray-200"
+                              ? "bg-stone-100 text-stone-600 border border-stone-200"
+                              : "bg-stone-100 text-stone-600 border border-stone-200"
                           }`}
                         >
                           <ShoppingCart className="w-3 h-3" />
@@ -338,28 +330,28 @@ export function SupplierTable({
                             title={supplier.isActive ? "Nonaktifkan" : "Aktifkan"}
                           >
                             {togglingStatus === supplier.id ? (
-                              <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
+                              <Loader2 className="w-4 h-4 animate-spin text-stone-600" />
                             ) : (
                               <Power
                                 className={`w-4 h-4 group-hover:scale-110 transition-transform ${
-                                  supplier.isActive ? "text-red-600" : "text-green-600"
+                                  supplier.isActive ? "text-red-800" : "text-green-600"
                                 }`}
                               />
                             )}
                           </button>
                           <button
                             onClick={() => onEdit(supplier)}
-                            className="p-2 rounded-lg hover:bg-blue-100 transition-colors group"
+                            className="p-2 rounded-lg hover:bg-stone-100 transition-colors group"
                             title="Edit"
                           >
-                            <Edit className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
+                            <Edit className="w-4 h-4 text-stone-600 group-hover:scale-110 transition-transform" />
                           </button>
                           <button
                             onClick={() => onDelete(supplier)}
-                            className="p-2 rounded-lg hover:bg-red-100 transition-colors group"
+                            className="p-2 rounded-lg hover:bg-red-50 transition-colors group"
                             title="Hapus"
                           >
-                            <Trash2 className="w-4 h-4 text-red-600 group-hover:scale-110 transition-transform" />
+                            <Trash2 className="w-4 h-4 text-red-800 group-hover:scale-110 transition-transform" />
                           </button>
                         </div>
                       </td>
@@ -380,19 +372,15 @@ export function SupplierTable({
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div
-                        className="p-2 rounded-lg flex-shrink-0"
-                        style={{
-                          background: "rgba(34, 197, 94, 0.1)",
-                          border: "1px solid rgba(34, 197, 94, 0.2)",
-                        }}
+                        className="p-2 rounded-lg flex-shrink-0 bg-stone-100 border border-stone-200"
                       >
-                        <Truck className="w-4 h-4 text-green-600" />
+                        <Truck className="w-4 h-4 text-stone-600" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h4 className="font-semibold text-gray-900 truncate">
+                        <h4 className="font-semibold text-stone-900 truncate">
                           {supplier.name}
                         </h4>
-                        <p className="text-xs font-mono text-gray-600 mt-0.5">
+                        <p className="text-xs font-mono text-stone-600 mt-0.5">
                           {supplier.code}
                         </p>
                       </div>
@@ -403,20 +391,20 @@ export function SupplierTable({
                   {/* Contact Info */}
                   <div className="space-y-1.5 text-sm">
                     {supplier.phone && (
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <Phone className="w-3.5 h-3.5 text-gray-400" />
+                      <div className="flex items-center gap-2 text-stone-700">
+                        <Phone className="w-3.5 h-3.5 text-stone-400" />
                         <span>{supplier.phone}</span>
                       </div>
                     )}
                     {supplier.email && (
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Mail className="w-3.5 h-3.5 text-gray-400" />
+                      <div className="flex items-center gap-2 text-stone-600">
+                        <Mail className="w-3.5 h-3.5 text-stone-400" />
                         <span className="truncate">{supplier.email}</span>
                       </div>
                     )}
                     {(supplier.city || supplier.province) && (
-                      <div className="flex items-start gap-2 text-gray-700">
-                        <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <div className="flex items-start gap-2 text-stone-700">
+                        <MapPin className="w-3.5 h-3.5 text-stone-400 mt-0.5 flex-shrink-0" />
                         <span>
                           {supplier.city}
                           {supplier.city && supplier.province && ", "}
@@ -428,19 +416,19 @@ export function SupplierTable({
 
                   {/* Stats */}
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold px-2 py-1 rounded-full bg-blue-100 text-blue-700 flex items-center gap-1">
+                    <span className="text-xs font-semibold px-2 py-1 rounded-full bg-stone-100 text-stone-600 border border-stone-200 flex items-center gap-1">
                       <Package className="w-3 h-3" />
                       {supplier._count.products} Produk
                     </span>
-                    <span className="text-xs font-semibold px-2 py-1 rounded-full bg-purple-100 text-purple-700 flex items-center gap-1">
+                    <span className="text-xs font-semibold px-2 py-1 rounded-full bg-stone-100 text-stone-600 flex items-center gap-1">
                       <ShoppingCart className="w-3 h-3" />
                       {supplier._count.purchases} Transaksi
                     </span>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                  <div className="flex items-center justify-between pt-3 border-t border-stone-200">
+                    <div className="flex items-center gap-2 text-xs text-stone-600">
                       <Calendar className="w-3.5 h-3.5" />
                       <span>
                         {format(new Date(supplier.createdAt), "dd MMM yyyy", {
@@ -457,26 +445,26 @@ export function SupplierTable({
                         }`}
                       >
                         {togglingStatus === supplier.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
+                          <Loader2 className="w-4 h-4 animate-spin text-stone-600" />
                         ) : (
                           <Power
                             className={`w-4 h-4 ${
-                              supplier.isActive ? "text-red-600" : "text-green-600"
+                              supplier.isActive ? "text-red-800" : "text-green-600"
                             }`}
                           />
                         )}
                       </button>
                       <button
                         onClick={() => onEdit(supplier)}
-                        className="p-2 rounded-lg hover:bg-blue-100 transition-colors"
+                        className="p-2 rounded-lg hover:bg-stone-100 transition-colors"
                       >
-                        <Edit className="w-4 h-4 text-blue-600" />
+                        <Edit className="w-4 h-4 text-stone-600" />
                       </button>
                       <button
                         onClick={() => onDelete(supplier)}
-                        className="p-2 rounded-lg hover:bg-red-100 transition-colors"
+                        className="p-2 rounded-lg hover:bg-red-50 transition-colors"
                       >
-                        <Trash2 className="w-4 h-4 text-red-600" />
+                        <Trash2 className="w-4 h-4 text-red-800" />
                       </button>
                     </div>
                   </div>
@@ -491,7 +479,7 @@ export function SupplierTable({
       {!loading && suppliers.length > 0 && pagination.totalPages > 1 && (
         <div className="glass-card p-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-stone-600">
               Menampilkan {(pagination.page - 1) * pagination.limit + 1} -{" "}
               {Math.min(pagination.page * pagination.limit, pagination.total)} dari{" "}
               {pagination.total} supplier
@@ -500,7 +488,7 @@ export function SupplierTable({
               <button
                 onClick={() => onPageChange(pagination.page - 1)}
                 disabled={pagination.page === 1}
-                className="px-4 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-100"
+                className="px-4 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-stone-100"
               >
                 Prev
               </button>
@@ -516,14 +504,14 @@ export function SupplierTable({
                 .map((page, index, array) => (
                   <div key={page} className="flex items-center gap-2">
                     {index > 0 && array[index - 1] !== page - 1 && (
-                      <span className="text-gray-400">...</span>
+                      <span className="text-stone-400">...</span>
                     )}
                     <button
                       onClick={() => onPageChange(page)}
                       className={`w-10 h-10 rounded-lg font-semibold text-sm transition-all ${
                         pagination.page === page
-                          ? "bg-green-600 text-white shadow-lg"
-                          : "hover:bg-green-100 text-gray-700"
+                          ? "bg-red-900 text-white shadow-lg"
+                          : "hover:bg-stone-100 text-stone-700"
                       }`}
                     >
                       {page}
@@ -533,7 +521,7 @@ export function SupplierTable({
               <button
                 onClick={() => onPageChange(pagination.page + 1)}
                 disabled={pagination.page === pagination.totalPages}
-                className="px-4 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-100"
+                className="px-4 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-stone-100"
               >
                 Next
               </button>

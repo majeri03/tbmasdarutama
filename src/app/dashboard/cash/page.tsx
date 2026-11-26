@@ -34,7 +34,7 @@ export default async function CashPage() {
           </p>
           <Link
             href="/dashboard"
-            className="inline-block mt-4 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition shadow"
+            className="inline-block mt-4 px-5 py-2.5 bg-red-900 hover:bg-red-800 text-white font-semibold rounded-lg transition shadow"
           >
             Kembali ke Beranda
           </Link>

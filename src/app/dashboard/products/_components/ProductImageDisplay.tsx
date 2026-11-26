@@ -25,10 +25,10 @@ export function ProductImageDisplay({
 
   if (!images || images.length === 0) {
     return (
-      <div className="flex items-center justify-center w-20 h-20 rounded-lg bg-gray-100 border-2 border-dashed border-gray-300">
+      <div className="flex items-center justify-center w-20 h-20 rounded-lg bg-stone-100 border-2 border-dashed border-stone-300">
         <div className="text-center">
-          <ImageIcon className="w-8 h-8 text-gray-400 mx-auto mb-1" />
-          <p className="text-xs text-gray-500">Tidak ada gambar</p>
+          <ImageIcon className="w-8 h-8 text-stone-400 mx-auto mb-1" />
+          <p className="text-xs text-stone-500">Tidak ada gambar</p>
         </div>
       </div>
     );
@@ -38,7 +38,7 @@ export function ProductImageDisplay({
 
   if (variant === "thumbnail") {
     return (
-      <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-100 group cursor-pointer">
+      <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-stone-100 group cursor-pointer">
         <Image
           src={primaryImage.imageUrl}
           alt={productName}
@@ -64,7 +64,7 @@ export function ProductImageDisplay({
       <div className="space-y-3">
         {/* Primary Image */}
         <div
-          className="relative w-full h-64 rounded-xl overflow-hidden bg-gray-100 cursor-pointer group"
+          className="relative w-full h-64 rounded-xl overflow-hidden bg-stone-100 cursor-pointer group"
           onClick={() => setSelectedImage(primaryImage.imageUrl)}
         >
           <Image
@@ -78,7 +78,7 @@ export function ProductImageDisplay({
             <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           {primaryImage.isPrimary && (
-            <div className="absolute top-3 left-3 px-2 py-1 rounded-lg bg-blue-600 text-white text-xs font-semibold">
+            <div className="absolute top-3 left-3 px-2 py-1 rounded-lg bg-red-900 text-white text-xs font-semibold">
               Gambar Utama
             </div>
           )}
@@ -90,8 +90,8 @@ export function ProductImageDisplay({
             {images.map((image) => (
               <div
                 key={image.id}
-                className={`relative h-16 rounded-lg overflow-hidden bg-gray-100 cursor-pointer group ${
-                  image.id === primaryImage.id ? "ring-2 ring-blue-600" : ""
+                className={`relative h-16 rounded-lg overflow-hidden bg-stone-100 cursor-pointer group ${
+                  image.id === primaryImage.id ? "ring-2 ring-red-900" : ""
                 }`}
                 onClick={() => setSelectedImage(image.imageUrl)}
               >

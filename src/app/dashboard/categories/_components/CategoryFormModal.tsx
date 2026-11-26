@@ -74,24 +74,24 @@ export function CategoryFormModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-fade-in">
-      <div className="glass-card p-6 w-full max-w-lg animate-slide-up">
+    <div className="modal-overlay">
+      <div className="modal-container p-6 w-full max-w-lg animate-slide-up">
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-center gap-3">
             <div
               className="p-3 rounded-xl"
               style={{
-                background: "rgba(96, 165, 250, 0.15)",
+                background: "rgba(127, 29, 29, 0.08)",
                 border: "1px solid rgba(96, 165, 250, 0.3)",
               }}
             >
-              <FolderTree className="w-6 h-6 text-blue-600" />
+              <FolderTree className="w-6 h-6 text-red-900" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-gray-900">
+              <h3 className="text-xl font-semibold tracking-tight text-stone-900">
                 {isEdit ? "Edit Kategori" : "Tambah Kategori"}
               </h3>
-              <p className="text-sm text-gray-600 mt-0.5">
+              <p className="text-sm text-stone-600 mt-0.5">
                 {isEdit
                   ? "Perbarui informasi kategori"
                   : "Tambahkan kategori produk baru"}
@@ -101,7 +101,7 @@ export function CategoryFormModal({
           <button
             onClick={onClose}
             disabled={loading}
-            className="text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+            className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 transition-colors disabled:opacity-50"
           >
             <X className="w-5 h-5" />
           </button>
@@ -111,7 +111,7 @@ export function CategoryFormModal({
           <div className="space-y-2">
             <label
               htmlFor="name"
-              className="block text-sm font-semibold text-gray-700"
+              className="label"
             >
               Nama Kategori <span className="text-red-500">*</span>
             </label>
@@ -130,7 +130,7 @@ export function CategoryFormModal({
               })}
             />
             {errors.name && (
-              <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+              <p className="text-xs text-red-800 mt-1 flex items-center gap-1">
                 <X className="w-3 h-3" />
                 {errors.name.message}
               </p>
@@ -140,9 +140,9 @@ export function CategoryFormModal({
           <div className="space-y-2">
             <label
               htmlFor="description"
-              className="block text-sm font-semibold text-gray-700"
+              className="label"
             >
-              Deskripsi <span className="text-gray-400">(Opsional)</span>
+              Deskripsi <span className="text-stone-400">(Opsional)</span>
             </label>
             <textarea
               id="description"
@@ -158,14 +158,14 @@ export function CategoryFormModal({
               })}
             />
             {errors.description && (
-              <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+              <p className="text-xs text-red-800 mt-1 flex items-center gap-1">
                 <X className="w-3 h-3" />
                 {errors.description.message}
               </p>
             )}
           </div>
 
-          <div className="flex gap-3 pt-4 border-t border-gray-200">
+          <div className="flex gap-3 pt-4 -mx-6 -mb-6 px-6 pb-6 bg-stone-50 border-t border-stone-200 rounded-b-3xl">
             <button
               type="button"
               onClick={onClose}

@@ -306,15 +306,15 @@ export function ProductFormModal({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-fade-in overflow-y-auto">
-      <div className="glass-card w-full max-w-4xl my-8 animate-slide-up max-h-[90vh] flex flex-col">
+    <div className="modal-overlay overflow-y-auto">
+      <div className="modal-container w-full max-w-4xl my-8 animate-slide-up max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between p-6 border-b border-stone-200">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">
+            <h2 className="text-2xl font-bold text-stone-900">
               {mode === "create" ? "Tambah Produk Baru" : "Edit Produk"}
             </h2>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-sm text-stone-600 mt-1">
               {mode === "create"
                 ? "Isi form di bawah untuk menambahkan produk"
                 : "Perbarui informasi produk"}
@@ -323,7 +323,7 @@ export function ProductFormModal({
           <button
             onClick={onClose}
             disabled={loading}
-            className="text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+            className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 transition-colors disabled:opacity-50"
           >
             <X className="w-6 h-6" />
           </button>
@@ -343,26 +343,19 @@ export function ProductFormModal({
                 <div key={step.id} className="flex items-center flex-1">
                   <div className="flex flex-col items-center flex-1">
                     <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isActive
-                        ? "bg-blue-600 text-white scale-110"
-                        : isCompleted
-                          ? "bg-green-600 text-white"
-                          : "bg-gray-200 text-gray-500"
-                        }`}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isActive ? "bg-red-900 text-white scale-110" : isCompleted ? "bg-green-700 text-white" : "bg-stone-200 text-stone-500" }`}
                     >
                       <StepIcon className="w-5 h-5" />
                     </div>
                     <span
-                      className={`text-xs font-semibold mt-2 ${isActive ? "text-blue-600" : isCompleted ? "text-green-600" : "text-gray-500"
-                        }`}
+                      className={`text-xs font-semibold mt-2 ${isActive ? "text-red-900" : isCompleted ? "text-green-700" : "text-stone-500" }`}
                     >
                       {step.label}
                     </span>
                   </div>
                   {index < steps.length - 1 && (
                     <div
-                      className={`h-1 flex-1 mx-2 rounded transition-all ${isCompleted ? "bg-green-600" : "bg-gray-200"
-                        }`}
+                      className={`h-1 flex-1 mx-2 rounded transition-all ${isCompleted ? "bg-green-700" : "bg-stone-200" }`}
                     />
                   )}
                 </div>
@@ -380,7 +373,7 @@ export function ProductFormModal({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Product Name */}
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="label mb-1">
                       Nama Produk <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -390,13 +383,13 @@ export function ProductFormModal({
                       placeholder="Contoh: Semen Portland"
                     />
                     {errors.name && (
-                      <p className="text-xs text-red-600 mt-1">{errors.name.message}</p>
+                      <p className="text-xs text-red-800 mt-1">{errors.name.message}</p>
                     )}
                   </div>
 
                   {/* Barcode */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="label mb-1">
                       Barcode (Opsional)
                     </label>
                     <input
@@ -406,13 +399,13 @@ export function ProductFormModal({
                       placeholder="Contoh: 8991234567890"
                     />
                     {errors.barcode && (
-                      <p className="text-xs text-red-600 mt-1">{errors.barcode.message}</p>
+                      <p className="text-xs text-red-800 mt-1">{errors.barcode.message}</p>
                     )}
                   </div>
 
                   {/* Min Stock */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="label mb-1">
                       Minimum Stok <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -423,13 +416,13 @@ export function ProductFormModal({
                       placeholder="0"
                     />
                     {errors.minStock && (
-                      <p className="text-xs text-red-600 mt-1">{errors.minStock.message}</p>
+                      <p className="text-xs text-red-800 mt-1">{errors.minStock.message}</p>
                     )}
                   </div>
 
                   {/* Category */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="label mb-1">
                       Kategori <span className="text-red-500">*</span>
                     </label>
                     <select {...register("categoryId")} className="glass-input">
@@ -441,13 +434,13 @@ export function ProductFormModal({
                       ))}
                     </select>
                     {errors.categoryId && (
-                      <p className="text-xs text-red-600 mt-1">{errors.categoryId.message}</p>
+                      <p className="text-xs text-red-800 mt-1">{errors.categoryId.message}</p>
                     )}
                   </div>
 
                   {/* Sub-Category */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="label mb-1">
                       Sub-Kategori (Opsional)
                     </label>
                     <select
@@ -463,13 +456,13 @@ export function ProductFormModal({
                       ))}
                     </select>
                     {!selectedCategoryId && (
-                      <p className="text-xs text-gray-500 mt-1">Pilih kategori terlebih dahulu</p>
+                      <p className="text-xs text-stone-500 mt-1">Pilih kategori terlebih dahulu</p>
                     )}
                   </div>
 
                   {/* Supplier */}
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="label mb-1">
                       Supplier (Opsional)
                     </label>
                     <select {...register("supplierId")} className="glass-input">
@@ -484,7 +477,7 @@ export function ProductFormModal({
 
                   {/* Description */}
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="label mb-1">
                       Deskripsi (Opsional)
                     </label>
                     <textarea
@@ -501,9 +494,9 @@ export function ProductFormModal({
                       {...register("isActive")}
                       type="checkbox"
                       id="isActive"
-                      className="w-4 h-4 text-blue-600 rounded"
+                      className="w-4 h-4 text-red-900 rounded"
                     />
-                    <label htmlFor="isActive" className="text-sm text-gray-700">
+                    <label htmlFor="isActive" className="text-sm text-stone-700">
                       Produk aktif dan dapat dijual
                     </label>
                   </div>
@@ -515,7 +508,7 @@ export function ProductFormModal({
             {currentStep === "units" && (
               <div className="animate-slide-up">
                 {validationError && ( // ✅ TAMBAHKAN INI
-                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
                     {validationError}
                   </div>
                 )}
@@ -531,7 +524,7 @@ export function ProductFormModal({
             {currentStep === "images" && (
               <div className="animate-slide-up">
                 {validationError && ( // ✅ TAMBAHKAN INI
-                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
                     {validationError}
                   </div>
                 )}
@@ -544,7 +537,7 @@ export function ProductFormModal({
           </div>
 
           {/* Footer Actions */}
-          <div className="flex items-center justify-between gap-3 p-6 border-t border-gray-200 bg-gray-50">
+          <div className="flex items-center justify-between gap-3 p-6 border-t border-stone-200 bg-stone-50">
             <div className="flex gap-2">
               {currentStep !== "basic" && (
                 <button

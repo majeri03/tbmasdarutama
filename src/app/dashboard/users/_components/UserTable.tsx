@@ -49,9 +49,9 @@ export default function UserTable({ users }: { users: UserData[] }) {
   const getRoleBadge = (role: string) => {
     switch (role) {
       case "SUPER_ADMIN":
-        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700 flex items-center gap-1 w-fit"><ShieldAlert className="w-3 h-3"/> Super Admin</span>;
+        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-[#7F1D1D]/10 text-[#7F1D1D] flex items-center gap-1 w-fit"><ShieldAlert className="w-3 h-3"/> Super Admin</span>;
       case "ADMIN":
-        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700 flex items-center gap-1 w-fit"><Shield className="w-3 h-3"/> Admin</span>;
+        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-stone-200 text-stone-700 flex items-center gap-1 w-fit"><Shield className="w-3 h-3"/> Admin</span>;
       default:
         return <span className="px-2 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700 flex items-center gap-1 w-fit"><UserIcon className="w-3 h-3"/> Kasir</span>;
     }
@@ -65,7 +65,7 @@ export default function UserTable({ users }: { users: UserData[] }) {
       <div className="glass-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 font-semibold border-b border-gray-200">
+            <thead className="bg-stone-50 text-stone-700 font-semibold border-b border-stone-200">
               <tr>
                 <th className="px-6 py-4">Nama User</th>
                 <th className="px-6 py-4">Role</th>
@@ -76,7 +76,7 @@ export default function UserTable({ users }: { users: UserData[] }) {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {users.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                <tr key={user.id} className="hover:bg-stone-50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="font-medium text-gray-900">{user.name}</div>
                     <div className="text-xs text-gray-500">{user.email}</div>
@@ -121,7 +121,7 @@ export default function UserTable({ users }: { users: UserData[] }) {
                       )}
                       <button
                         onClick={() => { setSelectedUser(user); setIsEditOpen(true); }}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="p-2 text-[#7F1D1D] hover:bg-[#7F1D1D]/[0.06] rounded-lg transition-colors"
                         title="Edit User"
                       >
                         <Edit className="w-4 h-4" />

@@ -28,7 +28,7 @@ export default function DateRangeFilter({
             onChange={(e) => onDateFromChange(e.target.value)}
             className="glass-input pl-10"
           />
-          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
         </div>
       </div>
 
@@ -41,13 +41,13 @@ export default function DateRangeFilter({
             onChange={(e) => onDateToChange(e.target.value)}
             className="glass-input pl-10"
           />
-          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
         </div>
       </div>
 
       <button
         onClick={onApply}
-        className="inline-flex items-center gap-2 rounded-lg bg-[#111111] px-4 py-2 text-sm font-semibold text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex items-center gap-2 rounded-lg bg-[#7F1D1D] px-4 py-2 text-sm font-semibold text-white hover:bg-[#991B1B] disabled:cursor-not-allowed disabled:opacity-50"
       >
         Tampilkan
       </button>

@@ -54,8 +54,8 @@ export default function SettingsPage() {
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="glass-card p-6">
-          <h1 className="text-2xl font-bold text-gray-800">Pengaturan</h1>
-          <p className="text-sm text-gray-600 mt-1">
+          <h1 className="text-2xl font-bold tracking-tight text-[#1C1917]">Pengaturan</h1>
+          <p className="text-sm text-stone-600 mt-1">
             Kelola informasi toko, keamanan, dan tampilan website
           </p>
         </div>

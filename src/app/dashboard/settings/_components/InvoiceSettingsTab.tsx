@@ -113,8 +113,8 @@ export default function InvoiceSettingsTab() {
             {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
 
             <div className="glass-card p-6 space-y-5">
-                <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-                    <Settings2 className="w-5 h-5 text-blue-600" />
+                <h3 className="font-semibold text-[#1C1917] flex items-center gap-2">
+                    <Settings2 className="w-5 h-5 text-[#7F1D1D]" />
                     Layout Default &amp; Kertas
                 </h3>
                 <p className="text-sm text-gray-500">
@@ -144,11 +144,11 @@ export default function InvoiceSettingsTab() {
                         <div className="flex rounded-lg overflow-hidden border border-gray-200 mb-3 w-fit text-xs">
                             <button type="button"
                                 onClick={() => { setThermalMode("preset"); selectThermalPreset(formData.invoicePaperSize || "58mm"); }}
-                                className={`px-3 py-1.5 font-medium transition-colors ${thermalMode === "preset" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                                className={`px-3 py-1.5 font-medium transition-colors ${thermalMode === "preset" ? "bg-[#7F1D1D] text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
                             >⊞ Preset</button>
                             <button type="button"
                                 onClick={() => { setThermalMode("custom"); updateThermalCustom(thermalCustomW); }}
-                                className={`px-3 py-1.5 font-medium transition-colors ${thermalMode === "custom" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                                className={`px-3 py-1.5 font-medium transition-colors ${thermalMode === "custom" ? "bg-[#7F1D1D] text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
                             >✎ Custom mm</button>
                         </div>
                         {thermalMode === "preset" ? (
@@ -158,8 +158,8 @@ export default function InvoiceSettingsTab() {
                                         onClick={() => selectThermalPreset(size)}
                                         className={`px-4 py-2 rounded-lg border text-sm font-semibold transition-all ${
                                             formData.invoicePaperSize === size
-                                                ? "bg-blue-600 text-white border-blue-600 shadow"
-                                                : "bg-white text-gray-700 border-gray-200 hover:border-blue-400 hover:text-blue-600"
+                                                ? "bg-[#7F1D1D] text-white border-[#7F1D1D] shadow"
+                                                : "bg-white text-gray-700 border-gray-200 hover:border-[#7F1D1D]/40 hover:text-[#7F1D1D]"
                                         }`}
                                     >{size}</button>
                                 ))}
@@ -186,11 +186,11 @@ export default function InvoiceSettingsTab() {
                         <div className="flex rounded-lg overflow-hidden border border-gray-200 mb-3 w-fit text-xs">
                             <button type="button"
                                 onClick={() => { setDocMode("preset"); selectDocPreset(formData.invoiceDocumentPaperSize || "A4"); }}
-                                className={`px-3 py-1.5 font-medium transition-colors ${docMode === "preset" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                                className={`px-3 py-1.5 font-medium transition-colors ${docMode === "preset" ? "bg-[#7F1D1D] text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
                             >⊞ Preset</button>
                             <button type="button"
                                 onClick={() => { setDocMode("custom"); updateDocCustom(docCustomW, docCustomH); }}
-                                className={`px-3 py-1.5 font-medium transition-colors ${docMode === "custom" ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                                className={`px-3 py-1.5 font-medium transition-colors ${docMode === "custom" ? "bg-[#7F1D1D] text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
                             >✎ Custom mm × mm</button>
                         </div>
 
@@ -201,8 +201,8 @@ export default function InvoiceSettingsTab() {
                                         onClick={() => selectDocPreset(size)}
                                         className={`px-5 py-2 rounded-lg border text-sm font-semibold transition-all ${
                                             formData.invoiceDocumentPaperSize === size
-                                                ? "bg-blue-600 text-white border-blue-600 shadow"
-                                                : "bg-white text-gray-700 border-gray-200 hover:border-blue-400 hover:text-blue-600"
+                                                ? "bg-[#7F1D1D] text-white border-[#7F1D1D] shadow"
+                                                : "bg-white text-gray-700 border-gray-200 hover:border-[#7F1D1D]/40 hover:text-[#7F1D1D]"
                                         }`}
                                     >{size}</button>
                                 ))}
@@ -241,8 +241,8 @@ export default function InvoiceSettingsTab() {
             </div>
 
             <div className="glass-card p-6 space-y-4">
-                <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-blue-600" />
+                <h3 className="font-semibold text-[#1C1917] flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-[#7F1D1D]" />
                     Komponen &amp; Visibilitas Cetak
                 </h3>
                 <p className="text-sm text-gray-500 mb-4">Pilih bagian mana saja yang ingin ditampilkan pada struk atau invoice Anda.</p>
@@ -262,7 +262,7 @@ export default function InvoiceSettingsTab() {
                                 name={name}
                                 checked={(formData[name as keyof StoreSettingFormData] as boolean) ?? true}
                                 onChange={handleCheckboxChange}
-                                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                className="w-4 h-4 accent-[#7F1D1D] rounded focus:ring-[#7F1D1D]"
                             />
                             <span className="text-sm font-medium text-gray-700">{label}</span>
                         </label>

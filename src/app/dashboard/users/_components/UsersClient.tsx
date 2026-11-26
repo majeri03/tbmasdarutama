@@ -32,7 +32,7 @@ export default function UsersClient({ initialUsers }: UsersClientProps) {
       <div className="flex justify-end mb-4">
         <button
             onClick={() => setIsCreateOpen(true)}
-            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg flex items-center gap-2 text-sm font-medium"
+            className="btn-primary inline-flex items-center gap-2 text-sm font-medium"
         >
             <Plus className="w-4 h-4" />
             Tambah User

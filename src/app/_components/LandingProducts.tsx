@@ -31,11 +31,11 @@ export default function LandingProducts({ products }: Props) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Header */}
         <div className="text-center mb-16 animate-slide-up">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
-            Produk <span className="text-gradient">Unggulan</span>
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-[#1C1917] mb-4">
+            Produk <span className="text-[#7F1D1D]">Unggulan</span>
           </h2>
-          <div className="w-24 h-1 bg-gradient-to-r from-blue-600 to-purple-600 mx-auto rounded-full mb-6" />
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <div className="w-24 h-1 bg-[#7F1D1D] mx-auto rounded-full mb-6" />
+          <p className="text-lg text-stone-600 max-w-2xl mx-auto">
             Pilihan terbaik untuk kebutuhan bangunan Anda — harga tertera per satuan
           </p>
         </div>
@@ -44,13 +44,13 @@ export default function LandingProducts({ products }: Props) {
           // Section tetap dirender (dengan id="products") supaya tautan nav
           // "Produk" tidak pernah mengarah ke anchor yang tidak ada.
           <div className="glass-card max-w-xl mx-auto p-10 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#7F1D1D] flex items-center justify-center">
               <Package className="w-8 h-8 text-white" />
             </div>
-            <h3 className="font-bold text-xl text-gray-800 mb-2">
+            <h3 className="font-bold text-xl text-[#1C1917] mb-2">
               Katalog produk segera hadir
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-stone-600 mb-6">
               Produk unggulan belum tersedia saat ini. Hubungi kami untuk
               daftar harga terbaru.
             </p>
@@ -93,20 +93,20 @@ export default function LandingProducts({ products }: Props) {
 
                   {/* Content: nama + deskripsi + harga */}
                   <div className="p-4">
-                    <h3 className="font-bold text-lg text-gray-800 line-clamp-2">
+                    <h3 className="font-bold text-lg text-[#1C1917] line-clamp-2">
                       {product.name}
                     </h3>
                     {product.description && (
-                      <p className="text-sm text-gray-500 line-clamp-2 mt-1">
+                      <p className="text-sm text-stone-500 line-clamp-2 mt-1">
                         {product.description}
                       </p>
                     )}
-                    <p className="mt-3 text-lg font-bold text-blue-600">
+                    <p className="mt-3 text-lg font-bold text-[#7F1D1D]">
                       {product.sellingPrice > 0
                         ? formatCurrency(product.sellingPrice)
                         : "Hubungi kami"}
                       {product.sellingPrice > 0 && (
-                        <span className="text-sm font-medium text-gray-500">
+                        <span className="text-sm font-medium text-stone-500">
                           {" "}
                           / {product.unit.name}
                         </span>

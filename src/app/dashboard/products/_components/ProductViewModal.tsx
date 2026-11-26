@@ -74,28 +74,28 @@ interface ProductViewModalProps {
 export function ProductViewModal({ product, onClose, onEdit }: ProductViewModalProps) {
   
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-fade-in overflow-y-auto">
-      <div className="glass-card w-full max-w-4xl my-8 animate-slide-up max-h-[90vh] overflow-y-auto">
+    <div className="modal-overlay overflow-y-auto">
+      <div className="modal-container w-full max-w-4xl my-8 animate-slide-up max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-white/95 backdrop-blur-sm z-10 flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="sticky top-0 bg-white/95 backdrop-blur-sm z-10 flex items-center justify-between p-6 border-b border-stone-200">
           <div className="flex items-center gap-3">
             <div
               className="p-3 rounded-xl"
               style={{
-                background: "rgba(59, 130, 246, 0.1)",
-                border: "1px solid rgba(59, 130, 246, 0.2)",
+                background: "rgba(127, 29, 29, 0.08)",
+                border: "1px solid rgba(127, 29, 29, 0.2)",
               }}
             >
-              <Package className="w-6 h-6 text-blue-600" />
+              <Package className="w-6 h-6 text-red-900" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">{product.name}</h2>
+              <h2 className="text-2xl font-bold text-stone-900">{product.name}</h2>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-sm font-mono text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
+                <span className="text-sm font-mono text-stone-600 bg-stone-100 px-2 py-0.5 rounded">
                   {product.code}
                 </span>
                 {product.barcode && (
-                  <span className="text-sm text-gray-600">| {product.barcode}</span>
+                  <span className="text-sm text-stone-600">| {product.barcode}</span>
                 )}
               </div>
             </div>
@@ -105,7 +105,7 @@ export function ProductViewModal({ product, onClose, onEdit }: ProductViewModalP
               <Package className="w-4 h-4" />
               <span>Edit Produk</span>
             </button>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700 transition-colors">
+            <button onClick={onClose} className="text-stone-500 hover:text-stone-700 transition-colors">
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -117,48 +117,48 @@ export function ProductViewModal({ product, onClose, onEdit }: ProductViewModalP
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="glass-card p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-100">
-                  <Package className="w-5 h-5 text-blue-600" />
+                <div className="p-2 rounded-xl bg-red-900/10">
+                  <Package className="w-5 h-5 text-red-900" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-600">Stok Saat Ini</p>
-                  <p className="text-xl font-bold text-gray-900">{product.currentStock}</p>
+                  <p className="text-xs text-stone-600">Stok Saat Ini</p>
+                  <p className="text-xl font-semibold tracking-tight text-stone-900">{product.currentStock}</p>
                 </div>
               </div>
             </div>
 
             <div className="glass-card p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-100">
-                  <DollarSign className="w-5 h-5 text-green-600" />
+                <div className="p-2 rounded-xl bg-green-100">
+                  <DollarSign className="w-5 h-5 text-green-700" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-600">Total Penjualan</p>
-                  <p className="text-xl font-bold text-gray-900">{product._count.saleItems}</p>
+                  <p className="text-xs text-stone-600">Total Penjualan</p>
+                  <p className="text-xl font-semibold tracking-tight text-stone-900">{product._count.saleItems}</p>
                 </div>
               </div>
             </div>
 
             <div className="glass-card p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-purple-100">
-                  <Tag className="w-5 h-5 text-purple-600" />
+                <div className="p-2 rounded-xl bg-red-900/10">
+                  <Tag className="w-5 h-5 text-red-900" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-600">Total Pembelian</p>
-                  <p className="text-xl font-bold text-gray-900">{product._count.purchaseItems}</p>
+                  <p className="text-xs text-stone-600">Total Pembelian</p>
+                  <p className="text-xl font-semibold tracking-tight text-stone-900">{product._count.purchaseItems}</p>
                 </div>
               </div>
             </div>
 
             <div className="glass-card p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-orange-100">
+                <div className="p-2 rounded-xl bg-orange-100">
                   <ImageIcon className="w-5 h-5 text-orange-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-600">Gambar</p>
-                  <p className="text-xl font-bold text-gray-900">{product._count.productImages}</p>
+                  <p className="text-xs text-stone-600">Gambar</p>
+                  <p className="text-xl font-semibold tracking-tight text-stone-900">{product._count.productImages}</p>
                 </div>
               </div>
             </div>
@@ -170,8 +170,8 @@ export function ProductViewModal({ product, onClose, onEdit }: ProductViewModalP
             <div className="lg:col-span-2 space-y-6">
               {/* Images */}
               <div className="glass-card p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5 text-blue-600" />
+                <h3 className="text-lg font-bold text-stone-900 mb-4 flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5 text-red-900" />
                   Gambar Produk
                 </h3>
                 <ProductImageDisplay
@@ -183,8 +183,8 @@ export function ProductViewModal({ product, onClose, onEdit }: ProductViewModalP
 
               {/* Units & Prices */}
               <div className="glass-card p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-green-600" />
+                <h3 className="text-lg font-bold text-stone-900 mb-4 flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-green-700" />
                   Satuan & Harga
                 </h3>
                 <ProductUnitDisplay units={product.productUnits} variant="full" />
@@ -193,8 +193,8 @@ export function ProductViewModal({ product, onClose, onEdit }: ProductViewModalP
               {/* Description */}
               {product.description && (
                 <div className="glass-card p-6">
-                  <h3 className="text-lg font-bold text-gray-900 mb-3">Deskripsi</h3>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                  <h3 className="text-lg font-bold text-stone-900 mb-3">Deskripsi</h3>
+                  <p className="text-sm text-stone-700 whitespace-pre-wrap leading-relaxed">
                     {product.description}
                   </p>
                 </div>
@@ -205,23 +205,19 @@ export function ProductViewModal({ product, onClose, onEdit }: ProductViewModalP
             <div className="space-y-6">
               {/* Status & Stock */}
               <div className="glass-card p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Status & Stok</h3>
+                <h3 className="text-lg font-bold text-stone-900 mb-4">Status & Stok</h3>
                 <div className="space-y-4">
                   <div>
-                    <p className="text-sm text-gray-600 mb-2">Status Produk</p>
+                    <p className="text-sm text-stone-600 mb-2">Status Produk</p>
                     <span
-                      className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold ${
-                        product.isActive
-                          ? "bg-green-100 text-green-700"
-                          : "bg-gray-100 text-gray-700"
-                      }`}
+                      className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold ${ product.isActive ? "bg-green-100 text-green-700" : "bg-stone-100 text-stone-700" }`}
                     >
                       {product.isActive ? "Aktif" : "Nonaktif"}
                     </span>
                   </div>
 
                   <div>
-                    <p className="text-sm text-gray-600 mb-2">Status Stok</p>
+                    <p className="text-sm text-stone-600 mb-2">Status Stok</p>
                     <ProductStockBadge
                       currentStock={product.currentStock}
                       minStock={product.minStock}
@@ -230,32 +226,32 @@ export function ProductViewModal({ product, onClose, onEdit }: ProductViewModalP
                   </div>
 
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Stok Saat Ini</p>
-                    <p className="text-2xl font-bold text-gray-900">{product.currentStock}</p>
+                    <p className="text-sm text-stone-600 mb-1">Stok Saat Ini</p>
+                    <p className="text-2xl font-bold text-stone-900">{product.currentStock}</p>
                   </div>
 
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Minimum Stok</p>
-                    <p className="text-lg font-semibold text-gray-900">{product.minStock}</p>
+                    <p className="text-sm text-stone-600 mb-1">Minimum Stok</p>
+                    <p className="text-lg font-semibold text-stone-900">{product.minStock}</p>
                   </div>
                 </div>
               </div>
 
               {/* Category Info */}
               <div className="glass-card p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Kategori</h3>
+                <h3 className="text-lg font-bold text-stone-900 mb-4">Kategori</h3>
                 <div className="space-y-3">
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Kategori Utama</p>
-                    <p className="text-sm font-semibold text-gray-900">
+                    <p className="text-sm text-stone-600 mb-1">Kategori Utama</p>
+                    <p className="text-sm font-semibold text-stone-900">
                       {product.category.name}
                     </p>
                   </div>
 
                   {product.subCategory && (
                     <div>
-                      <p className="text-sm text-gray-600 mb-1">Sub-Kategori</p>
-                      <p className="text-sm font-semibold text-gray-900">
+                      <p className="text-sm text-stone-600 mb-1">Sub-Kategori</p>
+                      <p className="text-sm font-semibold text-stone-900">
                         {product.subCategory.name}
                       </p>
                     </div>
@@ -266,27 +262,27 @@ export function ProductViewModal({ product, onClose, onEdit }: ProductViewModalP
               {/* Supplier Info */}
               {product.supplier && (
                 <div className="glass-card p-6">
-                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <User className="w-5 h-5 text-purple-600" />
+                  <h3 className="text-lg font-bold text-stone-900 mb-4 flex items-center gap-2">
+                    <User className="w-5 h-5 text-red-900" />
                     Supplier
                   </h3>
                   <div className="space-y-2">
                     <div>
-                      <p className="text-sm text-gray-600">Nama</p>
-                      <p className="text-sm font-semibold text-gray-900">
+                      <p className="text-sm text-stone-600">Nama</p>
+                      <p className="text-sm font-semibold text-stone-900">
                         {product.supplier.name}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Kode</p>
-                      <p className="text-xs font-mono text-gray-900 bg-gray-100 px-2 py-1 rounded inline-block">
+                      <p className="text-sm text-stone-600">Kode</p>
+                      <p className="text-xs font-mono text-stone-900 bg-stone-100 px-2 py-1 rounded inline-block">
                         {product.supplier.code}
                       </p>
                     </div>
                     {product.supplier.phone && (
                       <div>
-                        <p className="text-sm text-gray-600">Telepon</p>
-                        <p className="text-sm font-semibold text-gray-900">
+                        <p className="text-sm text-stone-600">Telepon</p>
+                        <p className="text-sm font-semibold text-stone-900">
                           {product.supplier.phone}
                         </p>
                       </div>
@@ -297,14 +293,14 @@ export function ProductViewModal({ product, onClose, onEdit }: ProductViewModalP
 
               {/* Timestamps */}
               <div className="glass-card p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-gray-600" />
+                <h3 className="text-lg font-bold text-stone-900 mb-4 flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-stone-600" />
                   Informasi Waktu
                 </h3>
                 <div className="space-y-2">
                   <div>
-                    <p className="text-sm text-gray-600">Dibuat</p>
-                    <p className="text-sm font-semibold text-gray-900">
+                    <p className="text-sm text-stone-600">Dibuat</p>
+                    <p className="text-sm font-semibold text-stone-900">
                       {new Date(product.createdAt).toLocaleDateString("id-ID", {
                         day: "numeric",
                         month: "long",
@@ -315,8 +311,8 @@ export function ProductViewModal({ product, onClose, onEdit }: ProductViewModalP
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Terakhir Diperbarui</p>
-                    <p className="text-sm font-semibold text-gray-900">
+                    <p className="text-sm text-stone-600">Terakhir Diperbarui</p>
+                    <p className="text-sm font-semibold text-stone-900">
                       {new Date(product.updatedAt).toLocaleDateString("id-ID", {
                         day: "numeric",
                         month: "long",

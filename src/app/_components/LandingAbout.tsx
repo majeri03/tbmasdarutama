@@ -26,17 +26,17 @@ export default function LandingAbout({ content }: Props) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Header */}
         <div className="text-center mb-16 animate-slide-up">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
-            Tentang <span className="text-gradient">Kami</span>
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-[#1C1917] mb-4">
+            Tentang <span className="text-[#7F1D1D]">Kami</span>
           </h2>
-          <div className="w-24 h-1 bg-gradient-to-r from-blue-600 to-purple-600 mx-auto rounded-full" />
+          <div className="w-24 h-1 bg-[#7F1D1D] mx-auto rounded-full" />
         </div>
 
         {/* Content Grid */}
         <div className="grid lg:grid-cols-2 gap-12 items-center mb-16">
           {/* Text Content */}
           <div className="glass-card p-8 animate-slide-up animation-delay-200">
-            <div className="prose prose-lg max-w-none text-gray-700 leading-relaxed whitespace-pre-line">
+            <div className="prose prose-lg max-w-none text-stone-700 leading-relaxed whitespace-pre-line">
               {content}
             </div>
           </div>
@@ -48,13 +48,13 @@ export default function LandingAbout({ content }: Props) {
                 key={index}
                 className="glass-card p-6 text-center hover:scale-105 transition-transform duration-300"
               >
-                <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                  <stat.icon className="w-8 h-8 text-white" />
+                <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-stone-100 flex items-center justify-center">
+                  <stat.icon className="w-8 h-8 text-[#7F1D1D]" />
                 </div>
-                <div className="text-3xl font-bold text-gray-800 mb-2">
+                <div className="text-3xl font-bold text-[#1C1917] mb-2">
                   {stat.value}
                 </div>
-                <div className="text-sm text-gray-600 font-medium">
+                <div className="text-sm text-stone-600 font-medium">
                   {stat.label}
                 </div>
               </div>
