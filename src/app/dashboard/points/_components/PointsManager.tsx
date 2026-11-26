@@ -228,12 +228,12 @@ export default function PointsManager() {
       )}
 
       {/* ---------- Pengaturan Poin ---------- */}
-      <div className="rounded-xl border border-stone-200 bg-white p-4 space-y-2">
+      <div className="rounded-xl border border-white/10 bg-white/10 p-4 space-y-2">
         <div className="flex items-center gap-2">
-          <Star className="w-5 h-5 text-[#7F1D1D]" />
-          <h2 className="text-lg font-semibold text-stone-800">Poin Loyalitas Customer</h2>
+          <Star className="w-5 h-5 text-[#E5484D]" />
+          <h2 className="text-lg font-semibold text-stone-200">Poin Loyalitas Customer</h2>
         </div>
-        <p className="text-sm text-stone-600">
+        <p className="text-sm text-stone-400">
           Customer mendapat poin dari penjualan lunas (bukan CREDIT), bukan
           customer Umum. Poin = total belanja dibagi nilai Rp per poin
           (dibulatkan ke bawah). Contoh: Rp 10.000 per poin, belanja Rp 250.000
@@ -248,12 +248,12 @@ export default function PointsManager() {
                 onChange={(e) => setPointsEnabled(e.target.checked)}
                 className="w-4 h-4 accent-[#7F1D1D] rounded"
               />
-              <span className="text-sm font-medium text-stone-700">Aktifkan pemberian poin</span>
+              <span className="text-sm font-medium text-stone-300">Aktifkan pemberian poin</span>
             </label>
             <div>
               <label className="label">Nilai Rp per 1 poin</label>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-stone-500 font-medium">Rp</span>
+                <span className="text-sm text-stone-400 font-medium">Rp</span>
                 <input
                   type="number"
                   min={1}
@@ -271,7 +271,7 @@ export default function PointsManager() {
             </button>
           </form>
         ) : (
-          <p className="text-sm text-stone-600">
+          <p className="text-sm text-stone-400">
             Saat ini poin <strong>{pointsEnabled ? "aktif" : "nonaktif"}</strong>, Rp{" "}
             {Number(pointsRupiahPerPoint).toLocaleString("id-ID")} per 1 poin.
             Pengaturan ini hanya bisa diubah SUPER_ADMIN.
@@ -281,29 +281,29 @@ export default function PointsManager() {
 
       {/* ---------- Ringkasan total ---------- */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-stone-200 bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Customer (bukan Umum)</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-stone-900">{totals.count}</p>
-          <p className="text-xs text-stone-500">dari {filteredCustomers.length} baris tampil</p>
+        <div className="rounded-xl border border-white/10 bg-white/10 p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-stone-400">Customer (bukan Umum)</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-stone-100">{totals.count}</p>
+          <p className="text-xs text-stone-400">dari {filteredCustomers.length} baris tampil</p>
         </div>
-        <div className="rounded-xl border border-stone-200 bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Total Saldo Poin</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-[#7F1D1D]">
+        <div className="rounded-xl border border-white/10 bg-white/10 p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-stone-400">Total Saldo Poin</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-[#E5484D]">
             {totals.totalPoints.toLocaleString("id-ID")} poin
           </p>
-          <p className="text-xs text-stone-500">Jumlah saldo semua customer</p>
+          <p className="text-xs text-stone-400">Jumlah saldo semua customer</p>
         </div>
-        <div className="rounded-xl border border-stone-200 bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Total Belanja (Lunas)</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-stone-900">{formatRp(totals.totalBelanja)}</p>
-          <p className="text-xs text-stone-500">Penjualan lunas saja (bukan CREDIT)</p>
+        <div className="rounded-xl border border-white/10 bg-white/10 p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-stone-400">Total Belanja (Lunas)</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-stone-100">{formatRp(totals.totalBelanja)}</p>
+          <p className="text-xs text-stone-400">Penjualan lunas saja (bukan CREDIT)</p>
         </div>
       </div>
 
       {/* ---------- Saldo Poin Customer ---------- */}
       <div className="space-y-3">
-        <h2 className="text-lg font-semibold text-stone-800">Saldo Poin Customer</h2>
-        <p className="text-sm text-stone-600">
+        <h2 className="text-lg font-semibold text-stone-200">Saldo Poin Customer</h2>
+        <p className="text-sm text-stone-400">
           Saldo poin semua customer. Penyesuaian manual (tambah/kurang) hanya
           untuk SUPER_ADMIN; customer Umum tidak punya poin. Kolom Total
           Belanja hanya menghitung penjualan lunas (bukan CREDIT, bukan
@@ -322,7 +322,7 @@ export default function PointsManager() {
               placeholder="Cari nama / kode customer…"
             />
           </div>
-          <div className="flex flex-wrap items-center gap-1 rounded-xl border border-stone-200 bg-white p-1">
+          <div className="flex flex-wrap items-center gap-1 rounded-xl border border-white/10 bg-white/10 p-1">
             {typeChips.map((chip) => (
               <button
                 key={chip.key}
@@ -331,14 +331,14 @@ export default function PointsManager() {
                 className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                   typeFilter === chip.key
                     ? "bg-[#7F1D1D] text-white"
-                    : "text-stone-600 hover:bg-stone-100"
+                    : "text-stone-400 hover:bg-white/10"
                 }`}
               >
                 {chip.label}
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-1 rounded-xl border border-stone-200 bg-white p-1">
+          <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/10 p-1">
             {pointsChips.map((chip) => (
               <button
                 key={chip.key}
@@ -347,7 +347,7 @@ export default function PointsManager() {
                 className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                   pointsFilter === chip.key
                     ? "bg-[#7F1D1D] text-white"
-                    : "text-stone-600 hover:bg-stone-100"
+                    : "text-stone-400 hover:bg-white/10"
                 }`}
               >
                 {chip.label}
@@ -364,20 +364,20 @@ export default function PointsManager() {
             <option value="points">Urutkan: Saldo Poin ↓</option>
             <option value="belanja">Urutkan: Total Belanja ↓</option>
           </select>
-          <span className="text-xs text-stone-500">
+          <span className="text-xs text-stone-400">
             Menampilkan {filteredCustomers.length} dari {customers.length} customer
           </span>
         </div>
 
         {loading ? (
-          <p className="text-sm text-stone-500">Memuat saldo poin…</p>
+          <p className="text-sm text-stone-400">Memuat saldo poin…</p>
         ) : filteredCustomers.length === 0 ? (
-          <p className="text-sm text-stone-500">Tidak ada customer yang cocok.</p>
+          <p className="text-sm text-stone-400">Tidak ada customer yang cocok.</p>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white">
+          <div className="overflow-x-auto rounded-xl border border-white/10 bg-white/15">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-stone-50 text-left text-[11px] uppercase tracking-wide text-stone-500">
+                <tr className="bg-white/5 text-left text-[11px] uppercase tracking-wide text-stone-400">
                   <th className="px-4 py-3 font-semibold">Customer</th>
                   <th className="px-4 py-3 font-semibold">Tipe</th>
                   <th className="px-4 py-3 font-semibold text-right">Total Belanja (Lunas)</th>
@@ -389,30 +389,30 @@ export default function PointsManager() {
                 {filteredCustomers.map((c) => {
                   const isUmum = c.type === "UMUM";
                   return (
-                    <tr key={c.id} className="border-t border-stone-100 hover:bg-stone-50">
+                    <tr key={c.id} className="border-t border-white/10 hover:bg-white/5">
                       <td className="px-4 py-3">
-                        <p className="font-medium text-stone-800">{c.name}</p>
-                        <p className="text-xs text-stone-500">{c.code}</p>
+                        <p className="font-medium text-stone-200">{c.name}</p>
+                        <p className="text-xs text-stone-400">{c.code}</p>
                       </td>
                       <td className="px-4 py-3">
                         <span
                           className={`text-xs font-medium px-2 py-1 rounded-full ${
                             isUmum
-                              ? "bg-stone-100 text-stone-500"
+                              ? "bg-white/10 text-stone-400"
                               : c.type === "GROSIR"
-                                ? "bg-amber-50 text-amber-700"
+                                ? "bg-amber-500/10 text-amber-300"
                                 : c.type === "PROYEK"
-                                  ? "bg-stone-100 text-stone-600"
-                                  : "bg-green-50 text-green-700"
+                                  ? "bg-white/10 text-stone-400"
+                                  : "bg-green-500/10 text-green-300"
                           }`}
                         >
                           {c.type}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold text-stone-900 whitespace-nowrap">
+                      <td className="px-4 py-3 text-right font-semibold text-stone-100 whitespace-nowrap">
                         {isUmum ? "—" : formatRp(c.totalBelanja ?? 0)}
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold text-[#7F1D1D] whitespace-nowrap">
+                      <td className="px-4 py-3 text-right font-semibold text-[#E5484D] whitespace-nowrap">
                         {isUmum ? "—" : `${(c.points ?? 0).toLocaleString("id-ID")} poin`}
                       </td>
                       {isSuperAdmin && (
@@ -453,7 +453,7 @@ export default function PointsManager() {
                                 </button>
                               </div>
                               {adjustMessages[c.id] && (
-                                <span className="text-xs text-stone-500">{adjustMessages[c.id]}</span>
+                                <span className="text-xs text-stone-400">{adjustMessages[c.id]}</span>
                               )}
                             </div>
                           )}
@@ -464,12 +464,12 @@ export default function PointsManager() {
                 })}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 border-stone-200 bg-stone-50 font-semibold text-stone-900">
+                <tr className="border-t-2 border-white/10 bg-white/5 font-semibold text-stone-100">
                   <td className="px-4 py-3" colSpan={2}>
                     TOTAL ({totals.count} customer, bukan Umum)
                   </td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">{formatRp(totals.totalBelanja)}</td>
-                  <td className="px-4 py-3 text-right text-[#7F1D1D] whitespace-nowrap">
+                  <td className="px-4 py-3 text-right text-[#E5484D] whitespace-nowrap">
                     {totals.totalPoints.toLocaleString("id-ID")} poin
                   </td>
                   {isSuperAdmin && <td className="px-4 py-3" />}

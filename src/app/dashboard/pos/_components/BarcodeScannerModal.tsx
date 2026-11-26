@@ -140,12 +140,12 @@ export function BarcodeScannerModal({ isOpen, onClose, onScanned }: BarcodeScann
   return (
     <div className="modal-overlay z-[60]">
       <div className="modal-container w-full max-w-lg overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-stone-200">
-          <h2 className="text-lg font-semibold text-stone-900 flex items-center gap-2">
-            <Camera className="w-5 h-5 text-red-900" />
+        <div className="flex items-center justify-between p-4 border-b border-white/10">
+          <h2 className="text-lg font-semibold text-stone-100 flex items-center gap-2">
+            <Camera className="w-5 h-5 text-[#E5484D]" />
             Scan Barcode / QR
           </h2>
-          <button onClick={onClose} className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 transition-colors" aria-label="Tutup">
+          <button onClick={onClose} className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-white/10 text-stone-400 hover:bg-white/15 hover:text-stone-300 transition-colors" aria-label="Tutup">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -162,17 +162,17 @@ export function BarcodeScannerModal({ isOpen, onClose, onScanned }: BarcodeScann
               <video ref={videoRef} playsInline muted className="w-full h-full object-cover" />
               {status === "scanning" && (
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                  <div className="w-3/4 h-1/2 border-2 border-green-400 rounded-xl" />
+                  <div className="w-3/4 h-1/2 border-2 border-green-500/50 rounded-xl" />
                 </div>
               )}
-              <p className="absolute bottom-2 left-0 right-0 text-center text-xs text-white bg-black/50 py-1">
+              <p className="absolute bottom-2 left-0 right-0 text-center text-xs text-white bg-black/70 py-1">
                 Arahkan kamera ke barcode / QR produk
               </p>
             </div>
           )}
 
           {status === "unsupported" && (
-            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+            <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl text-sm text-amber-300">
               Browser ini tidak mendukung scan kamera (butuh BarcodeDetector —
               Chrome/Edge terbaru). Pakai input manual di bawah atau scanner
               barcode fisik (ketik + Enter).
@@ -180,7 +180,7 @@ export function BarcodeScannerModal({ isOpen, onClose, onScanned }: BarcodeScann
           )}
 
           {status === "error" && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+            <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-sm text-red-400">
               {errorMessage}
             </div>
           )}
@@ -200,7 +200,7 @@ export function BarcodeScannerModal({ isOpen, onClose, onScanned }: BarcodeScann
                   if (e.key === "Enter") handleManualSubmit();
                 }}
                 placeholder="Kode / barcode produk..."
-                className="flex-1 px-3 py-2 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-900"
+                className="flex-1 px-3 py-2 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
               />
               <button
                 onClick={handleManualSubmit}

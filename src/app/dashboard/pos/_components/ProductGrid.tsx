@@ -14,7 +14,7 @@ export function ProductGrid({ products, onAddToCart, isLoading }: ProductGridPro
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-[#7F1D1D]" />
+        <Loader2 className="w-8 h-8 animate-spin text-[#E5484D]" />
       </div>
     );
   }

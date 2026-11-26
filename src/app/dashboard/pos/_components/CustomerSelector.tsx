@@ -86,12 +86,12 @@ export function CustomerSelector({ selectedCustomer, onSelectCustomer, onQuickAd
                         <User className="w-5 h-5 text-white" />
                     </div>
                     <div className="text-left">
-                        <p className="text-sm text-stone-500">Customer</p>
-                        <p className="font-semibold text-stone-900">
+                        <p className="text-sm text-stone-400">Customer</p>
+                        <p className="font-semibold text-stone-100">
                             {selectedCustomer ? selectedCustomer.name : "Pilih Customer"}
                         </p>
                         {selectedCustomer && (
-                            <p className="text-xs text-[#7F1D1D]">
+                            <p className="text-xs text-[#E5484D]">
                                 {selectedCustomer.type} • Diskon {selectedCustomer.discountPercent}% • {selectedCustomer.points ?? 0} poin
                             </p>
                         )}
@@ -113,7 +113,7 @@ export function CustomerSelector({ selectedCustomer, onSelectCustomer, onQuickAd
                     {/* Dropdown Content */}
                     <div className="absolute top-full left-0 right-0 mt-2 z-50 glass-card shadow-xl max-h-96 flex flex-col">
                         {/* Search */}
-                        <div className="p-3 border-b border-stone-200">
+                        <div className="p-3 border-b border-white/10">
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
                                 <input
@@ -121,7 +121,7 @@ export function CustomerSelector({ selectedCustomer, onSelectCustomer, onQuickAd
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     placeholder="Cari customer..."
-                                    className="w-full pl-10 pr-3 py-2 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7F1D1D]"
+                                    className="w-full pl-10 pr-3 py-2 border border-white/15 bg-white/[0.06] text-stone-100 placeholder:text-stone-500 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7F1D1D]"
                                     autoFocus
                                 />
                             </div>
@@ -133,7 +133,7 @@ export function CustomerSelector({ selectedCustomer, onSelectCustomer, onQuickAd
                                 setIsOpen(false);
                                 onQuickAdd();
                             }}
-                            className="p-3 border-b border-stone-200 flex items-center gap-2 text-[#7F1D1D] hover:bg-[rgba(127,29,29,0.06)] transition-colors"
+                            className="p-3 border-b border-white/10 flex items-center gap-2 text-[#E5484D] hover:bg-[rgba(127,29,29,0.06)] transition-colors"
                         >
                             <UserPlus className="w-4 h-4" />
                             <span className="text-sm font-medium">Tambah Customer Baru</span>
@@ -143,7 +143,7 @@ export function CustomerSelector({ selectedCustomer, onSelectCustomer, onQuickAd
                         <div className="overflow-y-auto flex-1">
                             {isLoading ? (
                                 <div className="flex items-center justify-center py-8">
-                                    <Loader2 className="w-6 h-6 animate-spin text-[#7F1D1D]" />
+                                    <Loader2 className="w-6 h-6 animate-spin text-[#E5484D]" />
                                 </div>
                             ) : customers.length === 0 ? (
                                 <div className="p-8 text-center text-stone-400">
@@ -154,22 +154,22 @@ export function CustomerSelector({ selectedCustomer, onSelectCustomer, onQuickAd
                                     <button
                                         key={customer.id}
                                         onClick={() => handleSelect(customer)}
-                                        className="w-full p-3 flex items-center gap-3 hover:bg-[rgba(127,29,29,0.06)] transition-colors border-b border-stone-100 last:border-0"
+                                        className="w-full p-3 flex items-center gap-3 hover:bg-[rgba(127,29,29,0.06)] transition-colors border-b border-white/[0.07] last:border-0"
                                     >
-                                        <div className="w-10 h-10 rounded-full bg-stone-300 flex items-center justify-center flex-shrink-0">
+                                        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
                                             <User className="w-5 h-5 text-white" />
                                         </div>
                                         <div className="flex-1 text-left min-w-0">
                                             <div className="flex items-center gap-2">
-                                                <p className="font-medium text-stone-900 truncate">{customer.name}</p>
+                                                <p className="font-medium text-stone-100 truncate">{customer.name}</p>
                                                 {/* ✅ PENANDA CUSTOMER UMUM (berdasar tipe, bukan kode) */}
                                                 {customer.type === CustomerType.UMUM && (
-                                                    <span className="px-2 py-0.5 bg-[rgba(127,29,29,0.08)] text-[#7F1D1D] text-[10px] font-medium rounded">
+                                                    <span className="px-2 py-0.5 bg-[rgba(229,72,77,0.12)] text-[#E5484D] text-[10px] font-medium rounded">
                                                         UMUM
                                                     </span>
                                                 )}
                                             </div>
-                                            <p className="text-xs text-stone-500">
+                                            <p className="text-xs text-stone-400">
                                                 {customer.code} • {customer.type}
                                                 {customer.discountPercent > 0 && ` • Diskon ${customer.discountPercent}%`}
                                                 {` • ${customer.points ?? 0} poin`}

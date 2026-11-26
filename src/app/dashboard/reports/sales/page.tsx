@@ -116,9 +116,9 @@ export default function SalesReportPage() {
                 </>
             ) : (
                 <div className="text-center py-12">
-                    <p className="text-stone-500">Pilih periode dan klik Tampilkan untuk generate laporan</p>
+                    <p className="text-stone-400">Pilih periode dan klik Tampilkan untuk generate laporan</p>
                     {error && (
-                        <p className="mt-4 text-sm text-[#991B1B]">{error}</p>
+                        <p className="mt-4 text-sm text-[#E5484D]">{error}</p>
                     )}
                 </div>
             )}

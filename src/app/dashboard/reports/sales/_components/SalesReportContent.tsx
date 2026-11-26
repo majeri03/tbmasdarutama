@@ -40,7 +40,7 @@ export default function SalesReportContent({ data, dateFrom, dateTo }: SalesRepo
   const period = `${formatDateWita(dateFrom)} - ${formatDateWita(dateTo)}`;
 
   return (
-    <div id="print-content" className="bg-white p-8 min-h-[297mm] text-[#111111]">
+    <div id="print-content" className="bg-[#1C1917] print:bg-white p-8 min-h-[297mm] text-stone-100 print:text-stone-100 print:text-[#111111]">
       <ReportHeader
         title="Laporan Penjualan"
         period={period}
@@ -72,19 +72,19 @@ export default function SalesReportContent({ data, dateFrom, dateTo }: SalesRepo
         <ReportSectionTitle>Detail Transaksi</ReportSectionTitle>
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b-2 border-[#111111]">
-              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">No</th>
-              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">No. Invoice</th>
-              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">Tanggal</th>
-              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">Customer</th>
-              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">Kasir</th>
-              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">Metode</th>
-              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-[#111111]">Total</th>
+            <tr className="border-b-2 border-white/40 print:border-[#111111]">
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">No</th>
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">No. Invoice</th>
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Tanggal</th>
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Customer</th>
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Kasir</th>
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Metode</th>
+              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Total</th>
             </tr>
           </thead>
           <tbody>
             {sales.map((sale, index) => (
-              <tr key={sale.id} className="border-b border-gray-200 even:bg-[#FAFAFA]">
+              <tr key={sale.id} className="border-b border-white/10 print:border-gray-200 even:bg-white/[0.04] print:even:bg-[#FAFAFA]">
                 <td className="px-3 py-2">{index + 1}</td>
                 <td className="px-3 py-2 font-mono text-xs">{sale.invoiceNumber}</td>
                 <td className="px-3 py-2">{formatDateWita(sale.saleDate)}</td>
@@ -98,11 +98,11 @@ export default function SalesReportContent({ data, dateFrom, dateTo }: SalesRepo
             ))}
           </tbody>
           <tfoot>
-            <tr className="border-t-2 border-[#111111] font-bold">
+            <tr className="border-t-2 border-white/40 print:border-[#111111] font-bold">
               <td colSpan={6} className="px-3 py-3 text-right">
                 TOTAL
               </td>
-              <td className="report-total-red px-3 py-3 text-right tabular-nums text-red-900">{formatCurrency(summary.totalRevenue)}</td>
+              <td className="report-total-red px-3 py-3 text-right tabular-nums text-[#E5484D] print:text-red-900">{formatCurrency(summary.totalRevenue)}</td>
             </tr>
           </tfoot>
         </table>

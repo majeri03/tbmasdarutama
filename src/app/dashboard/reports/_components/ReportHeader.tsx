@@ -77,25 +77,25 @@ export default function ReportHeader({
     <div className="mb-8">
       {/* Kop perusahaan */}
       <div className="text-center">
-        <h1 className="text-2xl font-bold tracking-wide text-[#111111]">
+        <h1 className="text-2xl font-bold tracking-wide text-stone-100 print:text-[#111111]">
           {loaded ? storeName || "Data toko belum diisi" : "\u00A0"}
         </h1>
-        {loaded && storeAddress && <p className="mt-1 text-sm text-[#6B7280]">{storeAddress}</p>}
-        {loaded && storePhone && <p className="text-sm text-[#6B7280]">Telp: {storePhone}</p>}
+        {loaded && storeAddress && <p className="mt-1 text-sm text-stone-400 print:text-[#6B7280]">{storeAddress}</p>}
+        {loaded && storePhone && <p className="text-sm text-stone-400 print:text-[#6B7280]">Telp: {storePhone}</p>}
       </div>
 
       {/* Garis merah tua */}
-      <div className="report-rule-red mt-5 border-t-[3px] border-red-900" />
+      <div className="report-rule-red mt-5 border-t-[3px] border-[#E5484D] print:border-red-900" />
 
       {/* Judul laporan */}
       <div className="mt-5 text-center">
-        <h2 className="text-xl font-bold uppercase tracking-[0.12em] text-[#111111]">{title}</h2>
-        {period && <p className="mt-1 text-sm text-[#6B7280]">Periode: {period}</p>}
-        <p className="mt-1 text-xs text-[#6B7280]">Dicetak: {getCurrentDateTimeWita()}</p>
+        <h2 className="text-xl font-bold uppercase tracking-[0.12em] text-stone-100 print:text-[#111111]">{title}</h2>
+        {period && <p className="mt-1 text-sm text-stone-400 print:text-[#6B7280]">Periode: {period}</p>}
+        <p className="mt-1 text-xs text-stone-400 print:text-[#6B7280]">Dicetak: {getCurrentDateTimeWita()}</p>
       </div>
 
       {/* Garis hitam di bawah blok judul */}
-      <div className="mt-5 border-b border-[#111111]" />
+      <div className="mt-5 border-b border-white/25 print:border-[#111111]" />
     </div>
   );
 }

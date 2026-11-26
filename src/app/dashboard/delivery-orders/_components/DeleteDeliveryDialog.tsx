@@ -49,17 +49,17 @@ export function DeleteDeliveryDialog({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl w-full max-w-md">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="bg-[#1C1917] rounded-xl w-full max-w-md">
         {/* Header */}
-        <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <AlertTriangle className="w-6 h-6 text-red-600" />
+        <div className="border-b border-white/10 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-stone-100 flex items-center gap-2">
+            <AlertTriangle className="w-6 h-6 text-red-400" />
             Konfirmasi Hapus
           </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
             disabled={isLoading}
           >
             <X className="w-5 h-5" />
@@ -68,30 +68,30 @@ export function DeleteDeliveryDialog({
 
         {/* Content */}
         <div className="p-6 space-y-4">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-sm text-red-800">
+          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+            <p className="text-sm text-red-300">
               <strong>Perhatian!</strong> Tindakan ini tidak dapat dibatalkan.
             </p>
           </div>
 
           <div className="space-y-2">
-            <p className="text-gray-700">
+            <p className="text-stone-300">
               Apakah Anda yakin ingin menghapus surat jalan ini?
             </p>
             <div className="glass-card p-3 space-y-1">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">No. Surat Jalan:</span>
+                <span className="text-sm text-stone-400">No. Surat Jalan:</span>
                 <span className="font-semibold">{deliveryOrder.doNumber}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Customer:</span>
+                <span className="text-sm text-stone-400">Customer:</span>
                 <span className="font-semibold">
                   {deliveryOrder.customer.name}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Total Items:</span>
-                <span className="font-semibold text-red-900">
+                <span className="text-sm text-stone-400">Total Items:</span>
+                <span className="font-semibold text-[#E5484D]">
                   {deliveryOrder.deliveryItems.length} items
                 </span>
               </div>
@@ -100,7 +100,7 @@ export function DeleteDeliveryDialog({
         </div>
 
         {/* Actions */}
-        <div className="border-t border-gray-200 px-6 py-4 flex gap-3">
+        <div className="border-t border-white/10 px-6 py-4 flex gap-3">
           <button
             onClick={onClose}
             className="btn-secondary flex-1"

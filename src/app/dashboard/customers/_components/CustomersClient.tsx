@@ -149,8 +149,8 @@ export function CustomersClient({
             {/* Header */}
             <div className="flex items-center justify-between mb-2">
                 <div>
-                    <h1 className="text-3xl font-semibold tracking-tight text-stone-900">Customer</h1>
-                    <p className="text-stone-600 mt-1">
+                    <h1 className="text-3xl font-semibold tracking-tight text-stone-100">Customer</h1>
+                    <p className="text-stone-400 mt-1">
                         Kelola data customer dan pelanggan
                     </p>
                 </div>

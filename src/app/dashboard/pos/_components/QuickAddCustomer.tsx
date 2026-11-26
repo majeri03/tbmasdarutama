@@ -66,12 +66,12 @@ export function QuickAddCustomer({ isOpen, onClose, onSuccess, showToast }: Quic
                 {/* Modal */}
                 <div className="glass-card w-full max-w-md">
                     {/* Header */}
-                    <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                        <h2 className="text-lg font-semibold text-gray-900">Tambah Customer Cepat</h2>
+                    <div className="flex items-center justify-between p-4 border-b border-white/10">
+                        <h2 className="text-lg font-semibold text-stone-100">Tambah Customer Cepat</h2>
                         <button
                             onClick={onClose}
                             disabled={isLoading}
-                            className="text-gray-400 hover:text-gray-600"
+                            className="text-stone-400 hover:text-stone-200"
                         >
                             <X className="w-5 h-5" />
                         </button>
@@ -81,7 +81,7 @@ export function QuickAddCustomer({ isOpen, onClose, onSuccess, showToast }: Quic
                     <form onSubmit={handleSubmit} className="p-4 space-y-4">
                         {/* Name */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-stone-300 mb-1">
                                 Nama Customer <span className="text-red-500">*</span>
                             </label>
                             <input
@@ -91,13 +91,13 @@ export function QuickAddCustomer({ isOpen, onClose, onSuccess, showToast }: Quic
                                 required
                                 disabled={isLoading}
                                 placeholder="Masukkan nama customer"
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-900"
+                                className="w-full px-3 py-2 border border-white/15 bg-white/[0.06] text-stone-100 placeholder:text-stone-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
                             />
                         </div>
 
                         {/* Phone */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-stone-300 mb-1">
                                 No. Telepon
                             </label>
                             <input
@@ -106,20 +106,20 @@ export function QuickAddCustomer({ isOpen, onClose, onSuccess, showToast }: Quic
                                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                 disabled={isLoading}
                                 placeholder="08xxxxxxxxxx"
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-900"
+                                className="w-full px-3 py-2 border border-white/15 bg-white/[0.06] text-stone-100 placeholder:text-stone-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
                             />
                         </div>
 
                         {/* Type */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-stone-300 mb-1">
                                 Tipe Customer <span className="text-red-500">*</span>
                             </label>
                             <select
                                 value={formData.type}
                                 onChange={(e) => setFormData({ ...formData, type: e.target.value as CustomerType })}
                                 disabled={isLoading}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-900"
+                                className="w-full px-3 py-2 border border-white/15 bg-white/[0.06] text-stone-100 placeholder:text-stone-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
                             >
                                 <option value="REGULER">Regular (Diskon 0%)</option>
                                 <option value="GROSIR">Grosir (Diskon 5%)</option>
@@ -133,14 +133,14 @@ export function QuickAddCustomer({ isOpen, onClose, onSuccess, showToast }: Quic
                                 type="button"
                                 onClick={onClose}
                                 disabled={isLoading}
-                                className="flex-1 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                                className="flex-1 px-4 py-2 border border-white/15 rounded-lg hover:bg-white/[0.07] text-stone-100 transition-colors"
                             >
                                 Batal
                             </button>
                             <button
                                 type="submit"
                                 disabled={isLoading || !formData.name}
-                                className="flex-1 px-4 py-2 bg-red-900 hover:bg-red-800 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                                className="flex-1 px-4 py-2 bg-[#7F1D1D] hover:bg-[#991B1B] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
                             >
                                 {isLoading ? (
                                     <>

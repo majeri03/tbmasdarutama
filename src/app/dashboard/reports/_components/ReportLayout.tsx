@@ -29,12 +29,12 @@ export default function ReportLayout({
         <div className="no-print glass-card p-6">
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-4">
-              <div className="rounded-lg bg-[#1C1917] p-3">
+              <div className="rounded-lg bg-[#7F1D1D] p-3">
                 <FileText className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-[#1C1917]">{title}</h1>
-                <p className="mt-1 text-[#57534E]">{description}</p>
+                <h1 className="text-2xl font-bold text-stone-100">{title}</h1>
+                <p className="mt-1 text-stone-400">{description}</p>
               </div>
             </div>
 
@@ -44,7 +44,7 @@ export default function ReportLayout({
                 <button
                   onClick={onPrint}
                   disabled={isLoading}
-                  className="inline-flex items-center gap-2 rounded-lg border border-[rgba(28,25,23,0.16)] bg-white px-4 py-2 text-sm font-semibold text-[#1C1917] hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-stone-100 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Printer className="w-4 h-4" />
                   Print
@@ -64,7 +64,7 @@ export default function ReportLayout({
           </div>
 
           {/* Filters */}
-          {filters && <div className="mt-6 pt-6 border-t border-stone-200 no-print">{filters}</div>}
+          {filters && <div className="mt-6 pt-6 border-t border-white/10 no-print">{filters}</div>}
         </div>
 
         {/* Content */}

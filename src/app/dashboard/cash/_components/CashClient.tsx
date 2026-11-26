@@ -148,29 +148,29 @@ export default function CashClient() {
       {/* Ringkasan */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="glass-card p-6">
-          <p className="text-sm text-stone-600 mb-1">Saldo Kas</p>
-          <p className="text-2xl font-bold text-red-900">
+          <p className="text-sm text-stone-400 mb-1">Saldo Kas</p>
+          <p className="text-2xl font-bold text-stone-100">
             {data ? formatCurrency(data.balance) : "—"}
           </p>
-          <p className="text-stone-500 text-xs mt-1">
+          <p className="text-stone-400 text-xs mt-1">
             Total semua kas masuk − total semua kas keluar
           </p>
         </div>
         <div className="glass-card p-6">
-          <p className="text-sm text-stone-600 mb-1">Kas Masuk (periode ini)</p>
-          <p className="text-2xl font-bold text-green-700">
+          <p className="text-sm text-stone-400 mb-1">Kas Masuk (periode ini)</p>
+          <p className="text-2xl font-bold text-green-400">
             {data ? formatCurrency(data.totalIn) : "—"}
           </p>
-          <p className="text-stone-500 text-xs mt-1">
+          <p className="text-stone-400 text-xs mt-1">
             {dateFrom} s.d. {dateTo}
           </p>
         </div>
         <div className="glass-card p-6">
-          <p className="text-sm text-stone-600 mb-1">Kas Keluar (periode ini)</p>
-          <p className="text-2xl font-bold text-red-800">
+          <p className="text-sm text-stone-400 mb-1">Kas Keluar (periode ini)</p>
+          <p className="text-2xl font-bold text-red-300">
             {data ? formatCurrency(data.totalOut) : "—"}
           </p>
-          <p className="text-stone-500 text-xs mt-1">
+          <p className="text-stone-400 text-xs mt-1">
             {dateFrom} s.d. {dateTo}
           </p>
         </div>
@@ -178,7 +178,7 @@ export default function CashClient() {
 
       {/* Form catat kas */}
       <div className="glass-card p-6">
-        <h2 className="text-lg font-bold text-stone-900 mb-4">
+        <h2 className="text-lg font-bold text-stone-100 mb-4">
           Catat Kas Masuk / Keluar
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -186,14 +186,14 @@ export default function CashClient() {
             <button
               type="button"
               onClick={() => setFormType("IN")}
-              className={`px-4 py-2.5 rounded-xl font-semibold text-sm transition ${ formType === "IN" ? "bg-green-700 text-white shadow" : "bg-green-50 text-green-700 border border-green-200 hover:bg-green-100" }`}
+              className={`px-4 py-2.5 rounded-xl font-semibold text-sm transition ${ formType === "IN" ? "bg-green-700 text-white shadow" : "bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/15" }`}
             >
               Kas Masuk
             </button>
             <button
               type="button"
               onClick={() => setFormType("OUT")}
-              className={`px-4 py-2.5 rounded-xl font-semibold text-sm transition ${ formType === "OUT" ? "bg-red-900 text-white shadow" : "bg-red-50 text-red-700 border border-red-200 hover:bg-red-100" }`}
+              className={`px-4 py-2.5 rounded-xl font-semibold text-sm transition ${ formType === "OUT" ? "bg-red-900 text-white shadow" : "bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/15" }`}
             >
               Kas Keluar
             </button>
@@ -243,12 +243,12 @@ export default function CashClient() {
             />
           </div>
           {formError && (
-            <p className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+            <p className="text-sm text-red-300 bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2">
               {formError}
             </p>
           )}
           {formSuccess && (
-            <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-3 py-2">
+            <p className="text-sm text-green-400 bg-green-500/10 border border-green-500/30 rounded-xl px-3 py-2">
               {formSuccess}
             </p>
           )}
@@ -273,7 +273,7 @@ export default function CashClient() {
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="input-field"
+              className="input-field [color-scheme:dark]"
             />
           </div>
           <div className="flex-1">
@@ -284,7 +284,7 @@ export default function CashClient() {
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="input-field"
+              className="input-field [color-scheme:dark]"
             />
           </div>
           <div className="flex-1">
@@ -296,7 +296,7 @@ export default function CashClient() {
               onChange={(e) =>
                 setTypeFilter(e.target.value as "ALL" | "IN" | "OUT")
               }
-              className="input-field"
+              className="input-field [color-scheme:dark]"
             >
               <option value="ALL">Semua</option>
               <option value="IN">Kas Masuk</option>
@@ -312,22 +312,22 @@ export default function CashClient() {
 
         {isLoading ? (
           <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-900 mx-auto"></div>
-            <p className="mt-4 text-stone-600">Memuat data kas...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#E5484D] mx-auto"></div>
+            <p className="mt-4 text-stone-400">Memuat data kas...</p>
           </div>
         ) : error ? (
-          <p className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+          <p className="text-sm text-red-300 bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2">
             {error}
           </p>
         ) : !data || data.transactions.length === 0 ? (
-          <p className="text-center text-stone-500 py-12">
+          <p className="text-center text-stone-400 py-12">
             Belum ada arus kas pada periode ini.
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b-2 border-gray-900">
+                <tr className="border-b-2 border-white/20">
                   <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider">
                     Tanggal
                   </th>
@@ -352,7 +352,7 @@ export default function CashClient() {
                 {data.transactions.map((t) => (
                   <tr
                     key={t.id}
-                    className="border-b border-stone-200 even:bg-[#FAFAFA]"
+                    className="border-b border-white/10 even:bg-white/5"
                   >
                     <td className="px-3 py-2 whitespace-nowrap">
                       {formatDateTime(t.createdAt)}
@@ -360,17 +360,17 @@ export default function CashClient() {
                     <td className="px-3 py-2">{t.description}</td>
                     <td className="px-3 py-2">{t.category || "—"}</td>
                     <td className="px-3 py-2">{t.createdByName}</td>
-                    <td className="px-3 py-2 text-right font-semibold tabular-nums text-green-700">
+                    <td className="px-3 py-2 text-right font-semibold tabular-nums text-green-400">
                       {t.type === "IN" ? formatCurrency(t.amount) : "—"}
                     </td>
-                    <td className="px-3 py-2 text-right font-semibold tabular-nums text-red-800">
+                    <td className="px-3 py-2 text-right font-semibold tabular-nums text-red-300">
                       {t.type === "OUT" ? formatCurrency(t.amount) : "—"}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <p className="text-xs text-stone-500 mt-3">
+            <p className="text-xs text-stone-400 mt-3">
               Menampilkan {data.transactions.length} transaksi terakhir
               (maksimal 100 dari API).
             </p>

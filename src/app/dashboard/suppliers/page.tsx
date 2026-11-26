@@ -170,10 +170,10 @@ export default function SuppliersPage() {
         <div className="glass-card p-6 animate-slide-up">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-stone-900 mb-2">
+              <h1 className="text-3xl font-semibold tracking-tight text-stone-100 mb-2">
                 Master Supplier
               </h1>
-              <p className="text-stone-600">
+              <p className="text-stone-400">
                 Kelola data supplier dan pemasok produk Anda
               </p>
               <div className="flex items-center gap-3 mt-3">
@@ -193,7 +193,7 @@ export default function SuppliersPage() {
                   </>
                 )}
                 <span className="text-stone-400 text-sm">•</span>
-                <span className="text-stone-600 text-sm">
+                <span className="text-stone-400 text-sm">
                   Halaman {pagination.page} dari {pagination.totalPages || 1}
                 </span>
               </div>
@@ -212,33 +212,33 @@ export default function SuppliersPage() {
           {/* Total Supplier */}
           <div className="stat-card animate-slide-up">
             <div className="flex items-start justify-between mb-4">
-              <div className="p-3 rounded-xl bg-stone-100 border border-stone-200">
-                <Truck className="w-6 h-6 text-stone-600" />
+              <div className="p-3 rounded-xl bg-white/10 border border-white/10">
+                <Truck className="w-6 h-6 text-stone-400" />
               </div>
             </div>
-            <h3 className="text-stone-500 text-sm font-medium mb-1">
+            <h3 className="text-stone-400 text-sm font-medium mb-1">
               Total Supplier
             </h3>
-            <p className="text-3xl font-semibold tabular-nums text-stone-900 mb-1">
+            <p className="text-3xl font-semibold tabular-nums text-stone-100 mb-1">
               {stats.total}
             </p>
-            <p className="text-stone-500 text-xs">Supplier terdaftar</p>
+            <p className="text-stone-400 text-xs">Supplier terdaftar</p>
           </div>
 
           {/* Supplier Aktif */}
           <div className="stat-card animate-slide-up animation-delay-200">
             <div className="flex items-start justify-between mb-4">
-              <div className="p-3 rounded-xl bg-stone-100 border border-stone-200">
-                <CheckCircle className="w-6 h-6 text-stone-600" />
+              <div className="p-3 rounded-xl bg-white/10 border border-white/10">
+                <CheckCircle className="w-6 h-6 text-stone-400" />
               </div>
             </div>
-            <h3 className="text-stone-500 text-sm font-medium mb-1">
+            <h3 className="text-stone-400 text-sm font-medium mb-1">
               Supplier Aktif
             </h3>
-            <p className="text-3xl font-semibold tabular-nums text-stone-900 mb-1">
+            <p className="text-3xl font-semibold tabular-nums text-stone-100 mb-1">
               {stats.active}
             </p>
-            <p className="text-stone-500 text-xs">
+            <p className="text-stone-400 text-xs">
               {stats.total > 0
                 ? `${((stats.active / stats.total) * 100).toFixed(0)}% dari total`
                 : "Belum ada data"}
@@ -248,17 +248,17 @@ export default function SuppliersPage() {
           {/* Supplier Nonaktif */}
           <div className="stat-card animate-slide-up animation-delay-400">
             <div className="flex items-start justify-between mb-4">
-              <div className="p-3 rounded-xl bg-stone-100 border border-stone-200">
-                <XCircle className="w-6 h-6 text-red-800" />
+              <div className="p-3 rounded-xl bg-white/10 border border-white/10">
+                <XCircle className="w-6 h-6 text-red-300" />
               </div>
             </div>
-            <h3 className="text-stone-500 text-sm font-medium mb-1">
+            <h3 className="text-stone-400 text-sm font-medium mb-1">
               Supplier Nonaktif
             </h3>
-            <p className="text-3xl font-semibold tabular-nums text-stone-900 mb-1">
+            <p className="text-3xl font-semibold tabular-nums text-stone-100 mb-1">
               {stats.inactive}
             </p>
-            <p className="text-stone-500 text-xs">
+            <p className="text-stone-400 text-xs">
               {stats.total > 0
                 ? `${((stats.inactive / stats.total) * 100).toFixed(0)}% dari total`
                 : "Belum ada data"}
@@ -268,17 +268,17 @@ export default function SuppliersPage() {
           {/* Total Produk */}
           <div className="stat-card animate-slide-up animation-delay-600">
             <div className="flex items-start justify-between mb-4">
-              <div className="p-3 rounded-xl bg-stone-100 border border-stone-200">
-                <Package className="w-6 h-6 text-stone-600" />
+              <div className="p-3 rounded-xl bg-white/10 border border-white/10">
+                <Package className="w-6 h-6 text-stone-400" />
               </div>
             </div>
-            <h3 className="text-stone-500 text-sm font-medium mb-1">
+            <h3 className="text-stone-400 text-sm font-medium mb-1">
               Total Produk
             </h3>
-            <p className="text-3xl font-semibold tabular-nums text-stone-900 mb-1">
+            <p className="text-3xl font-semibold tabular-nums text-stone-100 mb-1">
               {stats.totalProducts}
             </p>
-            <p className="text-stone-500 text-xs">Produk dari supplier</p>
+            <p className="text-stone-400 text-xs">Produk dari supplier</p>
           </div>
         </div>
 
@@ -288,15 +288,15 @@ export default function SuppliersPage() {
           <div className="stat-card animate-slide-up animation-delay-800">
             <div className="flex items-center gap-4">
               <div
-                className="p-4 rounded-xl bg-stone-100 border border-stone-200"
+                className="p-4 rounded-xl bg-white/10 border border-white/10"
               >
-                <ShoppingCart className="w-8 h-8 text-stone-600" />
+                <ShoppingCart className="w-8 h-8 text-stone-400" />
               </div>
               <div className="flex-1">
-                <h3 className="text-stone-500 text-sm font-medium mb-1">
+                <h3 className="text-stone-400 text-sm font-medium mb-1">
                   Total Transaksi Pembelian
                 </h3>
-                <p className="text-3xl font-bold text-stone-900">
+                <p className="text-3xl font-bold text-stone-100">
                   {stats.totalPurchases}
                 </p>
               </div>
@@ -307,15 +307,15 @@ export default function SuppliersPage() {
           <div className="stat-card animate-slide-up animation-delay-1000">
             <div className="flex items-center gap-4">
               <div
-                className="p-4 rounded-xl bg-stone-100 border border-stone-200"
+                className="p-4 rounded-xl bg-white/10 border border-white/10"
               >
-                <Package className="w-8 h-8 text-stone-600" />
+                <Package className="w-8 h-8 text-stone-400" />
               </div>
               <div className="flex-1">
-                <h3 className="text-stone-500 text-sm font-medium mb-1">
+                <h3 className="text-stone-400 text-sm font-medium mb-1">
                   Rata-rata Produk per Supplier
                 </h3>
-                <p className="text-3xl font-bold text-stone-900">
+                <p className="text-3xl font-bold text-stone-100">
                   {stats.total > 0
                     ? (stats.totalProducts / stats.total).toFixed(1)
                     : "0"}

@@ -51,19 +51,19 @@ export function POSKeyboardShortcuts({
   }, [onSearchFocus, onCheckout, onClearCart, canCheckout]);
 
   return (
-    <div className="hidden md:block fixed bottom-4 left-4 glass-card p-3 text-xs text-stone-600 shadow-lg">
-      <p className="font-semibold text-stone-900 mb-1">Shortcut Keyboard:</p>
+    <div className="hidden md:block fixed bottom-4 left-4 glass-card p-3 text-xs text-stone-400 shadow-lg">
+      <p className="font-semibold text-stone-100 mb-1">Shortcut Keyboard:</p>
       <div className="space-y-0.5">
         <div className="flex items-center gap-2">
-          <kbd className="px-2 py-0.5 bg-stone-200 rounded text-[10px] font-mono">F2</kbd>
+          <kbd className="px-2 py-0.5 bg-white/10 text-stone-200 rounded text-[10px] font-mono">F2</kbd>
           <span>Focus Pencarian</span>
         </div>
         <div className="flex items-center gap-2">
-          <kbd className="px-2 py-0.5 bg-stone-200 rounded text-[10px] font-mono">F9</kbd>
+          <kbd className="px-2 py-0.5 bg-white/10 text-stone-200 rounded text-[10px] font-mono">F9</kbd>
           <span>Checkout</span>
         </div>
         <div className="flex items-center gap-2">
-          <kbd className="px-2 py-0.5 bg-stone-200 rounded text-[10px] font-mono">F12</kbd>
+          <kbd className="px-2 py-0.5 bg-white/10 text-stone-200 rounded text-[10px] font-mono">F12</kbd>
           <span>Kosongkan Keranjang</span>
         </div>
       </div>

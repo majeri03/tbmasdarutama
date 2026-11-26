@@ -52,7 +52,7 @@ export default async function StockPage({ searchParams }: StockPageProps) {
         return (
             <div className="p-6">
                 <div className="glass-card p-8 text-center">
-                    <p className="text-red-800 font-semibold">
+                    <p className="text-red-300 font-semibold">
                         {movementsResult.error || "Gagal memuat data stock movements"}
                     </p>
                 </div>
@@ -67,7 +67,7 @@ export default async function StockPage({ searchParams }: StockPageProps) {
         return (
             <div className="p-6">
                 <div className="glass-card p-8 text-center">
-                    <p className="text-red-800 font-semibold">
+                    <p className="text-red-300 font-semibold">
                         {statsResult.error || "Gagal memuat statistik stock"}
                     </p>
                 </div>

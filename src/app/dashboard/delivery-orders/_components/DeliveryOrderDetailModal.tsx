@@ -60,10 +60,10 @@ interface DeliveryOrderDetail {
 }
 
 const statusConfig: Record<DeliveryStatus, { label: string; className: string }> = {
-  PENDING: { label: "Menunggu", className: "bg-yellow-100 text-yellow-800" },
-  IN_TRANSIT: { label: "Dalam Pengiriman", className: "bg-stone-100 text-stone-700" },
-  DELIVERED: { label: "Terkirim", className: "bg-green-100 text-green-800" },
-  CANCELLED: { label: "Dibatalkan", className: "bg-red-100 text-red-800" },
+  PENDING: { label: "Menunggu", className: "bg-yellow-500/15 text-yellow-300" },
+  IN_TRANSIT: { label: "Dalam Pengiriman", className: "bg-white/10 text-stone-300" },
+  DELIVERED: { label: "Terkirim", className: "bg-green-500/15 text-green-300" },
+  CANCELLED: { label: "Dibatalkan", className: "bg-red-500/15 text-red-300" },
 };
 
 export function DeliveryOrderDetailModal({
@@ -109,8 +109,8 @@ export function DeliveryOrderDetailModal({
     <div className="modal-overlay">
       <div className="modal-container w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold tracking-tight text-stone-900">Detail Surat Jalan</h2>
+        <div className="sticky top-0 bg-[#1C1917] border-b border-white/10 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold tracking-tight text-stone-100">Detail Surat Jalan</h2>
           <div className="flex items-center gap-2">
             {deliveryOrder && (
               <button
@@ -123,7 +123,7 @@ export function DeliveryOrderDetailModal({
             )}
             <button
               onClick={onClose}
-              className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 transition-colors"
+              className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-white/10 text-stone-400 hover:bg-white/15 hover:text-stone-300 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -133,24 +133,24 @@ export function DeliveryOrderDetailModal({
         {/* Content */}
         {isLoading ? (
           <div className="p-12 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-900 mx-auto"></div>
-            <p className="mt-4 text-stone-600">Memuat data...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#E5484D] mx-auto"></div>
+            <p className="mt-4 text-stone-400">Memuat data...</p>
           </div>
         ) : deliveryOrder ? (
           <div className="p-6 space-y-6">
             {/* DO Info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="glass-card p-4 space-y-3">
-                <h3 className="font-semibold text-stone-900 mb-3">
+                <h3 className="font-semibold text-stone-100 mb-3">
                   Informasi Surat Jalan
                 </h3>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-sm text-stone-600">No. Surat Jalan:</span>
+                    <span className="text-sm text-stone-400">No. Surat Jalan:</span>
                     <span className="font-semibold">{deliveryOrder.doNumber}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-stone-600">Status:</span>
+                    <span className="text-sm text-stone-400">Status:</span>
                     <span
                       className={`px-2 py-1 text-xs font-medium rounded-full ${ statusConfig[deliveryOrder.status].className }`}
                     >
@@ -158,7 +158,7 @@ export function DeliveryOrderDetailModal({
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-stone-600">Tanggal Kirim:</span>
+                    <span className="text-sm text-stone-400">Tanggal Kirim:</span>
                     <span className="text-sm">
                       {format(new Date(deliveryOrder.deliveryDate), "dd MMM yyyy", {
                         locale: id,
@@ -166,7 +166,7 @@ export function DeliveryOrderDetailModal({
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-stone-600">Dibuat:</span>
+                    <span className="text-sm text-stone-400">Dibuat:</span>
                     <span className="text-sm">
                       {format(new Date(deliveryOrder.createdAt), "dd MMM yyyy HH:mm", {
                         locale: id,
@@ -175,13 +175,13 @@ export function DeliveryOrderDetailModal({
                   </div>
                   {deliveryOrder.driver && (
                     <div className="flex justify-between">
-                      <span className="text-sm text-stone-600">Pengemudi:</span>
+                      <span className="text-sm text-stone-400">Pengemudi:</span>
                       <span className="font-semibold">{deliveryOrder.driver}</span>
                     </div>
                   )}
                   {deliveryOrder.vehicle && (
                     <div className="flex justify-between">
-                      <span className="text-sm text-stone-600">Kendaraan:</span>
+                      <span className="text-sm text-stone-400">Kendaraan:</span>
                       <span className="font-semibold">{deliveryOrder.vehicle}</span>
                     </div>
                   )}
@@ -189,31 +189,31 @@ export function DeliveryOrderDetailModal({
               </div>
 
               <div className="glass-card p-4 space-y-3">
-                <h3 className="font-semibold text-stone-900 mb-3">
+                <h3 className="font-semibold text-stone-100 mb-3">
                   Informasi Customer
                 </h3>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-sm text-stone-600">Kode:</span>
+                    <span className="text-sm text-stone-400">Kode:</span>
                     <span className="font-semibold">{deliveryOrder.customer.code}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-stone-600">Nama:</span>
+                    <span className="text-sm text-stone-400">Nama:</span>
                     <span className="font-semibold">{deliveryOrder.customer.name}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-stone-600">Telepon:</span>
+                    <span className="text-sm text-stone-400">Telepon:</span>
                     <span className="text-sm">{deliveryOrder.customer.phone || "-"}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-stone-600">Alamat:</span>
+                    <span className="text-sm text-stone-400">Alamat:</span>
                     <span className="text-sm text-right max-w-[200px]">
                       {deliveryOrder.customer.address || "-"}
                     </span>
                   </div>
                   {deliveryOrder.sale && (
-                    <div className="flex justify-between pt-2 border-t border-stone-200">
-                      <span className="text-sm text-stone-600">No. Invoice:</span>
+                    <div className="flex justify-between pt-2 border-t border-white/10">
+                      <span className="text-sm text-stone-400">No. Invoice:</span>
                       <span className="font-semibold">
                         {deliveryOrder.sale.invoiceNumber}
                       </span>
@@ -225,37 +225,37 @@ export function DeliveryOrderDetailModal({
 
             {/* Items */}
             <div className="glass-card p-4">
-              <h3 className="font-semibold text-stone-900 mb-3 flex items-center gap-2">
+              <h3 className="font-semibold text-stone-100 mb-3 flex items-center gap-2">
                 <FileText className="w-4 h-4" />
                 Items Pengiriman ({deliveryOrder.deliveryItems.length})
               </h3>
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-stone-50 border-b border-stone-200">
+                  <thead className="bg-white/5 border-b border-white/10">
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-stone-500">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-stone-400">
                         No.
                       </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-stone-500">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-stone-400">
                         Kode Produk
                       </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-stone-500">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-stone-400">
                         Nama Produk
                       </th>
-                      <th className="px-4 py-2 text-center text-xs font-medium text-stone-500">
+                      <th className="px-4 py-2 text-center text-xs font-medium text-stone-400">
                         Jumlah
                       </th>
-                      <th className="px-4 py-2 text-center text-xs font-medium text-stone-500">
+                      <th className="px-4 py-2 text-center text-xs font-medium text-stone-400">
                         Satuan
                       </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-stone-500">
+                      <th className="px-4 py-2 text-left text-xs font-medium text-stone-400">
                         Keterangan
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-stone-200">
+                  <tbody className="divide-y divide-white/10">
                     {deliveryOrder.deliveryItems.map((item, index) => (
-                      <tr key={item.id} className="hover:bg-stone-50">
+                      <tr key={item.id} className="hover:bg-white/5">
                         <td className="px-4 py-3 text-sm">{index + 1}</td>
                         <td className="px-4 py-3 text-sm">{item.product.code}</td>
                         <td className="px-4 py-3 text-sm font-medium">
@@ -267,7 +267,7 @@ export function DeliveryOrderDetailModal({
                         <td className="px-4 py-3 text-sm text-center">
                           {item.unit.name}
                         </td>
-                        <td className="px-4 py-3 text-sm text-stone-600">
+                        <td className="px-4 py-3 text-sm text-stone-400">
                           {item.notes || "-"}
                         </td>
                       </tr>
@@ -280,18 +280,18 @@ export function DeliveryOrderDetailModal({
             {/* Received Info */}
             {deliveryOrder.status === "DELIVERED" && (
               <div className="glass-card p-4">
-                <h3 className="font-semibold text-stone-900 mb-3">
+                <h3 className="font-semibold text-stone-100 mb-3">
                   Informasi Penerimaan
                 </h3>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-sm text-stone-600">Diterima Oleh:</span>
+                    <span className="text-sm text-stone-400">Diterima Oleh:</span>
                     <span className="font-semibold">
                       {deliveryOrder.receivedBy || "-"}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-stone-600">Tanggal Diterima:</span>
+                    <span className="text-sm text-stone-400">Tanggal Diterima:</span>
                     <span className="text-sm">
                       {deliveryOrder.receivedDate
                         ? format(
@@ -323,17 +323,17 @@ export function DeliveryOrderDetailModal({
               return (
                 <div className="glass-card p-4 space-y-3 border-l-4 border-l-green-500">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-stone-900 flex items-center gap-2">
-                      <Camera className="w-4 h-4 text-green-700" />
+                    <h3 className="font-semibold text-stone-100 flex items-center gap-2">
+                      <Camera className="w-4 h-4 text-green-400" />
                       Foto Bukti Pengiriman
                     </h3>
-                    <span className="inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full bg-green-100 text-green-800 font-medium">
+                    <span className="inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full bg-green-500/15 text-green-300 font-medium">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       Tervalidasi
                     </span>
                   </div>
 
-                  <div className="relative group rounded-xl overflow-hidden border border-stone-200 bg-stone-50 flex items-center justify-center max-h-72">
+                  <div className="relative group rounded-xl overflow-hidden border border-white/10 bg-white/5 flex items-center justify-center max-h-72">
                     <img
                       src={proofUrl}
                       alt="Bukti Pengiriman"
@@ -344,7 +344,7 @@ export function DeliveryOrderDetailModal({
                       <button
                         type="button"
                         onClick={() => setZoomImage(proofUrl)}
-                        className="px-3 py-1.5 bg-black/70 hover:bg-black text-white text-xs rounded-xl backdrop-blur flex items-center gap-1.5 transition-colors shadow-sm"
+                        className="px-3 py-1.5 bg-black/80 hover:bg-black text-white text-xs rounded-xl backdrop-blur flex items-center gap-1.5 transition-colors shadow-sm"
                       >
                         <ZoomIn className="w-3.5 h-3.5" />
                         Perbesar
@@ -373,25 +373,25 @@ export function DeliveryOrderDetailModal({
               if (!cleanNotes) return null;
               return (
                 <div className="glass-card p-4">
-                  <h3 className="font-semibold text-stone-900 mb-2">Catatan</h3>
-                  <p className="text-sm text-stone-600 whitespace-pre-wrap">{cleanNotes}</p>
+                  <h3 className="font-semibold text-stone-100 mb-2">Catatan</h3>
+                  <p className="text-sm text-stone-400 whitespace-pre-wrap">{cleanNotes}</p>
                 </div>
               );
             })()}
 
             {/* Created By */}
-            <div className="text-center text-sm text-stone-500">
+            <div className="text-center text-sm text-stone-400">
               Dibuat oleh: <span className="font-semibold">{deliveryOrder.createdBy.name}</span>
             </div>
           </div>
         ) : (
           <div className="p-12 text-center">
-            <p className="text-stone-500">Data tidak ditemukan</p>
+            <p className="text-stone-400">Data tidak ditemukan</p>
           </div>
         )}
 
         {/* Footer */}
-        <div className="border-t border-stone-200 px-6 py-4 bg-stone-50">
+        <div className="border-t border-white/10 px-6 py-4 bg-white/5">
           <button onClick={onClose} className="btn-secondary w-full">
             Tutup
           </button>
@@ -408,14 +408,14 @@ export function DeliveryOrderDetailModal({
             className="modal-container relative max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between p-4 border-b border-stone-200 bg-stone-50">
-              <span className="font-semibold text-stone-800 text-sm flex items-center gap-2">
-                <Camera className="w-4 h-4 text-green-700" />
+            <div className="flex items-center justify-between p-4 border-b border-white/10 bg-white/5">
+              <span className="font-semibold text-stone-200 text-sm flex items-center gap-2">
+                <Camera className="w-4 h-4 text-green-400" />
                 Bukti Pengiriman — {deliveryOrder?.doNumber}
               </span>
               <button
                 onClick={() => setZoomImage(null)}
-                className="p-1.5 text-stone-500 hover:text-stone-800 hover:bg-stone-200 rounded-full transition-colors"
+                className="p-1.5 text-stone-400 hover:text-stone-200 hover:bg-white/15 rounded-full transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>

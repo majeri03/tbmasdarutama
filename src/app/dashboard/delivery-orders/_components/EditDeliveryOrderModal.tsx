@@ -231,7 +231,7 @@ export function EditDeliveryOrderModal({
 
   return (
     <div className="modal-overlay">
-      <div className="modal-container w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col border border-stone-100">
+      <div className="modal-container w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col border border-white/10">
         {/* Header */}
         <div className="bg-red-900 px-6 py-4 flex items-center justify-between text-white">
           <div>
@@ -260,7 +260,7 @@ export function EditDeliveryOrderModal({
               ini adalah yang membuat tombol Simpan selalu gagal. */}
           {/* Row 1: Tanggal Kirim */}
           <div>
-            <label className="block text-xs font-semibold text-stone-700 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-semibold text-stone-300 uppercase tracking-wider mb-1.5">
               Tanggal Pengiriman <span className="text-red-500">*</span>
             </label>
             <div className="relative">
@@ -268,24 +268,24 @@ export function EditDeliveryOrderModal({
                 type="date"
                 value={deliveryDate}
                 onChange={(e) => setDeliveryDate(e.target.value)}
-                className="input-field pl-10"
+                className="input-field pl-10 [color-scheme:dark]"
                 required
               />
-              <Calendar className="w-4 h-4 text-stone-400 absolute left-3 top-3.5" />
+              <Calendar className="w-4 h-4 text-stone-500 absolute left-3 top-3.5" />
             </div>
           </div>
 
           {/* Row 2: Sopir & Kendaraan (Fitur Armada) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-stone-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-stone-300 uppercase tracking-wider mb-1.5">
                 Pengemudi / Sopir (Fitur Armada)
               </label>
               <div className="relative">
                 <select
                   value={driver}
                   onChange={(e) => handleDriverSelect(e.target.value)}
-                  className="input-field pl-10"
+                  className="input-field pl-10 [color-scheme:dark]"
                 >
                   <option value="">-- Pilih Sopir dari Armada --</option>
                   {driver && !fleetList.some((f) => f.driverName === driver) && (
@@ -302,19 +302,19 @@ export function EditDeliveryOrderModal({
                     }
                   )}
                 </select>
-                <User className="w-4 h-4 text-stone-400 absolute left-3 top-3.5" />
+                <User className="w-4 h-4 text-stone-500 absolute left-3 top-3.5" />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-stone-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-stone-300 uppercase tracking-wider mb-1.5">
                 Kendaraan / Plat Nomor (Fitur Armada)
               </label>
               <div className="relative">
                 <select
                   value={vehicle}
                   onChange={(e) => handleVehicleSelect(e.target.value)}
-                  className="input-field pl-10"
+                  className="input-field pl-10 [color-scheme:dark]"
                 >
                   <option value="">-- Pilih Kendaraan dari Armada --</option>
                   {vehicle && !fleetList.some((f) => f.plateNumber === vehicle || `${f.plateNumber} (${f.brand})` === vehicle) && (
@@ -329,7 +329,7 @@ export function EditDeliveryOrderModal({
                     );
                   })}
                 </select>
-                <Truck className="w-4 h-4 text-stone-400 absolute left-3 top-3.5" />
+                <Truck className="w-4 h-4 text-stone-500 absolute left-3 top-3.5" />
               </div>
             </div>
           </div>
@@ -339,7 +339,7 @@ export function EditDeliveryOrderModal({
               cetak DO adalah alamat customer, jadi field ini mengubah
               alamat customer tersebut). */}
           <div>
-            <label className="block text-xs font-semibold text-stone-700 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-semibold text-stone-300 uppercase tracking-wider mb-1.5">
               Alamat Pengiriman
             </label>
             <div className="relative">
@@ -351,18 +351,18 @@ export function EditDeliveryOrderModal({
                 maxLength={255}
                 className="input-field py-2 pl-10"
               />
-              <MapPin className="w-4 h-4 text-stone-400 absolute left-3 top-3" />
+              <MapPin className="w-4 h-4 text-stone-500 absolute left-3 top-3" />
             </div>
-            <p className="text-[11px] text-stone-500 mt-1">
+            <p className="text-[11px] text-stone-400 mt-1">
               Alamat customer — perubahan di sini juga mengubah alamat customer di data master.
             </p>
           </div>
 
           {/* Row 4: Foto Bukti Pengiriman */}
           <div>
-            <label className="block text-xs font-semibold text-stone-700 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+            <label className="block text-xs font-semibold text-stone-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
               <span>Foto Bukti Pengiriman</span>
-              <span className="text-stone-400 font-normal lowercase">Bukan foto lokasi, foto barang tiba/penerima</span>
+              <span className="text-stone-500 font-normal lowercase">Bukan foto lokasi, foto barang tiba/penerima</span>
             </label>
             <input
               type="file"
@@ -373,22 +373,22 @@ export function EditDeliveryOrderModal({
             />
 
             {proofImage ? (
-              <div className="relative border border-green-200 rounded-xl p-3 bg-green-50/40 flex items-center justify-between">
+              <div className="relative border border-green-500/30 rounded-xl p-3 bg-green-500/10 flex items-center justify-between">
                 <div className="flex items-center gap-3 overflow-hidden">
                   <img
                     src={proofImage}
                     alt="Bukti Pengiriman"
-                    className="w-16 h-16 object-cover rounded-xl border border-stone-200 shadow-sm"
+                    className="w-16 h-16 object-cover rounded-xl border border-white/10 shadow-sm"
                   />
                   <div className="min-w-0">
-                    <span className="text-xs font-semibold text-green-700 block">
+                    <span className="text-xs font-semibold text-green-400 block">
                       ✓ Foto Bukti Tersimpan
                     </span>
                     <a
                       href={proofImage}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-xs text-red-900 hover:underline truncate block max-w-[260px]"
+                      className="text-xs text-[#E5484D] hover:underline truncate block max-w-[260px]"
                     >
                       {proofImage}
                     </a>
@@ -398,7 +398,7 @@ export function EditDeliveryOrderModal({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="px-3 py-1.5 text-xs font-medium text-stone-700 bg-white hover:bg-stone-100 border border-stone-200 rounded-xl transition-colors shadow-sm"
+                    className="px-3 py-1.5 text-xs font-medium text-stone-300 bg-white/10 hover:bg-white/15 border border-white/10 rounded-xl transition-colors shadow-sm"
                     disabled={isUploading}
                   >
                     Ganti Foto
@@ -406,7 +406,7 @@ export function EditDeliveryOrderModal({
                   <button
                     type="button"
                     onClick={() => setProofImage("")}
-                    className="p-2 text-red-800 hover:bg-red-100 rounded-xl transition-colors"
+                    className="p-2 text-red-300 hover:bg-red-500/15 rounded-xl transition-colors"
                     title="Hapus foto bukti"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -416,24 +416,24 @@ export function EditDeliveryOrderModal({
             ) : (
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-stone-300 hover:border-red-900 hover:bg-red-900/5 rounded-xl p-5 text-center cursor-pointer transition-colors"
+                className="border-2 border-dashed border-white/15 hover:border-[#E5484D] hover:bg-[#E5484D]/10 rounded-xl p-5 text-center cursor-pointer transition-colors"
               >
                 {isUploading ? (
                   <div className="flex flex-col items-center gap-2">
-                    <Loader2 className="w-7 h-7 text-red-900 animate-spin" />
-                    <span className="text-sm font-medium text-red-900">
+                    <Loader2 className="w-7 h-7 text-[#E5484D] animate-spin" />
+                    <span className="text-sm font-medium text-[#E5484D]">
                       Mengunggah foto bukti pengiriman...
                     </span>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-1.5">
-                    <div className="w-10 h-10 rounded-full bg-red-900/10 flex items-center justify-center text-red-900 mb-1">
+                    <div className="w-10 h-10 rounded-full bg-[#E5484D]/15 flex items-center justify-center text-[#E5484D] mb-1">
                       <Camera className="w-5 h-5" />
                     </div>
-                    <span className="text-sm font-semibold text-stone-700">
+                    <span className="text-sm font-semibold text-stone-300">
                       Upload / Ganti Foto Bukti Pengiriman
                     </span>
-                    <span className="text-xs text-stone-500">
+                    <span className="text-xs text-stone-400">
                       Format JPG, PNG, atau WebP (Maksimal 5MB)
                     </span>
                   </div>
@@ -444,7 +444,7 @@ export function EditDeliveryOrderModal({
 
           {/* Row 5: Catatan */}
           <div>
-            <label className="block text-xs font-semibold text-stone-700 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-semibold text-stone-300 uppercase tracking-wider mb-1.5">
               Catatan / Instruksi Pengiriman
             </label>
             <div className="relative">
@@ -461,14 +461,14 @@ export function EditDeliveryOrderModal({
           {/* Pesan galat inline (FIX WS-H item 118): kegagalan simpan harus
               terlihat di dalam modal, bukan hanya lewat toast. */}
           {formError && (
-            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
-              <AlertCircle className="w-4 h-4 text-red-800 shrink-0 mt-0.5" />
-              <p className="text-sm text-red-800">{formError}</p>
+            <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2.5">
+              <AlertCircle className="w-4 h-4 text-red-300 shrink-0 mt-0.5" />
+              <p className="text-sm text-red-300">{formError}</p>
             </div>
           )}
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4 -mx-6 -mb-6 px-6 pb-6 bg-stone-50 border-t border-stone-200 rounded-b-3xl">
+          <div className="flex gap-3 pt-4 -mx-6 -mb-6 px-6 pb-6 bg-white/5 border-t border-white/10 rounded-b-3xl">
             <button
               type="button"
               onClick={onClose}

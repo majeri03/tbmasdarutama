@@ -305,7 +305,7 @@ export function EditSaleModal({ saleId, onClose, onSuccess }: EditSaleModalProps
   return (
     <div className="modal-overlay overflow-y-auto">
       <div className="modal-container max-w-4xl my-8 animate-modal-slide-up">
-        <div className="modal-header bg-gradient-to-r from-amber-500 to-amber-600">
+        <div className="modal-header bg-amber-600">
           <h2 className="text-lg font-semibold text-white flex items-center gap-2">
             <Pencil className="w-5 h-5" />
             Edit Penjualan {invoiceNumber ? `#${invoiceNumber}` : ""}
@@ -317,22 +317,22 @@ export function EditSaleModal({ saleId, onClose, onSuccess }: EditSaleModalProps
 
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-8 h-8 animate-spin text-red-900" />
+            <Loader2 className="w-8 h-8 animate-spin text-[#E5484D]" />
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-6 space-y-5">
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
                 {error}
               </div>
             )}
             {notEditable && (
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm">
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 text-sm">
                 Transaksi {saleStatus === "CANCELLED" ? "yang dibatalkan" : "yang di-return"} tidak
                 bisa diubah.
               </div>
             )}
-            <p className="text-xs text-stone-500">
+            <p className="text-xs text-stone-400">
               Harga satuan mengikuti harga master saat ini; total akhir dihitung ulang oleh
               server saat disimpan. Stok disesuaikan otomatis dari selisih item lama dan baru.
             </p>
@@ -344,7 +344,7 @@ export function EditSaleModal({ saleId, onClose, onSuccess }: EditSaleModalProps
                 <select
                   value={customerId}
                   onChange={(e) => setCustomerId(e.target.value)}
-                  className="input-field"
+                  className="input-field [color-scheme:dark]"
                   disabled={notEditable}
                 >
                   <option value="">Pilih customer</option>
@@ -360,7 +360,7 @@ export function EditSaleModal({ saleId, onClose, onSuccess }: EditSaleModalProps
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                  className="input-field"
+                  className="input-field [color-scheme:dark]"
                   disabled={notEditable}
                 >
                   <option value="CASH">Tunai</option>
@@ -376,7 +376,7 @@ export function EditSaleModal({ saleId, onClose, onSuccess }: EditSaleModalProps
             <div className="relative">
               <label className="label">Tambah Produk</label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500" />
                 <input
                   type="text"
                   value={searchProduct}
@@ -391,11 +391,11 @@ export function EditSaleModal({ saleId, onClose, onSuccess }: EditSaleModalProps
                 />
               </div>
               {showProductDropdown && searchProduct && filteredProducts.length > 0 && (
-                <div className="absolute z-20 w-full mt-1 bg-white border border-stone-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                <div className="absolute z-20 w-full mt-1 bg-[#1C1917] border border-white/10 rounded-xl shadow-lg max-h-64 overflow-y-auto">
                   {filteredProducts.map((p) => (
-                    <div key={p.id} className="p-3 border-b border-stone-100 last:border-0">
+                    <div key={p.id} className="p-3 border-b border-white/10 last:border-0">
                       <p className="font-medium text-sm">
-                        {p.name} <span className="text-stone-400">({p.code})</span>
+                        {p.name} <span className="text-stone-500">({p.code})</span>
                       </p>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {p.productUnits.map((u) => (
@@ -403,7 +403,7 @@ export function EditSaleModal({ saleId, onClose, onSuccess }: EditSaleModalProps
                             key={u.id}
                             type="button"
                             onClick={() => addToCart(p, u.unitId)}
-                            className="px-2 py-1 text-xs bg-red-900/5 text-red-800 rounded hover:bg-red-900/10"
+                            className="px-2 py-1 text-xs bg-[#E5484D]/10 text-red-300 rounded hover:bg-[#E5484D]/15"
                           >
                             {u.unit.symbol || u.unit.name} — Rp{" "}
                             {Number(u.sellPrice).toLocaleString("id-ID")}
@@ -420,7 +420,7 @@ export function EditSaleModal({ saleId, onClose, onSuccess }: EditSaleModalProps
             <div>
               <label className="label">Item Penjualan</label>
               {items.length === 0 ? (
-                <p className="text-sm text-stone-500 py-4 text-center border border-dashed rounded-xl">
+                <p className="text-sm text-stone-400 py-4 text-center border border-dashed rounded-xl">
                   Belum ada item
                 </p>
               ) : (
@@ -428,16 +428,16 @@ export function EditSaleModal({ saleId, onClose, onSuccess }: EditSaleModalProps
                   {items.map((item, idx) => (
                     <div
                       key={`${item.productId}-${item.unitId}`}
-                      className="flex flex-wrap items-center gap-2 p-3 border border-stone-200 rounded-xl"
+                      className="flex flex-wrap items-center gap-2 p-3 border border-white/10 rounded-xl"
                     >
                       <div className="flex-1 min-w-[140px]">
                         <p className="font-medium text-sm">{item.productName}</p>
-                        <p className="text-xs text-stone-500">
+                        <p className="text-xs text-stone-400">
                           {item.productCode} • {item.unitName} • Rp{" "}
                           {item.unitPrice.toLocaleString("id-ID")}
                         </p>
                       </div>
-                      <label className="text-[11px] font-medium uppercase tracking-wide text-stone-500">
+                      <label className="text-[11px] font-medium uppercase tracking-wide text-stone-400">
                         Qty
                         <input
                           type="number"
@@ -448,7 +448,7 @@ export function EditSaleModal({ saleId, onClose, onSuccess }: EditSaleModalProps
                           disabled={notEditable}
                         />
                       </label>
-                      <label className="text-[11px] font-medium uppercase tracking-wide text-stone-500">
+                      <label className="text-[11px] font-medium uppercase tracking-wide text-stone-400">
                         Diskon
                         <input
                           type="number"
@@ -465,7 +465,7 @@ export function EditSaleModal({ saleId, onClose, onSuccess }: EditSaleModalProps
                       <button
                         type="button"
                         onClick={() => removeItem(idx)}
-                        className="text-red-500 hover:text-red-700"
+                        className="text-red-500 hover:text-red-400"
                         disabled={notEditable}
                         aria-label="Hapus item"
                       >
@@ -514,11 +514,11 @@ export function EditSaleModal({ saleId, onClose, onSuccess }: EditSaleModalProps
               </div>
               <div>
                 <label className="label">Grand Total</label>
-                <p className="text-lg font-bold text-stone-900 pt-2">
+                <p className="text-lg font-bold text-stone-100 pt-2">
                   Rp {grandTotal.toLocaleString("id-ID")}
                 </p>
                 {paymentMethod !== PaymentMethod.CREDIT && (
-                  <p className="text-xs text-stone-500">
+                  <p className="text-xs text-stone-400">
                     Kembalian: Rp {changeAmount.toLocaleString("id-ID")}
                   </p>
                 )}
@@ -535,7 +535,7 @@ export function EditSaleModal({ saleId, onClose, onSuccess }: EditSaleModalProps
                 disabled={notEditable}
               />
               {proofTag && (
-                <p className="text-xs text-stone-500 mt-1">
+                <p className="text-xs text-stone-400 mt-1">
                   Bukti transfer terlampir dipertahankan ({proofTag.slice(0, 40)}...)
                 </p>
               )}

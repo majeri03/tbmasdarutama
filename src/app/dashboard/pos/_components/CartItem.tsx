@@ -24,20 +24,20 @@ export function CartItem({ item, onUpdateQuantity, onUpdateDiscount, onRemove, o
     }
   };
   return (
-    <div className="glass-panel-strong rounded-xl p-3 transition-colors">
+    <div className="glass-panel-strong rounded-xl p-3 bg-white/[0.16] transition-colors">
       {/* Product Name */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex-1 min-w-0">
-          <h4 className="font-medium text-stone-900 text-sm truncate">{item.productName}</h4>
+          <h4 className="font-medium text-stone-100 text-sm truncate">{item.productName}</h4>
           
           {/* LOGIC DROPDOWN DISINI */}
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs text-stone-500">{item.productCode} •</span>
+            <span className="text-xs text-stone-400">{item.productCode} •</span>
             
             {item.availableUnits && item.availableUnits.length > 1 ? (
               // Jika ada lebih dari 1 satuan, tampilkan Dropdown
               <select 
-                className="text-xs border border-stone-300 rounded px-1 py-0.5 bg-white text-stone-700 focus:outline-none focus:ring-1 focus:ring-[#7F1D1D] cursor-pointer"
+                className="text-xs border border-white/15 rounded px-1 py-0.5 bg-[#211E1B] text-stone-200 focus:outline-none focus:ring-1 focus:ring-[#7F1D1D] cursor-pointer"
                 value={item.unitId}
                 onChange={handleUnitChange}
               >
@@ -49,32 +49,32 @@ export function CartItem({ item, onUpdateQuantity, onUpdateDiscount, onRemove, o
               </select>
             ) : (
               // Jika cuma 1 satuan, tampilkan teks biasa
-              <span className="text-xs text-stone-500">{item.unitName}</span>
+              <span className="text-xs text-stone-400">{item.unitName}</span>
             )}
           </div>
 
         </div>
         <button
           onClick={() => onRemove(item.productId, item.unitId)}
-          className="text-[#991B1B] hover:text-[#7F1D1D] transition-colors"
+          className="text-[#E5484D] hover:opacity-80 transition-colors"
         >
           <Trash2 className="w-4 h-4" />
         </button>
       </div>
 
       {/* Price */}
-      <div className="text-sm text-stone-700 mb-2">
+      <div className="text-sm text-stone-300 mb-2">
         {formatCurrency(item.unitPrice)} x {item.quantity} = {formatCurrency(item.unitPrice * item.quantity)}
       </div>
 
       {/* Quantity Controls */}
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-xs text-stone-500 w-16">Jumlah:</span>
+        <span className="text-xs text-stone-400 w-16">Jumlah:</span>
         <div className="flex items-center gap-1">
           <button
             onClick={() => onUpdateQuantity(item.productId, item.unitId, item.quantity - 1)}
             disabled={item.quantity <= 1}
-            className="w-7 h-7 rounded bg-stone-100 hover:bg-stone-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            className="w-7 h-7 rounded bg-white/10 hover:bg-white/15 text-stone-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           >
             <Minus className="w-3 h-3" />
           </button>
@@ -85,12 +85,12 @@ export function CartItem({ item, onUpdateQuantity, onUpdateDiscount, onRemove, o
               const qty = parseInt(e.target.value) || 1;
               onUpdateQuantity(item.productId, item.unitId, qty);
             }}
-            className="w-14 h-7 text-center border border-stone-200 rounded focus:outline-none focus:ring-1 focus:ring-[#7F1D1D]"
+            className="w-14 h-7 text-center border border-white/15 bg-white/[0.06] text-stone-100 rounded focus:outline-none focus:ring-1 focus:ring-[#7F1D1D]"
             min="1"
           />
           <button
             onClick={() => onUpdateQuantity(item.productId, item.unitId, item.quantity + 1)}
-            className="w-7 h-7 rounded bg-stone-100 hover:bg-stone-200 flex items-center justify-center"
+            className="w-7 h-7 rounded bg-white/10 hover:bg-white/15 text-stone-200 flex items-center justify-center"
           >
             <Plus className="w-3 h-3" />
           </button>
@@ -99,9 +99,9 @@ export function CartItem({ item, onUpdateQuantity, onUpdateDiscount, onRemove, o
 
       {/* Discount */}
       <div className="flex items-center gap-2">
-        <span className="text-xs text-stone-500 w-16">Diskon:</span>
+        <span className="text-xs text-stone-400 w-16">Diskon:</span>
         <div className="flex items-center gap-1 flex-1">
-          <span className="text-xs text-stone-500">Rp</span>
+          <span className="text-xs text-stone-400">Rp</span>
           <input
             type="number"
             value={item.discount}
@@ -109,7 +109,7 @@ export function CartItem({ item, onUpdateQuantity, onUpdateDiscount, onRemove, o
               const discount = parseFloat(e.target.value) || 0;
               onUpdateDiscount(item.productId, item.unitId, discount);
             }}
-            className="flex-1 h-7 px-2 text-sm border border-stone-200 rounded focus:outline-none focus:ring-1 focus:ring-[#7F1D1D]"
+            className="flex-1 h-7 px-2 text-sm border border-white/15 bg-white/[0.06] text-stone-100 rounded focus:outline-none focus:ring-1 focus:ring-[#7F1D1D]"
             min="0"
             placeholder="0"
           />
@@ -117,9 +117,9 @@ export function CartItem({ item, onUpdateQuantity, onUpdateDiscount, onRemove, o
       </div>
 
       {/* Subtotal */}
-      <div className="mt-2 pt-2 border-t border-stone-200 flex justify-between items-center">
-        <span className="text-xs text-stone-500">Subtotal:</span>
-        <span className="font-semibold tabular-nums text-[#7F1D1D]">{formatCurrency(item.subtotal)}</span>
+      <div className="mt-2 pt-2 border-t border-white/10 flex justify-between items-center">
+        <span className="text-xs text-stone-400">Subtotal:</span>
+        <span className="font-semibold tabular-nums text-[#E5484D]">{formatCurrency(item.subtotal)}</span>
       </div>
     </div>
   );

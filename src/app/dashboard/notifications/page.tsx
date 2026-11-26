@@ -46,13 +46,13 @@ interface NotificationItem {
 }
 
 const TYPE_META: Record<NotifType, { label: string; icon: typeof Bell; color: string }> = {
-  NEW_ORDER: { label: "Pesanan Baru", icon: ShoppingCart, color: "bg-green-100 text-green-700" },
-  ORDER_STATUS: { label: "Status Pesanan", icon: ShoppingCart, color: "bg-green-100 text-green-700" },
-  PAYMENT_RECEIVED: { label: "Pembayaran", icon: Wallet, color: "bg-[#7F1D1D]/10 text-[#7F1D1D]" },
-  DELIVERY_UPDATE: { label: "Pengiriman", icon: Truck, color: "bg-stone-200 text-stone-700" },
-  DEBT_DUE: { label: "Jatuh Tempo", icon: Wallet, color: "bg-orange-100 text-orange-700" },
-  LOW_STOCK: { label: "Stok Menipis", icon: Package, color: "bg-amber-100 text-amber-700" },
-  SYSTEM_ALERT: { label: "Sistem", icon: AlertTriangle, color: "bg-gray-100 text-gray-700" },
+  NEW_ORDER: { label: "Pesanan Baru", icon: ShoppingCart, color: "bg-green-500/15 text-green-400" },
+  ORDER_STATUS: { label: "Status Pesanan", icon: ShoppingCart, color: "bg-green-500/15 text-green-400" },
+  PAYMENT_RECEIVED: { label: "Pembayaran", icon: Wallet, color: "bg-[#E5484D]/10 text-[#E5484D]" },
+  DELIVERY_UPDATE: { label: "Pengiriman", icon: Truck, color: "bg-white/[0.12] text-stone-300" },
+  DEBT_DUE: { label: "Jatuh Tempo", icon: Wallet, color: "bg-orange-500/15 text-orange-300" },
+  LOW_STOCK: { label: "Stok Menipis", icon: Package, color: "bg-amber-500/15 text-amber-300" },
+  SYSTEM_ALERT: { label: "Sistem", icon: AlertTriangle, color: "bg-white/[0.08] text-stone-300" },
 };
 
 type FilterKey = "ALL" | "UNREAD" | "ORDER" | "DELIVERY" | "FINANCE" | "STOCK" | "SYSTEM";
@@ -284,7 +284,7 @@ export default function NotificationsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#1C1917]">Notifikasi</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-stone-100">Notifikasi</h1>
           <p className="page-subtitle">
             {unreadCount > 0 ? `${unreadCount} belum dibaca` : "Semua sudah dibaca"}
           </p>
@@ -310,7 +310,7 @@ export default function NotificationsPage() {
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
               filter === f.key
                 ? "bg-[#7F1D1D] text-white"
-                : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                : "bg-white/[0.06] border border-white/10 text-stone-300 hover:bg-white/[0.10]"
             }`}
           >
             {f.label}
@@ -319,12 +319,12 @@ export default function NotificationsPage() {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>
+        <div className="p-4 bg-red-500/[0.08] border border-red-500/30 rounded-lg text-red-300">{error}</div>
       )}
 
       {/* Batch 7 item 194 (b): DO yang ditunjuk notifikasi sudah tidak ada. */}
       {staleNotice && (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 space-y-2">
+        <div className="p-4 bg-amber-500/[0.08] border border-amber-500/30 rounded-lg text-amber-200 space-y-2">
           <p className="text-sm font-medium">
             Surat jalan {staleNotice.doNumber} sudah tidak ada — kemungkinan sudah dihapus.
           </p>
@@ -355,15 +355,15 @@ export default function NotificationsPage() {
         </div>
       )}
 
-      <div className="glass-card divide-y divide-gray-100">
+      <div className="glass-card divide-y divide-white/[0.08]">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-8 h-8 animate-spin text-[#7F1D1D]" />
+            <Loader2 className="w-8 h-8 animate-spin text-[#E5484D]" />
           </div>
         ) : visible.length === 0 ? (
           <div className="text-center py-16">
-            <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">Tidak ada notifikasi untuk filter ini</p>
+            <Bell className="w-12 h-12 text-stone-500 mx-auto mb-3" />
+            <p className="text-stone-400">Tidak ada notifikasi untuk filter ini</p>
           </div>
         ) : (
           visible.map((item) => {
@@ -374,7 +374,7 @@ export default function NotificationsPage() {
               <button
                 key={item.id}
                 onClick={() => handleTap(item)}
-                className={`w-full text-left p-4 flex gap-3 hover:bg-gray-50 transition-colors ${
+                className={`w-full text-left p-4 flex gap-3 hover:bg-white/[0.06] transition-colors ${
                   !item.isRead ? "bg-[#7F1D1D]/[0.04]" : ""
                 }`}
               >
@@ -383,13 +383,13 @@ export default function NotificationsPage() {
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="flex items-center gap-2">
-                    <span className={`font-semibold text-sm ${!item.isRead ? "text-gray-900" : "text-gray-700"}`}>
+                    <span className={`font-semibold text-sm ${!item.isRead ? "text-stone-100" : "text-stone-300"}`}>
                       {item.title}
                     </span>
                     {!item.isRead && <span className="w-2 h-2 rounded-full bg-[#7F1D1D] shrink-0" />}
                   </span>
-                  <span className="block text-sm text-gray-600 mt-0.5 break-words">{item.body}</span>
-                  <span className="block text-xs text-gray-400 mt-1">
+                  <span className="block text-sm text-stone-400 mt-0.5 break-words">{item.body}</span>
+                  <span className="block text-xs text-stone-500 mt-1">
                     {format(new Date(item.createdAt), "dd MMM yyyy, HH:mm", { locale: localeId })}
                     {url ? " • Ketuk untuk melihat" : ""}
                   </span>
@@ -403,7 +403,7 @@ export default function NotificationsPage() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-stone-400">
             Halaman {page} dari {totalPages}
           </p>
           <div className="flex gap-2">
@@ -446,7 +446,7 @@ export default function NotificationsPage() {
               </button>
             </div>
             <div className="modal-body">
-              <p className="text-gray-700 text-sm">
+              <p className="text-stone-300 text-sm">
                 Hapus semua notifikasi yang sudah dibaca? Notifikasi yang belum dibaca tidak
                 ikut terhapus.
               </p>

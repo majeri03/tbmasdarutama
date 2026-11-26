@@ -34,33 +34,33 @@ export function StockHistoryModal({
         return {
           label: "Stock Masuk",
           icon: TrendingUp,
-          color: "text-green-700",
-          bgColor: "bg-green-50",
-          borderColor: "border-green-200",
+          color: "text-green-400",
+          bgColor: "bg-green-500/10",
+          borderColor: "border-green-500/30",
         };
       case MovementType.OUT:
         return {
           label: "Stock Keluar",
           icon: TrendingDown,
-          color: "text-red-800",
-          bgColor: "bg-red-50",
-          borderColor: "border-red-200",
+          color: "text-red-300",
+          bgColor: "bg-red-500/10",
+          borderColor: "border-red-500/30",
         };
       case MovementType.ADJUSTMENT:
         return {
           label: "Adjustment Stock",
           icon: Edit,
-          color: "text-stone-700",
-          bgColor: "bg-stone-100",
-          borderColor: "border-stone-200",
+          color: "text-stone-300",
+          bgColor: "bg-white/10",
+          borderColor: "border-white/10",
         };
       default:
         return {
           label: "Unknown",
           icon: Package,
-          color: "text-stone-600",
-          bgColor: "bg-stone-50",
-          borderColor: "border-stone-200",
+          color: "text-stone-400",
+          bgColor: "bg-white/5",
+          borderColor: "border-white/10",
         };
     }
   };
@@ -91,23 +91,23 @@ export function StockHistoryModal({
         {/* Modal */}
         <div className="modal-container relative max-w-2xl w-full">
           {/* Header */}
-          <div className="border-b border-stone-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+          <div className="border-b border-white/10 px-6 py-4 flex items-center justify-between rounded-t-2xl">
             <div className="flex items-center gap-3">
               <div className={`p-2 ${typeInfo.bgColor} rounded-xl`}>
                 <Package className={`w-6 h-6 ${typeInfo.color}`} />
               </div>
               <div>
-                <h2 className="text-xl font-semibold tracking-tight text-stone-900">
+                <h2 className="text-xl font-semibold tracking-tight text-stone-100">
                   Detail Pergerakan Stock
                 </h2>
-                <p className="text-sm text-stone-600">
+                <p className="text-sm text-stone-400">
                   Informasi lengkap movement stock
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 transition-colors"
+              className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-white/10 text-stone-400 hover:bg-white/15 hover:text-stone-300 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -140,8 +140,8 @@ export function StockHistoryModal({
                 <label className="label mb-2">
                   Produk
                 </label>
-                <div className="p-4 bg-stone-50 rounded-xl border border-stone-200">
-                  <div className="font-semibold text-stone-900">{productName}</div>
+                <div className="p-4 bg-white/5 rounded-xl border border-white/10">
+                  <div className="font-semibold text-stone-100">{productName}</div>
                 </div>
               </div>
             )}
@@ -151,12 +151,12 @@ export function StockHistoryModal({
               <label className="label mb-2">
                 Referensi
               </label>
-              <div className="p-4 bg-stone-50 rounded-xl border border-stone-200">
-                <div className="font-medium text-stone-900">
+              <div className="p-4 bg-white/5 rounded-xl border border-white/10">
+                <div className="font-medium text-stone-100">
                   {movement.referenceType}
                 </div>
                 {movement.referenceId && (
-                  <div className="text-sm text-stone-600 font-mono mt-1">
+                  <div className="text-sm text-stone-400 font-mono mt-1">
                     ID: {movement.referenceId}
                   </div>
                 )}
@@ -169,8 +169,8 @@ export function StockHistoryModal({
                 <label className="label mb-2">
                   Catatan
                 </label>
-                <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
-                  <p className="text-stone-700 italic">{movement.notes}</p>
+                <div className="p-4 bg-amber-500/10 rounded-xl border border-amber-500/30">
+                  <p className="text-stone-300 italic">{movement.notes}</p>
                 </div>
               </div>
             )}
@@ -180,18 +180,18 @@ export function StockHistoryModal({
               <label className="label mb-2">
                 Tanggal & Waktu
               </label>
-              <div className="flex items-center gap-3 p-4 bg-stone-50 rounded-xl border border-stone-200">
-                <Calendar className="w-5 h-5 text-stone-400" />
-                <span className="text-stone-700">{formatDate(movement.createdAt)}</span>
+              <div className="flex items-center gap-3 p-4 bg-white/5 rounded-xl border border-white/10">
+                <Calendar className="w-5 h-5 text-stone-500" />
+                <span className="text-stone-300">{formatDate(movement.createdAt)}</span>
               </div>
             </div>
           </div>
 
           {/* Footer */}
-          <div className="border-t border-stone-200 px-6 py-4 bg-stone-50">
+          <div className="border-t border-white/10 px-6 py-4 bg-white/5">
             <button
               onClick={onClose}
-              className="w-full px-6 py-3 bg-gradient-to-r from-stone-600 to-stone-700 text-white font-semibold rounded-xl hover:from-stone-700 hover:to-stone-800 transition-all"
+              className="w-full px-6 py-3 bg-stone-700 hover:bg-stone-600 text-white font-semibold rounded-xl transition-all"
             >
               Tutup
             </button>

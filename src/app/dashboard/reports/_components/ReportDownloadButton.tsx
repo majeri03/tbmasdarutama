@@ -11,6 +11,46 @@ interface ReportDownloadButtonProps {
   disabled?: boolean;
 }
 
+/**
+ * dark-8 (26 Nov 2026) — PDF laporan harus TERANG di mode gelap.
+ *
+ * Masalah: html2canvas memotret DOM layar dan MENGABAIKAN @media print,
+ * jadi varian print: yang terang (print:text-[#111111], print:bg-white,
+ * dst.) tidak berlaku di snapshot — PDF ikut gelap walau Print browser
+ * tetap terang. Opsi backgroundColor: "#ffffff" di bawah hanya mengisi
+ * latar kanvas, bukan warna elemen di dalamnya.
+ *
+ * Cara kerja: onclone menerima DOKUMEN HASIL CLONE (bukan halaman asli).
+ * Style di bawah disuntikkan ke <head> clone saja — halaman gelap di
+ * layar TIDAK berubah, dan style ini mati bersama clone setelah snapshot
+ * selesai. Isinya menimpa kelas gelap di dalam #print-content dengan nilai
+ * terang yang SAMA dengan varian print: tiap elemen (jadi PDF = hasil
+ * print). Daftar kelas diambil dari inventarisasi 9 file isi laporan
+ * (6 *ReportContent + ReportHeader + ReportSummary + ReportFooter).
+ *
+ * Kenapa selektor [class~="..."]: mencocokkan token class persis tanpa
+ * perlu escape (bandingkan .text-\[\#E5484D\]); html2canvas membaca style
+ * lewat getComputedStyle browser pada clone, jadi semua CSS valid berlaku.
+ * :nth-child(even) pada baris zebra dipertahankan supaya corak selang-
+ * seling putih/#FAFAFA sama seperti print.
+ */
+const LIGHT_SNAPSHOT_CSS = `
+#print-content { background: #ffffff !important; color: #111111 !important; }
+#print-content [class~="text-stone-100"] { color: #111111 !important; }
+#print-content [class~="text-stone-400"] { color: #6b7280 !important; }
+#print-content [class~="bg-[#1C1917]"] { background-color: #ffffff !important; }
+#print-content [class~="border-white/40"] { border-color: #111111 !important; }
+#print-content [class~="border-white/25"] { border-color: #111111 !important; }
+#print-content [class~="border-white/10"] { border-color: #e5e7eb !important; }
+#print-content [class~="even:bg-white/[0.04]"]:nth-child(even) { background-color: #fafafa !important; }
+#print-content [class~="bg-white/[0.04]"] { background-color: #fafafa !important; }
+#print-content [class~="bg-white/[0.06]"] { background-color: #fafafa !important; }
+#print-content [class~="text-[#E5484D]"] { color: #7f1d1d !important; }
+#print-content [class~="border-[#E5484D]"] { border-color: #7f1d1d !important; }
+#print-content .report-total-red { color: #7f1d1d !important; }
+#print-content .report-rule-red { border-color: #7f1d1d !important; }
+`;
+
 export default function ReportDownloadButton({ 
   targetRef, 
   filename,
@@ -28,6 +68,15 @@ export default function ReportDownloadButton({
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
+        // dark-8: suntikkan style terang ke DOKUMEN CLONE saja (lihat
+        // LIGHT_SNAPSHOT_CSS di atas). Halaman gelap di layar tidak berubah.
+        // "?." untuk jaga-jaga: head selalu ada di dokumen clone, tapi
+        // tsconfig proyek strict — jangan sampai tsc gagal karena null.
+        onclone: (clonedDoc) => {
+          const style = clonedDoc.createElement("style");
+          style.textContent = LIGHT_SNAPSHOT_CSS;
+          clonedDoc.head?.appendChild(style);
+        },
       });
 
       // OPT-C (23 Nov 2026): JPEG q0.85, bukan PNG — PDF 1 halaman turun

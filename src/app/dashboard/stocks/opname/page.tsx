@@ -197,8 +197,8 @@ export default function StockOpnamePage() {
     <PageGuard pageKey="stock_opname">
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-stone-900 flex items-center gap-2">
-            <ClipboardCheck className="w-6 h-6 text-stone-600" />
+          <h1 className="text-2xl font-semibold tracking-tight text-stone-100 flex items-center gap-2">
+            <ClipboardCheck className="w-6 h-6 text-stone-400" />
             Stock Opname
           </h1>
           <p className="page-subtitle">
@@ -208,12 +208,12 @@ export default function StockOpnamePage() {
         </div>
 
         {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          <div className="p-4 bg-red-500/10 border border-red-500/25 rounded-lg text-red-300">
             {error}
           </div>
         )}
         {result && (
-          <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+          <div className="p-4 bg-green-500/10 border border-green-500/25 rounded-lg text-green-300">
             {result}
           </div>
         )}
@@ -232,18 +232,18 @@ export default function StockOpnamePage() {
                 }}
                 onFocus={() => setShowResults(true)}
                 placeholder="Cari produk (nama / kode / barcode)..."
-                className="w-full pl-9 pr-3 py-2.5 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-800"
+                className="w-full pl-9 pr-3 py-2.5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
               />
               {showResults && results.length > 0 && (
-                <div className="absolute z-20 w-full mt-1 bg-white border border-stone-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                <div className="absolute z-20 w-full mt-1 bg-[#211E1B] border border-white/10 rounded-lg shadow-lg max-h-64 overflow-y-auto">
                   {results.map((p) => (
                     <button
                       key={p.id}
                       onClick={() => addProduct(p)}
-                      className="w-full text-left p-3 hover:bg-stone-50 border-b border-stone-100 last:border-0"
+                      className="w-full text-left p-3 hover:bg-white/5 border-b border-white/10 last:border-0"
                     >
                       <p className="font-medium text-sm">{p.name}</p>
-                      <p className="text-xs text-stone-500">
+                      <p className="text-xs text-stone-400">
                         {p.code} • Stok sistem: {p.currentStock} {primaryUnitName(p)}
                       </p>
                     </button>
@@ -272,10 +272,10 @@ export default function StockOpnamePage() {
         </div>
 
         {/* Daftar opname */}
-        <div className="glass-card overflow-hidden">
+        <div className="glass-card overflow-hidden bg-white/15 border-white/10">
           <div className="overflow-x-auto">
             {rows.length === 0 ? (
-              <p className="text-center text-stone-500 py-12">
+              <p className="text-center text-stone-400 py-12">
                 Belum ada produk. Cari produk di atas atau scan barcode untuk menambahkannya.
               </p>
             ) : (
@@ -297,7 +297,7 @@ export default function StockOpnamePage() {
                       <tr key={row.productId}>
                         <td>
                           <p className="font-medium">{row.name}</p>
-                          <p className="text-xs text-stone-500">{row.code}</p>
+                          <p className="text-xs text-stone-400">{row.code}</p>
                         </td>
                         <td className="text-right">
                           {row.systemStock} {row.unitName}
@@ -309,7 +309,7 @@ export default function StockOpnamePage() {
                             value={row.counted}
                             onChange={(e) => updateCounted(row.productId, e.target.value)}
                             placeholder="0"
-                            className="w-24 px-2 py-1.5 border border-stone-200 rounded-lg text-right focus:outline-none focus:ring-2 focus:ring-red-800"
+                            className="w-24 px-2 py-1.5 border border-white/10 rounded-lg text-right focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
                           />
                         </td>
                         <td
@@ -317,10 +317,10 @@ export default function StockOpnamePage() {
                             diff === null
                               ? "text-stone-400"
                               : diff === 0
-                                ? "text-stone-500"
+                                ? "text-stone-400"
                                 : diff > 0
-                                  ? "text-green-600"
-                                  : "text-red-800"
+                                  ? "text-green-400"
+                                  : "text-red-300"
                           }`}
                         >
                           {diff === null ? "—" : diff > 0 ? `+${diff}` : diff}
@@ -330,7 +330,7 @@ export default function StockOpnamePage() {
                             onClick={() =>
                               setRows(rows.filter((r) => r.productId !== row.productId))
                             }
-                            className="text-red-500 hover:text-red-700"
+                            className="text-[#E5484D] hover:text-red-300"
                             aria-label="Hapus baris"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -344,8 +344,8 @@ export default function StockOpnamePage() {
             )}
           </div>
           {rows.length > 0 && (
-            <div className="p-4 border-t border-stone-200 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-stone-600">
+            <div className="p-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-stone-400">
                 {changedRows.length} dari {rows.length} produk berubah
               </p>
               <button
@@ -372,20 +372,20 @@ export default function StockOpnamePage() {
         {/* Riwayat opname terakhir */}
         {recent.length > 0 && (
           <div className="glass-card p-4">
-            <h2 className="font-semibold text-stone-900 mb-3">Opname Terakhir</h2>
+            <h2 className="font-semibold text-stone-100 mb-3">Opname Terakhir</h2>
             <div className="space-y-2">
               {recent.slice(0, 10).map((m) => (
-                <div key={m.id} className="flex items-center justify-between text-sm border-b border-stone-100 pb-2 last:border-0">
+                <div key={m.id} className="flex items-center justify-between text-sm border-b border-white/10 pb-2 last:border-0">
                   <div>
                     <p className="font-medium">{m.product.name}</p>
-                    <p className="text-xs text-stone-500">
+                    <p className="text-xs text-stone-400">
                       {format(new Date(m.createdAt), "dd MMM yyyy, HH:mm", { locale: localeId })}
                       {m.notes ? ` • ${m.notes}` : ""}
                     </p>
                   </div>
                   <span
                     className={`font-semibold ${
-                      m.type === "IN" ? "text-green-600" : "text-red-800"
+                      m.type === "IN" ? "text-green-400" : "text-red-300"
                     }`}
                   >
                     {m.type === "IN" ? "+" : "-"}

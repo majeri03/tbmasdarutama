@@ -60,20 +60,20 @@ export default function PageAccessClient({ initialMatrix }: PageAccessClientProp
 
   return (
     <div className="space-y-6">
-      {error && <div className="p-3 bg-red-100 text-red-700 rounded-lg text-sm">{error}</div>}
-      {msg && <div className="p-3 bg-green-100 text-green-700 rounded-lg text-sm transition-opacity">{msg}</div>}
+      {error && <div className="p-3 bg-red-500/15 text-red-300 rounded-lg text-sm">{error}</div>}
+      {msg && <div className="p-3 bg-green-500/15 text-green-400 rounded-lg text-sm transition-opacity">{msg}</div>}
 
       <div className="glass-card overflow-hidden">
-        <table className="min-w-full divide-y divide-stone-200">
-          <thead className="bg-stone-50">
+        <table className="min-w-full divide-y divide-white/10">
+          <thead className="bg-white/[0.06]">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Halaman</th>
-              <th className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase">Admin</th>
-              <th className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase">Kasir</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase">Update Terakhir</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-stone-400 uppercase">Halaman</th>
+              <th className="px-6 py-3 text-center text-xs font-bold text-stone-400 uppercase">Admin</th>
+              <th className="px-6 py-3 text-center text-xs font-bold text-stone-400 uppercase">Kasir</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-stone-400 uppercase">Update Terakhir</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-stone-200">
+          <tbody className="divide-y divide-white/10">
             {PAGE_KEYS.map((page) => {
               const rAdmin = matrix.find((m) => m.pageKey === page.key && m.role === "ADMIN");
               const rKasir = matrix.find((m) => m.pageKey === page.key && m.role === "KASIR");
@@ -83,14 +83,14 @@ export default function PageAccessClient({ initialMatrix }: PageAccessClientProp
                   : rAdmin || rKasir;
 
               return (
-                <tr key={page.key} className="hover:bg-stone-50">
-                  <td className="px-6 py-4 font-semibold text-[#1C1917]">{page.label}</td>
+                <tr key={page.key} className="hover:bg-white/[0.04]">
+                  <td className="px-6 py-4 font-semibold text-stone-100">{page.label}</td>
                   <td className="px-6 py-4 text-center">
                     <button
                       onClick={() => toggle(page.key, Role.ADMIN, !!rAdmin?.enabled)}
                       disabled={updating !== null}
                       className={`px-3 py-1 rounded text-xs font-bold text-white transition ${
-                        rAdmin?.enabled ? "bg-[#7F1D1D] hover:bg-[#991B1B]" : "bg-stone-400 hover:bg-stone-500"
+                        rAdmin?.enabled ? "bg-[#7F1D1D] hover:bg-[#991B1B]" : "bg-stone-600 hover:bg-stone-500"
                       } ${updating === `${page.key}-ADMIN` ? "opacity-50" : ""}`}
                     >
                       {rAdmin?.enabled ? "AKTIF" : "NONAKTIF"}
@@ -101,13 +101,13 @@ export default function PageAccessClient({ initialMatrix }: PageAccessClientProp
                       onClick={() => toggle(page.key, Role.KASIR, !!rKasir?.enabled)}
                       disabled={updating !== null}
                       className={`px-3 py-1 rounded text-xs font-bold text-white transition ${
-                        rKasir?.enabled ? "bg-[#7F1D1D] hover:bg-[#991B1B]" : "bg-stone-400 hover:bg-stone-500"
+                        rKasir?.enabled ? "bg-[#7F1D1D] hover:bg-[#991B1B]" : "bg-stone-600 hover:bg-stone-500"
                       } ${updating === `${page.key}-KASIR` ? "opacity-50" : ""}`}
                     >
                       {rKasir?.enabled ? "AKTIF" : "NONAKTIF"}
                     </button>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
+                  <td className="px-6 py-4 text-sm text-stone-400">
                     {last?.updatedBy ? `${last.updatedBy} (${new Date(last.updatedAt).toLocaleDateString()})` : "-"}
                   </td>
                 </tr>

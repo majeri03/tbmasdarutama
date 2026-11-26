@@ -153,8 +153,8 @@ export function DeliveryOrderClient() {
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-900 mx-auto"></div>
-                    <p className="mt-4 text-stone-600">Memuat data...</p>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#E5484D] mx-auto"></div>
+                    <p className="mt-4 text-stone-400">Memuat data...</p>
                 </div>
             </div>
         );
@@ -165,8 +165,8 @@ export function DeliveryOrderClient() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-semibold tracking-tight text-stone-900">Surat Jalan</h1>
-                    <p className="text-stone-600 mt-1">
+                    <h1 className="text-2xl font-semibold tracking-tight text-stone-100">Surat Jalan</h1>
+                    <p className="text-stone-400 mt-1">
                         Kelola surat jalan dan tracking pengiriman
                     </p>
                 </div>
@@ -241,12 +241,12 @@ export function DeliveryOrderClient() {
                 {/* Filter Info & Clear */}
                 {(searchQuery || statusFilter !== "ALL" || dateFrom || dateTo) && (
                     <div className="mt-3 flex items-center justify-between">
-                        <p className="text-sm text-stone-600">
+                        <p className="text-sm text-stone-400">
                             Menampilkan {filteredOrders.length} dari {deliveryOrders.length} surat jalan
                         </p>
                         <button
                             onClick={clearFilters}
-                            className="text-sm text-red-900 hover:text-red-900 font-medium"
+                            className="text-sm text-[#E5484D] hover:text-[#E5484D] font-medium"
                         >
                             Reset Filter
                         </button>

@@ -28,7 +28,7 @@ export function ProductUnitDisplay({ units, variant = "compact" }: ProductUnitDi
   const canViewPurchasePrice = hasPermission(session, "EDIT_PRODUCT");
   if (!units || units.length === 0) {
     return (
-      <span className="text-sm text-stone-500 italic">Belum ada satuan</span>
+      <span className="text-sm text-stone-400 italic">Belum ada satuan</span>
     );
   }
 
@@ -46,18 +46,18 @@ export function ProductUnitDisplay({ units, variant = "compact" }: ProductUnitDi
     return (
       <div className="flex items-center gap-2">
         <span
-          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-red-100 text-red-900 border border-red-200"
+          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-red-500/15 text-red-300 border border-red-500/25"
         >
           <Package className="w-3 h-3" />
           {primaryUnit.unit.name}
         </span>
-        <div className="text-xs text-stone-600">
+        <div className="text-xs text-stone-400">
           <span className="font-semibold">
             Rp {primaryUnit.sellPrice.toLocaleString("id-ID")}
           </span>
         </div>
         {units.length > 1 && (
-          <span className="text-xs text-stone-500">
+          <span className="text-xs text-stone-400">
             +{units.length - 1} satuan
           </span>
         )}
@@ -83,15 +83,15 @@ export function ProductUnitDisplay({ units, variant = "compact" }: ProductUnitDi
           key={unit.id}
           className={`flex items-center justify-between p-2 rounded-lg border ${
             unit.isPrimary
-              ? "bg-red-50 border-red-200"
-              : "bg-stone-50 border-stone-200"
+              ? "bg-red-500/10 border-red-500/25"
+              : "bg-white/5 border-white/10"
           }`}
         >
           <div className="flex items-center gap-2">
-            <Package className="w-4 h-4 text-stone-600" />
+            <Package className="w-4 h-4 text-stone-400" />
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm text-stone-900">
+                <span className="font-semibold text-sm text-stone-100">
                   {unit.unit.name}
                 </span>
                 {unit.isPrimary && (
@@ -100,19 +100,19 @@ export function ProductUnitDisplay({ units, variant = "compact" }: ProductUnitDi
                   </span>
                 )}
               </div>
-              <p className="text-xs text-stone-600">
+              <p className="text-xs text-stone-400">
                 Konversi: 1 {unit.unit.name} = {unit.conversionValue} {primaryUnitName}
                 {unit.isPrimary ? " (satuan utama)" : ""}
               </p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-sm font-semibold text-stone-900">
+            <p className="text-sm font-semibold text-stone-100">
               Rp {unit.sellPrice.toLocaleString("id-ID")}
             </p>
              {canViewPurchasePrice && (
             <div>
-            <p className="text-xs text-stone-600">
+            <p className="text-xs text-stone-400">
               Beli: Rp {unit.buyPrice.toLocaleString("id-ID")}
             </p>
             </div>

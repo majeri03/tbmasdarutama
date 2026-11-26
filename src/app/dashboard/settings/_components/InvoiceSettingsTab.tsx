@@ -113,11 +113,11 @@ export default function InvoiceSettingsTab() {
             {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
 
             <div className="glass-card p-6 space-y-5">
-                <h3 className="font-semibold text-[#1C1917] flex items-center gap-2">
-                    <Settings2 className="w-5 h-5 text-[#7F1D1D]" />
+                <h3 className="font-semibold text-stone-100 flex items-center gap-2">
+                    <Settings2 className="w-5 h-5 text-[#E5484D]" />
                     Layout Default &amp; Kertas
                 </h3>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-stone-400">
                     Pengaturan ini akan digunakan secara otomatis saat Anda mencetak dari kasir POS maupun Riwayat Transaksi.
                 </p>
 
@@ -141,14 +141,14 @@ export default function InvoiceSettingsTab() {
                     {/* ── THERMAL PAPER SIZE ── */}
                     <div>
                         <label className="label">Lebar Thermal POS (Struk Kecil)</label>
-                        <div className="flex rounded-lg overflow-hidden border border-gray-200 mb-3 w-fit text-xs">
+                        <div className="flex rounded-lg overflow-hidden border border-white/10 mb-3 w-fit text-xs">
                             <button type="button"
                                 onClick={() => { setThermalMode("preset"); selectThermalPreset(formData.invoicePaperSize || "58mm"); }}
-                                className={`px-3 py-1.5 font-medium transition-colors ${thermalMode === "preset" ? "bg-[#7F1D1D] text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                                className={`px-3 py-1.5 font-medium transition-colors ${thermalMode === "preset" ? "bg-[#7F1D1D] text-white" : "bg-transparent text-stone-400 hover:bg-white/[0.06]"}`}
                             >⊞ Preset</button>
                             <button type="button"
                                 onClick={() => { setThermalMode("custom"); updateThermalCustom(thermalCustomW); }}
-                                className={`px-3 py-1.5 font-medium transition-colors ${thermalMode === "custom" ? "bg-[#7F1D1D] text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                                className={`px-3 py-1.5 font-medium transition-colors ${thermalMode === "custom" ? "bg-[#7F1D1D] text-white" : "bg-transparent text-stone-400 hover:bg-white/[0.06]"}`}
                             >✎ Custom mm</button>
                         </div>
                         {thermalMode === "preset" ? (
@@ -159,7 +159,7 @@ export default function InvoiceSettingsTab() {
                                         className={`px-4 py-2 rounded-lg border text-sm font-semibold transition-all ${
                                             formData.invoicePaperSize === size
                                                 ? "bg-[#7F1D1D] text-white border-[#7F1D1D] shadow"
-                                                : "bg-white text-gray-700 border-gray-200 hover:border-[#7F1D1D]/40 hover:text-[#7F1D1D]"
+                                                : "bg-white/[0.06] text-stone-300 border-white/10 hover:border-[#E5484D]/40 hover:text-[#E5484D]"
                                         }`}
                                     >{size}</button>
                                 ))}
@@ -172,8 +172,8 @@ export default function InvoiceSettingsTab() {
                                     className="glass-input text-center w-28"
                                     placeholder="58"
                                 />
-                                <span className="text-sm text-gray-500 font-medium">mm</span>
-                                <span className="text-xs text-gray-400 bg-gray-100 rounded px-2 py-1.5 font-mono ml-1">
+                                <span className="text-sm text-stone-400 font-medium">mm</span>
+                                <span className="text-xs text-stone-500 bg-white/[0.08] rounded px-2 py-1.5 font-mono ml-1">
                                     = {thermalCustomW || "58"}mm
                                 </span>
                             </div>
@@ -183,14 +183,14 @@ export default function InvoiceSettingsTab() {
                     {/* ── DOCUMENT PAPER SIZE ── */}
                     <div className="md:col-span-2">
                         <label className="label">Ukuran Kertas Dokumen (Invoice / NCR / Surat Jalan)</label>
-                        <div className="flex rounded-lg overflow-hidden border border-gray-200 mb-3 w-fit text-xs">
+                        <div className="flex rounded-lg overflow-hidden border border-white/10 mb-3 w-fit text-xs">
                             <button type="button"
                                 onClick={() => { setDocMode("preset"); selectDocPreset(formData.invoiceDocumentPaperSize || "A4"); }}
-                                className={`px-3 py-1.5 font-medium transition-colors ${docMode === "preset" ? "bg-[#7F1D1D] text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                                className={`px-3 py-1.5 font-medium transition-colors ${docMode === "preset" ? "bg-[#7F1D1D] text-white" : "bg-transparent text-stone-400 hover:bg-white/[0.06]"}`}
                             >⊞ Preset</button>
                             <button type="button"
                                 onClick={() => { setDocMode("custom"); updateDocCustom(docCustomW, docCustomH); }}
-                                className={`px-3 py-1.5 font-medium transition-colors ${docMode === "custom" ? "bg-[#7F1D1D] text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}
+                                className={`px-3 py-1.5 font-medium transition-colors ${docMode === "custom" ? "bg-[#7F1D1D] text-white" : "bg-transparent text-stone-400 hover:bg-white/[0.06]"}`}
                             >✎ Custom mm × mm</button>
                         </div>
 
@@ -202,7 +202,7 @@ export default function InvoiceSettingsTab() {
                                         className={`px-5 py-2 rounded-lg border text-sm font-semibold transition-all ${
                                             formData.invoiceDocumentPaperSize === size
                                                 ? "bg-[#7F1D1D] text-white border-[#7F1D1D] shadow"
-                                                : "bg-white text-gray-700 border-gray-200 hover:border-[#7F1D1D]/40 hover:text-[#7F1D1D]"
+                                                : "bg-white/[0.06] text-stone-300 border-white/10 hover:border-[#E5484D]/40 hover:text-[#E5484D]"
                                         }`}
                                     >{size}</button>
                                 ))}
@@ -216,9 +216,9 @@ export default function InvoiceSettingsTab() {
                                         className="glass-input text-center w-24"
                                         placeholder="210"
                                     />
-                                    <span className="text-sm text-gray-500">mm</span>
+                                    <span className="text-sm text-stone-400">mm</span>
                                 </div>
-                                <span className="text-gray-400 font-bold text-xl">×</span>
+                                <span className="text-stone-500 font-bold text-xl">×</span>
                                 <div className="flex items-center gap-1.5">
                                     <input type="number" min="50" max="700"
                                         value={docCustomH}
@@ -226,14 +226,14 @@ export default function InvoiceSettingsTab() {
                                         className="glass-input text-center w-24"
                                         placeholder="297"
                                     />
-                                    <span className="text-sm text-gray-500">mm</span>
+                                    <span className="text-sm text-stone-400">mm</span>
                                 </div>
-                                <span className="text-xs text-gray-400 bg-gray-100 rounded px-2 py-1.5 font-mono">
+                                <span className="text-xs text-stone-500 bg-white/[0.08] rounded px-2 py-1.5 font-mono">
                                     = {docCustomW || "210"} × {docCustomH || "297"} mm
                                 </span>
                             </div>
                         )}
-                        <p className="text-xs text-gray-400 mt-2">
+                        <p className="text-xs text-stone-500 mt-2">
                             Referensi: A4 = 210×297mm &nbsp;·&nbsp; A5 = 148×210mm &nbsp;·&nbsp; F4 = 215×330mm &nbsp;·&nbsp; Letter = 216×279mm
                         </p>
                     </div>
@@ -241,11 +241,11 @@ export default function InvoiceSettingsTab() {
             </div>
 
             <div className="glass-card p-6 space-y-4">
-                <h3 className="font-semibold text-[#1C1917] flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-[#7F1D1D]" />
+                <h3 className="font-semibold text-stone-100 flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-[#E5484D]" />
                     Komponen &amp; Visibilitas Cetak
                 </h3>
-                <p className="text-sm text-gray-500 mb-4">Pilih bagian mana saja yang ingin ditampilkan pada struk atau invoice Anda.</p>
+                <p className="text-sm text-stone-400 mb-4">Pilih bagian mana saja yang ingin ditampilkan pada struk atau invoice Anda.</p>
 
                 <div className="space-y-3">
                     {[
@@ -262,15 +262,15 @@ export default function InvoiceSettingsTab() {
                                 name={name}
                                 checked={(formData[name as keyof StoreSettingFormData] as boolean) ?? true}
                                 onChange={handleCheckboxChange}
-                                className="w-4 h-4 accent-[#7F1D1D] rounded focus:ring-[#7F1D1D]"
+                                className="w-4 h-4 accent-[#E5484D] rounded focus:ring-[#E5484D]"
                             />
-                            <span className="text-sm font-medium text-gray-700">{label}</span>
+                            <span className="text-sm font-medium text-stone-300">{label}</span>
                         </label>
                     ))}
                 </div>
 
                 {(formData.invoiceShowFooter ?? true) && (
-                    <div className="mt-4 pt-4 border-t border-gray-100">
+                    <div className="mt-4 pt-4 border-t border-white/[0.08]">
                         <label className="label">Teks Syarat &amp; Ketentuan (Footer)</label>
                         <textarea
                             name="invoiceFooterTerms"

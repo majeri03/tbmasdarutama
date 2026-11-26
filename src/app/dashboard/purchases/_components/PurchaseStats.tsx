@@ -42,10 +42,10 @@ export function PurchaseStats({ stats }: PurchaseStatsProps) {
         <div key={index} className="glass-card p-4 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-stone-500 mb-1">{stat.title}</p>
-              <p className="text-2xl font-semibold tabular-nums text-stone-900">{stat.value}</p>
+              <p className="text-sm text-stone-400 mb-1">{stat.title}</p>
+              <p className="text-2xl font-semibold tabular-nums text-stone-100">{stat.value}</p>
             </div>
-            <div className="p-3 rounded-lg bg-stone-100 border border-stone-200 text-stone-600">
+            <div className="p-3 rounded-lg bg-white/10 border border-white/10 text-stone-400">
               {stat.icon}
             </div>
           </div>

@@ -114,12 +114,12 @@ export function CustomerFormModal({
     <div className="modal-overlay">
       <div className="modal-container w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-slide-up">
         {/* Header */}
-        <div className="sticky top-0 bg-white/80 backdrop-blur-sm border-b border-stone-200 p-6 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-[#1C1917]/85 backdrop-blur-sm border-b border-white/10 p-6 flex items-center justify-between z-10">
           <div>
-            <h2 className="text-2xl font-bold text-stone-900">
+            <h2 className="text-2xl font-bold text-stone-100">
               {mode === "create" ? "Tambah Customer Baru" : "Edit Customer"}
             </h2>
-            <p className="text-sm text-stone-600 mt-1">
+            <p className="text-sm text-stone-400 mt-1">
               {mode === "create"
                 ? "Isi informasi customer yang akan ditambahkan"
                 : `Edit data customer: ${customer?.code}`}
@@ -128,9 +128,9 @@ export function CustomerFormModal({
           <button
             onClick={onClose}
             disabled={loading}
-            className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 transition-colors disabled:opacity-50"
+            className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-white/10 text-stone-400 hover:bg-white/15 hover:text-stone-300 transition-colors disabled:opacity-50"
           >
-            <X className="w-5 h-5 text-stone-500" />
+            <X className="w-5 h-5 text-stone-400" />
           </button>
         </div>
 
@@ -138,8 +138,8 @@ export function CustomerFormModal({
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Basic Information Section */}
           <div>
-            <h3 className="text-lg font-semibold text-stone-900 mb-4 flex items-center gap-2">
-              <User className="w-5 h-5 text-red-900" />
+            <h3 className="text-lg font-semibold text-stone-100 mb-4 flex items-center gap-2">
+              <User className="w-5 h-5 text-[#E5484D]" />
               Informasi Dasar
             </h3>
 
@@ -176,14 +176,14 @@ export function CustomerFormModal({
                     })
                   }
                   required
-                  className="glass-input"
+                  className="glass-input [color-scheme:dark]"
                   disabled={loading}
                 >
                   <option value={CustomerType.REGULER}>Reguler</option>
                   <option value={CustomerType.GROSIR}>Grosir</option>
                   <option value={CustomerType.PROYEK}>Proyek</option>
                 </select>
-                <p className="text-xs text-stone-500 mt-1">
+                <p className="text-xs text-stone-400 mt-1">
                   {formData.type === CustomerType.REGULER &&
                     "Customer dengan pembelian normal"}
                   {formData.type === CustomerType.GROSIR &&
@@ -233,8 +233,8 @@ export function CustomerFormModal({
 
           {/* Address Section */}
           <div>
-            <h3 className="text-lg font-semibold text-stone-900 mb-4 flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-red-900" />
+            <h3 className="text-lg font-semibold text-stone-100 mb-4 flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-[#E5484D]" />
               Alamat
             </h3>
 
@@ -297,7 +297,7 @@ export function CustomerFormModal({
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-6 -mx-6 -mb-6 px-6 pb-6 bg-stone-50 border-t border-stone-200 rounded-b-3xl">
+          <div className="flex gap-3 pt-6 -mx-6 -mb-6 px-6 pb-6 bg-white/5 border-t border-white/10 rounded-b-3xl">
             <button
               type="button"
               onClick={onClose}

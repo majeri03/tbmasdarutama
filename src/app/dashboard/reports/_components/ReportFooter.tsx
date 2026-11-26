@@ -39,23 +39,23 @@ export default function ReportFooter({ storeName: storeNameProp }: { storeName?:
     <div className="mt-12 break-inside-avoid">
       <div className="grid grid-cols-2 gap-12">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#6B7280]">
+          <p className="text-xs font-bold uppercase tracking-[0.08em] text-stone-400 print:text-[#6B7280]">
             Dibuat oleh
           </p>
           <div className="h-16" />
-          <div className="border-b border-[#111111]" />
-          <p className="mt-1 text-xs text-[#6B7280]">Nama</p>
+          <div className="border-b border-white/25 print:border-[#111111]" />
+          <p className="mt-1 text-xs text-stone-400 print:text-[#6B7280]">Nama</p>
         </div>
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#6B7280]">
+          <p className="text-xs font-bold uppercase tracking-[0.08em] text-stone-400 print:text-[#6B7280]">
             Mengetahui
           </p>
           <div className="h-16" />
-          <div className="border-b border-[#111111]" />
-          <p className="mt-1 text-xs text-[#6B7280]">Nama</p>
+          <div className="border-b border-white/25 print:border-[#111111]" />
+          <p className="mt-1 text-xs text-stone-400 print:text-[#6B7280]">Nama</p>
         </div>
       </div>
-      <p className="mt-8 text-center text-xs text-[#6B7280]">
+      <p className="mt-8 text-center text-xs text-stone-400 print:text-[#6B7280]">
         Dicetak: {getCurrentDateTimeWita()}
         {storeName ? ` • ${storeName}` : ""}
       </p>

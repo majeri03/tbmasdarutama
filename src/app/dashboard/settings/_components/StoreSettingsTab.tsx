@@ -170,7 +170,7 @@ export default function StoreSettingsTab() {
                                 className="object-contain"
                             />
                         ) : (
-                            <Building2 className="w-12 h-12 text-gray-400" />
+                            <Building2 className="w-12 h-12 text-stone-500" />
                         )}
                     </div>
 
@@ -205,14 +205,14 @@ export default function StoreSettingsTab() {
                                     type="button"
                                     onClick={() => setConfirmDeleteLogo(true)}
                                     disabled={uploading || deletingLogo}
-                                    className="btn-secondary inline-flex items-center gap-2 cursor-pointer ml-2 !text-[#991B1B]"
+                                    className="btn-secondary inline-flex items-center gap-2 cursor-pointer ml-2 !text-[#E5484D]"
                                 >
                                     <Trash2 className="w-4 h-4" />
                                     Hapus Logo
                                 </button>
                                 {confirmDeleteLogo && (
                                     <span className="inline-flex flex-wrap items-center gap-2 ml-2 text-xs">
-                                        <span className="text-[#991B1B] font-medium">Yakin hapus logo toko?</span>
+                                        <span className="text-[#E5484D] font-medium">Yakin hapus logo toko?</span>
                                         <button
                                             type="button"
                                             onClick={handleDeleteLogo}
@@ -225,7 +225,7 @@ export default function StoreSettingsTab() {
                                             type="button"
                                             onClick={() => setConfirmDeleteLogo(false)}
                                             disabled={deletingLogo}
-                                            className="px-2 py-1 rounded border border-gray-300 text-gray-600"
+                                            className="px-2 py-1 rounded border border-white/20 text-stone-400"
                                         >
                                             Batal
                                         </button>
@@ -233,7 +233,7 @@ export default function StoreSettingsTab() {
                                 )}
                             </>
                         )}
-                        <p className="text-xs text-gray-500 mt-2">
+                        <p className="text-xs text-stone-400 mt-2">
                             Format: PNG, JPG, SVG | Max: 1MB
                         </p>
                     </div>
@@ -242,8 +242,8 @@ export default function StoreSettingsTab() {
 
             {/* Informasi Dasar */}
             <div className="glass-card p-6 space-y-4">
-                <h3 className="font-semibold text-[#1C1917] flex items-center gap-2">
-                    <Building2 className="w-5 h-5 text-[#7F1D1D]" />
+                <h3 className="font-semibold text-stone-100 flex items-center gap-2">
+                    <Building2 className="w-5 h-5 text-[#E5484D]" />
                     Informasi Dasar
                 </h3>
 
@@ -325,7 +325,7 @@ export default function StoreSettingsTab() {
 
             {/* Alamat */}
             <div className="glass-card p-6 space-y-4">
-                <h3 className="font-semibold text-[#1C1917]">Alamat</h3>
+                <h3 className="font-semibold text-stone-100">Alamat</h3>
 
                 <div className="space-y-4">
                     <div>
@@ -382,7 +382,7 @@ export default function StoreSettingsTab() {
 
             {/* Social Media */}
             <div className="glass-card p-6 space-y-4">
-                <h3 className="font-semibold text-[#1C1917]">Social Media</h3>
+                <h3 className="font-semibold text-stone-100">Social Media</h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -413,7 +413,7 @@ export default function StoreSettingsTab() {
 
             {/* Informasi Bank & Pajak */}
             <div className="glass-card p-6 space-y-4">
-                <h3 className="font-semibold text-[#1C1917]">Bank & Pajak</h3>
+                <h3 className="font-semibold text-stone-100">Bank & Pajak</h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>

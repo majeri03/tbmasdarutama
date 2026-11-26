@@ -108,7 +108,7 @@ export function SupplierTable({
                 <button
                   type="button"
                   onClick={handleSearchClear}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-200 transition-colors"
                 >
                   <span className="text-lg">×</span>
                 </button>
@@ -137,7 +137,7 @@ export function SupplierTable({
               className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
                 activeFilter === null
                   ? "bg-red-900 text-white shadow-lg"
-                  : "bg-white/50 text-stone-700 hover:bg-white/80"
+                  : "bg-white/10 text-stone-300 hover:bg-white/15"
               }`}
               disabled={loading}
             >
@@ -148,7 +148,7 @@ export function SupplierTable({
               className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
                 activeFilter === true
                   ? "bg-red-900 text-white shadow-lg"
-                  : "bg-white/50 text-stone-700 hover:bg-white/80"
+                  : "bg-white/10 text-stone-300 hover:bg-white/15"
               }`}
               disabled={loading}
             >
@@ -159,7 +159,7 @@ export function SupplierTable({
               className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
                 activeFilter === false
                   ? "bg-red-900 text-white shadow-lg"
-                  : "bg-white/50 text-stone-700 hover:bg-white/80"
+                  : "bg-white/10 text-stone-300 hover:bg-white/15"
               }`}
               disabled={loading}
             >
@@ -170,25 +170,25 @@ export function SupplierTable({
       </div>
 
       {/* Table */}
-      <div className="glass-card overflow-hidden">
+      <div className="glass-card overflow-hidden bg-white/15 border-white/10">
         {loading ? (
           // Loading State
           <div className="p-12 text-center">
-            <Loader2 className="w-8 h-8 animate-spin text-stone-600 mx-auto mb-3" />
-            <p className="text-stone-600 text-sm">Memuat data supplier...</p>
+            <Loader2 className="w-8 h-8 animate-spin text-stone-400 mx-auto mb-3" />
+            <p className="text-stone-400 text-sm">Memuat data supplier...</p>
           </div>
         ) : suppliers.length === 0 ? (
           // Empty State
           <div className="p-12 text-center">
             <div
-              className="inline-flex p-4 rounded-2xl mb-4 bg-stone-100 border border-stone-200"
+              className="inline-flex p-4 rounded-2xl mb-4 bg-white/10 border border-white/10"
             >
-              <Truck className="w-8 h-8 text-stone-600" />
+              <Truck className="w-8 h-8 text-stone-400" />
             </div>
-            <h3 className="text-lg font-bold text-stone-900 mb-2">
+            <h3 className="text-lg font-bold text-stone-100 mb-2">
               Belum Ada Data Supplier
             </h3>
-            <p className="text-stone-600 text-sm">
+            <p className="text-stone-400 text-sm">
               {searchInput
                 ? `Tidak ada hasil untuk "${searchInput}"`
                 : "Tambahkan supplier pertama Anda"}
@@ -200,29 +200,29 @@ export function SupplierTable({
             <div className="hidden xl:block overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-stone-200">
-                    <th className="text-left p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                  <tr className="border-b border-white/10">
+                    <th className="text-left p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
                       Kode
                     </th>
-                    <th className="text-left p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                    <th className="text-left p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
                       Nama Supplier
                     </th>
-                    <th className="text-left p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                    <th className="text-left p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
                       Kontak
                     </th>
-                    <th className="text-left p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                    <th className="text-left p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
                       Lokasi
                     </th>
-                    <th className="text-center p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                    <th className="text-center p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
                       Produk
                     </th>
-                    <th className="text-center p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                    <th className="text-center p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
                       Transaksi
                     </th>
-                    <th className="text-center p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                    <th className="text-center p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
                       Status
                     </th>
-                    <th className="text-right p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                    <th className="text-right p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
                       Aksi
                     </th>
                   </tr>
@@ -231,28 +231,28 @@ export function SupplierTable({
                   {suppliers.map((supplier, index) => (
                     <tr
                       key={supplier.id}
-                      className={`border-b border-stone-100 hover:bg-stone-50 transition-colors ${
-                        index % 2 === 0 ? "bg-white/20" : ""
+                      className={`border-b border-white/10 hover:bg-white/5 transition-colors ${
+                        index % 2 === 0 ? "bg-white/5" : ""
                       }`}
                     >
                       <td className="p-4">
-                        <span className="font-mono text-sm font-semibold text-stone-900">
+                        <span className="font-mono text-sm font-semibold text-stone-100">
                           {supplier.code}
                         </span>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <div
-                            className="p-2 rounded-lg bg-stone-100 border border-stone-200"
+                            className="p-2 rounded-lg bg-white/10 border border-white/10"
                           >
-                            <Truck className="w-4 h-4 text-stone-600" />
+                            <Truck className="w-4 h-4 text-stone-400" />
                           </div>
                           <div>
-                            <p className="font-semibold text-stone-900">
+                            <p className="font-semibold text-stone-100">
                               {supplier.name}
                             </p>
                             {supplier.description && (
-                              <p className="text-xs text-stone-600 line-clamp-1">
+                              <p className="text-xs text-stone-400 line-clamp-1">
                                 {supplier.description}
                               </p>
                             )}
@@ -262,13 +262,13 @@ export function SupplierTable({
                       <td className="p-4">
                         <div className="space-y-1">
                           {supplier.phone && (
-                            <div className="flex items-center gap-2 text-sm text-stone-700">
+                            <div className="flex items-center gap-2 text-sm text-stone-300">
                               <Phone className="w-3.5 h-3.5 text-stone-400" />
                               <span>{supplier.phone}</span>
                             </div>
                           )}
                           {supplier.email && (
-                            <div className="flex items-center gap-2 text-xs text-stone-600">
+                            <div className="flex items-center gap-2 text-xs text-stone-400">
                               <Mail className="w-3.5 h-3.5 text-stone-400" />
                               <span>{supplier.email}</span>
                             </div>
@@ -277,12 +277,12 @@ export function SupplierTable({
                       </td>
                       <td className="p-4">
                         {supplier.city || supplier.province ? (
-                          <div className="flex items-start gap-2 text-sm text-stone-700">
+                          <div className="flex items-start gap-2 text-sm text-stone-300">
                             <MapPin className="w-3.5 h-3.5 text-stone-400 mt-0.5 flex-shrink-0" />
                             <div>
                               {supplier.city && <p>{supplier.city}</p>}
                               {supplier.province && (
-                                <p className="text-xs text-stone-600">{supplier.province}</p>
+                                <p className="text-xs text-stone-400">{supplier.province}</p>
                               )}
                             </div>
                           </div>
@@ -294,8 +294,8 @@ export function SupplierTable({
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
                             supplier._count.products > 0
-                              ? "bg-stone-100 text-stone-600 border border-stone-200"
-                              : "bg-stone-100 text-stone-600 border border-stone-200"
+                              ? "bg-white/10 text-stone-400 border border-white/10"
+                              : "bg-white/10 text-stone-400 border border-white/10"
                           }`}
                         >
                           <Package className="w-3 h-3" />
@@ -306,8 +306,8 @@ export function SupplierTable({
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
                             supplier._count.purchases > 0
-                              ? "bg-stone-100 text-stone-600 border border-stone-200"
-                              : "bg-stone-100 text-stone-600 border border-stone-200"
+                              ? "bg-white/10 text-stone-400 border border-white/10"
+                              : "bg-white/10 text-stone-400 border border-white/10"
                           }`}
                         >
                           <ShoppingCart className="w-3 h-3" />
@@ -324,34 +324,34 @@ export function SupplierTable({
                             disabled={togglingStatus === supplier.id}
                             className={`p-2 rounded-lg transition-colors group ${
                               supplier.isActive
-                                ? "hover:bg-red-100"
-                                : "hover:bg-green-100"
+                                ? "hover:bg-red-500/15"
+                                : "hover:bg-green-500/15"
                             }`}
                             title={supplier.isActive ? "Nonaktifkan" : "Aktifkan"}
                           >
                             {togglingStatus === supplier.id ? (
-                              <Loader2 className="w-4 h-4 animate-spin text-stone-600" />
+                              <Loader2 className="w-4 h-4 animate-spin text-stone-400" />
                             ) : (
                               <Power
                                 className={`w-4 h-4 group-hover:scale-110 transition-transform ${
-                                  supplier.isActive ? "text-red-800" : "text-green-600"
+                                  supplier.isActive ? "text-red-300" : "text-green-400"
                                 }`}
                               />
                             )}
                           </button>
                           <button
                             onClick={() => onEdit(supplier)}
-                            className="p-2 rounded-lg hover:bg-stone-100 transition-colors group"
+                            className="p-2 rounded-lg hover:bg-white/10 transition-colors group"
                             title="Edit"
                           >
-                            <Edit className="w-4 h-4 text-stone-600 group-hover:scale-110 transition-transform" />
+                            <Edit className="w-4 h-4 text-stone-400 group-hover:scale-110 transition-transform" />
                           </button>
                           <button
                             onClick={() => onDelete(supplier)}
-                            className="p-2 rounded-lg hover:bg-red-50 transition-colors group"
+                            className="p-2 rounded-lg hover:bg-red-500/10 transition-colors group"
                             title="Hapus"
                           >
-                            <Trash2 className="w-4 h-4 text-red-800 group-hover:scale-110 transition-transform" />
+                            <Trash2 className="w-4 h-4 text-red-300 group-hover:scale-110 transition-transform" />
                           </button>
                         </div>
                       </td>
@@ -366,21 +366,21 @@ export function SupplierTable({
               {suppliers.map((supplier) => (
                 <div
                   key={supplier.id}
-                  className="glass-card p-4 space-y-3 hover:bg-white/60 transition-colors"
+                  className="glass-card p-4 space-y-3 bg-white/15 border-white/10 hover:bg-white/20 transition-colors"
                 >
                   {/* Header */}
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div
-                        className="p-2 rounded-lg flex-shrink-0 bg-stone-100 border border-stone-200"
+                        className="p-2 rounded-lg flex-shrink-0 bg-white/10 border border-white/10"
                       >
-                        <Truck className="w-4 h-4 text-stone-600" />
+                        <Truck className="w-4 h-4 text-stone-400" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h4 className="font-semibold text-stone-900 truncate">
+                        <h4 className="font-semibold text-stone-100 truncate">
                           {supplier.name}
                         </h4>
-                        <p className="text-xs font-mono text-stone-600 mt-0.5">
+                        <p className="text-xs font-mono text-stone-400 mt-0.5">
                           {supplier.code}
                         </p>
                       </div>
@@ -391,19 +391,19 @@ export function SupplierTable({
                   {/* Contact Info */}
                   <div className="space-y-1.5 text-sm">
                     {supplier.phone && (
-                      <div className="flex items-center gap-2 text-stone-700">
+                      <div className="flex items-center gap-2 text-stone-300">
                         <Phone className="w-3.5 h-3.5 text-stone-400" />
                         <span>{supplier.phone}</span>
                       </div>
                     )}
                     {supplier.email && (
-                      <div className="flex items-center gap-2 text-stone-600">
+                      <div className="flex items-center gap-2 text-stone-400">
                         <Mail className="w-3.5 h-3.5 text-stone-400" />
                         <span className="truncate">{supplier.email}</span>
                       </div>
                     )}
                     {(supplier.city || supplier.province) && (
-                      <div className="flex items-start gap-2 text-stone-700">
+                      <div className="flex items-start gap-2 text-stone-300">
                         <MapPin className="w-3.5 h-3.5 text-stone-400 mt-0.5 flex-shrink-0" />
                         <span>
                           {supplier.city}
@@ -416,19 +416,19 @@ export function SupplierTable({
 
                   {/* Stats */}
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold px-2 py-1 rounded-full bg-stone-100 text-stone-600 border border-stone-200 flex items-center gap-1">
+                    <span className="text-xs font-semibold px-2 py-1 rounded-full bg-white/10 text-stone-400 border border-white/10 flex items-center gap-1">
                       <Package className="w-3 h-3" />
                       {supplier._count.products} Produk
                     </span>
-                    <span className="text-xs font-semibold px-2 py-1 rounded-full bg-stone-100 text-stone-600 flex items-center gap-1">
+                    <span className="text-xs font-semibold px-2 py-1 rounded-full bg-white/10 text-stone-400 flex items-center gap-1">
                       <ShoppingCart className="w-3 h-3" />
                       {supplier._count.purchases} Transaksi
                     </span>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center justify-between pt-3 border-t border-stone-200">
-                    <div className="flex items-center gap-2 text-xs text-stone-600">
+                  <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                    <div className="flex items-center gap-2 text-xs text-stone-400">
                       <Calendar className="w-3.5 h-3.5" />
                       <span>
                         {format(new Date(supplier.createdAt), "dd MMM yyyy", {
@@ -441,30 +441,30 @@ export function SupplierTable({
                         onClick={() => handleToggleStatus(supplier)}
                         disabled={togglingStatus === supplier.id}
                         className={`p-2 rounded-lg transition-colors ${
-                          supplier.isActive ? "hover:bg-red-100" : "hover:bg-green-100"
+                          supplier.isActive ? "hover:bg-red-500/15" : "hover:bg-green-500/15"
                         }`}
                       >
                         {togglingStatus === supplier.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin text-stone-600" />
+                          <Loader2 className="w-4 h-4 animate-spin text-stone-400" />
                         ) : (
                           <Power
                             className={`w-4 h-4 ${
-                              supplier.isActive ? "text-red-800" : "text-green-600"
+                              supplier.isActive ? "text-red-300" : "text-green-400"
                             }`}
                           />
                         )}
                       </button>
                       <button
                         onClick={() => onEdit(supplier)}
-                        className="p-2 rounded-lg hover:bg-stone-100 transition-colors"
+                        className="p-2 rounded-lg hover:bg-white/10 transition-colors"
                       >
-                        <Edit className="w-4 h-4 text-stone-600" />
+                        <Edit className="w-4 h-4 text-stone-400" />
                       </button>
                       <button
                         onClick={() => onDelete(supplier)}
-                        className="p-2 rounded-lg hover:bg-red-50 transition-colors"
+                        className="p-2 rounded-lg hover:bg-red-500/10 transition-colors"
                       >
-                        <Trash2 className="w-4 h-4 text-red-800" />
+                        <Trash2 className="w-4 h-4 text-red-300" />
                       </button>
                     </div>
                   </div>
@@ -479,7 +479,7 @@ export function SupplierTable({
       {!loading && suppliers.length > 0 && pagination.totalPages > 1 && (
         <div className="glass-card p-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-stone-600">
+            <p className="text-sm text-stone-400">
               Menampilkan {(pagination.page - 1) * pagination.limit + 1} -{" "}
               {Math.min(pagination.page * pagination.limit, pagination.total)} dari{" "}
               {pagination.total} supplier
@@ -488,7 +488,7 @@ export function SupplierTable({
               <button
                 onClick={() => onPageChange(pagination.page - 1)}
                 disabled={pagination.page === 1}
-                className="px-4 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-stone-100"
+                className="px-4 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/10"
               >
                 Prev
               </button>
@@ -511,7 +511,7 @@ export function SupplierTable({
                       className={`w-10 h-10 rounded-lg font-semibold text-sm transition-all ${
                         pagination.page === page
                           ? "bg-red-900 text-white shadow-lg"
-                          : "hover:bg-stone-100 text-stone-700"
+                          : "hover:bg-white/10 text-stone-300"
                       }`}
                     >
                       {page}
@@ -521,7 +521,7 @@ export function SupplierTable({
               <button
                 onClick={() => onPageChange(pagination.page + 1)}
                 disabled={pagination.page === pagination.totalPages}
-                className="px-4 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-stone-100"
+                className="px-4 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/10"
               >
                 Next
               </button>

@@ -162,7 +162,7 @@ const displaySellPrice = autoCalculate && primaryUnit && !formData.isPrimary
       {/* Unit List */}
       {units.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-sm font-semibold text-stone-700 mb-2">
+          <h4 className="text-sm font-semibold text-stone-300 mb-2">
             Daftar Satuan ({units.length})
           </h4>
           {units.map((unit, index) => {
@@ -172,14 +172,14 @@ const displaySellPrice = autoCalculate && primaryUnit && !formData.isPrimary
                 key={index}
                 className={`p-3 rounded-lg border ${
                   unit.isPrimary
-                    ? "bg-red-50 border-red-200"
-                    : "bg-white border-stone-200"
+                    ? "bg-red-500/10 border-red-500/25"
+                    : "bg-white/10 border-white/10"
                 }`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold text-stone-900">
+                      <span className="font-semibold text-stone-100">
                         {unitInfo?.name || "Unknown"}
                       </span>
                       {unit.isPrimary && (
@@ -190,23 +190,23 @@ const displaySellPrice = autoCalculate && primaryUnit && !formData.isPrimary
                     </div>
                     <div className="grid grid-cols-3 gap-3 text-sm">
                       <div>
-                        <p className="text-stone-600 text-xs">Konversi</p>
-                        <p className="font-semibold text-stone-900">
+                        <p className="text-stone-400 text-xs">Konversi</p>
+                        <p className="font-semibold text-stone-100">
                           {unit.conversionValue}
                           {!unit.isPrimary && " × satuan utama"}
                         </p>
                       </div>
                        {canViewPurchasePrice && (
                       <div>
-                        <p className="text-stone-600 text-xs">Harga Beli</p>
-                        <p className="font-semibold text-stone-900">
+                        <p className="text-stone-400 text-xs">Harga Beli</p>
+                        <p className="font-semibold text-stone-100">
                           Rp {unit.buyPrice.toLocaleString("id-ID")}
                         </p>
                       </div>
                        )}
                       <div>
-                        <p className="text-stone-600 text-xs">Harga Jual</p>
-                        <p className="font-semibold tabular-nums text-stone-900">
+                        <p className="text-stone-400 text-xs">Harga Jual</p>
+                        <p className="font-semibold tabular-nums text-stone-100">
                           Rp {unit.sellPrice.toLocaleString("id-ID")}
                         </p>
                       </div>
@@ -217,28 +217,28 @@ const displaySellPrice = autoCalculate && primaryUnit && !formData.isPrimary
                       <button
                         type="button"
                         onClick={() => handleSetPrimary(index)}
-                        className="p-2 rounded-lg hover:bg-green-100 transition-colors"
+                        className="p-2 rounded-lg hover:bg-green-500/15 transition-colors"
                         title="Jadikan satuan utama"
                       >
-                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        <CheckCircle className="w-4 h-4 text-green-400" />
                       </button>
                     )}
                     <button
                       type="button"
                       onClick={() => handleEdit(index)}
-                      className="p-2 rounded-lg hover:bg-stone-100 transition-colors"
+                      className="p-2 rounded-lg hover:bg-white/10 transition-colors"
                       title="Edit"
                     >
-                      <Edit2 className="w-4 h-4 text-stone-600" />
+                      <Edit2 className="w-4 h-4 text-stone-400" />
                     </button>
                     {units.length > 1 && (
                       <button
                         type="button"
                         onClick={() => handleDelete(index)}
-                        className="p-2 rounded-lg hover:bg-red-50 transition-colors"
+                        className="p-2 rounded-lg hover:bg-red-500/10 transition-colors"
                         title="Hapus"
                       >
-                        <Trash2 className="w-4 h-4 text-red-800" />
+                        <Trash2 className="w-4 h-4 text-red-300" />
                       </button>
                     )}
                   </div>
@@ -251,15 +251,15 @@ const displaySellPrice = autoCalculate && primaryUnit && !formData.isPrimary
 
       {/* Add/Edit Form */}
       <div className="glass-card p-4">
-        <h4 className="text-sm font-semibold text-stone-700 mb-3">
+        <h4 className="text-sm font-semibold text-stone-300 mb-3">
           {editingIndex !== null ? "Edit Satuan" : "Tambah Satuan"}
         </h4>
 
         <div className="space-y-3">
           {/* Unit Selection */}
           <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">
-              Satuan <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-stone-300 mb-1">
+              Satuan <span className="text-[#E5484D]">*</span>
             </label>
             <select
               value={formData.unitId}
@@ -280,8 +280,8 @@ const displaySellPrice = autoCalculate && primaryUnit && !formData.isPrimary
 
           {/* Conversion Value */}
           <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">
-              Nilai Konversi <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-stone-300 mb-1">
+              Nilai Konversi <span className="text-[#E5484D]">*</span>
             </label>
             <input
               type="number"
@@ -297,7 +297,7 @@ const displaySellPrice = autoCalculate && primaryUnit && !formData.isPrimary
               className="glass-input"
               placeholder="1"
             />
-            <p className="text-xs text-stone-500 mt-1">
+            <p className="text-xs text-stone-400 mt-1">
               {formData.isPrimary || units.length === 0
                 ? "Satuan utama selalu bernilai 1"
                 : "Berapa satuan utama dalam 1 unit ini?"}
@@ -306,19 +306,19 @@ const displaySellPrice = autoCalculate && primaryUnit && !formData.isPrimary
 
           {/* Auto Calculate Toggle */}
           {primaryUnit && !formData.isPrimary && (
-            <div className="flex items-center gap-2 p-2 rounded-lg bg-red-50 border border-red-200">
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-red-500/10 border border-red-500/25">
               <input
                 type="checkbox"
                 id="autoCalculate"
                 checked={autoCalculate}
                 onChange={(e) => setAutoCalculate(e.target.checked)}
-                className="w-4 h-4 text-red-900 rounded"
+                className="w-4 h-4 text-[#E5484D] rounded"
               />
               <label
                 htmlFor="autoCalculate"
-                className="text-sm text-stone-700 cursor-pointer flex items-center gap-1"
+                className="text-sm text-stone-300 cursor-pointer flex items-center gap-1"
               >
-                <Calculator className="w-4 h-4 text-stone-600" />
+                <Calculator className="w-4 h-4 text-stone-400" />
                 <span>Hitung harga otomatis</span>
               </label>
             </div>
@@ -328,8 +328,8 @@ const displaySellPrice = autoCalculate && primaryUnit && !formData.isPrimary
           <div className="grid grid-cols-2 gap-3">
              {canViewPurchasePrice && (
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">
-                Harga Beli <span className="text-red-500">*</span>
+              <label className="block text-sm font-medium text-stone-300 mb-1">
+                Harga Beli <span className="text-[#E5484D]">*</span>
               </label>
               <input
                 type="number"
@@ -348,8 +348,8 @@ const displaySellPrice = autoCalculate && primaryUnit && !formData.isPrimary
             </div>
              )}
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">
-                Harga Jual <span className="text-red-500">*</span>
+              <label className="block text-sm font-medium text-stone-300 mb-1">
+                Harga Jual <span className="text-[#E5484D]">*</span>
               </label>
               <input
                 type="number"
@@ -379,9 +379,9 @@ const displaySellPrice = autoCalculate && primaryUnit && !formData.isPrimary
                   setFormData({ ...formData, isPrimary: e.target.checked })
                 }
                 disabled={units.length === 0}
-                className="w-4 h-4 text-red-900 rounded"
+                className="w-4 h-4 text-[#E5484D] rounded"
               />
-              <label htmlFor="isPrimary" className="text-sm text-stone-700">
+              <label htmlFor="isPrimary" className="text-sm text-stone-300">
                 Jadikan satuan utama
               </label>
             </div>
@@ -425,8 +425,8 @@ const displaySellPrice = autoCalculate && primaryUnit && !formData.isPrimary
 
       {/* Help Text */}
       {units.length === 0 && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200">
-          <p className="text-sm text-stone-700">
+        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/25">
+          <p className="text-sm text-stone-300">
             <span className="font-semibold">💡 Tips:</span> Satuan pertama yang
             Anda tambahkan akan otomatis menjadi satuan utama dengan nilai
             konversi 1.

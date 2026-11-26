@@ -136,23 +136,23 @@ export function StockAdjustmentModal({
         {/* Modal */}
         <div className="modal-container relative max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           {/* Header */}
-          <div className="sticky top-0 bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+          <div className="sticky top-0 bg-[#1C1917] border-b border-white/10 px-6 py-4 flex items-center justify-between rounded-t-2xl">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-900/5 rounded-xl">
-                <Package className="w-6 h-6 text-red-900" />
+              <div className="p-2 bg-[#E5484D]/10 rounded-xl">
+                <Package className="w-6 h-6 text-[#E5484D]" />
               </div>
               <div>
-                <h2 className="text-xl font-semibold tracking-tight text-stone-900">
+                <h2 className="text-xl font-semibold tracking-tight text-stone-100">
                   Adjustment Stock
                 </h2>
-                <p className="text-sm text-stone-600">
+                <p className="text-sm text-stone-400">
                   Sesuaikan stock produk manual
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 transition-colors"
+              className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-white/10 text-stone-400 hover:bg-white/15 hover:text-stone-300 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -176,9 +176,9 @@ export function StockAdjustmentModal({
               />
 
               {/* Product List */}
-              <div className="max-h-48 overflow-y-auto border border-stone-200 rounded-xl divide-y">
+              <div className="max-h-48 overflow-y-auto border border-white/10 rounded-xl divide-y">
                 {filteredProducts.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-stone-500">
+                  <div className="p-4 text-center text-sm text-stone-400">
                     Tidak ada produk ditemukan
                   </div>
                 ) : (
@@ -187,20 +187,20 @@ export function StockAdjustmentModal({
                       key={product.id}
                       type="button"
                       onClick={() => setSelectedProduct(product)}
-                      className={`w-full p-3 text-left hover:bg-stone-50 transition-colors ${ selectedProduct?.id === product.id ? "bg-red-900/5 border-l-4 border-red-900" : "" }`}
+                      className={`w-full p-3 text-left hover:bg-white/5 transition-colors ${ selectedProduct?.id === product.id ? "bg-[#E5484D]/10 border-l-4 border-[#E5484D]" : "" }`}
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="font-medium text-stone-900">
+                          <div className="font-medium text-stone-100">
                             {product.name}
                           </div>
-                          <div className="text-xs text-stone-500 font-mono">
+                          <div className="text-xs text-stone-400 font-mono">
                             {product.code}
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-[11px] font-medium uppercase tracking-wide text-stone-500">Stock saat ini</div>
-                          <div className="text-sm font-bold text-red-900">
+                          <div className="text-[11px] font-medium uppercase tracking-wide text-stone-400">Stock saat ini</div>
+                          <div className="text-sm font-bold text-[#E5484D]">
                             {product.currentStock} unit
                           </div>
                         </div>
@@ -222,36 +222,36 @@ export function StockAdjustmentModal({
                     <button
                       type="button"
                       onClick={() => setType(MovementType.IN)}
-                      className={`p-4 rounded-xl border-2 transition-all ${ type === MovementType.IN ? "border-green-500 bg-green-50" : "border-stone-200 hover:border-green-300" }`}
+                      className={`p-4 rounded-xl border-2 transition-all ${ type === MovementType.IN ? "border-green-500 bg-green-500/10" : "border-white/10 hover:border-green-500/40" }`}
                     >
                       <div className="text-center">
                         <div className="text-2xl mb-1">📥</div>
                         <div className="font-semibold text-sm">Masuk</div>
-                        <div className="text-[11px] font-medium uppercase tracking-wide text-stone-500">Stock Bertambah</div>
+                        <div className="text-[11px] font-medium uppercase tracking-wide text-stone-400">Stock Bertambah</div>
                       </div>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setType(MovementType.OUT)}
-                      className={`p-4 rounded-xl border-2 transition-all ${ type === MovementType.OUT ? "border-red-500 bg-red-50" : "border-stone-200 hover:border-red-300" }`}
+                      className={`p-4 rounded-xl border-2 transition-all ${ type === MovementType.OUT ? "border-red-500 bg-red-500/10" : "border-white/10 hover:border-red-500/40" }`}
                     >
                       <div className="text-center">
                         <div className="text-2xl mb-1">📤</div>
                         <div className="font-semibold text-sm">Keluar</div>
-                        <div className="text-[11px] font-medium uppercase tracking-wide text-stone-500">Stock Berkurang</div>
+                        <div className="text-[11px] font-medium uppercase tracking-wide text-stone-400">Stock Berkurang</div>
                       </div>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setType(MovementType.ADJUSTMENT)}
-                      className={`p-4 rounded-xl border-2 transition-all ${ type === MovementType.ADJUSTMENT ? "border-red-900 bg-red-900/5" : "border-stone-200 hover:border-red-900/30" }`}
+                      className={`p-4 rounded-xl border-2 transition-all ${ type === MovementType.ADJUSTMENT ? "border-[#E5484D] bg-[#E5484D]/10" : "border-white/10 hover:border-[#E5484D]/40" }`}
                     >
                       <div className="text-center">
                         <div className="text-2xl mb-1">✏️</div>
                         <div className="font-semibold text-sm">Adjustment</div>
-                        <div className="text-[11px] font-medium uppercase tracking-wide text-stone-500">Set Stock Baru</div>
+                        <div className="text-[11px] font-medium uppercase tracking-wide text-stone-400">Set Stock Baru</div>
                       </div>
                     </button>
                   </div>
@@ -281,20 +281,20 @@ export function StockAdjustmentModal({
                 {/* Stock Preview */}
                 {quantity && (
                   <div
-                    className={`p-4 rounded-xl border-2 ${ isStockNegative ? "bg-red-50 border-red-200" : "bg-red-900/5 border-red-900/20" }`}
+                    className={`p-4 rounded-xl border-2 ${ isStockNegative ? "bg-red-500/10 border-red-500/30" : "bg-[#E5484D]/10 border-[#E5484D]/30" }`}
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="text-sm font-medium text-stone-700">
+                        <div className="text-sm font-medium text-stone-300">
                           Stock Setelah Adjustment
                         </div>
                         <div
-                          className={`text-2xl font-bold ${ isStockNegative ? "text-red-800" : "text-green-700" }`}
+                          className={`text-2xl font-bold ${ isStockNegative ? "text-red-300" : "text-green-400" }`}
                         >
                           {selectedProduct.currentStock} →{" "}
                           <span
                             className={
-                              isStockNegative ? "text-red-800" : "text-green-700"
+                              isStockNegative ? "text-red-300" : "text-green-400"
                             }
                           >
                             {newStock}
@@ -307,7 +307,7 @@ export function StockAdjustmentModal({
                       )}
                     </div>
                     {isStockNegative && (
-                      <div className="mt-2 text-sm text-red-800 font-medium">
+                      <div className="mt-2 text-sm text-red-300 font-medium">
                         ⚠️ Stock tidak boleh negatif!
                       </div>
                     )}
@@ -327,7 +327,7 @@ export function StockAdjustmentModal({
                     className="glass-input resize-none"
                     required
                   />
-                  <p className="text-xs text-stone-500 mt-1">
+                  <p className="text-xs text-stone-400 mt-1">
                     Contoh: Stock opname, barang rusak, kehilangan, dll.
                   </p>
                 </div>
@@ -335,12 +335,12 @@ export function StockAdjustmentModal({
             )}
 
             {/* Actions */}
-            <div className="flex gap-3 pt-4 -mx-6 -mb-6 px-6 pb-6 bg-stone-50 border-t border-stone-200 rounded-b-3xl">
+            <div className="flex gap-3 pt-4 -mx-6 -mb-6 px-6 pb-6 bg-white/5 border-t border-white/10 rounded-b-3xl">
               <button
                 type="button"
                 onClick={onClose}
                 disabled={loading}
-                className="flex-1 px-6 py-3 border-2 border-stone-300 text-stone-700 font-semibold rounded-xl hover:bg-stone-50 transition-colors disabled:opacity-50"
+                className="flex-1 px-6 py-3 border-2 border-white/15 text-stone-300 font-semibold rounded-xl hover:bg-white/5 transition-colors disabled:opacity-50"
               >
                 Batal
               </button>

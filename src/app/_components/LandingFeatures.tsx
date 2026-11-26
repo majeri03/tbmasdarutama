@@ -41,16 +41,16 @@ export default function LandingFeatures({ content }: Props) {
   ];
 
   return (
-    <section className="py-20 bg-[#FAFAF8] relative overflow-hidden">
+    <section className="py-20 bg-[#141210] relative overflow-hidden">
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Header */}
         <div className="text-center mb-16 animate-slide-up">
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-[#1C1917] mb-4">
-            Mengapa Memilih <span className="text-[#7F1D1D]">Kami?</span>
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-stone-100 mb-4">
+            Mengapa Memilih <span className="text-[#E5484D]">Kami?</span>
           </h2>
           <div className="w-24 h-1 bg-[#7F1D1D] mx-auto rounded-full mb-6" />
-          <p className="text-lg text-stone-600 max-w-2xl mx-auto">
+          <p className="text-lg text-stone-400 max-w-2xl mx-auto">
             {content}
           </p>
         </div>
@@ -64,15 +64,15 @@ export default function LandingFeatures({ content }: Props) {
               style={{ animationDelay: `${index * 100}ms` }}
             >
               {/* Icon */}
-              <div className="w-16 h-16 rounded-xl bg-stone-100 flex items-center justify-center mb-6">
-                <feature.icon className="w-8 h-8 text-[#7F1D1D]" />
+              <div className="w-16 h-16 rounded-xl bg-white/[0.08] flex items-center justify-center mb-6">
+                <feature.icon className="w-8 h-8 text-[#E5484D]" />
               </div>
 
               {/* Content */}
-              <h3 className="text-xl font-bold text-[#1C1917] mb-3">
+              <h3 className="text-xl font-bold text-stone-100 mb-3">
                 {feature.title}
               </h3>
-              <p className="text-stone-600 leading-relaxed">
+              <p className="text-stone-400 leading-relaxed">
                 {feature.description}
               </p>
             </div>

@@ -85,10 +85,10 @@ export default function LandingPageTab() {
             {/* Hero Images Manager */}
             <div className="glass-card p-6 space-y-4">
                 <div className="flex items-center gap-2">
-                    <ImageIcon className="w-5 h-5 text-[#7F1D1D]" />
-                    <h3 className="font-semibold text-[#1C1917]">Gambar Hero</h3>
+                    <ImageIcon className="w-5 h-5 text-[#E5484D]" />
+                    <h3 className="font-semibold text-stone-100">Gambar Hero</h3>
                 </div>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-stone-400">
                     Upload hingga 10 gambar untuk carousel hero section
                 </p>
                 <HeroImageManager landingId={landingId} onUpdate={fetchData} />
@@ -99,8 +99,8 @@ export default function LandingPageTab() {
                 {/* Hero Section */}
                 <div className="glass-card p-6 space-y-4">
                     <div className="flex items-center gap-2">
-                        <Globe className="w-5 h-5 text-[#7F1D1D]" />
-                        <h3 className="font-semibold text-[#1C1917]">Hero Section</h3>
+                        <Globe className="w-5 h-5 text-[#E5484D]" />
+                        <h3 className="font-semibold text-stone-100">Hero Section</h3>
                     </div>
 
                     <div className="space-y-4">
@@ -134,7 +134,7 @@ export default function LandingPageTab() {
 
                 {/* About Section */}
                 <div className="glass-card p-6 space-y-4">
-                    <h3 className="font-semibold text-[#1C1917]">Tentang Kami</h3>
+                    <h3 className="font-semibold text-stone-100">Tentang Kami</h3>
 
                     <div>
                         <label className="label">Deskripsi Tentang Kami</label>
@@ -163,7 +163,7 @@ export default function LandingPageTab() {
 
                 {/* Features */}
                 <div className="glass-card p-6 space-y-4">
-                    <h3 className="font-semibold text-[#1C1917]">Fitur Tampilan</h3>
+                    <h3 className="font-semibold text-stone-100">Fitur Tampilan</h3>
 
                     <label className="flex items-center gap-3 cursor-pointer group">
                         <input
@@ -171,13 +171,13 @@ export default function LandingPageTab() {
                             name="showFeaturedProducts"
                             checked={formData.showFeaturedProducts}
                             onChange={handleChange}
-                            className="w-5 h-5 rounded border-gray-300 accent-[#7F1D1D] focus:ring-2 focus:ring-[#7F1D1D]"
+                            className="w-5 h-5 rounded border-white/20 accent-[#E5484D] focus:ring-2 focus:ring-[#E5484D]"
                         />
                         <div>
-                            <p className="font-medium text-[#1C1917] group-hover:text-[#7F1D1D] transition-colors">
+                            <p className="font-medium text-stone-100 group-hover:text-[#E5484D] transition-colors">
                                 Tampilkan Produk Unggulan
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-stone-400">
                                 Produk unggulan akan ditampilkan di homepage
                             </p>
                         </div>
@@ -186,7 +186,7 @@ export default function LandingPageTab() {
 
                 {/* Contact Map */}
                 <div className="glass-card p-6 space-y-4">
-                    <h3 className="font-semibold text-[#1C1917]">Lokasi Toko</h3>
+                    <h3 className="font-semibold text-stone-100">Lokasi Toko</h3>
 
                     <div>
                         <label className="label">Google Maps Embed URL</label>
@@ -198,14 +198,14 @@ export default function LandingPageTab() {
                             className="glass-input"
                             placeholder="https://www.google.com/maps/embed?pb=..."
                         />
-                        <p className="text-xs text-gray-500 mt-2">
+                        <p className="text-xs text-stone-400 mt-2">
                             Dapatkan embed URL dari Google Maps → Share → Embed a map
                         </p>
                     </div>
 
                     {formData.contactMapUrl && (
                         <div className="glass-card p-4">
-                            <p className="text-sm font-medium text-gray-700 mb-2">Preview:</p>
+                            <p className="text-sm font-medium text-stone-300 mb-2">Preview:</p>
                             <iframe
                                 src={formData.contactMapUrl}
                                 width="100%"

@@ -32,7 +32,7 @@ export default function FinancialReportContent({ data, dateFrom, dateTo }: Finan
   const period = `${formatDateWita(dateFrom)} - ${formatDateWita(dateTo)}`;
 
   return (
-    <div id="print-content" className="bg-white p-8 min-h-[297mm] text-[#111111]">
+    <div id="print-content" className="bg-[#1C1917] print:bg-white p-8 min-h-[297mm] text-stone-100 print:text-stone-100 print:text-[#111111]">
       <ReportHeader
         title="Laporan Keuangan"
         period={period}
@@ -80,33 +80,33 @@ export default function FinancialReportContent({ data, dateFrom, dateTo }: Finan
       />
 
       {/* Summary Table */}
-      <div className="mt-8 border-t-2 border-[#111111] pt-6">
+      <div className="mt-8 border-t-2 border-white/40 print:border-[#111111] pt-6">
         <ReportSectionTitle>Ringkasan Keuangan</ReportSectionTitle>
         <table className="w-full">
           <tbody className="text-base">
-            <tr className="border-b border-gray-200 even:bg-[#FAFAFA]">
+            <tr className="border-b border-white/10 print:border-gray-200 even:bg-white/[0.04] print:even:bg-[#FAFAFA]">
               <td className="py-3 px-4 font-semibold">Total Pendapatan Kotor</td>
               <td className="py-3 px-4 text-right font-bold tabular-nums">{formatCurrency(summary.totalRevenue)}</td>
             </tr>
-            <tr className="border-b border-gray-200 even:bg-[#FAFAFA]">
-              <td className="py-3 px-4 pl-8 text-[#6B7280]">- Diskon</td>
+            <tr className="border-b border-white/10 print:border-gray-200 even:bg-white/[0.04] print:even:bg-[#FAFAFA]">
+              <td className="py-3 px-4 pl-8 text-stone-400 print:text-[#6B7280]">- Diskon</td>
               <td className="py-3 px-4 text-right tabular-nums">({formatCurrency(summary.totalDiscount)})</td>
             </tr>
-            <tr className="border-b border-gray-200 font-semibold even:bg-[#FAFAFA]">
+            <tr className="border-b border-white/10 print:border-gray-200 font-semibold even:bg-white/[0.04] print:even:bg-[#FAFAFA]">
               <td className="py-3 px-4">Pendapatan Bersih</td>
               <td className="py-3 px-4 text-right tabular-nums">{formatCurrency(summary.netRevenue)}</td>
             </tr>
-            <tr className="border-b border-gray-200 even:bg-[#FAFAFA]">
-              <td className="py-3 px-4 pl-8 text-[#6B7280]">- HPP (COGS)</td>
+            <tr className="border-b border-white/10 print:border-gray-200 even:bg-white/[0.04] print:even:bg-[#FAFAFA]">
+              <td className="py-3 px-4 pl-8 text-stone-400 print:text-[#6B7280]">- HPP (COGS)</td>
               <td className="py-3 px-4 text-right tabular-nums">({formatCurrency(summary.totalCOGS)})</td>
             </tr>
-            <tr className="border-b-2 border-[#111111] font-semibold even:bg-[#FAFAFA]">
+            <tr className="border-b-2 border-white/40 print:border-[#111111] font-semibold even:bg-[#FAFAFA]">
               <td className="py-3 px-4">Laba Kotor</td>
               <td className="py-3 px-4 text-right tabular-nums">{formatCurrency(summary.grossProfit)}</td>
             </tr>
-            <tr className="border-t-2 border-[#111111] font-bold text-lg">
+            <tr className="border-t-2 border-white/40 print:border-[#111111] font-bold text-lg">
               <td className="py-4 px-4">LABA BERSIH</td>
-              <td className="report-total-red py-4 px-4 text-right tabular-nums text-red-900">{formatCurrency(summary.netProfit)}</td>
+              <td className="report-total-red py-4 px-4 text-right tabular-nums text-[#E5484D] print:text-red-900">{formatCurrency(summary.netProfit)}</td>
             </tr>
           </tbody>
         </table>

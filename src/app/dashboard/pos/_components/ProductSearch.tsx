@@ -97,17 +97,17 @@ export const ProductSearch = forwardRef<ProductSearchHandle, ProductSearchProps>
             }
           }}
           placeholder="Cari produk (nama/kode) atau scan barcode..."
-          className="w-full pl-10 md:pl-12 pr-24 py-2 md:py-3 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7F1D1D] text-sm md:text-base"
+          className="w-full pl-10 md:pl-12 pr-24 py-2 md:py-3 border border-white/15 bg-white/[0.06] text-stone-100 placeholder:text-stone-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7F1D1D] text-sm md:text-base"
         />
         {isLoading ? (
-          <Loader2 className="absolute right-14 top-1/2 -translate-y-1/2 w-5 h-5 text-[#7F1D1D] animate-spin" />
+          <Loader2 className="absolute right-14 top-1/2 -translate-y-1/2 w-5 h-5 text-[#E5484D] animate-spin" />
         ) : (
           <Barcode className="absolute right-14 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400" />
         )}
         <button
           type="button"
           onClick={() => setShowScanner(true)}
-          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-[#7F1D1D] hover:bg-[rgba(127,29,29,0.06)]"
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg text-[#E5484D] hover:bg-[rgba(127,29,29,0.06)]"
           title="Scan barcode pakai kamera"
           aria-label="Scan barcode pakai kamera"
         >
@@ -116,9 +116,9 @@ export const ProductSearch = forwardRef<ProductSearchHandle, ProductSearchProps>
       </div>
 
       {/* Search Tips */}
-      <div className="mt-2 flex items-center gap-4 text-xs text-stone-500">
+      <div className="mt-2 flex items-center gap-4 text-xs text-stone-400">
         <div className="flex items-center gap-1">
-          <kbd className="px-1.5 py-0.5 bg-stone-100 rounded font-mono">F2</kbd>
+          <kbd className="px-1.5 py-0.5 bg-white/10 text-stone-300 rounded font-mono">F2</kbd>
           <span>Focus pencarian</span>
         </div>
         <div className="flex items-center gap-1">

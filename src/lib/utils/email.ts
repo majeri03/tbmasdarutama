@@ -55,7 +55,7 @@ export function generatePasswordResetEmail(name: string, resetUrl: string) {
           margin: 0;
           padding: 0;
           font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: #f3f4f6;
         }
         .container {
           max-width: 600px;
@@ -66,7 +66,7 @@ export function generatePasswordResetEmail(name: string, resetUrl: string) {
           box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
         .header {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: #7f1d1d;
           padding: 40px 30px;
           text-align: center;
           color: white;
@@ -92,7 +92,7 @@ export function generatePasswordResetEmail(name: string, resetUrl: string) {
         .button {
           display: inline-block;
           padding: 14px 32px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: #7f1d1d;
           color: white !important;
           text-decoration: none;
           border-radius: 8px;
@@ -105,7 +105,7 @@ export function generatePasswordResetEmail(name: string, resetUrl: string) {
         }
         .info-box {
           background: #f8f9fa;
-          border-left: 4px solid #667eea;
+          border-left: 4px solid #7f1d1d;
           padding: 16px;
           margin: 20px 0;
           border-radius: 4px;
@@ -146,7 +146,7 @@ export function generatePasswordResetEmail(name: string, resetUrl: string) {
           </div>
           
           <p>Jika tombol tidak berfungsi, copy dan paste URL berikut ke browser Anda:</p>
-          <p style="word-break: break-all; color: #667eea;">
+          <p style="word-break: break-all; color: #7f1d1d;">
             ${resetUrl}
           </p>
           
@@ -196,7 +196,7 @@ export function generateOtpEmail(name: string, otpCode: string) {
           box-shadow: 0 20px 60px rgba(0,0,0,0.15);
         }
         .header {
-          background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%);
+          background: #7f1d1d;
           padding: 32px 30px;
           text-align: center;
           color: white;
@@ -221,16 +221,16 @@ export function generateOtpEmail(name: string, otpCode: string) {
           font-size: 40px;
           font-weight: 700;
           letter-spacing: 12px;
-          color: #1d4ed8;
-          background: #eff6ff;
-          border: 2px dashed #93c5fd;
+          color: #7f1d1d;
+          background: #fef2f2;
+          border: 2px dashed #fca5a5;
           border-radius: 12px;
           padding: 16px 24px 16px 36px;
           margin: 12px 0 20px 0;
         }
         .info-box {
           background: #f8f9fa;
-          border-left: 4px solid #1d4ed8;
+          border-left: 4px solid #7f1d1d;
           padding: 14px 16px;
           margin: 16px 0;
           border-radius: 4px;
@@ -382,8 +382,8 @@ function debtDueSectionHtml(
         ? `<a href="${appUrl}" style="display: inline-block; padding: 12px 28px; background: #991b1b; color: white !important; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 8px 8px 4px 0;">Buka di Aplikasi</a>`
         : ""
     }
-    <a href="${pageUrl}" style="display: inline-block; padding: 12px 28px; background: #1d4ed8; color: white !important; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 8px 0 4px 0;">${buttonLabel}</a>
-    <p style="word-break: break-all; color: #1d4ed8; font-size: 13px;">${pageUrl}</p>
+    <a href="${pageUrl}" style="display: inline-block; padding: 12px 28px; background: #7f1d1d; color: white !important; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 8px 0 4px 0;">${buttonLabel}</a>
+    <p style="word-break: break-all; color: #7f1d1d; font-size: 13px;">${pageUrl}</p>
     ${
       appUrl
         ? `<p style="color: #999; font-size: 12px; margin: 4px 0 0 0;">Tombol "Buka di Aplikasi" hanya berfungsi kalau aplikasi TB Masdar Utama sudah terinstal di HP ini — kalau belum, pakai tombol web di atas.</p>`

@@ -45,11 +45,11 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_STYLE: Record<string, string> = {
-  ACTIVE: "bg-green-100 text-green-700",
-  PENDING: "bg-yellow-100 text-yellow-700",
-  ORPHANED: "bg-red-100 text-red-700",
-  DELETED: "bg-gray-100 text-gray-500",
-  DELETE_FAILED: "bg-orange-100 text-orange-700",
+  ACTIVE: "bg-green-500/15 text-green-400",
+  PENDING: "bg-yellow-500/15 text-yellow-300",
+  ORPHANED: "bg-red-500/15 text-red-300",
+  DELETED: "bg-white/[0.08] text-stone-400",
+  DELETE_FAILED: "bg-orange-500/15 text-orange-300",
 };
 
 interface Props {
@@ -184,11 +184,11 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <HardDrive className="w-6 h-6 text-[#7F1D1D]" />
+          <h1 className="text-2xl font-bold text-stone-100 flex items-center gap-2">
+            <HardDrive className="w-6 h-6 text-[#E5484D]" />
             Penyimpanan Gambar
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-stone-400 mt-1">
             File gambar di Cloudflare R2 — kuota gratis 10 GB. Angka di sini ukuran asli dari database pelacakan, bukan tebakan.
           </p>
         </div>
@@ -207,8 +207,8 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
         <div
           className={`flex items-start gap-2 p-3 rounded-lg border ${
             notice.type === "success"
-              ? "bg-green-50 border-green-200 text-green-700"
-              : "bg-red-50 border-red-200 text-red-600"
+              ? "bg-green-500/[0.08] border-green-500/30 text-green-400"
+              : "bg-red-500/[0.08] border-red-500/30 text-red-400"
           }`}
         >
           {notice.type === "success" ? (
@@ -227,33 +227,33 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
       <div className="glass-card p-5 space-y-3">
         <div className="flex flex-wrap justify-between gap-2">
           <div>
-            <p className="text-sm text-gray-500">Terpakai (file aktif)</p>
-            <p className="text-2xl font-bold text-gray-900">
-              {usedMB} MB <span className="text-sm font-normal text-gray-500">dari 10 GB ({usedPercent}%)</span>
+            <p className="text-sm text-stone-400">Terpakai (file aktif)</p>
+            <p className="text-2xl font-bold text-stone-100">
+              {usedMB} MB <span className="text-sm font-normal text-stone-400">dari 10 GB ({usedPercent}%)</span>
             </p>
           </div>
           <div className="text-right text-sm">
-            <p className="text-gray-500">
-              File aktif: <span className="font-semibold text-gray-900">{overview.activeCount}</span>
+            <p className="text-stone-400">
+              File aktif: <span className="font-semibold text-stone-100">{overview.activeCount}</span>
             </p>
-            <p className="text-gray-500">
+            <p className="text-stone-400">
               Yatim:{" "}
-              <span className="font-semibold text-red-600">
+              <span className="font-semibold text-red-400">
                 {overview.orphans.count} file ({formatBytes(overview.orphans.sizeBytes)})
               </span>
             </p>
-            <p className="text-gray-500">
+            <p className="text-stone-400">
               Menunggu konfirmasi: {overview.pending.count} file ({formatBytes(overview.pending.sizeBytes)})
             </p>
             {overview.deleteFailed.count > 0 && (
-              <p className="text-gray-500">
+              <p className="text-stone-400">
                 Gagal hapus:{" "}
-                <span className="font-semibold text-orange-600">{overview.deleteFailed.count} file</span>
+                <span className="font-semibold text-orange-400">{overview.deleteFailed.count} file</span>
               </p>
             )}
           </div>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+        <div className="w-full bg-white/[0.12] rounded-full h-3 overflow-hidden">
           <div
             className={`h-3 rounded-full ${usedPercent > 80 ? "bg-red-500" : usedPercent > 50 ? "bg-yellow-500" : "bg-[#7F1D1D]"}`}
             style={{ width: `${Math.min(100, usedPercent)}%` }}
@@ -261,7 +261,7 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
         </div>
         {overview.orphans.count > 0 && (
           <div className="flex flex-wrap items-center gap-3 pt-1">
-            <p className="text-sm text-red-600 flex items-center gap-1">
+            <p className="text-sm text-red-400 flex items-center gap-1">
               <AlertTriangle className="w-4 h-4" />
               Ada {overview.orphans.count} file yatim ({formatBytes(overview.orphans.sizeBytes)}) yang tidak dipakai
               entitas apa pun.
@@ -280,9 +280,9 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
 
       {/* Per folder */}
       <div className="glass-card p-5">
-        <h2 className="font-semibold text-gray-900 mb-3">Per folder</h2>
+        <h2 className="font-semibold text-stone-100 mb-3">Per folder</h2>
         {overview.byFolder.length === 0 ? (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-stone-400">
             Belum ada file tercatat. Jalankan backfill di atas supaya file-file lama ikut tercatat.
           </p>
         ) : (
@@ -291,10 +291,10 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
               <button
                 key={f.folder}
                 onClick={() => applyFilters({ folder: f.folder, page: 1 })}
-                className="text-left p-3 rounded-lg border border-gray-200 hover:border-[#7F1D1D]/40 transition-colors"
+                className="text-left p-3 rounded-lg border border-white/10 hover:border-[#E5484D]/40 transition-colors"
               >
-                <p className="font-mono text-sm font-semibold text-gray-900 truncate">{f.folder}</p>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="font-mono text-sm font-semibold text-stone-100 truncate">{f.folder}</p>
+                <p className="text-xs text-stone-400 mt-1">
                   {f.count} file • {formatBytes(f.sizeBytes)}
                 </p>
               </button>
@@ -305,23 +305,23 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
 
       {/* Rekonsiliasi */}
       <div className="glass-card p-5 space-y-3">
-        <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-          <RefreshCw className="w-5 h-5 text-[#7F1D1D]" />
+        <h2 className="font-semibold text-stone-100 flex items-center gap-2">
+          <RefreshCw className="w-5 h-5 text-[#E5484D]" />
           Rekonsiliasi dengan isi R2
         </h2>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-stone-400">
           Aplikasi tidak bisa membaca isi bucket R2 langsung (tidak ada kredensial listing di server). Export daftar
           objek dari dashboard Cloudflare (R2 → bucket → Objects) atau jalankan{" "}
-          <code className="bg-gray-100 px-1 rounded text-xs">wrangler r2 object list &lt;nama-bucket&gt;</code>, lalu
+          <code className="bg-white/[0.08] px-1 rounded text-xs">wrangler r2 object list &lt;nama-bucket&gt;</code>, lalu
           tempel key-nya di bawah ini — satu key per baris (boleh tambah ukuran setelah koma:{" "}
-          <code className="bg-gray-100 px-1 rounded text-xs">proofs_delivery/123.jpg,45200</code>).
+          <code className="bg-white/[0.08] px-1 rounded text-xs">proofs_delivery/123.jpg,45200</code>).
         </p>
         <textarea
           value={reconcileText}
           onChange={(e) => setReconcileText(e.target.value)}
           rows={4}
           placeholder={"proofs_delivery/1699999999-abc.jpg\nproducts/1699999999-def.jpg"}
-          className="w-full p-3 border border-gray-300 rounded-lg font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[#7F1D1D]"
+          className="w-full p-3 border border-white/20 bg-white/[0.06] text-stone-100 placeholder:text-stone-500 rounded-lg font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
         />
         <div>
           <button
@@ -334,16 +334,16 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
           </button>
         </div>
         {reconcileResult && (
-          <div className="p-3 rounded-lg bg-[#7F1D1D]/[0.06] border border-[#7F1D1D]/20 text-sm space-y-1">
+          <div className="p-3 rounded-lg bg-[#7F1D1D]/25 border border-[#E5484D]/30 text-sm space-y-1">
             <p>
               Total di R2: <b>{reconcileResult.totalInR2}</b> • Tercatat di DB: <b>{reconcileResult.totalInDb}</b> •
               Cocok: <b>{reconcileResult.matched}</b>
             </p>
-            <p className="text-red-600">
+            <p className="text-red-400">
               Yatim (di R2 tapi tidak dikenal DB): <b>{reconcileResult.inR2NotInDb.length}</b> — sudah dicatat supaya
               bisa dihapus dari daftar di bawah (filter status Yatim).
             </p>
-            <p className="text-orange-600">
+            <p className="text-orange-400">
               Hilang (tercatat di DB tapi tidak ada di R2): <b>{reconcileResult.inDbNotInR2.length}</b>
             </p>
           </div>
@@ -352,12 +352,12 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
 
       {/* Filter + daftar file */}
       <div className="glass-card p-5 space-y-4">
-        <h2 className="font-semibold text-gray-900">Daftar file</h2>
+        <h2 className="font-semibold text-stone-100">Daftar file</h2>
         <div className="flex flex-wrap gap-2">
           <select
             value={filters.status}
             onChange={(e) => applyFilters({ status: e.target.value, page: 1 })}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            className="px-3 py-2 border border-white/20 bg-[#1C1917] text-stone-100 rounded-lg text-sm"
           >
             <option value="">Semua status</option>
             {Object.keys(STATUS_LABEL).map((s) => (
@@ -369,7 +369,7 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
           <select
             value={filters.folder}
             onChange={(e) => applyFilters({ folder: e.target.value, page: 1 })}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            className="px-3 py-2 border border-white/20 bg-[#1C1917] text-stone-100 rounded-lg text-sm"
           >
             <option value="">Semua folder</option>
             {["products", "proofs_delivery", "proofs_payment", "heroes", "logos"].map((f) => (
@@ -379,7 +379,7 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
             ))}
           </select>
           <div className="relative flex-1 min-w-[200px]">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-500" />
             <input
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
@@ -390,20 +390,20 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
                 if (searchText !== filters.search) applyFilters({ search: searchText, page: 1 });
               }}
               placeholder="Cari key / ID pemilik... (Enter untuk mencari)"
-              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7F1D1D]"
+              className="w-full pl-9 pr-3 py-2 border border-white/20 bg-white/[0.06] text-stone-100 placeholder:text-stone-500 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
             />
           </div>
         </div>
 
         {files.length === 0 ? (
-          <p className="text-sm text-gray-500 text-center py-8">
+          <p className="text-sm text-stone-400 text-center py-8">
             Tidak ada file untuk filter ini. Jalankan backfill kalau file lama belum tercatat.
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-gray-500 border-b">
+                <tr className="text-left text-stone-400 border-b">
                   <th className="py-2 pr-2">File</th>
                   <th className="py-2 pr-2">Folder / Pemilik</th>
                   <th className="py-2 pr-2">Ukuran</th>
@@ -417,7 +417,7 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
                   <tr key={f.id} className="border-b last:border-0 align-top">
                     <td className="py-2 pr-2">
                       <div className="flex items-center gap-2">
-                        <div className="relative w-10 h-10 rounded overflow-hidden bg-gray-100 flex-shrink-0">
+                        <div className="relative w-10 h-10 rounded overflow-hidden bg-white/[0.08] flex-shrink-0">
                           <Image src={f.url} alt={f.r2Key} fill className="object-cover" sizes="40px" />
                         </div>
                         <span className="font-mono text-xs break-all">{f.r2Key}</span>
@@ -425,7 +425,7 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
                     </td>
                     <td className="py-2 pr-2">
                       <p className="font-mono text-xs">{f.folder}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-stone-400">
                         {f.ownerType} {f.ownerId ? `• ${String(f.ownerId).slice(0, 8)}…` : "• tanpa pemilik"}
                       </p>
                     </td>
@@ -461,7 +461,7 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
 
         {pagination.totalPages > 1 && (
           <div className="flex items-center justify-between pt-2">
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-stone-400">
               Halaman {pagination.page} dari {pagination.totalPages} ({pagination.total} file)
             </p>
             <div className="flex gap-2">
@@ -489,13 +489,13 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
         <div className="modal-overlay">
           <div className="modal-container max-w-md">
             <div className="modal-header">
-              <h3 className="text-lg font-semibold text-gray-800">Hapus File</h3>
-              <button onClick={() => setConfirmDeleteKey(null)} className="text-gray-500 hover:text-gray-700">
+              <h3 className="text-lg font-semibold text-stone-200">Hapus File</h3>
+              <button onClick={() => setConfirmDeleteKey(null)} className="text-stone-400 hover:text-stone-300">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="modal-body">
-              <p className="text-gray-600 text-sm break-all">
+              <p className="text-stone-400 text-sm break-all">
                 Hapus <span className="font-mono">{confirmDeleteKey}</span> dari Cloudflare R2? File yang sudah
                 terhapus tidak bisa dikembalikan.
               </p>

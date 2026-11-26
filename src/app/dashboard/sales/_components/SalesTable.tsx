@@ -84,9 +84,9 @@ export function SalesTable() {
   };
 
   return (
-    <div className="glass-card">
+    <div className="glass-card bg-white/15 border-white/10">
       {/* Filters */}
-      <div className="p-6 border-b border-stone-200">
+      <div className="p-6 border-b border-white/10">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="md:col-span-2">
             <div className="search-box">
@@ -132,7 +132,7 @@ export function SalesTable() {
       </div>
 
       {error && (
-        <div className="m-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+        <div className="m-6 p-4 bg-red-500/10 border border-red-500/25 rounded-lg text-red-300">
           {error}
         </div>
       )}
@@ -145,7 +145,7 @@ export function SalesTable() {
           </div>
         ) : sales.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-stone-500">Tidak ada data penjualan</p>
+            <p className="text-stone-400">Tidak ada data penjualan</p>
           </div>
         ) : (
           <table className="data-table">
@@ -165,7 +165,7 @@ export function SalesTable() {
               {sales.map((sale) => (
                 <tr key={sale.id}>
                   <td>
-                    <span className="font-semibold text-red-900">
+                    <span className="font-semibold text-[#E5484D]">
                       {sale.invoiceNumber}
                     </span>
                   </td>
@@ -178,7 +178,7 @@ export function SalesTable() {
                     <div>
                       <p className="font-medium">{sale.customer?.name || "Customer Umum"}</p>
                       {sale.customer?.code && (
-                        <p className="text-xs text-stone-500">{sale.customer.code}</p>
+                        <p className="text-xs text-stone-400">{sale.customer.code}</p>
                       )}
                     </div>
                   </td>
@@ -207,8 +207,8 @@ export function SalesTable() {
 
       {/* Pagination */}
       {!loading && sales.length > 0 && (
-        <div className="p-4 border-t border-stone-200 flex items-center justify-between">
-          <p className="text-sm text-stone-600">
+        <div className="p-4 border-t border-white/10 flex items-center justify-between">
+          <p className="text-sm text-stone-400">
             Halaman {page} dari {totalPages}
           </p>
           <div className="flex gap-2">

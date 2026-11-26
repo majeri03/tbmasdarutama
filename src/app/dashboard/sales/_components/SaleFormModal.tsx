@@ -298,12 +298,12 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
 
                             <div className="modal-body" style={{ maxHeight: 'calc(90vh - 180px)' }}>
                                 {error && (
-                                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+                                    <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
                                         {error}
                                     </div>
                                 )}
                                 {success && (
-                                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm">
+                                    <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm">
                                         {success}
                                     </div>
                                 )}
@@ -314,7 +314,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
                                         <select
                                             value={customerId}
                                             onChange={(e) => setCustomerId(e.target.value)}
-                                            className="input-field"
+                                            className="input-field [color-scheme:dark]"
                                             required
                                         >
                                             <option value="">Pilih Customer</option>
@@ -332,7 +332,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
                                             type="date"
                                             value={saleDate}
                                             onChange={(e) => setSaleDate(e.target.value)}
-                                            className="input-field"
+                                            className="input-field [color-scheme:dark]"
                                             required
                                         />
                                     </div>
@@ -342,7 +342,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
                                         <select
                                             value={paymentMethod}
                                             onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                                            className="input-field"
+                                            className="input-field [color-scheme:dark]"
                                             required
                                         >
                                             <option value={PaymentMethod.CASH}>Tunai</option>
@@ -378,13 +378,13 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
                                         </div>
 
                                         {showProductDropdown && searchProduct && filteredProducts.length > 0 && (
-                                            <div className="absolute z-50 w-full mt-1 bg-white border border-stone-200 rounded-xl shadow-xl max-h-64 overflow-y-auto">
+                                            <div className="absolute z-50 w-full mt-1 bg-[#1C1917] border border-white/10 rounded-xl shadow-xl max-h-64 overflow-y-auto">
                                                 {filteredProducts.slice(0, 10).map((product) => (
-                                                    <div key={product.id} className="p-3 border-b border-stone-100 last:border-0 hover:bg-stone-50 transition-colors">
+                                                    <div key={product.id} className="p-3 border-b border-white/10 last:border-0 hover:bg-white/5 transition-colors">
                                                         <div className="flex items-start justify-between mb-2">
                                                             <div>
-                                                                <p className="font-medium text-sm text-stone-900">{product.name}</p>
-                                                                <p className="text-xs text-stone-500">{product.code} • Stock: {product.currentStock}</p>
+                                                                <p className="font-medium text-sm text-stone-100">{product.name}</p>
+                                                                <p className="text-xs text-stone-400">{product.code} • Stock: {product.currentStock}</p>
                                                             </div>
                                                         </div>
                                                         <div className="flex gap-2 flex-wrap">
@@ -408,10 +408,10 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
 
                                 {/* Cart Table */}
                                 {cart.length > 0 && (
-                                    <div className="bg-white border border-stone-200 rounded-xl p-4 mb-4">
+                                    <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4">
                                         <div className="flex items-center justify-between mb-3">
-                                            <h3 className="font-semibold text-stone-900">Keranjang Belanja</h3>
-                                            <span className="text-sm text-stone-500">{cart.length} item</span>
+                                            <h3 className="font-semibold text-stone-100">Keranjang Belanja</h3>
+                                            <span className="text-sm text-stone-400">{cart.length} item</span>
                                         </div>
                                         <div className="overflow-x-auto">
                                             <table className="data-table">
@@ -431,7 +431,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
                                                         <tr key={index}>
                                                             <td>
                                                                 <p className="font-medium">{item.productName}</p>
-                                                                <p className="text-xs text-stone-500">{item.productCode}</p>
+                                                                <p className="text-xs text-stone-400">{item.productCode}</p>
                                                             </td>
                                                             <td>
                                                                 <span className="badge badge-info">{item.unitName}</span>
@@ -502,7 +502,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
                                         />
                                     </div>
 
-                                    <div className="bg-stone-50 border border-stone-200 rounded-xl p-4">
+                                    <div className="bg-white/5 border border-white/10 rounded-xl p-4">
                                         <div className="space-y-3">
                                             <div className="grid grid-cols-2 gap-2">
                                                 <label className="label">Diskon Global (%)</label>
@@ -537,7 +537,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
                                                 </div>
                                                 <div className="flex justify-between text-sm">
                                                     <span>Diskon:</span>
-                                                    <span className="text-red-800">
+                                                    <span className="text-red-300">
                                                         - Rp {totals.discountAmount.toLocaleString("id-ID")}
                                                     </span>
                                                 </div>
@@ -547,7 +547,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
                                                 </div>
                                                 <div className="flex justify-between font-bold text-lg border-t pt-2">
                                                     <span>Grand Total:</span>
-                                                    <span className="text-red-900">
+                                                    <span className="text-[#E5484D]">
                                                         Rp {totals.grandTotal.toLocaleString("id-ID")}
                                                     </span>
                                                 </div>
@@ -566,7 +566,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
                                             </div>
 
                                             {totals.changeAmount > 0 && (
-                                                <div className="flex justify-between text-sm text-green-700">
+                                                <div className="flex justify-between text-sm text-green-400">
                                                     <span>Kembalian:</span>
                                                     <span className="font-semibold">
                                                         Rp {totals.changeAmount.toLocaleString("id-ID")}

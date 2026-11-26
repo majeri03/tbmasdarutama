@@ -22,35 +22,35 @@ export function HoldCartPanel({ isOpen, carts, onClose, onResume, onDelete }: Ho
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="glass-card w-full max-w-lg max-h-[80vh] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b border-stone-200">
-          <h2 className="text-lg font-semibold text-stone-900 flex items-center gap-2">
-            <Pause className="w-5 h-5 text-[#7F1D1D]" />
+        <div className="flex items-center justify-between p-4 border-b border-white/10">
+          <h2 className="text-lg font-semibold text-stone-100 flex items-center gap-2">
+            <Pause className="w-5 h-5 text-[#E5484D]" />
             Keranjang Ditahan ({carts.length})
           </h2>
-          <button onClick={onClose} className="text-stone-400 hover:text-stone-600" aria-label="Tutup">
+          <button onClick={onClose} className="text-stone-400 hover:text-stone-200" aria-label="Tutup">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="p-4 space-y-3 overflow-y-auto">
           {carts.length === 0 ? (
-            <p className="text-center text-stone-500 py-8">
+            <p className="text-center text-stone-400 py-8">
               Belum ada keranjang yang ditahan.
             </p>
           ) : (
             carts.map((cart) => (
-              <div key={cart.id} className="p-3 border border-stone-200 rounded-lg">
+              <div key={cart.id} className="p-3 border border-white/10 bg-white/[0.04] rounded-lg">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="font-semibold text-stone-900">
+                    <p className="font-semibold text-stone-100">
                       {cart.customer?.name || "Customer Umum"}
                     </p>
-                    <p className="text-xs text-stone-500">
+                    <p className="text-xs text-stone-400">
                       {format(new Date(cart.createdAt), "dd MMM yyyy, HH:mm", { locale: localeId })}
                       {" • "}
                       {cart.items.length} item
                     </p>
-                    <p className="text-sm text-stone-600 mt-1">
+                    <p className="text-sm text-stone-400 mt-1">
                       {cart.items
                         .slice(0, 3)
                         .map((i) => `${i.productName} x${i.quantity}`)
@@ -58,21 +58,21 @@ export function HoldCartPanel({ isOpen, carts, onClose, onResume, onDelete }: Ho
                       {cart.items.length > 3 ? ` +${cart.items.length - 3} lagi` : ""}
                     </p>
                   </div>
-                  <p className="font-bold text-stone-900 whitespace-nowrap">
+                  <p className="font-bold text-stone-100 whitespace-nowrap">
                     {formatCurrency(parkedCartTotal(cart))}
                   </p>
                 </div>
                 <div className="flex gap-2 mt-3">
                   <button
                     onClick={() => onResume(cart)}
-                    className="flex-1 px-3 py-2 bg-[#15803D] text-white rounded-lg hover:bg-[#166534] flex items-center justify-center gap-1 text-sm font-medium"
+                    className="flex-1 px-3 py-2 bg-[#16A34A] text-white rounded-lg hover:bg-[#15803D] flex items-center justify-center gap-1 text-sm font-medium"
                   >
                     <Play className="w-4 h-4" />
                     Lanjutkan
                   </button>
                   <button
                     onClick={() => onDelete(cart.id)}
-                    className="px-3 py-2 border border-[rgba(153,27,27,0.2)] text-[#991B1B] rounded-lg hover:bg-[rgba(153,27,27,0.06)] flex items-center justify-center gap-1 text-sm"
+                    className="px-3 py-2 border border-[rgba(229,72,77,0.3)] text-[#E5484D] rounded-lg hover:bg-[rgba(229,72,77,0.08)] flex items-center justify-center gap-1 text-sm"
                   >
                     <Trash2 className="w-4 h-4" />
                     Hapus

@@ -281,9 +281,9 @@ export default function DebtNotificationTab() {
 
   if (!isSuperAdmin) {
     return (
-      <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-50 border border-amber-200">
-        <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-        <p className="text-sm text-amber-800">
+      <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-500/[0.08] border border-amber-500/30">
+        <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+        <p className="text-sm text-amber-200">
           Tab Notifikasi Utang hanya untuk SUPER_ADMIN. Daftar email penerima
           dan jadwal pengingat utang hanya bisa diubah oleh pemilik toko.
         </p>
@@ -300,10 +300,10 @@ export default function DebtNotificationTab() {
       {/* ---------- Jadwal & Saklar ---------- */}
       <form onSubmit={handleSaveSettings} className="space-y-4">
         <div className="flex items-center gap-2">
-          <Bell className="w-5 h-5 text-[#7F1D1D]" />
-          <h2 className="text-lg font-semibold text-[#1C1917]">Email Pengingat Utang</h2>
+          <Bell className="w-5 h-5 text-[#E5484D]" />
+          <h2 className="text-lg font-semibold text-stone-100">Email Pengingat Utang</h2>
         </div>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-stone-400">
           Sekali sehari (pukul 08:00 WITA) sistem mengirim satu email ringkasan
           — piutang pelanggan dan utang supplier yang sudah jatuh tempo, plus
           yang akan jatuh tempo. Email hanya dikirim pada hari ketika ada utang
@@ -315,13 +315,13 @@ export default function DebtNotificationTab() {
             type="checkbox"
             checked={debtEmailEnabled}
             onChange={(e) => setDebtEmailEnabled(e.target.checked)}
-            className="w-4 h-4 accent-[#7F1D1D] rounded focus:ring-[#7F1D1D]"
+            className="w-4 h-4 accent-[#E5484D] rounded focus:ring-[#E5484D]"
           />
-          <span className="text-sm font-medium text-gray-700">Aktifkan email pengingat utang</span>
+          <span className="text-sm font-medium text-stone-300">Aktifkan email pengingat utang</span>
         </label>
         <div>
           <label className="label">Ingatkan saat utang sudah lewat jatuh tempo selama (hari)</label>
-          <p className="text-xs text-gray-500 mb-2">
+          <p className="text-xs text-stone-400 mb-2">
             Satu utang diingatkan maksimal 3 kali — isi hari ke-1, ke-2, dan ke-3.
             Kosongkan satu kolom kalau tonggak itu tidak dipakai.
           </p>
@@ -336,7 +336,7 @@ export default function DebtNotificationTab() {
               className="glass-input w-24"
               placeholder="3"
             />
-            <span className="text-sm text-gray-500">hari,</span>
+            <span className="text-sm text-stone-400">hari,</span>
             <input
               type="number"
               min={1}
@@ -347,7 +347,7 @@ export default function DebtNotificationTab() {
               className="glass-input w-24"
               placeholder="7"
             />
-            <span className="text-sm text-gray-500">hari, dan</span>
+            <span className="text-sm text-stone-400">hari, dan</span>
             <input
               type="number"
               min={1}
@@ -358,7 +358,7 @@ export default function DebtNotificationTab() {
               className="glass-input w-24"
               placeholder="30"
             />
-            <span className="text-sm text-gray-500">hari.</span>
+            <span className="text-sm text-stone-400">hari.</span>
           </div>
         </div>
         <div>
@@ -374,7 +374,7 @@ export default function DebtNotificationTab() {
               className="glass-input w-24"
               placeholder="3"
             />
-            <span className="text-sm text-gray-500">hari ke depan.</span>
+            <span className="text-sm text-stone-400">hari ke depan.</span>
           </div>
         </div>
         <button type="submit" disabled={saving} className="btn-primary inline-flex items-center gap-2">
@@ -386,10 +386,10 @@ export default function DebtNotificationTab() {
       {/* ---------- Daftar Penerima ---------- */}
       <div className="space-y-4">
         <div className="flex items-center gap-2">
-          <Mail className="w-5 h-5 text-[#7F1D1D]" />
-          <h2 className="text-lg font-semibold text-[#1C1917]">Email Penerima</h2>
+          <Mail className="w-5 h-5 text-[#E5484D]" />
+          <h2 className="text-lg font-semibold text-stone-100">Email Penerima</h2>
         </div>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-stone-400">
           Email ringkasan dikirim ke setiap alamat aktif di bawah ini (satu
           email per alamat, supaya alamat penerima lain tidak saling terlihat).
         </p>
@@ -424,14 +424,14 @@ export default function DebtNotificationTab() {
         </form>
 
         {loading ? (
-          <p className="text-sm text-gray-500">Memuat daftar penerima…</p>
+          <p className="text-sm text-stone-400">Memuat daftar penerima…</p>
         ) : recipients.length === 0 ? (
-          <p className="text-sm text-gray-500">Belum ada penerima. Tambahkan dulu email yang menerima pengingat utang.</p>
+          <p className="text-sm text-stone-400">Belum ada penerima. Tambahkan dulu email yang menerima pengingat utang.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-gray-500 border-b">
+                <tr className="text-left text-stone-400 border-b">
                   <th className="py-2 pr-2 font-medium">Email</th>
                   <th className="py-2 pr-2 font-medium">Nama</th>
                   <th className="py-2 pr-2 font-medium">Status</th>
@@ -441,14 +441,14 @@ export default function DebtNotificationTab() {
               <tbody>
                 {recipients.map((r) => (
                   <tr key={r.id} className="border-b last:border-0">
-                    <td className="py-2 pr-2 font-medium text-gray-800">{r.email}</td>
-                    <td className="py-2 pr-2 text-gray-600">{r.name || "-"}</td>
+                    <td className="py-2 pr-2 font-medium text-stone-200">{r.email}</td>
+                    <td className="py-2 pr-2 text-stone-400">{r.name || "-"}</td>
                     <td className="py-2 pr-2">
                       <button
                         type="button"
                         onClick={() => handleToggleRecipient(r.id)}
                         className={`text-xs font-medium px-2 py-1 rounded-full ${
-                          r.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                          r.isActive ? "bg-green-500/15 text-green-400" : "bg-white/[0.08] text-stone-400"
                         }`}
                         title="Klik untuk mengubah status"
                       >
@@ -475,13 +475,13 @@ export default function DebtNotificationTab() {
       {/* ---------- Terakhir Terkirim + Tes ---------- */}
       <div className="space-y-4">
         <div className="flex items-center gap-2">
-          <Send className="w-5 h-5 text-[#7F1D1D]" />
-          <h2 className="text-lg font-semibold text-[#1C1917]">Pengiriman Terakhir &amp; Tes</h2>
+          <Send className="w-5 h-5 text-[#E5484D]" />
+          <h2 className="text-lg font-semibold text-stone-100">Pengiriman Terakhir &amp; Tes</h2>
         </div>
         {lastLog ? (
-          <div className="flex items-start gap-3 p-4 rounded-lg bg-green-50 border border-green-200">
-            <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
-            <p className="text-sm text-green-800">
+          <div className="flex items-start gap-3 p-4 rounded-lg bg-green-500/[0.08] border border-green-500/30">
+            <CheckCircle className="w-5 h-5 text-green-400 shrink-0 mt-0.5" />
+            <p className="text-sm text-green-300">
               Terakhir terkirim <strong>{formatTanggal(lastLog.sentAt)}</strong> ke{" "}
               <strong>{lastLog.recipientCount} penerima</strong>: {lastLog.customerOverdue} piutang
               jatuh tempo ({formatRupiah(lastLog.totalCustomer)}) dan {lastLog.supplierOverdue} utang
@@ -497,9 +497,9 @@ export default function DebtNotificationTab() {
           // hanya terkirim pada hari ada utang yang tepat mencapai
           // tonggak pengingat — jadi kosong itu keadaan normal kalau
           // belum ada tonggak yang tercapai / belum ada penerima aktif.
-          <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
-            <p className="text-sm text-gray-700 font-medium">Belum pernah ada email ringkasan utang yang terkirim.</p>
-            <p className="text-sm text-gray-500 mt-1">
+          <div className="p-4 rounded-lg bg-white/[0.06] border border-white/10">
+            <p className="text-sm text-stone-300 font-medium">Belum pernah ada email ringkasan utang yang terkirim.</p>
+            <p className="text-sm text-stone-400 mt-1">
               Email ringkasan harian hanya dikirim (pukul 08:00 WITA) pada hari ada utang yang tepat
               mencapai salah satu tonggak pengingat di atas, dan hanya ke{" "}
               {recipients.filter((r) => r.isActive).length} penerima aktif saat ini. Pakai tombol
@@ -510,22 +510,22 @@ export default function DebtNotificationTab() {
         {testResult && (
           <div
             className={`flex items-start gap-3 p-4 rounded-lg border ${
-              testResult.ok ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
+              testResult.ok ? "bg-green-500/[0.08] border-green-500/30" : "bg-red-500/[0.08] border-red-500/30"
             }`}
           >
             {testResult.ok ? (
-              <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+              <CheckCircle className="w-5 h-5 text-green-400 shrink-0 mt-0.5" />
             ) : (
-              <ShieldAlert className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+              <ShieldAlert className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
             )}
-            <p className={`text-sm ${testResult.ok ? "text-green-800" : "text-red-800"}`}>
+            <p className={`text-sm ${testResult.ok ? "text-green-300" : "text-red-300"}`}>
               <strong>{testResult.ok ? "Email tes terkirim" : "Email tes gagal"}</strong>{" "}
               ({formatTanggal(testResult.at)}): {testResult.message} Email tes tidak masuk ke
               &ldquo;Pengiriman Terakhir&rdquo; di atas supaya tidak mengganggu jadwal harian.
             </p>
           </div>
         )}
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-stone-400">
           Email tes memakai data utang saat ini (atau satu baris contoh kalau belum ada utang),
           dan tidak memengaruhi jadwal harian. Kalau belum ada penerima aktif, email tes dikirim
           ke email akun Anda sendiri.
@@ -539,12 +539,12 @@ export default function DebtNotificationTab() {
       {/* ---------- Modal konfirmasi hapus penerima (item 174) ---------- */}
       {deletingRecipient && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+          <div className="bg-[#1C1917] border border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
             <div className="px-6 py-4 bg-[#7F1D1D]">
               <h3 className="font-bold text-white text-lg">Hapus Penerima Email?</h3>
             </div>
             <div className="p-6 space-y-5">
-              <p className="text-sm text-gray-700 leading-relaxed">
+              <p className="text-sm text-stone-300 leading-relaxed">
                 Hapus <strong>{deletingRecipient.email}</strong> dari daftar penerima email pengingat
                 utang? Alamat ini tidak akan lagi menerima ringkasan utang harian.
               </p>
@@ -553,7 +553,7 @@ export default function DebtNotificationTab() {
                   type="button"
                   onClick={() => setDeletingRecipient(null)}
                   disabled={deleting}
-                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 font-medium text-sm transition-colors disabled:opacity-40"
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-stone-400 hover:bg-white/[0.06] font-medium text-sm transition-colors disabled:opacity-40"
                 >
                   Batal
                 </button>

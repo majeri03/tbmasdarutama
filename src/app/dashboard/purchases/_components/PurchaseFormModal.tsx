@@ -242,11 +242,11 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
         <div className="modal-overlay">
             <div className="modal-container w-full max-w-6xl max-h-[90vh] flex flex-col">
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-stone-200">
-                    <h2 className="text-xl font-semibold text-stone-900">
+                <div className="flex items-center justify-between p-4 border-b border-white/10">
+                    <h2 className="text-xl font-semibold text-stone-100">
                         {purchase ? "Edit Purchase Order" : "Buat Purchase Order Baru"}
                     </h2>
-                    <button onClick={onClose} className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 transition-colors">
+                    <button onClick={onClose} className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-white/10 text-stone-400 hover:bg-white/15 hover:text-stone-300 transition-colors">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
@@ -262,7 +262,7 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                             <select
                                 value={supplierId}
                                 onChange={(e) => setSupplierId(e.target.value)}
-                                className="w-full px-3 py-2 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-900"
+                                className="w-full px-3 py-2 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#E5484D] [color-scheme:dark]"
                                 required
                             >
                                 <option value="">Pilih Supplier</option>
@@ -282,7 +282,7 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                                 type="date"
                                 value={purchaseDate}
                                 onChange={(e) => setPurchaseDate(e.target.value)}
-                                className="w-full px-3 py-2 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-900"
+                                className="w-full px-3 py-2 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#E5484D] [color-scheme:dark]"
                                 required
                             />
                         </div>
@@ -294,13 +294,13 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                             Cari & Tambah Produk
                         </label>
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-500" />
                             <input
                                 type="text"
                                 value={searchProduct}
                                 onChange={(e) => setSearchProduct(e.target.value)}
                                 placeholder="Ketik nama atau kode produk..."
-                                className="w-full pl-10 pr-4 py-2 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-900"
+                                className="w-full pl-10 pr-4 py-2 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
                             />
                         </div>
 
@@ -312,16 +312,16 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                                         key={product.id}
                                         type="button"
                                         onClick={() => handleAddItem(product)}
-                                        className="w-full px-4 py-2 text-left hover:bg-stone-50 transition-colors flex items-center justify-between"
+                                        className="w-full px-4 py-2 text-left hover:bg-white/5 transition-colors flex items-center justify-between"
                                     >
                                         <div>
-                                            <p className="font-medium text-stone-900">{product.name}</p>
-                                            <p className="text-xs text-stone-500">
+                                            <p className="font-medium text-stone-100">{product.name}</p>
+                                            <p className="text-xs text-stone-400">
                                                 {product.code} • Stok: {product.currentStock}
                                                 {product.currentStock === 0 ? " (habis)" : ""}
                                             </p>
                                         </div>
-                                        <Plus className="w-4 h-4 text-red-900" />
+                                        <Plus className="w-4 h-4 text-[#E5484D]" />
                                     </button>
                                 ))}
                             </div>
@@ -329,24 +329,24 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                     </div>
 
                     {/* Items Table */}
-                    <div className="mb-6 border border-stone-200 rounded-xl overflow-hidden">
+                    <div className="mb-6 border border-white/10 rounded-xl overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full">
-                                <thead className="bg-stone-50">
+                                <thead className="bg-white/5">
                                     <tr>
-                                        <th className="px-3 py-2 text-left text-xs font-semibold text-stone-600">Produk</th>
-                                        <th className="px-3 py-2 text-center text-xs font-semibold text-stone-600">Qty</th>
-                                        <th className="px-3 py-2 text-center text-xs font-semibold text-stone-600">Satuan</th>
-                                        <th className="px-3 py-2 text-right text-xs font-semibold text-stone-600">Harga</th>
-                                        <th className="px-3 py-2 text-right text-xs font-semibold text-stone-600">Diskon</th>
-                                        <th className="px-3 py-2 text-right text-xs font-semibold text-stone-600">Subtotal</th>
-                                        <th className="px-3 py-2 text-center text-xs font-semibold text-stone-600">Aksi</th>
+                                        <th className="px-3 py-2 text-left text-xs font-semibold text-stone-400">Produk</th>
+                                        <th className="px-3 py-2 text-center text-xs font-semibold text-stone-400">Qty</th>
+                                        <th className="px-3 py-2 text-center text-xs font-semibold text-stone-400">Satuan</th>
+                                        <th className="px-3 py-2 text-right text-xs font-semibold text-stone-400">Harga</th>
+                                        <th className="px-3 py-2 text-right text-xs font-semibold text-stone-400">Diskon</th>
+                                        <th className="px-3 py-2 text-right text-xs font-semibold text-stone-400">Subtotal</th>
+                                        <th className="px-3 py-2 text-center text-xs font-semibold text-stone-400">Aksi</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-stone-200">
+                                <tbody className="divide-y divide-white/10">
                                     {items.length === 0 ? (
                                         <tr>
-                                            <td colSpan={7} className="px-3 py-8 text-center text-stone-500">
+                                            <td colSpan={7} className="px-3 py-8 text-center text-stone-400">
                                                 Belum ada produk. Cari produk di atas untuk menambahkan.
                                             </td>
                                         </tr>
@@ -357,7 +357,7 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                                                 <tr key={index}>
                                                     <td className="px-3 py-2">
                                                         <div className="font-medium text-sm">{item.product?.name}</div>
-                                                        <div className="text-xs text-stone-500">{item.product?.code}</div>
+                                                        <div className="text-xs text-stone-400">{item.product?.code}</div>
                                                     </td>
                                                     <td className="px-3 py-2">
                                                         <input
@@ -367,14 +367,14 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                                                             onChange={(e) =>
                                                                 handleUpdateItem(index, "quantity", parseFloat(e.target.value) || 1)
                                                             }
-                                                            className="w-20 px-2 py-1 text-center border border-stone-200 rounded focus:outline-none focus:ring-2 focus:ring-red-900"
+                                                            className="w-20 px-2 py-1 text-center border border-white/10 rounded focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
                                                         />
                                                     </td>
                                                     <td className="px-3 py-2">
                                                         <select
                                                             value={item.unitId}
                                                             onChange={(e) => handleChangeUnit(index, e.target.value)}
-                                                            className="w-full px-2 py-1 text-sm border border-stone-200 rounded focus:outline-none focus:ring-2 focus:ring-red-900"
+                                                            className="w-full px-2 py-1 text-sm border border-white/10 rounded focus:outline-none focus:ring-2 focus:ring-[#E5484D] [color-scheme:dark]"
                                                         >
                                                             {product?.units.map((unit) => (
                                                                 <option key={unit.unit.id} value={unit.unit.id}>
@@ -391,7 +391,7 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                                                             onChange={(e) =>
                                                                 handleUpdateItem(index, "unitPrice", parseFloat(e.target.value) || 0)
                                                             }
-                                                            className="w-28 px-2 py-1 text-right border border-stone-200 rounded focus:outline-none focus:ring-2 focus:ring-red-900"
+                                                            className="w-28 px-2 py-1 text-right border border-white/10 rounded focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
                                                         />
                                                     </td>
                                                     <td className="px-3 py-2">
@@ -402,7 +402,7 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                                                             onChange={(e) =>
                                                                 handleUpdateItem(index, "discount", parseFloat(e.target.value) || 0)
                                                             }
-                                                            className="w-24 px-2 py-1 text-right border border-stone-200 rounded focus:outline-none focus:ring-2 focus:ring-red-900"
+                                                            className="w-24 px-2 py-1 text-right border border-white/10 rounded focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
                                                         />
                                                     </td>
                                                     <td className="px-3 py-2 text-right font-semibold">
@@ -412,9 +412,9 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                                                         <button
                                                             type="button"
                                                             onClick={() => handleRemoveItem(index)}
-                                                            className="p-1 hover:bg-red-50 rounded transition-colors"
+                                                            className="p-1 hover:bg-red-500/10 rounded transition-colors"
                                                         >
-                                                            <Trash2 className="w-4 h-4 text-red-800" />
+                                                            <Trash2 className="w-4 h-4 text-red-300" />
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -435,7 +435,7 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                                 value={notes}
                                 onChange={(e) => setNotes(e.target.value)}
                                 rows={4}
-                                className="w-full px-3 py-2 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-900"
+                                className="w-full px-3 py-2 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
                                 placeholder="Catatan tambahan (opsional)"
                             />
                         </div>
@@ -443,35 +443,35 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                         {/* Right: Totals */}
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <label className="text-sm font-medium text-stone-700">Total Barang:</label>
+                                <label className="text-sm font-medium text-stone-300">Total Barang:</label>
                                 <span className="text-lg font-semibold">{formatCurrency(totalAmount)}</span>
                             </div>
 
                             <div className="flex items-center gap-2">
-                                <label className="text-sm font-medium text-stone-700">Diskon:</label>
+                                <label className="text-sm font-medium text-stone-300">Diskon:</label>
                                 <input
                                     type="number"
                                     min="0"
                                     value={discount}
                                     onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                                    className="flex-1 px-3 py-2 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-900 text-right"
+                                    className="flex-1 px-3 py-2 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#E5484D] text-right"
                                 />
                             </div>
 
                             <div className="flex items-center gap-2">
-                                <label className="text-sm font-medium text-stone-700">Pajak:</label>
+                                <label className="text-sm font-medium text-stone-300">Pajak:</label>
                                 <input
                                     type="number"
                                     min="0"
                                     value={tax}
                                     onChange={(e) => setTax(parseFloat(e.target.value) || 0)}
-                                    className="flex-1 px-3 py-2 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-900 text-right"
+                                    className="flex-1 px-3 py-2 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#E5484D] text-right"
                                 />
                             </div>
 
-                            <div className="flex items-center justify-between pt-3 border-t border-stone-200">
-                                <label className="text-base font-bold text-stone-900">Grand Total:</label>
-                                <span className="text-xl font-bold text-red-900">{formatCurrency(grandTotal)}</span>
+                            <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                                <label className="text-base font-bold text-stone-100">Grand Total:</label>
+                                <span className="text-xl font-bold text-[#E5484D]">{formatCurrency(grandTotal)}</span>
                             </div>
 
                             <div>
@@ -479,7 +479,7 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                                 <select
                                     value={paymentMethod}
                                     onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                                    className="w-full px-3 py-2 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-900"
+                                    className="w-full px-3 py-2 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#E5484D] [color-scheme:dark]"
                                 >
                                     <option value="">Pilih Metode</option>
                                     <option value="CASH">Cash</option>
@@ -496,14 +496,14 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                                     max={grandTotal}
                                     value={paidAmount}
                                     onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
-                                    className="w-full px-3 py-2 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-900 text-right"
+                                    className="w-full px-3 py-2 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#E5484D] text-right"
                                 />
                             </div>
 
                             {remainingDebt > 0 && (
-                                <div className="flex items-center justify-between p-3 bg-red-50 rounded-xl">
-                                    <span className="text-sm font-medium text-red-700">Sisa Utang:</span>
-                                    <span className="text-lg font-bold text-red-800">{formatCurrency(remainingDebt)}</span>
+                                <div className="flex items-center justify-between p-3 bg-red-500/10 rounded-xl">
+                                    <span className="text-sm font-medium text-red-400">Sisa Utang:</span>
+                                    <span className="text-lg font-bold text-red-300">{formatCurrency(remainingDebt)}</span>
                                 </div>
                             )}
                         </div>
@@ -511,12 +511,12 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                 </form>
 
                 {/* Footer */}
-                <div className="p-4 border-t border-stone-200 flex gap-2 bg-stone-50 justify-end bg-stone-50">
+                <div className="p-4 border-t border-white/10 flex gap-2 bg-white/5 justify-end bg-white/5">
                     <button
                         type="button"
                         onClick={onClose}
                         disabled={isLoading}
-                        className="px-6 py-2 border border-stone-200 rounded-xl hover:bg-stone-50 transition-colors disabled:opacity-50"
+                        className="px-6 py-2 border border-white/10 rounded-xl hover:bg-white/5 transition-colors disabled:opacity-50"
                     >
                         Batal
                     </button>

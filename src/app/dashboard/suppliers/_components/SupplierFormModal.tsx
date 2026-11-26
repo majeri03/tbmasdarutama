@@ -119,13 +119,13 @@ export function SupplierFormModal({
                 border: "1px solid rgba(34, 197, 94, 0.3)",
               }}
             >
-              <Truck className="w-6 h-6 text-green-700" />
+              <Truck className="w-6 h-6 text-green-400" />
             </div>
             <div>
-              <h3 className="text-xl font-semibold tracking-tight text-stone-900">
+              <h3 className="text-xl font-semibold tracking-tight text-stone-100">
                 {isEdit ? "Edit Supplier" : "Tambah Supplier"}
               </h3>
-              <p className="text-sm text-stone-600 mt-0.5">
+              <p className="text-sm text-stone-400 mt-0.5">
                 {isEdit
                   ? `Kode: ${supplier.code}`
                   : "Kode akan digenerate otomatis"}
@@ -135,7 +135,7 @@ export function SupplierFormModal({
           <button
             onClick={onClose}
             disabled={loading}
-            className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 transition-colors disabled:opacity-50"
+            className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-white/10 text-stone-400 hover:bg-white/15 hover:text-stone-300 transition-colors disabled:opacity-50"
           >
             <X className="w-5 h-5" />
           </button>
@@ -161,7 +161,7 @@ export function SupplierFormModal({
                 })}
               />
               {errors.name && (
-                <p className="text-xs text-red-800 mt-1 flex items-center gap-1">
+                <p className="text-xs text-red-300 mt-1 flex items-center gap-1">
                   <X className="w-3 h-3" />
                   {errors.name.message}
                 </p>
@@ -174,7 +174,7 @@ export function SupplierFormModal({
                 Nomor Telepon <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500" />
                 <input
                   id="phone"
                   type="tel"
@@ -191,7 +191,7 @@ export function SupplierFormModal({
                 />
               </div>
               {errors.phone && (
-                <p className="text-xs text-red-800 mt-1 flex items-center gap-1">
+                <p className="text-xs text-red-300 mt-1 flex items-center gap-1">
                   <X className="w-3 h-3" />
                   {errors.phone.message}
                 </p>
@@ -202,10 +202,10 @@ export function SupplierFormModal({
           {/* Email */}
           <div className="space-y-2">
             <label htmlFor="email" className="label">
-              Email <span className="text-stone-400">(Opsional)</span>
+              Email <span className="text-stone-500">(Opsional)</span>
             </label>
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500" />
               <input
                 id="email"
                 type="email"
@@ -221,7 +221,7 @@ export function SupplierFormModal({
               />
             </div>
             {errors.email && (
-              <p className="text-xs text-red-800 mt-1 flex items-center gap-1">
+              <p className="text-xs text-red-300 mt-1 flex items-center gap-1">
                 <X className="w-3 h-3" />
                 {errors.email.message}
               </p>
@@ -231,10 +231,10 @@ export function SupplierFormModal({
           {/* Alamat */}
           <div className="space-y-2">
             <label htmlFor="address" className="label">
-              Alamat <span className="text-stone-400">(Opsional)</span>
+              Alamat <span className="text-stone-500">(Opsional)</span>
             </label>
             <div className="relative">
-              <MapPin className="absolute left-4 top-4 w-4 h-4 text-stone-400" />
+              <MapPin className="absolute left-4 top-4 w-4 h-4 text-stone-500" />
               <textarea
                 id="address"
                 rows={2}
@@ -251,7 +251,7 @@ export function SupplierFormModal({
             {/* Kota */}
             <div className="space-y-2">
               <label htmlFor="city" className="label">
-                Kota <span className="text-stone-400">(Opsional)</span>
+                Kota <span className="text-stone-500">(Opsional)</span>
               </label>
               <input
                 id="city"
@@ -266,7 +266,7 @@ export function SupplierFormModal({
             {/* Provinsi */}
             <div className="space-y-2">
               <label htmlFor="province" className="label">
-                Provinsi <span className="text-stone-400">(Opsional)</span>
+                Provinsi <span className="text-stone-500">(Opsional)</span>
               </label>
               <input
                 id="province"
@@ -282,7 +282,7 @@ export function SupplierFormModal({
           {/* Deskripsi */}
           <div className="space-y-2">
             <label htmlFor="description" className="label">
-              Deskripsi <span className="text-stone-400">(Opsional)</span>
+              Deskripsi <span className="text-stone-500">(Opsional)</span>
             </label>
             <textarea
               id="description"
@@ -299,17 +299,17 @@ export function SupplierFormModal({
             <input
               id="isActive"
               type="checkbox"
-              className="w-5 h-5 rounded border-stone-300 text-green-700 focus:ring-green-700"
+              className="w-5 h-5 rounded border-white/15 accent-green-600 focus:ring-green-500"
               disabled={loading}
               {...register("isActive")}
             />
-            <label htmlFor="isActive" className="text-sm font-semibold text-stone-700">
+            <label htmlFor="isActive" className="text-sm font-semibold text-stone-300">
               Supplier Aktif
             </label>
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4 -mx-6 -mb-6 px-6 pb-6 bg-stone-50 border-t border-stone-200 rounded-b-3xl">
+          <div className="flex gap-3 pt-4 -mx-6 -mb-6 px-6 pb-6 bg-white/5 border-t border-white/10 rounded-b-3xl">
             <button
               type="button"
               onClick={onClose}

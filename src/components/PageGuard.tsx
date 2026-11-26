@@ -59,18 +59,18 @@ export default function PageGuard({ pageKey, children }: PageGuardProps) {
   if (status === "loading" || (!isSuperAdmin && isEffectiveAllowed === null)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-900"></div>
-        <p className="text-gray-500 text-sm">Memverifikasi hak akses halaman...</p>
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-500"></div>
+        <p className="text-stone-500 text-sm">Memverifikasi hak akses halaman...</p>
       </div>
     );
   }
 
   if (!isEffectiveAllowed) {
     return (
-      <div className="max-w-md mx-auto mt-16 p-8 bg-white border border-gray-150 rounded-2xl text-center shadow-lg">
+      <div className="max-w-md mx-auto mt-16 p-8 bg-[#211E1B] border border-white/10 rounded-2xl text-center shadow-lg">
         <div className="text-5xl mb-4">🚫</div>
-        <h2 className="text-xl font-bold text-gray-900 mb-2">Halaman Tidak Tersedia</h2>
-        <p className="text-gray-600 text-sm">
+        <h2 className="text-xl font-bold text-stone-100 mb-2">Halaman Tidak Tersedia</h2>
+        <p className="text-stone-400 text-sm">
           Akses ke halaman ini belum dibuka oleh Superadmin untuk Peran Anda saat ini.
         </p>
         <button

@@ -11,19 +11,19 @@ interface POSLayoutProps {
 
 export function POSLayout({ children, cart, customer, cartItemsCount }: POSLayoutProps) {
   return (
-    <div className="h-screen flex flex-col bg-[#FAFAF8] space-y-2 p-6">
+    <div className="h-screen flex flex-col bg-[#141210] space-y-2 p-6">
       {/* Header */}
-      <div className="flex-shrink-0 h-14 md:h-16 glass-card border-b border-stone-200 flex items-center justify-between px-3 md:px-6">
+      <div className="flex-shrink-0 h-14 md:h-16 glass-card border-b border-white/10 flex items-center justify-between px-3 md:px-6">
         <div>
-          <h1 className="text-lg md:text-2xl font-bold text-[#1C1917] tracking-tight">
+          <h1 className="text-lg md:text-2xl font-bold text-stone-100 tracking-tight">
             Point of Sale
           </h1>
-          <p className="text-[10px] md:text-xs text-stone-500 hidden md:block">Sistem Kasir TB Masdar Utama</p>
+          <p className="text-[10px] md:text-xs text-stone-400 hidden md:block">Sistem Kasir TB Masdar Utama</p>
         </div>
         <div className="flex items-center gap-2 md:gap-4">
           <div className="text-right">
-            <p className="text-[10px] text-stone-500 hidden md:block">Tanggal</p>
-            <p className="text-xs md:text-sm font-semibold text-stone-900">
+            <p className="text-[10px] text-stone-400 hidden md:block">Tanggal</p>
+            <p className="text-xs md:text-sm font-semibold text-stone-100">
               {new Date().toLocaleDateString("id-ID", {
                 day: "numeric",
                 month: "short",
@@ -45,13 +45,13 @@ export function POSLayout({ children, cart, customer, cartItemsCount }: POSLayou
         </div>
 
         {/* Right Side - Cart (Mobile: Hidden, Desktop: Sidebar) */}
-        <div className="hidden md:flex md:w-96 flex-shrink-0 glass-panel-strong rounded-2xl flex-col mb-2">
+        <div className="hidden md:flex md:w-96 flex-shrink-0 glass-panel-strong rounded-2xl flex-col mb-2 bg-white/[0.16]">
           {cart}
         </div>
       </div>
 
       {/* Mobile Cart Button (Fixed Bottom) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 p-3 glass-card border-t border-stone-200 z-50">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 p-3 glass-card border-t border-white/10 z-50">
         <button
           onClick={() => {
             // Akan ditambahkan fungsi untuk buka cart modal

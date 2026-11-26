@@ -88,7 +88,7 @@ export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative">
+    <div className="min-h-screen flex items-center justify-center p-4 relative bg-[#141210]">
       {toast && (
         <Toast message={toast.message} type={toast.type} onClose={hideToast} />
       )}
@@ -97,7 +97,7 @@ export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
       <div className="glass-card rounded-[24px] p-8 w-full max-w-md relative z-10 animate-slide-up">
         {/* Logo & Title */}
         <div className="text-center mb-8">
-          <div className="w-20 h-20 flex items-center justify-center mx-auto mb-2 rounded-2xl bg-stone-100">
+          <div className="w-20 h-20 flex items-center justify-center mx-auto mb-2 rounded-2xl bg-white/[0.08]">
              {logoUrl ? (
             <Image
               src={logoUrl}
@@ -108,13 +108,13 @@ export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
               priority
             />
           ) : (
-            <Store className="w-10 h-10 text-[#7F1D1D]" />
+            <Store className="w-10 h-10 text-[#E5484D]" />
           )}
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-[#1C1917] mb-2">
+          <h1 className="text-3xl font-bold tracking-tight text-stone-100 mb-2">
             TB MASDAR UTAMA
           </h1>
-          <p className="text-stone-600 flex items-center justify-center gap-2">
+          <p className="text-stone-400 flex items-center justify-center gap-2">
             Sistem Manajemen Toko Bangunan
           </p>
         </div>
@@ -125,7 +125,7 @@ export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
           <div>
             <label className="label">Email Address</label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-500" />
               <input
                 type="email"
                 value={email}
@@ -142,7 +142,7 @@ export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
           <div>
             <label className="label">Password</label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-500" />
               <input
                 type="password"
                 value={password}
@@ -157,7 +157,7 @@ export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
 
           {/* Error Message */}
           {error && (
-            <div className="glass-card bg-red-50 border border-red-200 p-3 text-sm text-[#991B1B]">
+            <div className="glass-card bg-red-500/[0.08] border border-red-500/30 p-3 text-sm text-[#E5484D]">
               {error}
             </div>
           )}
@@ -165,11 +165,11 @@ export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
           {/* FIX (24 Nov 2026, OTP): akun belum terverifikasi — tunjukkan
               JELAS ke mana memasukkan kode OTP (email sudah terisi). */}
           {isUnverified && (
-            <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-center">
-              <p className="text-sm font-semibold text-amber-800 mb-1">
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/[0.08] p-4 text-center">
+              <p className="text-sm font-semibold text-amber-200 mb-1">
                 Akun Anda belum terverifikasi
               </p>
-              <p className="text-sm text-amber-700 mb-3">
+              <p className="text-sm text-amber-300 mb-3">
                 Kode 6 digit sudah dikirim ke email Anda. Masukkan kodenya
                 untuk mengaktifkan akun, lalu login kembali.
               </p>
@@ -212,18 +212,18 @@ export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
         <div className="mt-6 text-center space-y-3">
           <Link
             href="/forgot-password"
-            className="text-sm text-stone-600 hover:text-[#7F1D1D] hover:underline transition-colors inline-flex items-center gap-1"
+            className="text-sm text-stone-400 hover:text-[#E5484D] hover:underline transition-colors inline-flex items-center gap-1"
           >
             <Lock className="w-4 h-4" />
             Lupa Password?
           </Link>
-          <div className="rounded-lg border border-[#7F1D1D]/20 bg-[#7F1D1D]/[0.06] px-4 py-3">
+          <div className="rounded-lg border border-[#E5484D]/30 bg-[#7F1D1D]/25 px-4 py-3">
             {/* PKG-I (23 Nov 2026, OTP): akun baru harus verifikasi email dulu.
                 Link dibuat menonjol (kotak aksen) supaya pemilik akun baru
                 langsung menemukan tempat memasukkan kode OTP. */}
             <Link
               href={verifyHref}
-              className="text-sm font-semibold text-[#7F1D1D] hover:text-[#991B1B] hover:underline transition-colors inline-flex items-center gap-1"
+              className="text-sm font-semibold text-[#E5484D] hover:text-[#F87171] hover:underline transition-colors inline-flex items-center gap-1"
             >
               <Mail className="w-4 h-4" />
               Belum terima kode? Verifikasi email / masukkan kode OTP
@@ -232,7 +232,7 @@ export default function LoginForm({ logoUrl }: { logoUrl?: string | null }) {
         </div>
 
         {/* Footer */}
-        <div className="mt-8 pt-6 border-t border-stone-200 text-center text-sm text-stone-500">
+        <div className="mt-8 pt-6 border-t border-white/10 text-center text-sm text-stone-500">
           © {new Date().getFullYear()} TB Masdar Utama. All rights reserved.
         </div>
       </div>

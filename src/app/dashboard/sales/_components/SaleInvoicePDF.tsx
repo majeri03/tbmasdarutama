@@ -181,26 +181,26 @@ export function SaleInvoicePDF({ isOpen, onClose, saleId }: SaleInvoicePDFProps)
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 print:hidden">
-      <div className="glass-card w-full max-w-4xl h-[92dvh] sm:h-[90vh] flex flex-col bg-white rounded-lg shadow-xl overflow-hidden">
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 print:hidden">
+      <div className="glass-card w-full max-w-4xl h-[92dvh] sm:h-[90vh] flex flex-col rounded-lg shadow-xl overflow-hidden">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border-b border-gray-200 bg-white gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border-b border-white/10 gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Invoice Preview</h2>
-            <p className="text-sm text-gray-500">
+            <h2 className="text-lg font-semibold text-stone-100">Invoice Preview</h2>
+            <p className="text-sm text-stone-400">
               {saleData ? `#${saleData.invoiceNumber}` : "Loading..."}
             </p>
           </div>
 
           {/* Format Selector Pills */}
-          <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-lg overflow-x-auto">
+          <div className="flex items-center gap-1.5 bg-white/10 p-1 rounded-lg overflow-x-auto">
             <button
               type="button"
               onClick={() => handleLayoutChange("SURAT_JALAN")}
               className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap ${
                 activeLayout === "SURAT_JALAN"
                   ? "bg-red-900 text-white shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
+                  : "text-stone-400 hover:text-stone-100"
               }`}
             >
               Surat Jalan
@@ -211,7 +211,7 @@ export function SaleInvoicePDF({ isOpen, onClose, saleId }: SaleInvoicePDFProps)
               className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap ${
                 activeLayout === "INVOICE_BESAR"
                   ? "bg-red-900 text-white shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
+                  : "text-stone-400 hover:text-stone-100"
               }`}
             >
               Invoice Besar (A4)
@@ -222,7 +222,7 @@ export function SaleInvoicePDF({ isOpen, onClose, saleId }: SaleInvoicePDFProps)
               className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap ${
                 activeLayout === "FAKTUR_NCR"
                   ? "bg-red-900 text-white shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
+                  : "text-stone-400 hover:text-stone-100"
               }`}
             >
               Faktur NCR
@@ -233,36 +233,36 @@ export function SaleInvoicePDF({ isOpen, onClose, saleId }: SaleInvoicePDFProps)
               className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap ${
                 activeLayout === "STRUK_KECIL"
                   ? "bg-red-900 text-white shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
+                  : "text-stone-400 hover:text-stone-100"
               }`}
             >
               Struk (58mm)
             </button>
           </div>
 
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 self-end sm:self-center">
+          <button onClick={onClose} className="text-stone-500 hover:text-stone-300 self-end sm:self-center">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Peringatan kalau data toko belum diisi di Pengaturan */}
         {storeSetting && !storeSetting.name?.trim() && !isLoading && (
-          <div className="px-4 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-800">
+          <div className="px-4 py-2 bg-amber-500/10 border-b border-amber-500/30 text-xs text-amber-300">
             Data toko belum diisi — lengkapi nama, alamat &amp; rekening di Pengaturan agar invoice menampilkan data toko yang benar.
           </div>
         )}
 
         {/* Preview Area */}
-        <div className="flex-1 bg-gray-50 overflow-auto relative" ref={previewWrapRef}>
+        <div className="flex-1 bg-[#141210] overflow-auto relative" ref={previewWrapRef}>
           {error ? (
-            <div className="p-8 text-center text-red-600 bg-white h-full flex items-center justify-center">
+            <div className="p-8 text-center text-red-400 bg-[#1C1917] h-full flex items-center justify-center">
                 {error}
             </div>
           ) : isLoading ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10">
+            <div className="absolute inset-0 flex items-center justify-center bg-[#141210]/85 z-10">
               <div className="text-center">
-                <Loader2 className="w-8 h-8 animate-spin mx-auto text-red-900" />
-                <p className="text-sm text-gray-500 mt-2">Menyiapkan invoice...</p>
+                <Loader2 className="w-8 h-8 animate-spin mx-auto text-[#E5484D]" />
+                <p className="text-sm text-stone-400 mt-2">Menyiapkan invoice...</p>
               </div>
             </div>
           ) : (
@@ -293,11 +293,11 @@ export function SaleInvoicePDF({ isOpen, onClose, saleId }: SaleInvoicePDFProps)
         </div>
 
         {/* Actions */}
-        <div className="p-4 border-t border-gray-200 flex gap-2 bg-white">
+        <div className="p-4 border-t border-white/10 flex gap-2">
           <button
             onClick={handleDownload}
             disabled={isLoading || !htmlContent || isProcessingPdf}
-            className="flex-1 px-4 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+            className="flex-1 px-4 py-3 border border-white/15 rounded-lg hover:bg-white/10 text-stone-100 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {isProcessingPdf ? (
                  <>

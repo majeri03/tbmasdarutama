@@ -41,7 +41,7 @@ function GrowthBadge({ growth }: { growth: number | null | undefined }) {
   }
   const up = value > 0;
   return (
-    <div className={`flex items-center gap-1 text-sm font-semibold ${up ? 'text-[#15803D]' : 'text-[#991B1B]'}`}>
+    <div className={`flex items-center gap-1 text-sm font-semibold ${up ? 'text-[#4ADE80]' : 'text-[#E5484D]'}`}>
       {up ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
       <span>{value}%</span>
     </div>
@@ -72,18 +72,18 @@ export default async function DashboardPage() {
         <div className="glass-card p-6 animate-slide-up">
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-[#1C1917] mb-2">
+              <h1 className="text-3xl font-bold tracking-tight text-stone-100 mb-2">
                 Dashboard
               </h1>
-              <p className="text-stone-600">
-                Selamat datang kembali, <span className="text-stone-900 font-semibold">{session.user.name}</span>
+              <p className="text-stone-400">
+                Selamat datang kembali, <span className="text-stone-100 font-semibold">{session.user.name}</span>
               </p>
               <div className="flex items-center gap-2 mt-3">
                 <div className="badge badge-info">
                   {session.user.role.replace('_', ' ')}
                 </div>
                 <span className="text-stone-400 text-sm">•</span>
-                <span className="text-stone-600 text-sm flex items-center gap-1">
+                <span className="text-stone-400 text-sm flex items-center gap-1">
                   <Calendar className="w-3.5 h-3.5" />
                   {new Date().toLocaleDateString('id-ID', {
                     weekday: 'long',
@@ -95,7 +95,7 @@ export default async function DashboardPage() {
               </div>
             </div>
             <div className="glass-card p-4">
-              <Store className="w-8 h-8 text-[#7F1D1D]" />
+              <Store className="w-8 h-8 text-[#E5484D]" />
             </div>
           </div>
         </div>
@@ -105,13 +105,13 @@ export default async function DashboardPage() {
           {/* Total Penjualan */}
           <div className="stat-card group animate-slide-up">
             <div className="flex items-start justify-between mb-4">
-              <div className="p-3 rounded-xl bg-stone-100 border border-[rgba(28,25,23,0.08)] transition-all group-hover:scale-110">
-                <TrendingUp className="w-6 h-6 text-stone-700" />
+              <div className="p-3 rounded-xl bg-white/[0.08] border border-white/10 transition-all group-hover:scale-110">
+                <TrendingUp className="w-6 h-6 text-stone-300" />
               </div>
               <GrowthBadge growth={stats?.sales?.growth} />
             </div>
-            <h3 className="text-stone-600 text-sm font-semibold mb-1">Total Penjualan</h3>
-            <p className="text-3xl font-bold tabular-nums text-stone-900 mb-1">
+            <h3 className="text-stone-400 text-sm font-semibold mb-1">Total Penjualan</h3>
+            <p className="text-3xl font-bold tabular-nums text-stone-100 mb-1">
               Rp {stats?.sales?.total ? (stats.sales.total / 1000000).toFixed(1) : '0'}M
             </p>
             <p className="text-stone-500 text-xs">
@@ -122,13 +122,13 @@ export default async function DashboardPage() {
           {/* Total Produk */}
           <div className="stat-card group animate-slide-up animation-delay-200">
             <div className="flex items-start justify-between mb-4">
-              <div className="p-3 rounded-xl bg-stone-100 border border-[rgba(28,25,23,0.08)] transition-all group-hover:scale-110">
-                <Package className="w-6 h-6 text-stone-700" />
+              <div className="p-3 rounded-xl bg-white/[0.08] border border-white/10 transition-all group-hover:scale-110">
+                <Package className="w-6 h-6 text-stone-300" />
               </div>
               <GrowthBadge growth={stats?.products?.growth} />
             </div>
-            <h3 className="text-stone-600 text-sm font-semibold mb-1">Total Produk</h3>
-            <p className="text-3xl font-bold tabular-nums text-stone-900 mb-1">
+            <h3 className="text-stone-400 text-sm font-semibold mb-1">Total Produk</h3>
+            <p className="text-3xl font-bold tabular-nums text-stone-100 mb-1">
               {stats?.products?.total.toLocaleString('id-ID') ?? '0'}
             </p>
             <p className="text-stone-500 text-xs">
@@ -139,13 +139,13 @@ export default async function DashboardPage() {
           {/* Total Customer */}
           <div className="stat-card group animate-slide-up animation-delay-400">
             <div className="flex items-start justify-between mb-4">
-              <div className="p-3 rounded-xl bg-stone-100 border border-[rgba(28,25,23,0.08)] transition-all group-hover:scale-110">
-                <Users className="w-6 h-6 text-stone-700" />
+              <div className="p-3 rounded-xl bg-white/[0.08] border border-white/10 transition-all group-hover:scale-110">
+                <Users className="w-6 h-6 text-stone-300" />
               </div>
               <GrowthBadge growth={stats?.customers?.growth} />
             </div>
-            <h3 className="text-stone-600 text-sm font-semibold mb-1">Total Customer</h3>
-            <p className="text-3xl font-bold tabular-nums text-stone-900 mb-1">
+            <h3 className="text-stone-400 text-sm font-semibold mb-1">Total Customer</h3>
+            <p className="text-3xl font-bold tabular-nums text-stone-100 mb-1">
               {stats?.customers?.total.toLocaleString('id-ID') ?? '0'}
             </p>
             <p className="text-stone-500 text-xs">
@@ -156,12 +156,12 @@ export default async function DashboardPage() {
           {/* Utang Customer */}
           <div className="stat-card group animate-slide-up animation-delay-600">
             <div className="flex items-start justify-between mb-4">
-              <div className="p-3 rounded-xl bg-stone-100 border border-[rgba(28,25,23,0.08)] transition-all group-hover:scale-110">
-                <DollarSign className="w-6 h-6 text-[#7F1D1D]" />
+              <div className="p-3 rounded-xl bg-white/[0.08] border border-white/10 transition-all group-hover:scale-110">
+                <DollarSign className="w-6 h-6 text-[#E5484D]" />
               </div>
               <div className={`flex items-center gap-1 text-sm font-semibold ${debtChange === null || debtChange === undefined
                   ? 'text-stone-400'
-                  : debtChange < 0 ? 'text-[#15803D]' : debtChange > 0 ? 'text-[#991B1B]' : 'text-stone-400'
+                  : debtChange < 0 ? 'text-[#4ADE80]' : debtChange > 0 ? 'text-[#E5484D]' : 'text-stone-400'
                 }`}>
                 {debtChange === null ? (
                   <span>—</span>
@@ -179,8 +179,8 @@ export default async function DashboardPage() {
                 )}
               </div>
             </div>
-            <h3 className="text-stone-600 text-sm font-semibold mb-1">Utang Customer</h3>
-            <p className="text-3xl font-bold tabular-nums text-stone-900 mb-1">
+            <h3 className="text-stone-400 text-sm font-semibold mb-1">Utang Customer</h3>
+            <p className="text-3xl font-bold tabular-nums text-stone-100 mb-1">
               Rp {stats?.debt?.total ? (stats.debt.total / 1000000).toFixed(1) : '0'}M
             </p>
             <p className="text-stone-500 text-xs">
@@ -195,18 +195,18 @@ export default async function DashboardPage() {
           <div className="glass-card p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-xl font-bold text-stone-900 mb-1">Grafik Penjualan</h2>
-                <p className="text-stone-600 text-sm">Performa penjualan 7 hari terakhir</p>
+                <h2 className="text-xl font-bold text-stone-100 mb-1">Grafik Penjualan</h2>
+                <p className="text-stone-400 text-sm">Performa penjualan 7 hari terakhir</p>
               </div>
               {/* Icon BarChart3 sudah dihapus sepenuhnya */}
             </div>
 
             {/* Chart Container */}
-            <div className="relative h-80 bg-stone-100/60 rounded-xl p-6">
+            <div className="relative h-80 bg-white/[0.05] rounded-xl p-6">
               {(!stats?.chart || stats.chart.length === 0) ? (
                 // Empty State - Safety check untuk error 'stats is possibly null'
                 <div className="flex flex-col items-center justify-center h-full">
-                  <p className="text-stone-500 text-sm">Belum ada data penjualan</p>
+                  <p className="text-stone-400 text-sm">Belum ada data penjualan</p>
                   <p className="text-stone-400 text-xs mt-1">Data akan muncul setelah ada transaksi</p>
                 </div>
               ) : (
@@ -239,7 +239,7 @@ export default async function DashboardPage() {
                         className="absolute w-full border-t border-dashed"
                         style={{
                           top: `${percent}%`,
-                          borderColor: 'rgba(28, 25, 23, 0.08)'
+                          borderColor: 'rgba(255, 255, 255, 0.08)'
                         }}
                       />
                     ))}
@@ -259,7 +259,7 @@ export default async function DashboardPage() {
                         </linearGradient>
 
                         <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" stopColor="rgba(127, 29, 29, 0.12)" />
+                          <stop offset="0%" stopColor="rgba(127, 29, 29, 0.22)" />
                           <stop offset="100%" stopColor="rgba(127, 29, 29, 0)" />
                         </linearGradient>
                       </defs>
@@ -345,12 +345,12 @@ export default async function DashboardPage() {
                         >
                           {/* Garis vertikal saat hover */}
                           <div className="absolute inset-x-0 top-0 bottom-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="w-px h-full mx-auto bg-stone-300" />
+                            <div className="w-px h-full mx-auto bg-white/25" />
                           </div>
 
                           {/* Tooltip minimalis */}
                           <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-10">
-                            <div className="bg-stone-900 text-white px-3 py-1.5 rounded text-xs shadow-xl whitespace-nowrap">
+                            <div className="bg-white text-stone-900 px-3 py-1.5 rounded text-xs shadow-xl whitespace-nowrap">
                               <p className="font-bold">Rp {data.total.toLocaleString('id-ID')}</p>
                               <p className="text-[10px] opacity-70">
                                 {new Date(data.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
@@ -383,7 +383,7 @@ export default async function DashboardPage() {
                           className="absolute top-0 text-center whitespace-nowrap"
                           style={{ left: `${x}%`, transform }}
                         >
-                          <p className="text-[10px] font-semibold text-stone-500 leading-tight">
+                          <p className="text-[10px] font-semibold text-stone-400 leading-tight">
                             {new Date(data.date).toLocaleDateString('id-ID', { weekday: 'short' })}
                           </p>
                           <p className="text-[10px] text-stone-400 leading-tight">
@@ -404,8 +404,8 @@ export default async function DashboardPage() {
         {/* Quick Actions */}
         <div className="glass-card p-6">
           <div className="flex items-center gap-2 mb-5">
-            <Sparkles className="w-5 h-5 text-[#7F1D1D]" />
-            <h2 className="text-lg font-bold text-stone-900">Quick Actions</h2>
+            <Sparkles className="w-5 h-5 text-[#E5484D]" />
+            <h2 className="text-lg font-bold text-stone-100">Quick Actions</h2>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
@@ -419,10 +419,10 @@ export default async function DashboardPage() {
                 href={action.href}
                 className="glass-card-hover p-5 text-center group relative overflow-hidden block"
               >
-                <div className="inline-flex p-3.5 rounded-xl mb-3 bg-stone-100 border border-[rgba(28,25,23,0.08)] transition-all group-hover:scale-110">
-                  <action.icon className="w-6 h-6 text-stone-700" />
+                <div className="inline-flex p-3.5 rounded-xl mb-3 bg-white/[0.08] border border-white/10 transition-all group-hover:scale-110">
+                  <action.icon className={`w-6 h-6 ${i === 0 ? 'text-[#E5484D]' : 'text-stone-300'}`} />
                 </div>
-                <p className="text-stone-900 text-sm font-semibold">{action.label}</p>
+                <p className="text-stone-100 text-sm font-semibold">{action.label}</p>
               </Link>
             ))}
           </div>
@@ -431,8 +431,8 @@ export default async function DashboardPage() {
         {/* Stock Alert */}
         <div className="glass-card p-6">
           <div className="flex items-center gap-2 mb-5">
-            <AlertCircle className="w-5 h-5 text-[#991B1B]" />
-            <h2 className="text-lg font-bold text-stone-900">Peringatan Stock Rendah</h2>
+            <AlertCircle className="w-5 h-5 text-[#E5484D]" />
+            <h2 className="text-lg font-bold text-stone-100">Peringatan Stock Rendah</h2>
             <span className="badge badge-danger ml-auto">
               {stats?.lowStock.length ?? 0} Item
             </span>
@@ -441,21 +441,21 @@ export default async function DashboardPage() {
             {(stats?.lowStock ?? []).map((item, i) => (
               <div
                 key={i}
-                className="flex items-center justify-between p-4 rounded-xl border border-[rgba(28,25,23,0.08)] bg-[rgba(127,29,29,0.04)] transition-all hover:bg-white/60"
+                className="flex items-center justify-between p-4 rounded-xl border border-white/10 bg-[rgba(127,29,29,0.08)] transition-all hover:bg-white/[0.07]"
               >
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-[rgba(127,29,29,0.08)] border border-[rgba(127,29,29,0.2)]">
-                    <Package className="w-4 h-4 text-[#991B1B]" />
+                    <Package className="w-4 h-4 text-[#E5484D]" />
                   </div>
                   <div>
-                    <p className="text-stone-900 text-sm font-semibold">{item.name}</p>
+                    <p className="text-stone-100 text-sm font-semibold">{item.name}</p>
                     <p className="text-stone-500 text-xs mt-0.5">
                       Min. stock: {item.minStock} {item.unit}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-[#991B1B] text-lg font-bold">{item.stock}</p>
+                  <p className="text-[#E5484D] text-lg font-bold">{item.stock}</p>
                   <p className="text-stone-500 text-xs">{item.unit}</p>
                 </div>
               </div>

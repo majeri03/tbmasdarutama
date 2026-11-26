@@ -210,8 +210,8 @@ export function ProductsClient({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-stone-900">Manajemen Produk</h1>
-          <p className="text-stone-600 mt-1">
+          <h1 className="text-3xl font-semibold tracking-tight text-stone-100">Manajemen Produk</h1>
+          <p className="text-stone-400 mt-1">
             Kelola semua produk, stok, dan harga
           </p>
         </div>

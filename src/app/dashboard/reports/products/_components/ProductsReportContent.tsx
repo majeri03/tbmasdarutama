@@ -38,7 +38,7 @@ export default function ProductsReportContent({ data }: ProductsReportContentPro
   const { products, store } = data;
 
   return (
-    <div id="print-content" className="bg-white p-8 min-h-[297mm] text-[#111111]">
+    <div id="print-content" className="bg-[#1C1917] print:bg-white p-8 min-h-[297mm] text-stone-100 print:text-stone-100 print:text-[#111111]">
       <ReportHeader
         title="Daftar Produk"
         storeName={store?.name}
@@ -59,7 +59,7 @@ export default function ProductsReportContent({ data }: ProductsReportContentPro
           const imageUrl = product.productImages[0]?.imageUrl || null;
 
           return (
-            <div key={product.id} className="border border-gray-200 rounded-lg p-4 break-inside-avoid">
+            <div key={product.id} className="border border-white/10 print:border-gray-200 bg-white/[0.04] print:bg-white rounded-lg p-4 break-inside-avoid">
               <div className="flex gap-4">
                 {/* Product Image — <img> biasa, BUKAN next/image (item 144):
                     next/image menolak URL remote yang host-nya tidak ada di
@@ -71,7 +71,7 @@ export default function ProductsReportContent({ data }: ProductsReportContentPro
                     File fallback lama '/placeholder-product.png' tidak ada
                     di public/, jadi produk tanpa foto menampilkan kotak
                     "Tanpa Gambar", bukan gambar rusak. */}
-                <div className="w-20 h-20 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center">
+                <div className="w-20 h-20 bg-white/[0.06] print:bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center">
                   {imageUrl ? (
                     <img
                       src={imageUrl}
@@ -84,40 +84,40 @@ export default function ProductsReportContent({ data }: ProductsReportContentPro
                       }}
                     />
                   ) : (
-                    <span className="text-[10px] text-[#6B7280] text-center px-1">Tanpa Gambar</span>
+                    <span className="text-[10px] text-stone-400 print:text-[#6B7280] text-center px-1">Tanpa Gambar</span>
                   )}
                 </div>
 
                 {/* Product Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between mb-1">
-                    <h3 className="font-bold text-[#111111] text-sm leading-tight">{product.name}</h3>
-                    <span className="text-xs font-mono text-[#6B7280] ml-2">{product.code}</span>
+                    <h3 className="font-bold text-stone-100 print:text-[#111111] text-sm leading-tight">{product.name}</h3>
+                    <span className="text-xs font-mono text-stone-400 print:text-[#6B7280] ml-2">{product.code}</span>
                   </div>
 
-                  <div className="text-xs text-[#6B7280] space-y-1">
+                  <div className="text-xs text-stone-400 print:text-[#6B7280] space-y-1">
                     <p>
-                      <span className="font-semibold text-[#111111]">Kategori:</span> {product.category?.name ?? "—"}
+                      <span className="font-semibold text-stone-100 print:text-[#111111]">Kategori:</span> {product.category?.name ?? "—"}
                       {product.subCategory && ` / ${product.subCategory.name}`}
                     </p>
-                    <p><span className="font-semibold text-[#111111]">Supplier:</span> {product.supplier?.name ?? "—"}</p>
+                    <p><span className="font-semibold text-stone-100 print:text-[#111111]">Supplier:</span> {product.supplier?.name ?? "—"}</p>
 
                     <div className="flex items-center gap-2 mt-2">
-                      <span className="text-xs font-semibold text-[#111111]">
+                      <span className="text-xs font-semibold text-stone-100 print:text-[#111111]">
                         Stok: {product.currentStock}
                       </span>
-                      <span className="text-[#6B7280]">Min: {product.minStock}</span>
+                      <span className="text-stone-400 print:text-[#6B7280]">Min: {product.minStock}</span>
                     </div>
 
                     {primaryUnit && (
-                      <div className="mt-2 pt-2 border-t border-gray-200 flex justify-between">
+                      <div className="mt-2 pt-2 border-t border-white/10 print:border-gray-200 flex justify-between">
                         <div>
-                          <p className="text-xs text-[#6B7280]">Harga Beli</p>
-                          <p className="font-bold text-[#111111]">{formatCurrency(Number(primaryUnit.buyPrice))}</p>
+                          <p className="text-xs text-stone-400 print:text-[#6B7280]">Harga Beli</p>
+                          <p className="font-bold text-stone-100 print:text-[#111111]">{formatCurrency(Number(primaryUnit.buyPrice))}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-xs text-[#6B7280]">Harga Jual</p>
-                          <p className="font-bold text-[#111111]">{formatCurrency(Number(primaryUnit.sellPrice))}</p>
+                          <p className="text-xs text-stone-400 print:text-[#6B7280]">Harga Jual</p>
+                          <p className="font-bold text-stone-100 print:text-[#111111]">{formatCurrency(Number(primaryUnit.sellPrice))}</p>
                         </div>
                       </div>
                     )}
@@ -126,7 +126,7 @@ export default function ProductsReportContent({ data }: ProductsReportContentPro
               </div>
 
               {product.description && (
-                <p className="text-xs text-[#6B7280] mt-2 line-clamp-2">{product.description}</p>
+                <p className="text-xs text-stone-400 print:text-[#6B7280] mt-2 line-clamp-2">{product.description}</p>
               )}
             </div>
           );
@@ -135,7 +135,7 @@ export default function ProductsReportContent({ data }: ProductsReportContentPro
 
       {/* Empty State */}
       {products.length === 0 && (
-        <div className="text-center py-12 text-[#6B7280]">
+        <div className="text-center py-12 text-stone-400 print:text-[#6B7280]">
           Tidak ada produk yang ditemukan
         </div>
       )}

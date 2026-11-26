@@ -21,15 +21,15 @@ export function Toast({ message, type = "success", duration = 3000, onClose }: T
   }, [duration, onClose]);
 
   const icons = {
-    success: <CheckCircle className="w-5 h-5 text-green-600" />,
-    error: <AlertCircle className="w-5 h-5 text-red-600" />,
-    info: <Info className="w-5 h-5 text-stone-600" />,
+    success: <CheckCircle className="w-5 h-5 text-green-400" />,
+    error: <AlertCircle className="w-5 h-5 text-red-400" />,
+    info: <Info className="w-5 h-5 text-stone-400" />,
   };
 
   const styles = {
-    success: "bg-green-50 border-green-200",
-    error: "bg-red-50 border-red-200",
-    info: "bg-stone-100 border-stone-200",
+    success: "border-green-400/40",
+    error: "border-red-400/40",
+    info: "border-white/15",
   };
 
   return (
@@ -38,10 +38,10 @@ export function Toast({ message, type = "success", duration = 3000, onClose }: T
     >
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0">{icons[type]}</div>
-        <p className="flex-1 text-sm text-gray-800 font-medium">{message}</p>
+        <p className="flex-1 text-sm text-stone-100 font-medium">{message}</p>
         <button
           onClick={onClose}
-          className="flex-shrink-0 text-gray-500 hover:text-gray-700 transition-colors"
+          className="flex-shrink-0 text-stone-400 hover:text-stone-200 transition-colors"
         >
           <X className="w-4 h-4" />
         </button>

@@ -71,7 +71,7 @@ export function UnitTable({
               <button
                 type="button"
                 onClick={handleSearchClear}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 transition-colors"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-200 transition-colors"
               >
                 <span className="text-lg">×</span>
               </button>
@@ -95,25 +95,25 @@ export function UnitTable({
       </div>
 
       {/* Table */}
-      <div className="glass-card overflow-hidden">
+      <div className="glass-card overflow-hidden bg-white/15 border-white/10">
         {loading ? (
           // Loading State
           <div className="p-12 text-center">
-            <Loader2 className="w-8 h-8 animate-spin text-stone-600 mx-auto mb-3" />
-            <p className="text-stone-600 text-sm">Memuat data satuan...</p>
+            <Loader2 className="w-8 h-8 animate-spin text-stone-400 mx-auto mb-3" />
+            <p className="text-stone-400 text-sm">Memuat data satuan...</p>
           </div>
         ) : units.length === 0 ? (
           // Empty State
           <div className="p-12 text-center">
             <div
-              className="inline-flex p-4 rounded-2xl mb-4 bg-stone-100 border border-stone-200"
+              className="inline-flex p-4 rounded-2xl mb-4 bg-white/10 border border-white/10"
             >
               <Package className="w-8 h-8 text-stone-400" />
             </div>
-            <h3 className="text-lg font-bold text-stone-900 mb-2">
+            <h3 className="text-lg font-bold text-stone-100 mb-2">
               Belum Ada Data Satuan
             </h3>
-            <p className="text-stone-600 text-sm">
+            <p className="text-stone-400 text-sm">
               {searchInput
                 ? `Tidak ada hasil untuk "${searchInput}"`
                 : "Tambahkan satuan produk pertama Anda"}
@@ -125,20 +125,20 @@ export function UnitTable({
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-stone-200">
-                    <th className="text-left p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                  <tr className="border-b border-white/10">
+                    <th className="text-left p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
                       Nama Satuan
                     </th>
-                    <th className="text-left p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                    <th className="text-left p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
                       Deskripsi
                     </th>
-                    <th className="text-center p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                    <th className="text-center p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
                       Digunakan
                     </th>
-                    <th className="text-left p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                    <th className="text-left p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
                       Dibuat
                     </th>
-                    <th className="text-right p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
+                    <th className="text-right p-4 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
                       Aksi
                     </th>
                   </tr>
@@ -147,24 +147,24 @@ export function UnitTable({
                   {units.map((unit, index) => (
                     <tr
                       key={unit.id}
-                      className={`border-b border-stone-100 hover:bg-stone-50 transition-colors ${
-                        index % 2 === 0 ? "bg-white/20" : ""
+                      className={`border-b border-white/10 hover:bg-white/5 transition-colors ${
+                        index % 2 === 0 ? "bg-white/5" : ""
                       }`}
                     >
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <div
-                            className="p-2 rounded-lg bg-stone-100 border border-stone-200"
+                            className="p-2 rounded-lg bg-white/10 border border-white/10"
                           >
-                            <Package className="w-4 h-4 text-stone-600" />
+                            <Package className="w-4 h-4 text-stone-400" />
                           </div>
-                          <span className="font-semibold text-stone-900">
+                          <span className="font-semibold text-stone-100">
                             {unit.name}
                           </span>
                         </div>
                       </td>
                       <td className="p-4">
-                        <span className="text-sm text-stone-600">
+                        <span className="text-sm text-stone-400">
                           {unit.description || "-"}
                         </span>
                       </td>
@@ -172,15 +172,15 @@ export function UnitTable({
                         <span
                           className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
                             unit._count.productUnits > 0
-                              ? "bg-green-100 text-green-700 border border-green-200"
-                              : "bg-stone-100 text-stone-600 border border-stone-200"
+                              ? "bg-green-500/15 text-green-300 border border-green-500/25"
+                              : "bg-white/10 text-stone-400 border border-white/10"
                           }`}
                         >
                           {unit._count.productUnits} Produk
                         </span>
                       </td>
                       <td className="p-4">
-                        <div className="flex items-center gap-2 text-sm text-stone-600">
+                        <div className="flex items-center gap-2 text-sm text-stone-400">
                           <Calendar className="w-4 h-4" />
                           <span>
                             {format(new Date(unit.createdAt), "dd MMM yyyy", {
@@ -193,17 +193,17 @@ export function UnitTable({
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => onEdit(unit)}
-                            className="p-2 rounded-lg hover:bg-stone-100 transition-colors group"
+                            className="p-2 rounded-lg hover:bg-white/10 transition-colors group"
                             title="Edit"
                           >
-                            <Edit className="w-4 h-4 text-stone-600 group-hover:scale-110 transition-transform" />
+                            <Edit className="w-4 h-4 text-stone-400 group-hover:scale-110 transition-transform" />
                           </button>
                           <button
                             onClick={() => onDelete(unit)}
-                            className="p-2 rounded-lg hover:bg-red-50 transition-colors group"
+                            className="p-2 rounded-lg hover:bg-red-500/10 transition-colors group"
                             title="Hapus"
                           >
-                            <Trash2 className="w-4 h-4 text-red-800 group-hover:scale-110 transition-transform" />
+                            <Trash2 className="w-4 h-4 text-red-300 group-hover:scale-110 transition-transform" />
                           </button>
                         </div>
                       </td>
@@ -218,20 +218,20 @@ export function UnitTable({
               {units.map((unit) => (
                 <div
                   key={unit.id}
-                  className="glass-card p-4 space-y-3 hover:bg-white/60 transition-colors"
+                  className="glass-card p-4 space-y-3 bg-white/15 border-white/10 hover:bg-white/20 transition-colors"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div
-                        className="p-2 rounded-lg bg-stone-100 border border-stone-200"
+                        className="p-2 rounded-lg bg-white/10 border border-white/10"
                       >
-                        <Package className="w-4 h-4 text-stone-600" />
+                        <Package className="w-4 h-4 text-stone-400" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-stone-900">
+                        <h4 className="font-semibold text-stone-100">
                           {unit.name}
                         </h4>
-                        <p className="text-xs text-stone-600 mt-0.5">
+                        <p className="text-xs text-stone-400 mt-0.5">
                           {unit.description || "Tidak ada deskripsi"}
                         </p>
                       </div>
@@ -239,16 +239,16 @@ export function UnitTable({
                     <span
                       className={`text-xs font-semibold px-2 py-1 rounded-full ${
                         unit._count.productUnits > 0
-                          ? "bg-green-100 text-green-700"
-                          : "bg-stone-100 text-stone-600"
+                          ? "bg-green-500/15 text-green-300"
+                          : "bg-white/10 text-stone-400"
                       }`}
                     >
                       {unit._count.productUnits}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between pt-3 border-t border-stone-200">
-                    <div className="flex items-center gap-2 text-xs text-stone-600">
+                  <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                    <div className="flex items-center gap-2 text-xs text-stone-400">
                       <Calendar className="w-3.5 h-3.5" />
                       <span>
                         {format(new Date(unit.createdAt), "dd MMM yyyy", {
@@ -259,15 +259,15 @@ export function UnitTable({
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => onEdit(unit)}
-                        className="p-2 rounded-lg hover:bg-stone-100 transition-colors"
+                        className="p-2 rounded-lg hover:bg-white/10 transition-colors"
                       >
-                        <Edit className="w-4 h-4 text-stone-600" />
+                        <Edit className="w-4 h-4 text-stone-400" />
                       </button>
                       <button
                         onClick={() => onDelete(unit)}
-                        className="p-2 rounded-lg hover:bg-red-50 transition-colors"
+                        className="p-2 rounded-lg hover:bg-red-500/10 transition-colors"
                       >
-                        <Trash2 className="w-4 h-4 text-red-800" />
+                        <Trash2 className="w-4 h-4 text-red-300" />
                       </button>
                     </div>
                   </div>
@@ -282,7 +282,7 @@ export function UnitTable({
       {!loading && units.length > 0 && pagination.totalPages > 1 && (
         <div className="glass-card p-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-stone-600">
+            <p className="text-sm text-stone-400">
               Menampilkan {(pagination.page - 1) * pagination.limit + 1} -{" "}
               {Math.min(pagination.page * pagination.limit, pagination.total)} dari{" "}
               {pagination.total} satuan
@@ -291,7 +291,7 @@ export function UnitTable({
               <button
                 onClick={() => onPageChange(pagination.page - 1)}
                 disabled={pagination.page === 1}
-                className="px-4 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-stone-100"
+                className="px-4 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/10"
               >
                 Prev
               </button>
@@ -314,7 +314,7 @@ export function UnitTable({
                       className={`w-10 h-10 rounded-lg font-semibold text-sm transition-all ${
                         pagination.page === page
                           ? "bg-red-900 text-white shadow-lg"
-                          : "hover:bg-stone-100 text-stone-700"
+                          : "hover:bg-white/10 text-stone-300"
                       }`}
                     >
                       {page}
@@ -324,7 +324,7 @@ export function UnitTable({
               <button
                 onClick={() => onPageChange(pagination.page + 1)}
                 disabled={pagination.page === pagination.totalPages}
-                className="px-4 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-stone-100"
+                className="px-4 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/10"
               >
                 Next
               </button>

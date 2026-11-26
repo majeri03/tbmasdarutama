@@ -98,9 +98,9 @@ function yToLat(y: number, z: number) {
 }
 
 function statusColor(status?: string | null) {
-  if (status === "ACTIVE") return "bg-[#15803D]";
-  if (status === "IDLE") return "bg-[#B45309]";
-  return "bg-stone-400";
+  if (status === "ACTIVE") return "bg-[#16A34A]";
+  if (status === "IDLE") return "bg-[#D97706]";
+  return "bg-stone-500";
 }
 
 /** Lokasi terakhir kendaraan (bersarang dari API), atau null kalau belum ada GPS. */
@@ -384,8 +384,8 @@ export function FleetMap() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-stone-900">Armada &amp; GPS Live</h1>
-          <p className="page-subtitle">
+          <h1 className="text-2xl font-bold text-stone-100">Armada &amp; GPS Live</h1>
+          <p className="text-sm text-stone-400">
             Posisi terakhir kendaraan — diperbarui otomatis tiap 15 detik dari HP sopir
           </p>
         </div>
@@ -404,7 +404,7 @@ export function FleetMap() {
       </div>
 
       {error && (
-        <div className="p-4 bg-[rgba(153,27,27,0.06)] border border-[rgba(153,27,27,0.2)] rounded-lg text-[#991B1B]">
+        <div className="p-4 bg-[rgba(229,72,77,0.10)] border border-[rgba(229,72,77,0.25)] rounded-lg text-[#E5484D]">
           {error}
         </div>
       )}
@@ -421,7 +421,7 @@ export function FleetMap() {
             onPointerLeave={onPointerUp}
           >
             {loading ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-20">
+              <div className="absolute inset-0 flex items-center justify-center bg-[#141210]/70 z-20">
                 <div className="spinner-large" />
               </div>
             ) : (
@@ -475,31 +475,31 @@ export function FleetMap() {
             <div className="absolute top-3 right-3 z-20 flex flex-col gap-1">
               <button
                 onClick={() => setZoom((z) => Math.min(18, z + 1))}
-                className="w-9 h-9 bg-white rounded-lg shadow flex items-center justify-center hover:bg-stone-50"
+                className="w-9 h-9 bg-[#211E1B] border border-white/10 rounded-lg shadow-lg text-stone-100 flex items-center justify-center hover:bg-white/10"
                 aria-label="Perbesar"
               >
                 <Plus className="w-5 h-5" />
               </button>
               <button
                 onClick={() => setZoom((z) => Math.max(5, z - 1))}
-                className="w-9 h-9 bg-white rounded-lg shadow flex items-center justify-center hover:bg-stone-50"
+                className="w-9 h-9 bg-[#211E1B] border border-white/10 rounded-lg shadow-lg text-stone-100 flex items-center justify-center hover:bg-white/10"
                 aria-label="Perkecil"
               >
                 <Minus className="w-5 h-5" />
               </button>
               <button
                 onClick={recenter}
-                className="w-9 h-9 bg-white rounded-lg shadow flex items-center justify-center hover:bg-stone-50"
+                className="w-9 h-9 bg-[#211E1B] border border-white/10 rounded-lg shadow-lg text-stone-100 flex items-center justify-center hover:bg-white/10"
                 aria-label="Pusatkan ke armada"
               >
                 <Navigation className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="absolute bottom-2 left-2 z-20 text-[11px] bg-white/80 px-2 py-0.5 rounded">
+            <div className="absolute bottom-2 left-2 z-20 text-[11px] bg-black/60 text-stone-300 px-2 py-0.5 rounded">
               © OpenStreetMap contributors
               {lastUpdate && (
-                <span className="text-stone-500">
+                <span className="text-stone-400">
                   {" • "}update {format(lastUpdate, "HH:mm:ss")}
                 </span>
               )}
@@ -507,18 +507,18 @@ export function FleetMap() {
           </div>
 
           {selected && (
-            <div className="p-4 border-t border-stone-200">
+            <div className="p-4 border-t border-white/10">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <p className="font-bold text-stone-900">
+                  <p className="font-bold text-stone-100">
                     {selected.plateNumber} — {selected.brand || selected.vehicleType || "-"}
                   </p>
-                  <p className="text-sm text-stone-600">
+                  <p className="text-sm text-stone-400">
                     Sopir: {selected.driverName || "-"}
                     {selected.driverPhone ? ` (${selected.driverPhone})` : ""}
                     {selected.coDriverName ? ` • Pendamping: ${selected.coDriverName}` : ""}
                   </p>
-                  <p className="text-sm text-stone-600 flex items-center gap-1">
+                  <p className="text-sm text-stone-400 flex items-center gap-1">
                     <MapPin className="w-4 h-4" />
                     {locOf(selected)?.address || "Alamat tidak diketahui"}
                   </p>
@@ -548,13 +548,13 @@ export function FleetMap() {
 
         {/* Daftar kendaraan */}
         <div className="glass-card p-4">
-          <h2 className="font-semibold text-stone-900 mb-3">
+          <h2 className="font-semibold text-stone-100 mb-3">
             Kendaraan ({vehicles.length})
           </h2>
           {loading ? (
-            <p className="text-sm text-stone-500">Memuat...</p>
+            <p className="text-sm text-stone-400">Memuat...</p>
           ) : vehicles.length === 0 ? (
-            <p className="text-sm text-stone-500">
+            <p className="text-sm text-stone-400">
               {isKasir
                 ? "Kamu belum ditugaskan ke kendaraan apa pun — hubungi admin."
                 : canManage
@@ -571,18 +571,18 @@ export function FleetMap() {
                     onClick={() => focusVehicle(v)}
                     className={`w-full text-left p-3 border rounded-lg transition-colors cursor-pointer ${
                       v.id === selectedId
-                        ? "border-[#7F1D1D] bg-[rgba(127,29,29,0.06)]"
-                        : "border-stone-200 hover:border-stone-300"
+                        ? "border-[#E5484D] bg-[rgba(229,72,77,0.08)]"
+                        : "border-white/10 hover:border-white/25"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <p className="font-semibold text-sm">{v.plateNumber}</p>
+                      <p className="font-semibold text-sm text-stone-100">{v.plateNumber}</p>
                       <span
                         className={`w-2.5 h-2.5 rounded-full ${statusColor(v.status)}`}
                         title={v.status || ""}
                       />
                     </div>
-                    <p className="text-xs text-stone-600">
+                    <p className="text-xs text-stone-400">
                       {v.brand || v.vehicleType || "-"} • {v.driverName || "Tanpa sopir"}
                       {v.coDriverName ? ` • Pendamping: ${v.coDriverName}` : ""}
                     </p>
@@ -598,7 +598,7 @@ export function FleetMap() {
                             e.stopPropagation();
                             openEditForm(v);
                           }}
-                          className="flex items-center gap-1 text-xs font-semibold text-[#7F1D1D] hover:text-[#991B1B]"
+                          className="flex items-center gap-1 text-xs font-semibold text-[#E5484D] hover:text-[#F87171]"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                           Edit
@@ -608,7 +608,7 @@ export function FleetMap() {
                             e.stopPropagation();
                             deactivateVehicle(v);
                           }}
-                          className="flex items-center gap-1 text-xs font-semibold text-[#991B1B] hover:text-[#7F1D1D]"
+                          className="flex items-center gap-1 text-xs font-semibold text-[#E5484D] hover:text-[#F87171]"
                         >
                           <Power className="w-3.5 h-3.5" />
                           Nonaktifkan
@@ -632,12 +632,12 @@ export function FleetMap() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="glass-card w-full max-w-lg max-h-[90vh] overflow-y-auto p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg text-stone-900">
+              <h3 className="font-bold text-lg text-stone-100">
                 {editingId ? "Edit Kendaraan" : "Tambah Kendaraan"}
               </h3>
               <button
                 onClick={() => setShowForm(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-stone-100"
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-stone-300 hover:bg-white/10"
                 aria-label="Tutup"
               >
                 <X className="w-5 h-5" />
@@ -645,14 +645,14 @@ export function FleetMap() {
             </div>
 
             {formError && (
-              <div className="p-3 mb-4 bg-[rgba(153,27,27,0.06)] border border-[rgba(153,27,27,0.2)] rounded-lg text-sm text-[#991B1B]">
+              <div className="p-3 mb-4 bg-[rgba(229,72,77,0.10)] border border-[rgba(229,72,77,0.25)] rounded-lg text-sm text-[#E5484D]">
                 {formError}
               </div>
             )}
 
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">
+                <label className="block text-sm font-medium text-stone-300 mb-1">
                   Nomor Plat *
                 </label>
                 <input
@@ -665,7 +665,7 @@ export function FleetMap() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-1">
+                  <label className="block text-sm font-medium text-stone-300 mb-1">
                     Jenis Kendaraan
                   </label>
                   <select
@@ -681,7 +681,7 @@ export function FleetMap() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-1">
+                  <label className="block text-sm font-medium text-stone-300 mb-1">
                     Status
                   </label>
                   <select
@@ -700,7 +700,7 @@ export function FleetMap() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-1">
+                  <label className="block text-sm font-medium text-stone-300 mb-1">
                     Merek
                   </label>
                   <input
@@ -711,7 +711,7 @@ export function FleetMap() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-1">
+                  <label className="block text-sm font-medium text-stone-300 mb-1">
                     Tahun
                   </label>
                   <input
@@ -725,7 +725,7 @@ export function FleetMap() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">
+                <label className="block text-sm font-medium text-stone-300 mb-1">
                   Sopir Utama (akun)
                 </label>
                 <select
@@ -754,7 +754,7 @@ export function FleetMap() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">
+                <label className="block text-sm font-medium text-stone-300 mb-1">
                   Sopir Pendamping (opsional)
                 </label>
                 <select
@@ -784,7 +784,7 @@ export function FleetMap() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">
+                <label className="block text-sm font-medium text-stone-300 mb-1">
                   Nama Sopir
                 </label>
                 <input
@@ -796,7 +796,7 @@ export function FleetMap() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">
+                <label className="block text-sm font-medium text-stone-300 mb-1">
                   No HP Sopir
                 </label>
                 <input

@@ -88,15 +88,15 @@ function ResetPasswordForm() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="min-h-screen flex items-center justify-center p-6 bg-[#141210]">
         <div className="glass-card p-8 max-w-md w-full text-center">
-          <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="w-8 h-8 text-green-600" />
+          <div className="w-16 h-16 rounded-full bg-green-500/15 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="w-8 h-8 text-green-400" />
           </div>
-          <h2 className="text-2xl font-bold tracking-tight text-[#1C1917] mb-2">
+          <h2 className="text-2xl font-bold tracking-tight text-stone-100 mb-2">
             Password Berhasil Direset!
           </h2>
-          <p className="text-stone-600 mb-6">
+          <p className="text-stone-400 mb-6">
             Anda akan diarahkan ke halaman login...
           </p>
           <Link href="/login" className="btn-primary inline-flex">
@@ -108,7 +108,7 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-[#141210]">
       {toast && (
         <Toast message={toast.message} type={toast.type} onClose={hideToast} />
       )}
@@ -118,8 +118,8 @@ function ResetPasswordForm() {
           <div className="w-16 h-16 rounded-full bg-[#7F1D1D] flex items-center justify-center mx-auto mb-4">
             <Lock className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#1C1917]">Reset Password</h1>
-          <p className="text-stone-600 mt-2">Masukkan password baru Anda</p>
+          <h1 className="text-2xl font-bold tracking-tight text-stone-100">Reset Password</h1>
+          <p className="text-stone-400 mt-2">Masukkan password baru Anda</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -139,7 +139,7 @@ function ResetPasswordForm() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-300"
               >
                 {showPassword ? (
                   <EyeOff className="w-5 h-5" />
@@ -169,7 +169,7 @@ function ResetPasswordForm() {
               <button
                 type="button"
                 onClick={() => setShowConfirm(!showConfirm)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-300"
               >
                 {showConfirm ? (
                   <EyeOff className="w-5 h-5" />
@@ -180,7 +180,7 @@ function ResetPasswordForm() {
             </div>
             {formData.confirmPassword &&
               formData.newPassword !== formData.confirmPassword && (
-                <p className="text-xs text-red-500 mt-1">Password tidak cocok</p>
+                <p className="text-xs text-red-400 mt-1">Password tidak cocok</p>
               )}
           </div>
 
@@ -208,7 +208,7 @@ function ResetPasswordForm() {
         <div className="mt-6 text-center">
           <Link
             href="/login"
-            className="text-sm text-stone-600 hover:text-[#7F1D1D] font-medium"
+            className="text-sm text-stone-400 hover:text-[#E5484D] font-medium"
           >
             ← Kembali ke Login
           </Link>

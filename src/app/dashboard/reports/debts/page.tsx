@@ -91,7 +91,7 @@ export default function DebtsReportPage() {
       {reportData ? (
         <>
           <div className="mb-4 flex gap-3 justify-end print:hidden">
-            <button onClick={handleGenerateReport} className="inline-flex items-center gap-2 rounded-lg border border-[rgba(28,25,23,0.16)] bg-white px-4 py-2 text-sm font-semibold text-[#1C1917] hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50">
+            <button onClick={handleGenerateReport} className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-stone-100 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50">
               Refresh Data
             </button>
             <ReportDownloadButton
@@ -106,12 +106,12 @@ export default function DebtsReportPage() {
         </>
       ) : (
         <div className="text-center py-12">
-          <p className="text-stone-500 mb-4">Klik tombol di bawah untuk generate laporan</p>
+          <p className="text-stone-400 mb-4">Klik tombol di bawah untuk generate laporan</p>
           <button onClick={handleGenerateReport} className="inline-flex items-center gap-2 rounded-lg bg-[#7F1D1D] px-4 py-2 text-sm font-semibold text-white hover:bg-[#991B1B] disabled:cursor-not-allowed disabled:opacity-50">
             Generate Laporan
           </button>
           {error && (
-            <p className="mt-4 text-sm text-[#991B1B]">{error}</p>
+            <p className="mt-4 text-sm text-[#E5484D]">{error}</p>
           )}
         </div>
       )}

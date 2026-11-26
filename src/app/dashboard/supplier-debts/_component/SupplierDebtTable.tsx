@@ -23,7 +23,7 @@ export function SupplierDebtTable({
   if (debts.length === 0) {
     return (
       <div className="glass-card p-12 text-center">
-        <p className="text-stone-500">Tidak ada data utang supplier</p>
+        <p className="text-stone-400">Tidak ada data utang supplier</p>
       </div>
     );
   }
@@ -33,85 +33,85 @@ export function SupplierDebtTable({
   };
 
   return (
-    <div className="glass-card overflow-hidden">
+    <div className="glass-card overflow-hidden bg-white/15 border-white/10">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-stone-50 border-b border-stone-200">
+          <thead className="bg-white/5 border-b border-white/10">
             <tr>
-              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-400 uppercase tracking-wider">
                 No. Utang
               </th>
-              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-400 uppercase tracking-wider">
                 Supplier
               </th>
-              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-400 uppercase tracking-wider">
                 PO Number
               </th>
-              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-400 uppercase tracking-wider">
                 Total Utang
               </th>
-              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-400 uppercase tracking-wider">
                 Terbayar
               </th>
-              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-400 uppercase tracking-wider">
                 Sisa
               </th>
-              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-400 uppercase tracking-wider">
                 Jatuh Tempo
               </th>
-              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-400 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-[11px] font-semibold text-stone-400 uppercase tracking-wider">
                 Aksi
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-stone-200">
+          <tbody className="divide-y divide-white/10">
             {debts.map((debt) => (
-              <tr key={debt.id} className="hover:bg-stone-50 transition-colors">
+              <tr key={debt.id} className="hover:bg-white/5 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm font-medium text-stone-900">
+                  <span className="text-sm font-medium text-stone-100">
                     {debt.debtNumber}
                   </span>
                 </td>
                 <td className="px-6 py-4">
                   <div className="text-sm">
-                    <p className="font-medium text-stone-900">
+                    <p className="font-medium text-stone-100">
                       {debt.supplier.name}
                     </p>
-                    <p className="text-stone-500">{debt.supplier.code}</p>
+                    <p className="text-stone-400">{debt.supplier.code}</p>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm text-stone-900 tabular-nums">
+                  <span className="text-sm text-stone-100 tabular-nums">
                     {debt.purchase.poNumber}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm font-semibold text-stone-900">
+                  <span className="text-sm font-semibold text-stone-100">
                     {formatCurrency(debt.totalDebt)}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm text-green-700 tabular-nums">
+                  <span className="text-sm text-green-300 tabular-nums">
                     {formatCurrency(debt.paidAmount)}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm font-semibold text-red-800">
+                  <span className="text-sm font-semibold text-red-300">
                     {formatCurrency(debt.remainingDebt)}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm">
-                    <p className={isOverdue(debt.dueDate) ? "text-red-800 font-semibold" : "text-stone-900"}>
+                    <p className={isOverdue(debt.dueDate) ? "text-red-300 font-semibold" : "text-stone-100"}>
                       {format(new Date(debt.dueDate), "dd MMM yyyy", {
                         locale: id,
                       })}
                     </p>
                     {isOverdue(debt.dueDate) && debt.status !== "PAID" && (
-                      <p className="text-xs text-red-800">Lewat jatuh tempo</p>
+                      <p className="text-xs text-red-300">Lewat jatuh tempo</p>
                     )}
                   </div>
                 </td>
@@ -122,7 +122,7 @@ export function SupplierDebtTable({
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => onView(debt)}
-                      className="p-2 text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
+                      className="p-2 text-stone-400 hover:bg-white/10 rounded-lg transition-colors"
                       title="Lihat Detail"
                     >
                       <Eye className="w-4 h-4" />
@@ -130,7 +130,7 @@ export function SupplierDebtTable({
                     {debt.status !== "PAID" && (
                       <button
                         onClick={() => onPay(debt)}
-                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                        className="p-2 text-green-400 hover:bg-green-500/10 rounded-lg transition-colors"
                         title="Bayar"
                       >
                         <DollarSign className="w-4 h-4" />
@@ -139,7 +139,7 @@ export function SupplierDebtTable({
                     {debt.status === "UNPAID" && debt._count?.payments === 0 && (
                       <button
                         onClick={() => onDelete(debt)}
-                        className="p-2 text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2 text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
                         title="Hapus"
                       >
                         <Trash2 className="w-4 h-4" />

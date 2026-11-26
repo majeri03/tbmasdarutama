@@ -152,11 +152,11 @@ export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuc
     };
 
     const paymentMethods = [
-        { value: "CASH", label: "Cash", icon: Banknote, color: "from-green-500 to-green-600" },
-        { value: "TRANSFER", label: "Transfer", icon: Landmark, color: "from-teal-500 to-teal-600" },
-        { value: "QRIS", label: "QRIS", icon: QrCode, color: "from-stone-600 to-stone-700" },
-        { value: "DEBIT_CARD", label: "Debit", icon: CreditCard, color: "from-red-900 to-red-800" },
-        { value: "CREDIT", label: "Kredit", icon: Wallet, color: "from-orange-500 to-orange-600" },
+        { value: "CASH", label: "Cash", icon: Banknote, color: "bg-green-600" },
+        { value: "TRANSFER", label: "Transfer", icon: Landmark, color: "bg-teal-600" },
+        { value: "QRIS", label: "QRIS", icon: QrCode, color: "bg-stone-600" },
+        { value: "DEBIT_CARD", label: "Debit", icon: CreditCard, color: "bg-[#7F1D1D]" },
+        { value: "CREDIT", label: "Kredit", icon: Wallet, color: "bg-orange-600" },
     ];
 
     return (
@@ -166,12 +166,12 @@ export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuc
                 {/* Modal */}
                 <div className="modal-container w-full max-w-lg">
                     {/* Header */}
-                    <div className="flex items-center justify-between p-4 border-b border-stone-200">
-                        <h2 className="text-lg font-semibold text-stone-900">Pembayaran</h2>
+                    <div className="flex items-center justify-between p-4 border-b border-white/10">
+                        <h2 className="text-lg font-semibold text-stone-100">Pembayaran</h2>
                         <button
                             onClick={onClose}
                             disabled={isLoading}
-                            className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 transition-colors"
+                            className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-white/10 text-stone-400 hover:bg-white/15 hover:text-stone-300 transition-colors"
                         >
                             <X className="w-5 h-5" />
                         </button>
@@ -180,10 +180,10 @@ export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuc
                     {/* Content */}
                     <div className="p-4 space-y-4">
                         {/* Customer Info */}
-                        <div className="p-3 bg-red-900/5 rounded-xl">
-                            <p className="text-sm text-stone-600">Customer</p>
-                            <p className="font-semibold text-stone-900">{customer.name}</p>
-                            <p className="text-xs text-stone-500">{customer.code} • {customer.type}</p>
+                        <div className="p-3 bg-[#E5484D]/10 rounded-xl">
+                            <p className="text-sm text-stone-400">Customer</p>
+                            <p className="font-semibold text-stone-100">{customer.name}</p>
+                            <p className="text-xs text-stone-400">{customer.code} • {customer.type}</p>
                         </div>
 
                         {/* Total */}
@@ -207,14 +207,14 @@ export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuc
                                             onClick={() => setPaymentMethod(method.value as PaymentMethod)}
                                             disabled={isLoading}
                                             className={`p-3 rounded-xl border-2 transition-all ${isSelected
-                                                ? `border-red-900 bg-red-900/5`
-                                                : "border-stone-200 hover:border-stone-300"
+                                                ? `border-[#E5484D] bg-[#E5484D]/10`
+                                                : "border-white/10 hover:border-white/15"
                                                 }`}
                                         >
-                                            <div className={`w-10 h-10 rounded-full bg-gradient-to-r ${method.color} mx-auto mb-2 flex items-center justify-center`}>
+                                            <div className={`w-10 h-10 rounded-full ${method.color} mx-auto mb-2 flex items-center justify-center`}>
                                                 <Icon className="w-5 h-5 text-white" />
                                             </div>
-                                            <p className="text-xs font-medium text-stone-900">{method.label}</p>
+                                            <p className="text-xs font-medium text-stone-100">{method.label}</p>
                                         </button>
                                     );
                                 })}
@@ -245,13 +245,13 @@ export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuc
                                         <img
                                             src={proofUrl}
                                             alt="Bukti pembayaran"
-                                            className="w-full max-h-48 object-contain rounded-xl border border-stone-200 bg-stone-50"
+                                            className="w-full max-h-48 object-contain rounded-xl border border-white/10 bg-white/5"
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setProofUrl(null)}
                                             disabled={isLoading}
-                                            className="absolute top-2 right-2 p-2 bg-white rounded-full shadow text-red-800 hover:bg-red-50"
+                                            className="absolute top-2 right-2 p-2 bg-[#1C1917] rounded-full shadow text-red-300 hover:bg-red-500/10"
                                             aria-label="Hapus bukti"
                                         >
                                             <Trash2 className="w-4 h-4" />
@@ -262,7 +262,7 @@ export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuc
                                         type="button"
                                         onClick={() => fileInputRef.current?.click()}
                                         disabled={isLoading || proofUploading}
-                                        className="w-full py-3 border-2 border-dashed border-stone-300 rounded-xl text-stone-600 hover:border-red-900 hover:text-red-900 flex items-center justify-center gap-2 disabled:opacity-50"
+                                        className="w-full py-3 border-2 border-dashed border-white/15 rounded-xl text-stone-400 hover:border-[#E5484D] hover:text-[#E5484D] flex items-center justify-center gap-2 disabled:opacity-50"
                                     >
                                         {proofUploading ? (
                                             <>
@@ -288,13 +288,13 @@ export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuc
                                         Jumlah Bayar
                                     </label>
                                     <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500">Rp</span>
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400">Rp</span>
                                         <input
                                             type="number"
                                             value={paidAmount}
                                             onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
                                             disabled={isLoading || isTransferOrQris}
-                                            className="w-full pl-10 pr-3 py-3 border border-stone-200 rounded-xl text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-red-900 disabled:bg-stone-50"
+                                            className="w-full pl-10 pr-3 py-3 border border-white/10 rounded-xl text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-[#E5484D] disabled:bg-white/5"
                                         />
                                     </div>
                                     {/* Quick Amount Buttons */}
@@ -304,7 +304,7 @@ export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuc
                                                 key={amount}
                                                 onClick={() => setPaidAmount(calculation.grandTotal + amount)}
                                                 disabled={isLoading}
-                                                className="px-2 py-1 text-xs bg-stone-100 hover:bg-stone-200 rounded transition-colors"
+                                                className="px-2 py-1 text-xs bg-white/10 hover:bg-white/15 rounded transition-colors"
                                             >
                                                 +{amount / 1000}k
                                             </button>
@@ -313,17 +313,17 @@ export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuc
                                 </div>
 
                                 {/* Change */}
-                                <div className="p-3 bg-green-50 rounded-xl">
-                                    <p className="text-sm text-stone-600">Kembalian</p>
-                                    <p className="text-2xl font-bold text-green-700">{formatCurrency(changeAmount)}</p>
+                                <div className="p-3 bg-green-500/10 rounded-xl">
+                                    <p className="text-sm text-stone-400">Kembalian</p>
+                                    <p className="text-2xl font-bold text-green-400">{formatCurrency(changeAmount)}</p>
                                 </div>
                             </>
                         )}
 
                         {/* Credit Warning */}
                         {paymentMethod === "CREDIT" && (
-                            <div className="p-3 bg-orange-50 border border-orange-200 rounded-xl">
-                                <p className="text-sm text-orange-800">
+                            <div className="p-3 bg-orange-500/10 border border-orange-500/30 rounded-xl">
+                                <p className="text-sm text-orange-300">
                                     ⚠️ Pembayaran kredit akan dicatat sebagai utang customer
                                 </p>
                             </div>
@@ -331,11 +331,11 @@ export function PaymentModal({ isOpen, onClose, items, customer, discount, onSuc
                     </div>
 
                     {/* Footer */}
-                    <div className="p-4 border-t border-stone-200 flex gap-2 bg-stone-50">
+                    <div className="p-4 border-t border-white/10 flex gap-2 bg-white/5">
                         <button
                             onClick={onClose}
                             disabled={isLoading}
-                            className="flex-1 px-4 py-3 border border-stone-200 rounded-xl hover:bg-stone-50 transition-colors"
+                            className="flex-1 px-4 py-3 border border-white/10 rounded-xl hover:bg-white/5 transition-colors"
                         >
                             Batal
                         </button>

@@ -13,8 +13,9 @@ export default function DashboardLayout({
 
   return (
     <SessionProvider>
-      {/* Latar body (paper hangat + dot grid + cahaya lembut) sudah diatur
-          di globals.css — div ini transparan supaya tekstur itu terlihat. */}
+      {/* Latar body (arang hangat #141210 + dot grid putih 5% + grain +
+          2 bidang cahaya hangat redup) sudah diatur di globals.css — div
+          ini transparan supaya tekstur itu terlihat. */}
       <div className="flex min-h-screen overflow-x-hidden">
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <div className="flex-1 w-full md:ml-64 transition-all duration-300">
@@ -26,9 +27,9 @@ export default function DashboardLayout({
               aria-label="Buka menu"
             >
               <svg width="28" height="28" fill="none" viewBox="0 0 24 24">
-                <rect y="5" width="24" height="2" rx="1" fill="#7F1D1D" />
-                <rect y="11" width="24" height="2" rx="1" fill="#7F1D1D" />
-                <rect y="17" width="24" height="2" rx="1" fill="#7F1D1D" />
+                <rect y="5" width="24" height="2" rx="1" fill="#E5484D" />
+                <rect y="11" width="24" height="2" rx="1" fill="#E5484D" />
+                <rect y="17" width="24" height="2" rx="1" fill="#E5484D" />
               </svg>
             </button>
             <NotificationBell />

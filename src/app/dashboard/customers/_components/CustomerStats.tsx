@@ -27,14 +27,14 @@ export function CustomerStats({
       <div className="glass-card p-6 hover-card">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-stone-500 mb-1">Total Customer</p>
-            <h3 className="text-3xl font-semibold tabular-nums text-stone-900">
+            <p className="text-sm text-stone-400 mb-1">Total Customer</p>
+            <h3 className="text-3xl font-semibold tabular-nums text-stone-100">
               {totalCustomers}
             </h3>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center">
             <svg
-              className="w-6 h-6 text-stone-600"
+              className="w-6 h-6 text-stone-400"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -54,14 +54,14 @@ export function CustomerStats({
       <div className="glass-card p-6 hover-card">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-stone-500 mb-1">Customer Aktif</p>
-            <h3 className="text-3xl font-semibold tabular-nums text-stone-900">
+            <p className="text-sm text-stone-400 mb-1">Customer Aktif</p>
+            <h3 className="text-3xl font-semibold tabular-nums text-stone-100">
               {activeCustomers}
             </h3>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center">
             <svg
-              className="w-6 h-6 text-stone-600"
+              className="w-6 h-6 text-stone-400"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -81,14 +81,14 @@ export function CustomerStats({
       <div className="glass-card p-6 hover-card">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-stone-500 mb-1">Customer Nonaktif</p>
-            <h3 className="text-3xl font-semibold tabular-nums text-stone-900">
+            <p className="text-sm text-stone-400 mb-1">Customer Nonaktif</p>
+            <h3 className="text-3xl font-semibold tabular-nums text-stone-100">
               {inactiveCustomers}
             </h3>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center">
             <svg
-              className="w-6 h-6 text-stone-600"
+              className="w-6 h-6 text-stone-400"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -108,14 +108,14 @@ export function CustomerStats({
       <div className="glass-card p-6 hover-card">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-stone-500 mb-1">Total Piutang</p>
-            <h3 className="text-2xl font-semibold tabular-nums text-stone-900">
+            <p className="text-sm text-stone-400 mb-1">Total Piutang</p>
+            <h3 className="text-2xl font-semibold tabular-nums text-stone-100">
               {formatCurrency(totalDebts)}
             </h3>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center">
             <svg
-              className="w-6 h-6 text-stone-600"
+              className="w-6 h-6 text-stone-400"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"

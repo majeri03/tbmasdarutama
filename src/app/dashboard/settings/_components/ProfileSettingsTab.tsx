@@ -43,13 +43,13 @@ export default function ProfileSettingsTab() {
   if (status === "loading") {
     return (
       <div className="max-w-2xl">
-        <h2 className="text-lg font-semibold text-[#1C1917]">Profil Akun</h2>
+        <h2 className="text-lg font-semibold text-stone-100">Profil Akun</h2>
         <p className="mt-1 text-sm text-stone-500">Memuat data akun…</p>
         <div className="mt-6 space-y-4" aria-busy="true">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="border-b border-stone-100 pb-4">
-              <div className="h-3 w-20 animate-pulse rounded bg-stone-200" />
-              <div className="mt-2 h-4 w-56 animate-pulse rounded bg-stone-200" />
+            <div key={i} className="border-b border-white/[0.08] pb-4">
+              <div className="h-3 w-20 animate-pulse rounded bg-white/[0.12]" />
+              <div className="mt-2 h-4 w-56 animate-pulse rounded bg-white/[0.12]" />
             </div>
           ))}
         </div>
@@ -60,7 +60,7 @@ export default function ProfileSettingsTab() {
   if (status === "unauthenticated" || !session?.user) {
     return (
       <div className="max-w-2xl">
-        <h2 className="text-lg font-semibold text-[#1C1917]">Profil Akun</h2>
+        <h2 className="text-lg font-semibold text-stone-100">Profil Akun</h2>
         <p className="mt-1 text-sm text-stone-500">
           Sesi tidak ditemukan. Silakan login ulang untuk melihat profil Anda.
         </p>
@@ -152,7 +152,7 @@ export default function ProfileSettingsTab() {
 
       {/* Foto profil */}
       <section>
-        <h2 className="text-lg font-semibold text-[#1C1917]">Profil Akun</h2>
+        <h2 className="text-lg font-semibold text-stone-100">Profil Akun</h2>
         <p className="mt-1 text-sm text-stone-500">
           Informasi akun Anda. Data ini hanya untuk dilihat.
         </p>
@@ -163,10 +163,10 @@ export default function ProfileSettingsTab() {
             <img
               src={currentAvatarUrl}
               alt="Foto profil"
-              className="h-20 w-20 rounded-full object-cover ring-1 ring-black/[0.08]"
+              className="h-20 w-20 rounded-full object-cover ring-1 ring-white/15"
             />
           ) : (
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-stone-200 text-2xl font-bold text-stone-600 ring-1 ring-black/[0.08]">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/[0.12] text-2xl font-bold text-stone-400 ring-1 ring-white/15">
               {(session.user.name || "U").charAt(0).toUpperCase()}
             </div>
           )}
@@ -195,7 +195,7 @@ export default function ProfileSettingsTab() {
                   type="button"
                   onClick={handleDeleteAvatar}
                   disabled={uploading || deleting}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#991B1B] hover:bg-[#991B1B]/[0.06] rounded-lg transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#E5484D] hover:bg-[#E5484D]/10 rounded-lg transition-colors disabled:opacity-50"
                 >
                   {deleting ? (
                     <>
@@ -224,13 +224,13 @@ export default function ProfileSettingsTab() {
           </div>
         </div>
 
-        <dl className="mt-6 divide-y divide-stone-100 border-y border-stone-100">
+        <dl className="mt-6 divide-y divide-white/[0.08] border-y border-white/[0.08]">
           {rows.map((row) => (
             <div key={row.label} className="py-3">
               <dt className="text-xs font-medium uppercase tracking-wide text-stone-500">
                 {row.label}
               </dt>
-              <dd className="mt-1 text-sm text-[#1C1917]">{row.value}</dd>
+              <dd className="mt-1 text-sm text-stone-100">{row.value}</dd>
             </div>
           ))}
         </dl>
@@ -242,7 +242,7 @@ export default function ProfileSettingsTab() {
 
       {/* Ubah password — pindahan dari tab "Ganti Password" (WS-9). */}
       <section>
-        <h3 className="text-lg font-semibold text-[#1C1917]">Ubah Password</h3>
+        <h3 className="text-lg font-semibold text-stone-100">Ubah Password</h3>
         <p className="mt-1 text-sm text-stone-500">
           Ganti password akun Anda di sini.
         </p>

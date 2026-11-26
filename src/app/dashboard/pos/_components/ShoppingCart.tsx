@@ -34,17 +34,17 @@ export function ShoppingCart({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-stone-200">
+      <div className="flex items-center justify-between p-4 border-b border-white/10">
         <div className="flex items-center gap-2">
-          <CartIcon className="w-5 h-5 text-[#7F1D1D]" />
-          <h2 className="text-lg font-semibold text-stone-900">
+          <CartIcon className="w-5 h-5 text-[#E5484D]" />
+          <h2 className="text-lg font-semibold text-stone-100">
             Keranjang ({items.length})
           </h2>
         </div>
         {items.length > 0 && (
           <button
             onClick={onClear}
-            className="text-sm text-[#991B1B] hover:text-[#991B1B] flex items-center gap-1"
+            className="text-sm text-[#E5484D] hover:opacity-80 flex items-center gap-1"
           >
             <X className="w-4 h-4" />
             Kosongkan
@@ -76,7 +76,7 @@ export function ShoppingCart({
 
       {/* Summary */}
       {items.length > 0 && (
-        <div className="border-t border-stone-200 p-4">
+        <div className="border-t border-white/10 p-4">
           <CartSummary
             calculation={calculation}
             customer={customer}

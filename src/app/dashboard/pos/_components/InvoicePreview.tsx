@@ -222,23 +222,23 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
 
     return (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 print:hidden">
-            <div className="glass-card w-full max-w-4xl h-[92dvh] sm:h-[90vh] flex flex-col bg-white rounded-lg shadow-xl overflow-hidden">
+            <div className="glass-card w-full max-w-4xl h-[92dvh] sm:h-[90vh] flex flex-col bg-[#1C1917] rounded-lg shadow-xl overflow-hidden">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border-b border-stone-200 bg-white gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border-b border-white/10 bg-[#1C1917] gap-3">
                     <div>
-                        <h2 className="text-lg font-semibold text-stone-900">Invoice Preview</h2>
-                        <p className="text-sm text-stone-500">#{invoiceNumber}</p>
+                        <h2 className="text-lg font-semibold text-stone-100">Invoice Preview</h2>
+                        <p className="text-sm text-stone-400">#{invoiceNumber}</p>
                     </div>
 
                     {/* Format Selector Pills */}
-                    <div className="flex items-center gap-1.5 bg-stone-100 p-1 rounded-lg overflow-x-auto">
+                    <div className="flex items-center gap-1.5 bg-white/[0.07] p-1 rounded-lg overflow-x-auto">
                         <button
                             type="button"
                             onClick={() => handleLayoutChange("SURAT_JALAN")}
                             className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap ${
                                 activeLayout === "SURAT_JALAN"
                                     ? "bg-[#7F1D1D] text-white shadow-sm"
-                                    : "text-stone-600 hover:text-stone-900"
+                                    : "text-stone-400 hover:text-stone-100"
                             }`}
                         >
                             Surat Jalan
@@ -249,7 +249,7 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                             className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap ${
                                 activeLayout === "INVOICE_BESAR"
                                     ? "bg-[#7F1D1D] text-white shadow-sm"
-                                    : "text-stone-600 hover:text-stone-900"
+                                    : "text-stone-400 hover:text-stone-100"
                             }`}
                         >
                             Invoice Besar (A4)
@@ -260,7 +260,7 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                             className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap ${
                                 activeLayout === "FAKTUR_NCR"
                                     ? "bg-[#7F1D1D] text-white shadow-sm"
-                                    : "text-stone-600 hover:text-stone-900"
+                                    : "text-stone-400 hover:text-stone-100"
                             }`}
                         >
                             Faktur NCR
@@ -271,7 +271,7 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                             className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap ${
                                 activeLayout === "STRUK_KECIL"
                                     ? "bg-[#7F1D1D] text-white shadow-sm"
-                                    : "text-stone-600 hover:text-stone-900"
+                                    : "text-stone-400 hover:text-stone-100"
                             }`}
                         >
                             Struk (58mm)
@@ -281,7 +281,7 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                     <div className="flex items-center gap-4 self-end sm:self-center">
                         <button
                             onClick={onClose}
-                            className="text-stone-400 hover:text-stone-600 p-1"
+                            className="text-stone-400 hover:text-stone-200 p-1"
                         >
                             <X className="w-5 h-5" />
                         </button>
@@ -290,18 +290,18 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
 
                 {/* Peringatan kalau data toko belum diisi di Pengaturan */}
                 {storeSetting && !storeSetting.name?.trim() && !isLoading && (
-                    <div className="px-4 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-800">
+                    <div className="px-4 py-2 bg-[#FBBF24]/10 border-b border-[#FBBF24]/25 text-xs text-[#FBBF24]">
                         Data toko belum diisi — lengkapi nama, alamat &amp; rekening di Pengaturan agar invoice menampilkan data toko yang benar.
                     </div>
                 )}
 
                 {/* Preview Area (Menggunakan Iframe) */}
-                <div className="flex-1 bg-stone-50 overflow-auto relative" ref={previewWrapRef}>
+                <div className="flex-1 bg-white/[0.04] overflow-auto relative" ref={previewWrapRef}>
                     {isLoading ? (
-                        <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10">
+                        <div className="absolute inset-0 flex items-center justify-center bg-[#141210]/80 z-10">
                             <div className="text-center">
-                                <Loader2 className="w-8 h-8 animate-spin mx-auto text-[#7F1D1D]" />
-                                <p className="text-sm text-stone-500 mt-2">Loading invoice details...</p>
+                                <Loader2 className="w-8 h-8 animate-spin mx-auto text-[#E5484D]" />
+                                <p className="text-sm text-stone-400 mt-2">Loading invoice details...</p>
                             </div>
                         </div>
                     ) : (
@@ -332,11 +332,11 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                 </div>
 
                 {/* Actions */}
-                <div className="p-4 border-t border-stone-200 flex flex-wrap gap-2 bg-white">
+                <div className="p-4 border-t border-white/10 flex flex-wrap gap-2 bg-[#1C1917]">
                     <button
                         onClick={handleThermalPrint}
                         disabled={isPrintingThermal || isLoading || !saleData}
-                        className="flex-1 px-4 py-3 border border-stone-200 rounded-lg hover:bg-stone-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 px-4 py-3 border border-white/15 rounded-lg hover:bg-white/[0.07] text-stone-100 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Cetak struk ke printer thermal Bluetooth (Chrome/Edge)"
                     >
                         {isPrintingThermal ? (
@@ -355,13 +355,13 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                         <ShareInvoiceWhatsApp
                             saleId={saleId}
                             label="WhatsApp"
-                            className="flex-1 px-4 py-3 border border-stone-200 rounded-lg hover:bg-stone-50 transition-colors flex items-center justify-center gap-2 text-[#15803D]"
+                            className="flex-1 px-4 py-3 border border-white/15 rounded-lg hover:bg-white/[0.07] transition-colors flex items-center justify-center gap-2 text-[#4ADE80]"
                         />
                     )}
                     <button
                         onClick={handleDownload}
                         disabled={isProcessingPdf || isLoading || !saleData}
-                        className="flex-1 px-4 py-3 border border-stone-200 rounded-lg hover:bg-stone-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 px-4 py-3 border border-white/15 rounded-lg hover:bg-white/[0.07] text-stone-100 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isProcessingPdf ? (
                             <>

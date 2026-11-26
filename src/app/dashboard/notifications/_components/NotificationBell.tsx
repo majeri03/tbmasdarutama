@@ -57,19 +57,22 @@ export function useUnreadCount(pollMs = 60000): number {
 }
 
 /** Lonceng lengkap (ikon + badge) untuk topbar.
-    Redesain 26 Nov (WS-B): pil kaca putih + hairline, ikon stone-600,
-    badge angka merah gelap solid #7F1D1D (red-900). Logika polling/klik
-    TIDAK diubah. */
+    Mode gelap 26 Nov (WS-B gelap): pil kaca gelap (putih 10% + hairline
+    putih 15% + blur), ikon stone-200, badge angka merah gelap solid
+    #7F1D1D (red-900) — DIPERTAHANKAN, bukan merah terang: angka putih
+    11px tebal di atas #7F1D1D kontrasnya ~10:1, sedangkan di atas
+    #E5484D hanya ~3,9:1; ring putih 70% memisahkan badge dari panel
+    gelap. Logika polling/klik TIDAK diubah. */
 export function NotificationBell({ className = "" }: { className?: string }) {
   const unread = useUnreadCount();
   return (
     <Link
       href="/dashboard/notifications"
-      className={`relative flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(28,25,23,0.08)] bg-white/70 shadow-sm backdrop-blur-md transition-colors hover:bg-white/90 ${className}`}
+      className={`relative flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/10 shadow-sm backdrop-blur-md transition-colors hover:bg-white/[0.16] ${className}`}
       aria-label={`Notifikasi${unread > 0 ? `, ${unread} belum dibaca` : ""}`}
       title="Notifikasi"
     >
-      <Bell className="h-5 w-5 text-stone-600" />
+      <Bell className="h-5 w-5 text-stone-200" />
       {unread > 0 && (
         <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-900 text-white text-[11px] font-bold flex items-center justify-center ring-1 ring-white/70">
           {unread > 99 ? "99+" : unread}
@@ -80,9 +83,11 @@ export function NotificationBell({ className = "" }: { className?: string }) {
 }
 
 /** Ikon lonceng ber-badge untuk dipakai sebagai ikon menu sidebar.
-    Redesain 26 Nov (WS-B): ikon 18px (selaras dengan ikon menu lain —
-    wrapper di Sidebar juga memaksa 18px), badge merah gelap solid
-    #7F1D1D (red-900) + ring putih tipis supaya terbaca di atas kaca. */
+    Mode gelap 26 Nov (WS-B gelap): ikon 18px (selaras dengan ikon menu
+    lain — wrapper di Sidebar juga memaksa 18px; warna ikon mengikuti
+    warna teks menu: stone-300 biasa, #E5484D saat aktif), badge merah
+    gelap solid #7F1D1D (red-900) + ring putih tipis — alasan sama
+    seperti badge di topbar: angka putih paling terbaca di atas #7F1D1D. */
 export function NotificationBellIcon() {
   const unread = useUnreadCount();
   return (

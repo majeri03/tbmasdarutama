@@ -48,7 +48,7 @@ export default function DebtsReportContent({ data }: DebtsReportContentProps) {
   const { customerDebts, supplierDebts, customerDebtSummary, supplierDebtSummary, store } = data;
 
   return (
-    <div id="print-content" className="bg-white p-8 min-h-[297mm] text-[#111111]">
+    <div id="print-content" className="bg-[#1C1917] print:bg-white p-8 min-h-[297mm] text-stone-100 print:text-stone-100 print:text-[#111111]">
       <ReportHeader
         title="Laporan Piutang & Hutang"
         storeName={store?.name}
@@ -91,24 +91,24 @@ export default function DebtsReportContent({ data }: DebtsReportContentProps) {
         <ReportSectionTitle>Detail Piutang Customer</ReportSectionTitle>
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b-2 border-[#111111]">
-              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">No</th>
-              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">Customer</th>
-              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">Invoice</th>
-              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">Jatuh Tempo</th>
-              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-[#111111]">Total</th>
-              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-[#111111]">Dibayar</th>
-              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-[#111111]">Sisa</th>
-              <th className="px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wider text-[#111111]">Status</th>
+            <tr className="border-b-2 border-white/40 print:border-[#111111]">
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">No</th>
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Customer</th>
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Invoice</th>
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Jatuh Tempo</th>
+              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Total</th>
+              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Dibayar</th>
+              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Sisa</th>
+              <th className="px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Status</th>
             </tr>
           </thead>
           <tbody>
             {customerDebts.map((debt, index) => (
-              <tr key={debt.id} className="border-b border-gray-200 even:bg-[#FAFAFA]">
+              <tr key={debt.id} className="border-b border-white/10 print:border-gray-200 even:bg-white/[0.04] print:even:bg-[#FAFAFA]">
                 <td className="px-3 py-2">{index + 1}</td>
                 <td className="px-3 py-2">
                   <div className="font-semibold">{debt.customer.name}</div>
-                  <div className="text-xs text-[#6B7280]">{debt.customer.phone}</div>
+                  <div className="text-xs text-stone-400 print:text-[#6B7280]">{debt.customer.phone}</div>
                 </td>
                 <td className="px-3 py-2 font-mono text-xs">{debt.sale.invoiceNumber}</td>
                 <td className="px-3 py-2">{formatDateWita(debt.dueDate)}</td>
@@ -120,9 +120,9 @@ export default function DebtsReportContent({ data }: DebtsReportContentProps) {
             ))}
           </tbody>
           <tfoot>
-            <tr className="border-t-2 border-[#111111] font-bold">
+            <tr className="border-t-2 border-white/40 print:border-[#111111] font-bold">
               <td colSpan={4} className="px-3 py-3 text-right">TOTAL PIUTANG</td>
-              <td className="report-total-red px-3 py-3 text-right tabular-nums text-red-900">{formatCurrency(customerDebtSummary.totalDebt)}</td>
+              <td className="report-total-red px-3 py-3 text-right tabular-nums text-[#E5484D] print:text-red-900">{formatCurrency(customerDebtSummary.totalDebt)}</td>
               <td className="px-3 py-3 text-right tabular-nums">{formatCurrency(customerDebtSummary.totalPaid)}</td>
               <td className="px-3 py-3 text-right tabular-nums">{formatCurrency(customerDebtSummary.totalRemaining)}</td>
               <td></td>
@@ -136,24 +136,24 @@ export default function DebtsReportContent({ data }: DebtsReportContentProps) {
         <ReportSectionTitle>Detail Hutang Supplier</ReportSectionTitle>
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b-2 border-[#111111]">
-              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">No</th>
-              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">Supplier</th>
-              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">Invoice</th>
-              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">Jatuh Tempo</th>
-              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-[#111111]">Total</th>
-              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-[#111111]">Dibayar</th>
-              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-[#111111]">Sisa</th>
-              <th className="px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wider text-[#111111]">Status</th>
+            <tr className="border-b-2 border-white/40 print:border-[#111111]">
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">No</th>
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Supplier</th>
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Invoice</th>
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Jatuh Tempo</th>
+              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Total</th>
+              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Dibayar</th>
+              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Sisa</th>
+              <th className="px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Status</th>
             </tr>
           </thead>
           <tbody>
             {supplierDebts.map((debt, index) => (
-              <tr key={debt.id} className="border-b border-gray-200 even:bg-[#FAFAFA]">
+              <tr key={debt.id} className="border-b border-white/10 print:border-gray-200 even:bg-white/[0.04] print:even:bg-[#FAFAFA]">
                 <td className="px-3 py-2">{index + 1}</td>
                 <td className="px-3 py-2">
                   <div className="font-semibold">{debt.supplier.name}</div>
-                  <div className="text-xs text-[#6B7280]">{debt.supplier.phone}</div>
+                  <div className="text-xs text-stone-400 print:text-[#6B7280]">{debt.supplier.phone}</div>
                 </td>
                 <td className="px-3 py-2 font-mono text-xs">{debt.purchase.invoiceNumber}</td>
                 <td className="px-3 py-2">{formatDateWita(debt.dueDate)}</td>
@@ -165,9 +165,9 @@ export default function DebtsReportContent({ data }: DebtsReportContentProps) {
             ))}
           </tbody>
           <tfoot>
-            <tr className="border-t-2 border-[#111111] font-bold">
+            <tr className="border-t-2 border-white/40 print:border-[#111111] font-bold">
               <td colSpan={4} className="px-3 py-3 text-right">TOTAL HUTANG</td>
-              <td className="report-total-red px-3 py-3 text-right tabular-nums text-red-900">{formatCurrency(supplierDebtSummary.totalDebt)}</td>
+              <td className="report-total-red px-3 py-3 text-right tabular-nums text-[#E5484D] print:text-red-900">{formatCurrency(supplierDebtSummary.totalDebt)}</td>
               <td className="px-3 py-3 text-right tabular-nums">{formatCurrency(supplierDebtSummary.totalPaid)}</td>
               <td className="px-3 py-3 text-right tabular-nums">{formatCurrency(supplierDebtSummary.totalRemaining)}</td>
               <td></td>

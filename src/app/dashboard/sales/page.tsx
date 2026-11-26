@@ -188,7 +188,7 @@ export default function SalesPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-semibold tracking-tight text-stone-900">Manajemen Penjualan</h1>
+                    <h1 className="text-2xl font-semibold tracking-tight text-stone-100">Manajemen Penjualan</h1>
                     <p className="page-subtitle">Kelola transaksi penjualan</p>
                 </div>
                 <SaleFormModal onSuccess={loadSales} />
@@ -200,7 +200,7 @@ export default function SalesPage() {
             {/* Filters */}
             <div className="glass-card p-6">
                 <div className="flex items-center gap-2 mb-4">
-                    <Filter className="w-5 h-5 text-stone-500" />
+                    <Filter className="w-5 h-5 text-stone-400" />
                     <h2 className="text-lg font-semibold">Filter & Pencarian</h2>
                 </div>
 
@@ -280,13 +280,13 @@ export default function SalesPage() {
 
             {/* Error */}
             {error && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                <div className="p-4 bg-red-500/10 border border-red-500/25 rounded-lg text-red-300">
                     {error}
                 </div>
             )}
 
             {/* Table */}
-            <div className="glass-card overflow-hidden">
+            <div className="glass-card overflow-hidden bg-white/15 border-white/10">
                 <div className="overflow-x-auto">
                     {loading ? (
                         <div className="flex items-center justify-center py-12">
@@ -295,7 +295,7 @@ export default function SalesPage() {
                     ) : sales.length === 0 ? (
                         <div className="text-center py-12">
                             <ShoppingCart className="w-12 h-12 text-stone-300 mx-auto mb-4" />
-                            <p className="text-stone-500">
+                            <p className="text-stone-400">
                                 {hasActiveFilters
                                     ? "Tidak ada penjualan yang cocok dengan filter yang diterapkan"
                                     : "Belum ada data penjualan"}
@@ -320,7 +320,7 @@ export default function SalesPage() {
                                 {sales.map((sale) => (
                                     <tr key={sale.id}>
                                         <td>
-                                            <span className="font-mono font-semibold text-red-900">
+                                            <span className="font-mono font-semibold text-[#E5484D]">
                                                 {sale.invoiceNumber}
                                             </span>
                                         </td>
@@ -332,7 +332,7 @@ export default function SalesPage() {
                                         <td>
                                             <div>
                                                 <p className="font-medium">{sale.customer?.name || "Customer Umum"}</p>
-                                                <p className="text-xs text-stone-500">{sale.customer?.code || "-"}</p>
+                                                <p className="text-xs text-stone-400">{sale.customer?.code || "-"}</p>
                                             </div>
                                         </td>
                                         <td>{sale.cashier.name}</td>
@@ -379,8 +379,8 @@ export default function SalesPage() {
                 {/* WS-D item 46: kontrol pagination — dulu tidak ada sama
                     sekali (page 1, limit 30, hardcode). */}
                 {!loading && sales.length > 0 && (
-                    <div className="p-4 border-t border-stone-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-                        <p className="text-sm text-stone-600">
+                    <div className="p-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <p className="text-sm text-stone-400">
                             Menampilkan {(page - 1) * PAGE_SIZE + 1}–
                             {Math.min(page * PAGE_SIZE, totalCount)} dari{" "}
                             {totalCount} penjualan
@@ -394,7 +394,7 @@ export default function SalesPage() {
                                 <ChevronLeft className="w-4 h-4" />
                                 Prev
                             </button>
-                            <span className="text-sm text-stone-600">
+                            <span className="text-sm text-stone-400">
                                 Halaman {page} dari {totalPages}
                             </span>
                             <button

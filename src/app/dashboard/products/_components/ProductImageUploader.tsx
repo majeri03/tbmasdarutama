@@ -152,8 +152,8 @@ export function ProductImageUploader({
       {/* Upload Area */}
       <div
         className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-colors ${dragActive
-          ? "border-red-900 bg-red-900/5"
-          : "border-gray-300 bg-gray-50 hover:bg-gray-100"
+          ? "border-[#E5484D] bg-[#E5484D]/10"
+          : "border-white/15 bg-white/5 hover:bg-white/10"
           } ${images.length >= maxImages ? "opacity-50 pointer-events-none" : ""}`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -174,11 +174,11 @@ export function ProductImageUploader({
           <div
             className="inline-flex p-4 rounded-full"
             style={{
-              background: "rgba(127, 29, 29, 0.1)",
-              border: "1px solid rgba(127, 29, 29, 0.2)",
+              background: "rgba(229, 72, 77, 0.12)",
+              border: "1px solid rgba(229, 72, 77, 0.35)",
             }}
           >
-            <Upload className="w-8 h-8 text-red-900" />
+            <Upload className="w-8 h-8 text-[#E5484D]" />
           </div>
 
           <div>
@@ -186,18 +186,18 @@ export function ProductImageUploader({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading || images.length >= maxImages}
-              className="text-red-900 font-semibold hover:text-red-800 transition-colors"
+              className="text-[#E5484D] font-semibold hover:text-red-300 transition-colors"
             >
               {uploading ? "Mengupload..." : "Klik untuk upload"}
             </button>
-            <span className="text-gray-600"> atau drag & drop</span>
+            <span className="text-stone-400"> atau drag & drop</span>
           </div>
 
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-stone-400">
             PNG, JPG, WEBP (max 2MB) • Maksimal {maxImages} gambar
           </p>
 
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-stone-400">
             {images.length}/{maxImages} gambar terupload
           </p>
         </div>
@@ -206,7 +206,7 @@ export function ProductImageUploader({
       {/* Image Previews */}
       {images.length > 0 && (
         <div className="space-y-3">
-          <h4 className="text-sm font-semibold text-gray-700">
+          <h4 className="text-sm font-semibold text-stone-300">
             Preview Gambar ({images.length})
           </h4>
 
@@ -214,11 +214,11 @@ export function ProductImageUploader({
             {images.map((image, index) => (
               <div
                 key={index}
-                className={`relative group rounded-lg overflow-hidden border-2 ${image.isPrimary ? "border-red-900" : "border-gray-200"
+                className={`relative group rounded-lg overflow-hidden border-2 ${image.isPrimary ? "border-[#E5484D]" : "border-white/10"
                   }`}
               >
                 {/* Image */}
-                <div className="relative aspect-square bg-gray-100">
+                <div className="relative aspect-square bg-white/10">
                   <Image
                     src={image.imageUrl}
                     alt={`Preview ${index + 1}`}
@@ -229,13 +229,13 @@ export function ProductImageUploader({
                 </div>
 
                 {/* Overlay Actions */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center gap-2">
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/70 transition-colors flex items-center justify-center gap-2">
                   <button
                     type="button"
                     onClick={() => handleSetPrimary(index)}
                     className={`p-2 rounded-full transition-all opacity-0 group-hover:opacity-100 ${image.isPrimary
                       ? "bg-red-900 text-white"
-                      : "bg-white/90 text-gray-700 hover:bg-white"
+                      : "bg-[#1C1917]/90 text-stone-300 hover:bg-[#1C1917]"
                       }`}
                     title={image.isPrimary ? "Gambar utama" : "Jadikan utama"}
                   >
@@ -263,7 +263,7 @@ export function ProductImageUploader({
                 )}
 
                 {/* Index Number */}
-                <div className="absolute bottom-2 right-2 px-2 py-1 rounded-lg bg-black/70 text-white text-xs font-semibold">
+                <div className="absolute bottom-2 right-2 px-2 py-1 rounded-lg bg-black/80 text-white text-xs font-semibold">
                   #{index + 1}
                 </div>
               </div>
@@ -282,12 +282,12 @@ export function ProductImageUploader({
               border: "1px solid rgba(156, 163, 175, 0.2)",
             }}
           >
-            <ImageIcon className="w-8 h-8 text-gray-400" />
+            <ImageIcon className="w-8 h-8 text-stone-500" />
           </div>
-          <h4 className="font-semibold text-gray-900 mb-1">
+          <h4 className="font-semibold text-stone-100 mb-1">
             Belum Ada Gambar
           </h4>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-stone-400">
             Upload gambar produk untuk tampilan yang lebih menarik
           </p>
         </div>
@@ -296,15 +296,15 @@ export function ProductImageUploader({
       {/* Upload Error */}
       {/* Error Message */}
       {uploadError && (
-        <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 animate-slide-down">
-          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 animate-slide-down">
+          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm text-red-600">{uploadError}</p>
+            <p className="text-sm text-red-400">{uploadError}</p>
           </div>
           <button
             type="button"
             onClick={() => setUploadError("")}
-            className="text-red-600 hover:text-red-700"
+            className="text-red-400 hover:text-red-400"
           >
             <X className="w-4 h-4" />
           </button>
@@ -312,8 +312,8 @@ export function ProductImageUploader({
       )}
 
       {/* Info Box */}
-      <div className="p-3 rounded-lg bg-stone-100 border border-stone-200">
-        <p className="text-sm text-gray-700">
+      <div className="p-3 rounded-lg bg-white/10 border border-white/10">
+        <p className="text-sm text-stone-300">
           <span className="font-semibold">💡 Tips:</span> Gambar pertama akan
           otomatis menjadi gambar utama. Anda bisa mengubahnya dengan klik icon
           bintang.

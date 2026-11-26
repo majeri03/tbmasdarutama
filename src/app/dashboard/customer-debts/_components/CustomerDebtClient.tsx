@@ -151,8 +151,8 @@ export function CustomerDebtClient() {
       {/* Table */}
       {isLoading ? (
         <div className="glass-card p-12 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-900 mx-auto"></div>
-          <p className="mt-4 text-stone-600">Memuat data...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#E5484D] mx-auto"></div>
+          <p className="mt-4 text-stone-400">Memuat data...</p>
         </div>
       ) : (
         <CustomerDebtTable

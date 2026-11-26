@@ -155,7 +155,7 @@ export default function LandingHero({ landing }: Props) {
           <a href="#products" className="btn-primary px-8 py-4 text-lg">
             Lihat Produk
           </a>
-          <a href="#contact" className="btn-secondary px-8 py-4 text-lg text-white border-white hover:bg-white/20">
+          <a href="#contact" className="btn-secondary px-8 py-4 text-lg text-white border-white/40 hover:bg-white/10">
             Hubungi Kami
           </a>
         </div>

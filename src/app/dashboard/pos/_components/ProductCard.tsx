@@ -21,10 +21,10 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
     // Stock badge color
     const stockColor =
         product.currentStock === 0
-            ? "bg-red-100 text-[#991B1B]"
+            ? "bg-[#E5484D]/15 text-[#E5484D]"
             : product.currentStock <= product.minStock
-                ? "bg-[#B45309]/10 text-[#B45309]"
-                : "bg-[#15803D]/10 text-[#15803D]";
+                ? "bg-[#FBBF24]/10 text-[#FBBF24]"
+                : "bg-[#4ADE80]/10 text-[#4ADE80]";
 
     return (
         <div
@@ -32,7 +32,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
             onClick={() => onAddToCart(product)}
         >
             {/* Product Image */}
-            <div className="relative h-24 md:h-40 bg-stone-100 rounded-t-lg overflow-hidden">
+            <div className="relative h-24 md:h-40 bg-white/[0.06] rounded-t-lg overflow-hidden">
                 {primaryImage ? (
                     <Image
                         src={primaryImage}
@@ -42,7 +42,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
                     />
                 ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <Package className="w-16 h-16 text-stone-300" />
+                        <Package className="w-16 h-16 text-stone-500" />
                     </div>
                 )}
 
@@ -57,20 +57,20 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
             {/* Product Info */}
             <div className="p-2 md:p-4">
                 {/* Product Name */}
-                <h3 className="text-xs md:text-sm font-semibold text-stone-900 line-clamp-2 min-h-[2rem] md:min-h-[3rem]">
+                <h3 className="text-xs md:text-sm font-semibold text-stone-100 line-clamp-2 min-h-[2rem] md:min-h-[3rem]">
                     {product.name}
                 </h3>
 
                 {/* Product Code */}
-                <p className="text-xs text-stone-500 mt-1">{product.code}</p>
+                <p className="text-xs text-stone-400 mt-1">{product.code}</p>
 
                 {/* Price & Unit */}
                 <div className="mt-3 space-y-3">
                     <div className="flex items-center justify-between">
                     <div>
-                        <p className="text-lg font-bold tabular-nums text-[#7F1D1D]">{formatCurrency(displayPrice)}</p>
+                        <p className="text-lg font-bold tabular-nums text-[#E5484D]">{formatCurrency(displayPrice)}</p>
                         {primaryUnit && (
-                            <p className="text-xs text-stone-500">per {primaryUnit.unit.name}</p>
+                            <p className="text-xs text-stone-400">per {primaryUnit.unit.name}</p>
                         )}
                     </div>
                     </div>

@@ -221,10 +221,10 @@ export default function CategoriesPage() {
         <div className="glass-card p-6 animate-slide-up">
           <div className="flex flex-col gap-2 mt-3 md:flex-row md:items-center md:gap-3">
             <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-stone-900 mb-2">
+              <h1 className="text-3xl font-semibold tracking-tight text-stone-100 mb-2">
                 Master Kategori & Sub-Kategori
               </h1>
-              <p className="text-stone-600">
+              <p className="text-stone-400">
                 Kelola kategori dan sub-kategori produk Anda
               </p>
               <div className="flex items-center gap-3 mt-3">
@@ -236,7 +236,7 @@ export default function CategoriesPage() {
                   {totalSubCategories} Sub-Kategori
                 </div>
                 <span className="text-stone-400 text-sm">•</span>
-                <span className="text-stone-600 text-sm">
+                <span className="text-stone-400 text-sm">
                   Halaman {pagination.page} dari {pagination.totalPages || 1}
                 </span>
               </div>
@@ -249,65 +249,65 @@ export default function CategoriesPage() {
           {/* Total Kategori */}
           <div className="stat-card animate-slide-up">
             <div className="flex items-start justify-between mb-4">
-              <div className="p-3 rounded-xl bg-stone-100 border border-stone-200">
-                <FolderTree className="w-6 h-6 text-stone-600" />
+              <div className="p-3 rounded-xl bg-white/10 border border-white/10">
+                <FolderTree className="w-6 h-6 text-stone-400" />
               </div>
             </div>
-            <h3 className="text-stone-500 text-sm font-medium mb-1">
+            <h3 className="text-stone-400 text-sm font-medium mb-1">
               Total Kategori
             </h3>
-            <p className="text-3xl font-semibold tabular-nums text-stone-900 mb-1">
+            <p className="text-3xl font-semibold tabular-nums text-stone-100 mb-1">
               {pagination.total}
             </p>
-            <p className="text-stone-500 text-xs">Kategori utama</p>
+            <p className="text-stone-400 text-xs">Kategori utama</p>
           </div>
 
           {/* Total Sub-Kategori */}
           <div className="stat-card animate-slide-up animation-delay-200">
             <div className="flex items-start justify-between mb-4">
-              <div className="p-3 rounded-xl bg-stone-100 border border-stone-200">
-                <Folder className="w-6 h-6 text-stone-600" />
+              <div className="p-3 rounded-xl bg-white/10 border border-white/10">
+                <Folder className="w-6 h-6 text-stone-400" />
               </div>
             </div>
-            <h3 className="text-stone-500 text-sm font-medium mb-1">
+            <h3 className="text-stone-400 text-sm font-medium mb-1">
               Total Sub-Kategori
             </h3>
-            <p className="text-3xl font-semibold tabular-nums text-stone-900 mb-1">
+            <p className="text-3xl font-semibold tabular-nums text-stone-100 mb-1">
               {totalSubCategories}
             </p>
-            <p className="text-stone-500 text-xs">Sub-kategori terdaftar</p>
+            <p className="text-stone-400 text-xs">Sub-kategori terdaftar</p>
           </div>
 
           {/* Kategori dengan Sub */}
           <div className="stat-card animate-slide-up animation-delay-400">
             <div className="flex items-start justify-between mb-4">
-              <div className="p-3 rounded-xl bg-stone-100 border border-stone-200">
-                <FolderTree className="w-6 h-6 text-stone-600" />
+              <div className="p-3 rounded-xl bg-white/10 border border-white/10">
+                <FolderTree className="w-6 h-6 text-stone-400" />
               </div>
             </div>
-            <h3 className="text-stone-500 text-sm font-medium mb-1">
+            <h3 className="text-stone-400 text-sm font-medium mb-1">
               Kategori Aktif
             </h3>
-            <p className="text-3xl font-semibold tabular-nums text-stone-900 mb-1">
+            <p className="text-3xl font-semibold tabular-nums text-stone-100 mb-1">
               {categoriesWithSub}
             </p>
-            <p className="text-stone-500 text-xs">Memiliki sub-kategori</p>
+            <p className="text-stone-400 text-xs">Memiliki sub-kategori</p>
           </div>
 
           {/* Total Produk */}
           <div className="stat-card animate-slide-up animation-delay-600">
             <div className="flex items-start justify-between mb-4">
-              <div className="p-3 rounded-xl bg-stone-100 border border-stone-200">
-                <Package className="w-6 h-6 text-stone-600" />
+              <div className="p-3 rounded-xl bg-white/10 border border-white/10">
+                <Package className="w-6 h-6 text-stone-400" />
               </div>
             </div>
-            <h3 className="text-stone-500 text-sm font-medium mb-1">
+            <h3 className="text-stone-400 text-sm font-medium mb-1">
               Total Produk
             </h3>
-            <p className="text-3xl font-semibold tabular-nums text-stone-900 mb-1">
+            <p className="text-3xl font-semibold tabular-nums text-stone-100 mb-1">
               {totalProducts}
             </p>
-            <p className="text-stone-500 text-xs">Produk terkategori</p>
+            <p className="text-stone-400 text-xs">Produk terkategori</p>
           </div>
         </div>
 
@@ -387,11 +387,11 @@ export default function CategoriesPage() {
             setPreSelectedCategoryId("");
             setShowSubCategoryFormModal(true);
           }}
-          className="group relative p-4 rounded-full shadow-2xl transition-all hover:scale-110 bg-stone-800 hover:bg-stone-900"
+          className="group relative p-4 rounded-full shadow-2xl transition-all hover:scale-110 bg-white/10 hover:bg-white/15"
           title="Tambah Sub-Kategori"
         >
           <Folder className="w-6 h-6 text-white" />
-          <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-stone-900 text-white text-xs font-semibold px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+          <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-[#211E1B] text-stone-100 text-xs font-semibold border border-white/10 px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
             Tambah Sub-Kategori
           </span>
         </button>
@@ -403,7 +403,7 @@ export default function CategoriesPage() {
           title="Tambah Kategori"
         >
           <Plus className="w-6 h-6 text-white" />
-          <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-stone-900 text-white text-xs font-semibold px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+          <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-[#211E1B] text-stone-100 text-xs font-semibold border border-white/10 px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
             Tambah Kategori
           </span>
         </button>

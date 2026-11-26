@@ -43,7 +43,7 @@ export default function InventoryReportContent({ data }: InventoryReportContentP
   const { products, summary, store } = data;
 
   return (
-    <div id="print-content" className="bg-white p-8 min-h-[297mm] text-[#111111]">
+    <div id="print-content" className="bg-[#1C1917] print:bg-white p-8 min-h-[297mm] text-stone-100 print:text-stone-100 print:text-[#111111]">
       <ReportHeader
         title="Laporan Stok Inventory"
         storeName={store?.name}
@@ -74,17 +74,17 @@ export default function InventoryReportContent({ data }: InventoryReportContentP
         <ReportSectionTitle>Detail Stok Produk</ReportSectionTitle>
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b-2 border-[#111111]">
-              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">No</th>
-              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">Kode</th>
-              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">Nama Produk</th>
-              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">Kategori</th>
-              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-[#111111]">Supplier</th>
-              <th className="px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wider text-[#111111]">Stok</th>
-              <th className="px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wider text-[#111111]">Min</th>
-              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-[#111111]">Harga Beli</th>
-              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-[#111111]">Harga Jual</th>
-              <th className="px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wider text-[#111111]">Status</th>
+            <tr className="border-b-2 border-white/40 print:border-[#111111]">
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">No</th>
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Kode</th>
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Nama Produk</th>
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Kategori</th>
+              <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Supplier</th>
+              <th className="px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Stok</th>
+              <th className="px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Min</th>
+              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Harga Beli</th>
+              <th className="px-3 py-2 text-right text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Harga Jual</th>
+              <th className="px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -95,14 +95,14 @@ export default function InventoryReportContent({ data }: InventoryReportContentP
                 product.currentStock <= product.minStock ? 'Menipis' : 'Aman';
 
               return (
-                <tr key={product.id} className="border-b border-gray-200 even:bg-[#FAFAFA]">
+                <tr key={product.id} className="border-b border-white/10 print:border-gray-200 even:bg-white/[0.04] print:even:bg-[#FAFAFA]">
                   <td className="px-3 py-2">{index + 1}</td>
                   <td className="px-3 py-2 font-mono text-xs">{product.code}</td>
                   <td className="px-3 py-2">{product.name}</td>
                   <td className="px-3 py-2 text-xs">{product.category?.name ?? "—"}</td>
                   <td className="px-3 py-2 text-xs">{product.supplier?.name ?? "—"}</td>
                   <td className="px-3 py-2 text-center font-semibold tabular-nums">{product.currentStock}</td>
-                  <td className="px-3 py-2 text-center tabular-nums text-[#6B7280]">{product.minStock}</td>
+                  <td className="px-3 py-2 text-center tabular-nums text-stone-400 print:text-[#6B7280]">{product.minStock}</td>
                   <td className="px-3 py-2 text-right tabular-nums">
                     {formatCurrency(Number(primaryUnit?.buyPrice || 0))}
                   </td>

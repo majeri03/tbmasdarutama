@@ -86,18 +86,18 @@ export function StockStats({
           >
             <div className="flex items-start justify-between p-6">
               <div className="flex-1">
-                <p className="text-sm font-medium text-stone-500 mb-1">
+                <p className="text-sm font-medium text-stone-400 mb-1">
                   {stat.title}
                 </p>
-                <p className="text-2xl font-semibold tabular-nums text-stone-900 mb-1">
+                <p className="text-2xl font-semibold tabular-nums text-stone-100 mb-1">
                   {stat.value}
                 </p>
                 {stat.subtitle && (
-                  <p className="text-xs text-stone-500">{stat.subtitle}</p>
+                  <p className="text-xs text-stone-400">{stat.subtitle}</p>
                 )}
               </div>
               <div
-                className="bg-stone-100 text-stone-600 p-3 rounded-xl border border-stone-200"
+                className="bg-white/10 text-stone-400 p-3 rounded-xl border border-white/10"
               >
                 <Icon className="w-6 h-6" />
               </div>

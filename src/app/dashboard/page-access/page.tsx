@@ -23,7 +23,7 @@ export default async function PageAccessPage() {
     <div className="p-6 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#1C1917]">🛡️ Kelola Akses & Visibilitas Halaman</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-stone-100">🛡️ Kelola Akses & Visibilitas Halaman</h1>
           <p className="text-sm text-stone-500">Atur visibilitas halaman bagi Admin dan Kasir (Super Admin Only)</p>
         </div>
       </div>

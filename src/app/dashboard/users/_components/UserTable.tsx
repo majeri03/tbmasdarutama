@@ -49,11 +49,11 @@ export default function UserTable({ users }: { users: UserData[] }) {
   const getRoleBadge = (role: string) => {
     switch (role) {
       case "SUPER_ADMIN":
-        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-[#7F1D1D]/10 text-[#7F1D1D] flex items-center gap-1 w-fit"><ShieldAlert className="w-3 h-3"/> Super Admin</span>;
+        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-[#E5484D]/10 text-[#E5484D] flex items-center gap-1 w-fit"><ShieldAlert className="w-3 h-3"/> Super Admin</span>;
       case "ADMIN":
-        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-stone-200 text-stone-700 flex items-center gap-1 w-fit"><Shield className="w-3 h-3"/> Admin</span>;
+        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-white/[0.12] text-stone-300 flex items-center gap-1 w-fit"><Shield className="w-3 h-3"/> Admin</span>;
       default:
-        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700 flex items-center gap-1 w-fit"><UserIcon className="w-3 h-3"/> Kasir</span>;
+        return <span className="px-2 py-1 rounded-full text-xs font-bold bg-white/[0.08] text-stone-300 flex items-center gap-1 w-fit"><UserIcon className="w-3 h-3"/> Kasir</span>;
     }
   };
 
@@ -65,7 +65,7 @@ export default function UserTable({ users }: { users: UserData[] }) {
       <div className="glass-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="bg-stone-50 text-stone-700 font-semibold border-b border-stone-200">
+            <thead className="bg-white/[0.06] text-stone-300 font-semibold border-b border-white/10">
               <tr>
                 <th className="px-6 py-4">Nama User</th>
                 <th className="px-6 py-4">Role</th>
@@ -74,25 +74,25 @@ export default function UserTable({ users }: { users: UserData[] }) {
                 <th className="px-6 py-4 text-right">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-white/[0.08]">
               {users.map((user) => (
-                <tr key={user.id} className="hover:bg-stone-50 transition-colors">
+                <tr key={user.id} className="hover:bg-white/[0.04] transition-colors">
                   <td className="px-6 py-4">
-                    <div className="font-medium text-gray-900">{user.name}</div>
-                    <div className="text-xs text-gray-500">{user.email}</div>
+                    <div className="font-medium text-stone-100">{user.name}</div>
+                    <div className="text-xs text-stone-400">{user.email}</div>
                   </td>
                   <td className="px-6 py-4">{getRoleBadge(user.role)}</td>
-                  <td className="px-6 py-4 text-gray-600">
+                  <td className="px-6 py-4 text-stone-400">
                     <div className="text-xs">{user.phone || "-"}</div>
-                    <div className="text-[10px] text-gray-400 max-w-[150px] truncate">{user.address}</div>
+                    <div className="text-[10px] text-stone-500 max-w-[150px] truncate">{user.address}</div>
                   </td>
                   <td className="px-6 py-4 text-center">
                     {user.isActive ? (
-                        <span className="inline-flex justify-center text-green-600" title="Aktif"><CheckCircle className="w-4 h-4"/></span>
+                        <span className="inline-flex justify-center text-green-400" title="Aktif"><CheckCircle className="w-4 h-4"/></span>
                     ) : user.hasPendingVerification ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 whitespace-nowrap" title="Menunggu verifikasi email"><Clock className="w-3 h-3"/> Menunggu verifikasi</span>
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300 whitespace-nowrap" title="Menunggu verifikasi email"><Clock className="w-3 h-3"/> Menunggu verifikasi</span>
                     ) : (
-                        <span className="inline-flex justify-center text-red-500" title="Non-Aktif"><XCircle className="w-4 h-4"/></span>
+                        <span className="inline-flex justify-center text-red-400" title="Non-Aktif"><XCircle className="w-4 h-4"/></span>
                     )}
                   </td>
                   <td className="px-6 py-4 text-right">
@@ -102,7 +102,7 @@ export default function UserTable({ users }: { users: UserData[] }) {
                           <button
                             onClick={() => handleResendOtp(user)}
                             disabled={resendingId === user.id}
-                            className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-50"
+                            className="p-2 text-amber-400 hover:bg-amber-500/10 rounded-lg transition-colors disabled:opacity-50"
                             title="Kirim ulang kode OTP"
                           >
                             {resendingId === user.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
@@ -112,7 +112,7 @@ export default function UserTable({ users }: { users: UserData[] }) {
                               kode OTP dimasukkan (email sudah terisi). */}
                           <Link
                             href={`/verify-email?email=${encodeURIComponent(user.email)}`}
-                            className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors inline-flex"
+                            className="p-2 text-amber-400 hover:bg-amber-500/10 rounded-lg transition-colors inline-flex"
                             title="Buka halaman verifikasi OTP (masukkan kode)"
                           >
                             <KeyRound className="w-4 h-4" />
@@ -121,14 +121,14 @@ export default function UserTable({ users }: { users: UserData[] }) {
                       )}
                       <button
                         onClick={() => { setSelectedUser(user); setIsEditOpen(true); }}
-                        className="p-2 text-[#7F1D1D] hover:bg-[#7F1D1D]/[0.06] rounded-lg transition-colors"
+                        className="p-2 text-[#E5484D] hover:bg-[#7F1D1D]/25 rounded-lg transition-colors"
                         title="Edit User"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => { setSelectedUser(user); setIsDeleteOpen(true); }}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                         title="Hapus User"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -139,7 +139,7 @@ export default function UserTable({ users }: { users: UserData[] }) {
               ))}
               {users.length === 0 && (
                  <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">Belum ada data user.</td>
+                    <td colSpan={5} className="px-6 py-8 text-center text-stone-400">Belum ada data user.</td>
                  </tr>
               )}
             </tbody>

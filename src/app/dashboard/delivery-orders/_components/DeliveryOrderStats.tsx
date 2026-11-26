@@ -41,13 +41,13 @@ export function DeliveryOrderStats({ stats }: DeliveryOrderStatsProps) {
         <div key={index} className="glass-card p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-stone-500 mb-1">{card.title}</p>
-              <p className="text-2xl font-semibold tabular-nums text-stone-900">
+              <p className="text-sm text-stone-400 mb-1">{card.title}</p>
+              <p className="text-2xl font-semibold tabular-nums text-stone-100">
                 {card.value}
               </p>
             </div>
-            <div className="bg-stone-100 border border-stone-200 p-3 rounded-lg">
-              <div className="text-stone-600">{card.icon}</div>
+            <div className="bg-white/10 border border-white/10 p-3 rounded-lg">
+              <div className="text-stone-400">{card.icon}</div>
             </div>
           </div>
         </div>

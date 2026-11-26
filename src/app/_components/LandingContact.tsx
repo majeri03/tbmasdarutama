@@ -106,16 +106,16 @@ export default function LandingContact({ store, mapUrl }: Props) {
   ];
 
   return (
-    <section id="contact" className="py-20 bg-[#FAFAF8] relative overflow-hidden scroll-mt-24">
+    <section id="contact" className="py-20 bg-[#141210] relative overflow-hidden scroll-mt-24">
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Header */}
         <div className="text-center mb-16 animate-slide-up">
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-[#1C1917] mb-4">
-            Hubungi <span className="text-[#7F1D1D]">Kami</span>
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-stone-100 mb-4">
+            Hubungi <span className="text-[#E5484D]">Kami</span>
           </h2>
           <div className="w-24 h-1 bg-[#7F1D1D] mx-auto rounded-full mb-6" />
-          <p className="text-lg text-stone-600 max-w-2xl mx-auto">
+          <p className="text-lg text-stone-400 max-w-2xl mx-auto">
             Kami siap membantu kebutuhan bahan bangunan Anda
           </p>
         </div>
@@ -130,18 +130,18 @@ export default function LandingContact({ store, mapUrl }: Props) {
                     <info.icon className="w-6 h-6 text-white" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-[#1C1917] mb-1">
+                    <h3 className="font-semibold text-stone-100 mb-1">
                       {info.label}
                     </h3>
                     {info.href ? (
                       <a
                         href={info.href}
-                        className="text-stone-600 hover:text-[#7F1D1D] transition-colors"
+                        className="text-stone-400 hover:text-[#E5484D] transition-colors"
                       >
                         {info.value}
                       </a>
                     ) : (
-                      <p className="text-stone-600">{info.value}</p>
+                      <p className="text-stone-400">{info.value}</p>
                     )}
                   </div>
                 </div>
@@ -150,7 +150,7 @@ export default function LandingContact({ store, mapUrl }: Props) {
 
             {/* Social Media */}
             <div className="glass-card p-6">
-              <h3 className="font-semibold text-[#1C1917] mb-4">
+              <h3 className="font-semibold text-stone-100 mb-4">
                 Ikuti Kami
               </h3>
               <div className="flex gap-4">
@@ -174,7 +174,7 @@ export default function LandingContact({ store, mapUrl }: Props) {
 
           {/* Map */}
           <div className="glass-card p-6 animate-slide-up animation-delay-400">
-            <h3 className="font-semibold text-[#1C1917] mb-4">
+            <h3 className="font-semibold text-stone-100 mb-4">
               Lokasi Kami
             </h3>
             {embedUrl ? (
@@ -194,7 +194,7 @@ export default function LandingContact({ store, mapUrl }: Props) {
                   href={mapsSearchUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-[#7F1D1D] hover:text-[#991B1B] transition-colors"
+                  className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-[#E5484D] hover:text-[#F87171] transition-colors"
                 >
                   <ExternalLink className="w-4 h-4" />
                   Buka di Google Maps
@@ -203,10 +203,10 @@ export default function LandingContact({ store, mapUrl }: Props) {
             ) : mapUrl ? (
               // URL peta ada tapi bukan URL embed yang valid -> jangan
               // iframe-kan (akan tampil halaman error "diblokir").
-              <div className="w-full h-96 rounded-lg bg-gray-100 flex items-center justify-center">
+              <div className="w-full h-96 rounded-lg bg-white/[0.08] flex items-center justify-center">
                 <div className="text-center px-6">
-                  <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-500 mb-4">
+                  <MapPin className="w-12 h-12 text-stone-500 mx-auto mb-2" />
+                  <p className="text-stone-400 mb-4">
                     Peta tidak dapat ditampilkan di halaman ini.
                   </p>
                   <a
@@ -221,10 +221,10 @@ export default function LandingContact({ store, mapUrl }: Props) {
                 </div>
               </div>
             ) : (
-              <div className="w-full h-96 rounded-lg bg-gray-100 flex items-center justify-center">
+              <div className="w-full h-96 rounded-lg bg-white/[0.08] flex items-center justify-center">
                 <div className="text-center">
-                  <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-500">Peta belum tersedia</p>
+                  <MapPin className="w-12 h-12 text-stone-500 mx-auto mb-2" />
+                  <p className="text-stone-400">Peta belum tersedia</p>
                 </div>
               </div>
             )}

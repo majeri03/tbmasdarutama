@@ -96,11 +96,11 @@ export function DebtDetailModal({
         <div className="modal-overlay">
             <div className="modal-container w-full max-w-4xl max-h-[90vh] overflow-y-auto">
                 {/* Header */}
-                <div className="sticky top-0 bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between">
-                    <h2 className="text-xl font-semibold tracking-tight text-stone-900">Detail Piutang</h2>
+                <div className="sticky top-0 bg-[#1C1917] border-b border-white/10 px-6 py-4 flex items-center justify-between">
+                    <h2 className="text-xl font-semibold tracking-tight text-stone-100">Detail Piutang</h2>
                     <button
                         onClick={onClose}
-                        className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 transition-colors"
+                        className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-white/10 text-stone-400 hover:bg-white/15 hover:text-stone-300 transition-colors"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -109,28 +109,28 @@ export function DebtDetailModal({
                 {/* Content */}
                 {isLoading ? (
                     <div className="p-12 text-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-900 mx-auto"></div>
-                        <p className="mt-4 text-stone-600">Memuat data...</p>
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#E5484D] mx-auto"></div>
+                        <p className="mt-4 text-stone-400">Memuat data...</p>
                     </div>
                 ) : debt ? (
                     <div className="p-6 space-y-6">
                         {/* Debt Info */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="glass-card p-4 space-y-3">
-                                <h3 className="font-semibold text-stone-900 mb-3">
+                                <h3 className="font-semibold text-stone-100 mb-3">
                                     Informasi Piutang
                                 </h3>
                                 <div className="space-y-2">
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-stone-600">No. Piutang:</span>
+                                        <span className="text-sm text-stone-400">No. Piutang:</span>
                                         <span className="font-semibold">{debt.debtNumber}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-stone-600">Status:</span>
+                                        <span className="text-sm text-stone-400">Status:</span>
                                         <DebtStatusBadge status={debt.status} />
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-stone-600">Dibuat:</span>
+                                        <span className="text-sm text-stone-400">Dibuat:</span>
                                         <span className="text-sm">
                                             {format(new Date(debt.createdAt), "dd MMM yyyy HH:mm", {
                                                 locale: id,
@@ -138,8 +138,8 @@ export function DebtDetailModal({
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-stone-600">Jatuh Tempo:</span>
-                                        <span className="text-sm font-semibold text-red-800">
+                                        <span className="text-sm text-stone-400">Jatuh Tempo:</span>
+                                        <span className="text-sm font-semibold text-red-300">
                                             {format(new Date(debt.dueDate), "dd MMM yyyy", {
                                                 locale: id,
                                             })}
@@ -149,26 +149,26 @@ export function DebtDetailModal({
                             </div>
 
                             <div className="glass-card p-4 space-y-3">
-                                <h3 className="font-semibold text-stone-900 mb-3">
+                                <h3 className="font-semibold text-stone-100 mb-3">
                                     Informasi Customer
                                 </h3>
                                 <div className="space-y-2">
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-stone-600">Kode:</span>
+                                        <span className="text-sm text-stone-400">Kode:</span>
                                         <span className="font-semibold">{debt.customer.code}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-stone-600">Nama:</span>
+                                        <span className="text-sm text-stone-400">Nama:</span>
                                         <span className="font-semibold">{debt.customer.name}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-stone-600">Telepon:</span>
+                                        <span className="text-sm text-stone-400">Telepon:</span>
                                         <span className="text-sm">
                                             {debt.customer.phone || "-"}
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-stone-600">Alamat:</span>
+                                        <span className="text-sm text-stone-400">Alamat:</span>
                                         <span className="text-sm text-right max-w-[200px]">
                                             {debt.customer.address || "-"}
                                         </span>
@@ -179,12 +179,12 @@ export function DebtDetailModal({
 
                         {/* Financial Summary */}
                         <div className="glass-card p-4">
-                            <h3 className="font-semibold text-stone-900 mb-3">
+                            <h3 className="font-semibold text-stone-100 mb-3">
                                 Ringkasan Keuangan
                             </h3>
                             <div className="space-y-2">
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-stone-600">
+                                    <span className="text-sm text-stone-400">
                                         Total Piutang Awal:
                                     </span>
                                     <span className="font-semibold">
@@ -192,18 +192,18 @@ export function DebtDetailModal({
                                     </span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-stone-600">
+                                    <span className="text-sm text-stone-400">
                                         Total Terbayar:
                                     </span>
-                                    <span className="text-green-700 font-semibold">
+                                    <span className="text-green-400 font-semibold">
                                         {formatCurrency(debt.paidAmount)}
                                     </span>
                                 </div>
-                                <div className="flex justify-between pt-2 border-t border-stone-200">
-                                    <span className="text-base font-semibold text-stone-900">
+                                <div className="flex justify-between pt-2 border-t border-white/10">
+                                    <span className="text-base font-semibold text-stone-100">
                                         Sisa Piutang:
                                     </span>
-                                    <span className="text-xl font-bold text-red-800">
+                                    <span className="text-xl font-bold text-red-300">
                                         {formatCurrency(debt.remainingDebt)}
                                     </span>
                                 </div>
@@ -212,19 +212,19 @@ export function DebtDetailModal({
 
                         {/* Sale Info */}
                         <div className="glass-card p-4">
-                            <h3 className="font-semibold text-stone-900 mb-3 flex items-center gap-2">
+                            <h3 className="font-semibold text-stone-100 mb-3 flex items-center gap-2">
                                 <FileText className="w-4 h-4" />
                                 Informasi Penjualan
                             </h3>
                             <div className="space-y-2 mb-4">
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-stone-600">No. Invoice:</span>
+                                    <span className="text-sm text-stone-400">No. Invoice:</span>
                                     <span className="font-semibold">
                                         {debt.sale.invoiceNumber}
                                     </span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-stone-600">Tanggal:</span>
+                                    <span className="text-sm text-stone-400">Tanggal:</span>
                                     <span className="text-sm">
                                         {format(new Date(debt.sale.saleDate), "dd MMM yyyy", {
                                             locale: id,
@@ -232,7 +232,7 @@ export function DebtDetailModal({
                                     </span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-sm text-stone-600">Grand Total:</span>
+                                    <span className="text-sm text-stone-400">Grand Total:</span>
                                     <span className="font-bold">
                                         {formatCurrency(debt.sale.grandTotal)}
                                     </span>
@@ -242,16 +242,16 @@ export function DebtDetailModal({
                             {/* Sale Items */}
                             {debt.sale.saleItems && debt.sale.saleItems.length > 0 && (
                                 <div className="mt-4">
-                                    <h4 className="text-sm font-semibold text-stone-700 mb-2">
+                                    <h4 className="text-sm font-semibold text-stone-300 mb-2">
                                         Produk Dibeli:
                                     </h4>
                                     <div className="space-y-2">
                                         {debt.sale.saleItems.map((item) => (
                                             <div
                                                 key={item.id}
-                                                className="flex justify-between text-sm p-2 bg-stone-50 rounded"
+                                                className="flex justify-between text-sm p-2 bg-white/5 rounded"
                                             >
-                                                <span className="text-stone-700">
+                                                <span className="text-stone-300">
                                                     {item.product.name} ({item.quantity} {item.unit.name})
                                                 </span>
                                                 <span className="font-semibold">
@@ -267,7 +267,7 @@ export function DebtDetailModal({
                         {/* Payment History */}
                         {debt.payments && debt.payments.length > 0 && (
                             <div className="glass-card p-4">
-                                <h3 className="font-semibold text-stone-900 mb-3 flex items-center gap-2">
+                                <h3 className="font-semibold text-stone-100 mb-3 flex items-center gap-2">
                                     <Clock className="w-4 h-4" />
                                     Riwayat Pembayaran ({debt.payments.length})
                                 </h3>
@@ -275,14 +275,14 @@ export function DebtDetailModal({
                                     {debt.payments.map((payment) => (
                                         <div
                                             key={payment.id}
-                                            className="border border-stone-200 rounded-xl p-3"
+                                            className="border border-white/10 rounded-xl p-3"
                                         >
                                             <div className="flex justify-between items-start mb-2">
                                                 <div>
-                                                    <p className="font-semibold text-green-700">
+                                                    <p className="font-semibold text-green-400">
                                                         {formatCurrency(payment.amount)}
                                                     </p>
-                                                    <p className="text-xs text-stone-500">
+                                                    <p className="text-xs text-stone-400">
                                                         {format(
                                                             new Date(payment.paymentDate),
                                                             "dd MMM yyyy HH:mm",
@@ -290,18 +290,18 @@ export function DebtDetailModal({
                                                         )}
                                                     </p>
                                                 </div>
-                                                <span className="text-xs bg-stone-100 px-2 py-1 rounded">
+                                                <span className="text-xs bg-white/10 px-2 py-1 rounded">
                                                     {paymentMethodLabels[payment.paymentMethod] ||
                                                         payment.paymentMethod}
                                                 </span>
                                             </div>
                                             {payment.notes && (
-                                                <p className="text-sm text-stone-600 mt-2">
+                                                <p className="text-sm text-stone-400 mt-2">
                                                     {payment.notes}
                                                 </p>
                                             )}
                                             {payment.admin && (
-                                                <p className="text-xs text-stone-500 mt-1">
+                                                <p className="text-xs text-stone-400 mt-1">
                                                     Dicatat oleh: {payment.admin.name}
                                                 </p>
                                             )}
@@ -314,19 +314,19 @@ export function DebtDetailModal({
                         {/* Notes */}
                         {debt.notes && (
                             <div className="glass-card p-4">
-                                <h3 className="font-semibold text-stone-900 mb-2">Catatan</h3>
-                                <p className="text-sm text-stone-600">{debt.notes}</p>
+                                <h3 className="font-semibold text-stone-100 mb-2">Catatan</h3>
+                                <p className="text-sm text-stone-400">{debt.notes}</p>
                             </div>
                         )}
                     </div>
                 ) : (
                     <div className="p-12 text-center">
-                        <p className="text-stone-500">Data tidak ditemukan</p>
+                        <p className="text-stone-400">Data tidak ditemukan</p>
                     </div>
                 )}
 
                 {/* Footer */}
-                <div className="border-t border-stone-200 px-6 py-4 bg-stone-50">
+                <div className="border-t border-white/10 px-6 py-4 bg-white/5">
                     <button onClick={onClose} className="btn-secondary w-full">
                         Tutup
                     </button>

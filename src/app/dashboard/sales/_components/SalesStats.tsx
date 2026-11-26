@@ -63,8 +63,8 @@ export function SalesStats({ refreshKey = 0 }: { refreshKey?: number }) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {[...Array(4)].map((_, i) => (
           <div key={i} className="glass-card p-6 animate-pulse">
-            <div className="h-4 bg-stone-200 rounded w-1/2 mb-4"></div>
-            <div className="h-8 bg-stone-200 rounded w-3/4"></div>
+            <div className="h-4 bg-white/10 rounded w-1/2 mb-4"></div>
+            <div className="h-8 bg-white/10 rounded w-3/4"></div>
           </div>
         ))}
       </div>
@@ -83,21 +83,21 @@ export function SalesStats({ refreshKey = 0 }: { refreshKey?: number }) {
               style={{ animationDelay: `${index * 100}ms` }}
             >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-medium text-stone-500">{stat.title}</h3>
+                <h3 className="text-sm font-medium text-stone-400">{stat.title}</h3>
                 <div
-                  className="w-12 h-12 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center"
+                  className="w-12 h-12 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center"
                 >
-                  <Icon className="w-6 h-6 text-stone-600" />
+                  <Icon className="w-6 h-6 text-stone-400" />
                 </div>
               </div>
-              <p className="text-2xl font-semibold tabular-nums text-stone-900">{stat.value}</p>
+              <p className="text-2xl font-semibold tabular-nums text-stone-100">{stat.value}</p>
             </div>
           );
         })}
       </div>
       {/* WS-D item 46 + 57: jelaskan apa yang dihitung kartu ini, supaya
           angkanya bisa dicocokkan dengan daftar di bawahnya. */}
-      <p className="text-xs text-stone-500 -mt-4 mb-2">
+      <p className="text-xs text-stone-400 -mt-4 mb-2">
         Total &amp; pendapatan hanya menghitung penjualan aktif (Selesai +
         Pending). Penjualan yang Dibatalkan atau di-Retur tidak dihitung.
         &ldquo;Hari Ini&rdquo; memakai waktu WITA.

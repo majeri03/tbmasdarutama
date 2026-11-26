@@ -85,13 +85,13 @@ export function CategoryFormModal({
                 border: "1px solid rgba(96, 165, 250, 0.3)",
               }}
             >
-              <FolderTree className="w-6 h-6 text-red-900" />
+              <FolderTree className="w-6 h-6 text-[#E5484D]" />
             </div>
             <div>
-              <h3 className="text-xl font-semibold tracking-tight text-stone-900">
+              <h3 className="text-xl font-semibold tracking-tight text-stone-100">
                 {isEdit ? "Edit Kategori" : "Tambah Kategori"}
               </h3>
-              <p className="text-sm text-stone-600 mt-0.5">
+              <p className="text-sm text-stone-400 mt-0.5">
                 {isEdit
                   ? "Perbarui informasi kategori"
                   : "Tambahkan kategori produk baru"}
@@ -101,7 +101,7 @@ export function CategoryFormModal({
           <button
             onClick={onClose}
             disabled={loading}
-            className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-700 transition-colors disabled:opacity-50"
+            className="flex shrink-0 items-center justify-center w-8 h-8 rounded-full bg-white/10 text-stone-400 hover:bg-white/15 hover:text-stone-300 transition-colors disabled:opacity-50"
           >
             <X className="w-5 h-5" />
           </button>
@@ -130,7 +130,7 @@ export function CategoryFormModal({
               })}
             />
             {errors.name && (
-              <p className="text-xs text-red-800 mt-1 flex items-center gap-1">
+              <p className="text-xs text-red-300 mt-1 flex items-center gap-1">
                 <X className="w-3 h-3" />
                 {errors.name.message}
               </p>
@@ -142,7 +142,7 @@ export function CategoryFormModal({
               htmlFor="description"
               className="label"
             >
-              Deskripsi <span className="text-stone-400">(Opsional)</span>
+              Deskripsi <span className="text-stone-500">(Opsional)</span>
             </label>
             <textarea
               id="description"
@@ -158,14 +158,14 @@ export function CategoryFormModal({
               })}
             />
             {errors.description && (
-              <p className="text-xs text-red-800 mt-1 flex items-center gap-1">
+              <p className="text-xs text-red-300 mt-1 flex items-center gap-1">
                 <X className="w-3 h-3" />
                 {errors.description.message}
               </p>
             )}
           </div>
 
-          <div className="flex gap-3 pt-4 -mx-6 -mb-6 px-6 pb-6 bg-stone-50 border-t border-stone-200 rounded-b-3xl">
+          <div className="flex gap-3 pt-4 -mx-6 -mb-6 px-6 pb-6 bg-white/5 border-t border-white/10 rounded-b-3xl">
             <button
               type="button"
               onClick={onClose}

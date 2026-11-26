@@ -128,21 +128,21 @@ export function StockTable({
     switch (type) {
       case MovementType.IN:
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-green-500/10 text-green-300 border border-green-500/25">
             <TrendingUp className="w-3 h-3" />
             Masuk
           </span>
         );
       case MovementType.OUT:
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-500/10 text-red-300 border border-red-500/25">
             <TrendingDown className="w-3 h-3" />
             Keluar
           </span>
         );
       case MovementType.ADJUSTMENT:
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-stone-100 text-stone-600 border border-stone-200">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/10 text-stone-400 border border-white/10">
             <Edit className="w-3 h-3" />
             Adjustment
           </span>
@@ -178,7 +178,7 @@ export function StockTable({
             {isClient && search && (
               <button
                 onClick={() => handleSearch("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-stone-100 rounded transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded transition-colors"
               >
                 <X className="w-4 h-4 text-stone-400" />
               </button>
@@ -203,12 +203,12 @@ export function StockTable({
           <div className="flex items-center gap-2">
             <button
               onClick={handleResetFilters}
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-stone-700 bg-white border border-stone-300 rounded-lg hover:bg-stone-50 transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-stone-200 bg-white/10 border border-white/15 rounded-lg hover:bg-white/15 transition-colors"
             >
               <RotateCcw className="w-4 h-4" />
               Reset Filter
             </button>
-            <span className="text-sm text-stone-600">
+            <span className="text-sm text-stone-400">
               {movements.length} hasil ditemukan
             </span>
           </div>
@@ -216,38 +216,38 @@ export function StockTable({
       </div>
 
       {/* Table */}
-      <div className="glass-card overflow-hidden">
+      <div className="glass-card overflow-hidden bg-white/15 border-white/10">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-stone-50 border-b border-stone-200">
+            <thead className="bg-white/5 border-b border-white/10">
               <tr>
-                <th className="px-6 py-4 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[11px] font-semibold text-stone-400 uppercase tracking-wider">
                   Produk
                 </th>
-                <th className="px-6 py-4 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[11px] font-semibold text-stone-400 uppercase tracking-wider">
                   Tipe
                 </th>
-                <th className="px-6 py-4 text-center text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-center text-[11px] font-semibold text-stone-400 uppercase tracking-wider">
                   Quantity
                 </th>
-                <th className="px-6 py-4 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[11px] font-semibold text-stone-400 uppercase tracking-wider">
                   Referensi
                 </th>
-                <th className="px-6 py-4 text-left text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[11px] font-semibold text-stone-400 uppercase tracking-wider">
                   Tanggal
                 </th>
-                <th className="px-6 py-4 text-center text-[11px] font-semibold text-stone-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-center text-[11px] font-semibold text-stone-400 uppercase tracking-wider">
                   Aksi
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-stone-200">
+            <tbody className="divide-y divide-white/10">
               {movements.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <Package className="w-12 h-12 text-stone-300" />
-                      <p className="text-sm text-stone-500">
+                      <p className="text-sm text-stone-400">
                         {hasActiveFilters
                           ? "Tidak ada pergerakan stock yang sesuai dengan filter"
                           : "Belum ada pergerakan stock"}
@@ -259,22 +259,22 @@ export function StockTable({
                 movements.map((movement) => (
                   <tr
                     key={movement.id}
-                    className="hover:bg-stone-50 transition-colors"
+                    className="hover:bg-white/5 transition-colors"
                   >
                     {/* Product */}
                     <td className="px-6 py-4">
                       <div>
-                        <div className="font-semibold text-stone-900">
+                        <div className="font-semibold text-stone-100">
                           {movement.product.name}
                         </div>
-                        <div className="text-sm text-stone-500 font-mono">
+                        <div className="text-sm text-stone-400 font-mono">
                           {movement.product.code}
                         </div>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-stone-500">
+                          <span className="text-xs text-stone-400">
                             Stock saat ini:
                           </span>
-                          <span className="text-xs font-semibold text-stone-600">
+                          <span className="text-xs font-semibold text-stone-400">
                             {movement.product.currentStock} unit
                           </span>
                         </div>
@@ -291,10 +291,10 @@ export function StockTable({
                       <span
                         className={`inline-flex items-center gap-1 font-bold text-lg ${
                           movement.type === MovementType.IN
-                            ? "text-green-600"
+                            ? "text-green-400"
                             : movement.type === MovementType.OUT
-                            ? "text-red-800"
-                            : "text-stone-600"
+                            ? "text-red-300"
+                            : "text-stone-400"
                         }`}
                       >
                         {movement.type === MovementType.IN && "+"}
@@ -306,16 +306,16 @@ export function StockTable({
                     {/* Reference */}
                     <td className="px-6 py-4">
                       <div className="text-sm">
-                        <div className="font-medium text-stone-900">
+                        <div className="font-medium text-stone-100">
                           {movement.referenceType}
                         </div>
                         {movement.referenceId && (
-                          <div className="text-xs text-stone-500 font-mono">
+                          <div className="text-xs text-stone-400 font-mono">
                             {movement.referenceId}
                           </div>
                         )}
                         {movement.notes && (
-                          <div className="text-xs text-stone-600 mt-1 italic">
+                          <div className="text-xs text-stone-400 mt-1 italic">
                             {movement.notes}
                           </div>
                         )}
@@ -324,7 +324,7 @@ export function StockTable({
 
                     {/* Date */}
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-sm text-stone-600">
+                      <div className="flex items-center gap-2 text-sm text-stone-400">
                         <Calendar className="w-3 h-3" />
                         <span>{formatDate(movement.createdAt)}</span>
                       </div>
@@ -335,14 +335,14 @@ export function StockTable({
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => onView(movement)}
-                          className="p-2 hover:bg-stone-100 text-stone-600 rounded-lg transition-colors"
+                          className="p-2 hover:bg-white/10 text-stone-400 rounded-lg transition-colors"
                           title="Lihat Detail"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => onDelete(movement)}
-                          className="p-2 hover:bg-red-50 text-red-800 rounded-lg transition-colors"
+                          className="p-2 hover:bg-red-500/10 text-red-300 rounded-lg transition-colors"
                           title="Hapus"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -358,22 +358,22 @@ export function StockTable({
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-stone-200 flex items-center justify-between">
-            <p className="text-sm text-stone-600">
+          <div className="px-6 py-4 border-t border-white/10 flex items-center justify-between">
+            <p className="text-sm text-stone-400">
               Halaman {currentPage} dari {totalPages}
             </p>
             <div className="flex gap-2">
               <button
                 onClick={() => onPageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="px-4 py-2 text-sm font-medium text-stone-700 bg-white border border-stone-300 rounded-lg hover:bg-stone-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="px-4 py-2 text-sm font-medium text-stone-200 bg-white/10 border border-white/15 rounded-lg hover:bg-white/15 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 Sebelumnya
               </button>
               <button
                 onClick={() => onPageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="px-4 py-2 text-sm font-medium text-stone-700 bg-white border border-stone-300 rounded-lg hover:bg-stone-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="px-4 py-2 text-sm font-medium text-stone-200 bg-white/10 border border-white/15 rounded-lg hover:bg-white/15 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 Selanjutnya
               </button>

@@ -137,12 +137,12 @@ export default function DataManagementTab() {
       {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
 
       {/* ── Header Warning ── */}
-      <div className="glass-card p-5 border-l-4 border-red-500 bg-red-50/60">
+      <div className="glass-card p-5 border-l-4 border-red-500 bg-red-500/[0.08]">
         <div className="flex items-start gap-3">
-          <ShieldAlert className="w-6 h-6 text-red-600 mt-0.5 shrink-0" />
+          <ShieldAlert className="w-6 h-6 text-red-400 mt-0.5 shrink-0" />
           <div>
-            <h3 className="font-bold text-red-800 text-base">Zona Berbahaya — Data Management</h3>
-            <p className="text-sm text-red-700 mt-1 leading-relaxed">
+            <h3 className="font-bold text-red-300 text-base">Zona Berbahaya — Data Management</h3>
+            <p className="text-sm text-red-300 mt-1 leading-relaxed">
               Halaman ini berisi operasi yang bersifat <strong>permanen dan tidak dapat dibatalkan</strong>.
               Pastikan Anda telah membuat cadangan data sebelum melanjutkan.
               Setiap operasi memerlukan verifikasi password untuk keamanan.
@@ -155,13 +155,13 @@ export default function DataManagementTab() {
       <div className="glass-card p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-[#7F1D1D]" />
-            <h3 className="font-semibold text-[#1C1917]">Ringkasan Data Transaksi Saat Ini</h3>
+            <BarChart3 className="w-5 h-5 text-[#E5484D]" />
+            <h3 className="font-semibold text-stone-100">Ringkasan Data Transaksi Saat Ini</h3>
           </div>
           <button
             onClick={loadStats}
             disabled={loadingStats}
-            className="flex items-center gap-1.5 text-sm text-[#7F1D1D] hover:text-[#991B1B] transition-colors"
+            className="flex items-center gap-1.5 text-sm text-[#E5484D] hover:text-[#F87171] transition-colors"
           >
             <RefreshCw className={`w-4 h-4 ${loadingStats ? "animate-spin" : ""}`} />
             Refresh
@@ -170,22 +170,22 @@ export default function DataManagementTab() {
 
         {loadingStats ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-[#7F1D1D]" />
+            <Loader2 className="w-6 h-6 animate-spin text-[#E5484D]" />
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {statItems.map((item) => (
-              <div key={item.label} className="bg-white/70 rounded-xl p-3 border border-gray-100 shadow-sm">
+              <div key={item.label} className="bg-white/[0.06] rounded-xl p-3 border border-white/[0.08] shadow-sm">
                 <div className="text-xl mb-1">{item.icon}</div>
-                <div className="text-2xl font-bold text-gray-800">{item.value.toLocaleString("id-ID")}</div>
-                <div className="text-xs text-gray-500 mt-0.5">{item.label}</div>
+                <div className="text-2xl font-bold text-stone-200">{item.value.toLocaleString("id-ID")}</div>
+                <div className="text-xs text-stone-400 mt-0.5">{item.label}</div>
               </div>
             ))}
             {stats && (
-              <div className="bg-red-50 rounded-xl p-3 border border-red-200">
+              <div className="bg-red-500/[0.08] rounded-xl p-3 border border-red-500/30">
                 <div className="text-xl mb-1">📋</div>
-                <div className="text-2xl font-bold text-red-700">{stats.total.toLocaleString("id-ID")}</div>
-                <div className="text-xs text-red-600 mt-0.5">Total Record</div>
+                <div className="text-2xl font-bold text-red-300">{stats.total.toLocaleString("id-ID")}</div>
+                <div className="text-xs text-red-400 mt-0.5">Total Record</div>
               </div>
             )}
           </div>
@@ -198,23 +198,23 @@ export default function DataManagementTab() {
         {/* Card 1: Hapus Transaksi Penjualan */}
         <div className="glass-card p-5 border border-orange-200 bg-orange-50/30 space-y-4">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
-              <Trash2 className="w-5 h-5 text-orange-600" />
+            <div className="w-10 h-10 rounded-xl bg-orange-500/15 flex items-center justify-center shrink-0">
+              <Trash2 className="w-5 h-5 text-orange-400" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-800">Hapus Transaksi Penjualan</h3>
-              <p className="text-xs text-red-700 font-bold mt-0.5">⛔ HAPUS MASSAL — Operasi Berbahaya</p>
+              <h3 className="font-bold text-stone-200">Hapus Transaksi Penjualan</h3>
+              <p className="text-xs text-red-300 font-bold mt-0.5">⛔ HAPUS MASSAL — Operasi Berbahaya</p>
             </div>
           </div>
-          <div className="text-sm text-gray-600 leading-relaxed space-y-1.5">
+          <div className="text-sm text-stone-400 leading-relaxed space-y-1.5">
             <p>Menghapus <strong>SEMUA transaksi penjualan sekaligus</strong> (hapus massal — <u>bukan</u> satu transaksi saja) beserta:</p>
-            <ul className="list-disc pl-4 space-y-0.5 text-gray-500">
+            <ul className="list-disc pl-4 space-y-0.5 text-stone-400">
               <li>Item penjualan POS</li>
               <li>Utang pelanggan & pembayarannya</li>
               <li>Surat jalan terkait</li>
               <li>Riwayat stok tipe SALE</li>
             </ul>
-            <p className="text-orange-700 font-medium mt-2">
+            <p className="text-orange-300 font-medium mt-2">
               ⚠️ Data pembelian, stok produk, dan master data tetap aman.
             </p>
           </div>
@@ -228,32 +228,32 @@ export default function DataManagementTab() {
         </div>
 
         {/* Card 2: Tutup Buku Tahunan */}
-        <div className="glass-card p-5 border border-red-300 bg-red-50/30 space-y-4">
+        <div className="glass-card p-5 border border-red-500/40 bg-red-500/[0.06] space-y-4">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
-              <BookOpen className="w-5 h-5 text-red-600" />
+            <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center shrink-0">
+              <BookOpen className="w-5 h-5 text-red-400" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-800">Tutup Buku Tahunan</h3>
-              <p className="text-xs text-red-700 font-medium mt-0.5">⚠️ Operasi SANGAT Berbahaya</p>
+              <h3 className="font-bold text-stone-200">Tutup Buku Tahunan</h3>
+              <p className="text-xs text-red-300 font-medium mt-0.5">⚠️ Operasi SANGAT Berbahaya</p>
             </div>
           </div>
-          <div className="text-sm text-gray-600 leading-relaxed space-y-1.5">
+          <div className="text-sm text-stone-400 leading-relaxed space-y-1.5">
             <p>Penutupan buku akhir tahun — menghapus <strong>semua data transaksi</strong>:</p>
-            <ul className="list-disc pl-4 space-y-0.5 text-gray-500">
+            <ul className="list-disc pl-4 space-y-0.5 text-stone-400">
               <li>Penjualan & pembelian lengkap</li>
               <li>Semua utang (pelanggan & supplier)</li>
               <li>Surat jalan & riwayat stok</li>
               <li>Kas masuk/keluar</li>
-              <li><strong className="text-red-600">Stok semua produk direset ke 0</strong></li>
+              <li><strong className="text-red-400">Stok semua produk direset ke 0</strong></li>
             </ul>
-            <p className="text-red-700 font-medium mt-2">
+            <p className="text-red-300 font-medium mt-2">
               🔴 Data master (produk, user, pelanggan, supplier) tetap aman.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Tahun:</label>
+            <label className="text-sm font-medium text-stone-300 whitespace-nowrap">Tahun:</label>
             <select
               value={tahunTutupBuku}
               onChange={(e) => setTahunTutupBuku(Number(e.target.value))}
@@ -279,7 +279,7 @@ export default function DataManagementTab() {
       ══════════════════════════════════════════════════ */}
       {activeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+          <div className="bg-[#1C1917] border border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
 
             {/* Modal Header */}
             <div className={`px-6 py-4 ${activeModal === "tutup-buku" ? "bg-red-600" : "bg-orange-500"}`}>
@@ -328,7 +328,7 @@ export default function DataManagementTab() {
                             <li>SEMUA penjualan & pembelian dihapus</li>
                             <li>Semua utang & pembayaran dihapus</li>
                             <li>Riwayat stok & kas dihapus</li>
-                            <li className="font-semibold text-red-700">Stok SEMUA produk direset ke 0</li>
+                            <li className="font-semibold text-red-300">Stok SEMUA produk direset ke 0</li>
                           </ul>
                           <p className="mt-2 font-medium">Ini adalah operasi penutupan tahun buku. Pastikan sudah ada backup!</p>
                         </>
@@ -336,7 +336,7 @@ export default function DataManagementTab() {
                     </div>
                   </div>
                   <div className="flex gap-3">
-                    <button onClick={closeModal} className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 font-medium text-sm transition-colors">
+                    <button onClick={closeModal} className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-stone-400 hover:bg-white/[0.06] font-medium text-sm transition-colors">
                       Batal
                     </button>
                     <button
@@ -352,9 +352,9 @@ export default function DataManagementTab() {
               {/* STEP 2: Confirm by typing */}
               {step === "confirm" && (
                 <div className="space-y-4">
-                  <div className="text-sm text-gray-700 leading-relaxed">
+                  <div className="text-sm text-stone-300 leading-relaxed">
                     <p>Untuk memastikan ini bukan klik tidak sengaja, ketik kalimat berikut persis:</p>
-                    <p className="mt-2 font-mono font-bold text-lg text-center py-3 bg-gray-100 rounded-xl tracking-wide">
+                    <p className="mt-2 font-mono font-bold text-lg text-center py-3 bg-white/[0.08] rounded-xl tracking-wide">
                       {confirmKeyword}
                     </p>
                   </div>
@@ -367,7 +367,7 @@ export default function DataManagementTab() {
                     autoFocus
                   />
                   <div className="flex gap-3">
-                    <button onClick={() => setStep("warning")} className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 font-medium text-sm transition-colors">
+                    <button onClick={() => setStep("warning")} className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-stone-400 hover:bg-white/[0.06] font-medium text-sm transition-colors">
                       ← Kembali
                     </button>
                     <button
@@ -384,9 +384,9 @@ export default function DataManagementTab() {
               {/* STEP 3: Password */}
               {step === "password" && (
                 <div className="space-y-4">
-                  <div className="flex items-start gap-3 p-4 bg-[#7F1D1D]/[0.06] rounded-xl border border-[#7F1D1D]/20">
-                    <ShieldAlert className="w-5 h-5 text-[#7F1D1D] mt-0.5 shrink-0" />
-                    <p className="text-sm text-[#7F1D1D]">
+                  <div className="flex items-start gap-3 p-4 bg-[#7F1D1D]/25 rounded-xl border border-[#E5484D]/30">
+                    <ShieldAlert className="w-5 h-5 text-[#E5484D] mt-0.5 shrink-0" />
+                    <p className="text-sm text-[#E5484D]">
                       Masukkan password akun Anda untuk mengotorisasi operasi ini.
                     </p>
                   </div>
@@ -405,14 +405,14 @@ export default function DataManagementTab() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-300"
                       >
                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
                     </div>
                   </div>
                   <div className="flex gap-3">
-                    <button onClick={() => setStep("confirm")} disabled={loading} className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 font-medium text-sm transition-colors disabled:opacity-40">
+                    <button onClick={() => setStep("confirm")} disabled={loading} className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-stone-400 hover:bg-white/[0.06] font-medium text-sm transition-colors disabled:opacity-40">
                       ← Kembali
                     </button>
                     <button
@@ -437,17 +437,17 @@ export default function DataManagementTab() {
               {step === "done" && (
                 <div className="space-y-4">
                   <div className="flex flex-col items-center text-center py-2">
-                    <CheckCircle2 className="w-14 h-14 text-green-500 mb-3" />
-                    <h4 className="font-bold text-gray-800 text-lg">Operasi Berhasil!</h4>
-                    <p className="text-sm text-gray-600 mt-1 leading-relaxed">{resultMessage}</p>
+                    <CheckCircle2 className="w-14 h-14 text-green-400 mb-3" />
+                    <h4 className="font-bold text-stone-200 text-lg">Operasi Berhasil!</h4>
+                    <p className="text-sm text-stone-400 mt-1 leading-relaxed">{resultMessage}</p>
                   </div>
                   {resultDetail && (
-                    <div className="bg-gray-50 rounded-xl p-4 text-sm space-y-1.5">
-                      <p className="font-semibold text-gray-700 mb-2">Detail Hasil:</p>
+                    <div className="bg-white/[0.06] rounded-xl p-4 text-sm space-y-1.5">
+                      <p className="font-semibold text-stone-300 mb-2">Detail Hasil:</p>
                       {Object.entries(resultDetail).map(([key, val]) => (
-                        <div key={key} className="flex justify-between text-gray-600">
+                        <div key={key} className="flex justify-between text-stone-400">
                           <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                          <span className="font-semibold text-gray-800">{val.toLocaleString("id-ID")}</span>
+                          <span className="font-semibold text-stone-200">{val.toLocaleString("id-ID")}</span>
                         </div>
                       ))}
                     </div>

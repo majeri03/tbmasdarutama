@@ -24,18 +24,18 @@ export default function LandingProducts({ products }: Props) {
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute inset-0" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M0 0h40v40H0V0zm40 40h40v40H40V40zm0-40h2l-2 2V0zm0 4l4-4h2l-6 6V4zm0 4l8-8h2L40 10V8zm0 4L52 0h2L40 14v-2zm0 4L56 0h2L40 18v-2zm0 4L60 0h2L40 22v-2zm0 4L64 0h2L40 26v-2zm0 4L68 0h2L40 30v-2zm0 4L72 0h2L40 34v-2zm0 4L76 0h2L40 38v-2zm0 4L80 0v2L42 40h-2zm4 0L80 4v2L46 40h-2zm4 0L80 8v2L50 40h-2zm4 0l28-28v2L54 40h-2zm4 0l24-24v2L58 40h-2zm4 0l20-20v2L62 40h-2zm4 0l16-16v2L66 40h-2zm4 0l12-12v2L70 40h-2zm4 0l8-8v2l-6 6h-2zm4 0l4-4v2l-2 2h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23FFFFFF' fill-opacity='1'%3E%3Cpath d='M0 0h40v40H0V0zm40 40h40v40H40V40zm0-40h2l-2 2V0zm0 4l4-4h2l-6 6V4zm0 4l8-8h2L40 10V8zm0 4L52 0h2L40 14v-2zm0 4L56 0h2L40 18v-2zm0 4L60 0h2L40 22v-2zm0 4L64 0h2L40 26v-2zm0 4L68 0h2L40 30v-2zm0 4L72 0h2L40 34v-2zm0 4L76 0h2L40 38v-2zm0 4L80 0v2L42 40h-2zm4 0L80 4v2L46 40h-2zm4 0L80 8v2L50 40h-2zm4 0l28-28v2L54 40h-2zm4 0l24-24v2L58 40h-2zm4 0l20-20v2L62 40h-2zm4 0l16-16v2L66 40h-2zm4 0l12-12v2L70 40h-2zm4 0l8-8v2l-6 6h-2zm4 0l4-4v2l-2 2h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
         }} />
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Header */}
         <div className="text-center mb-16 animate-slide-up">
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-[#1C1917] mb-4">
-            Produk <span className="text-[#7F1D1D]">Unggulan</span>
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-stone-100 mb-4">
+            Produk <span className="text-[#E5484D]">Unggulan</span>
           </h2>
           <div className="w-24 h-1 bg-[#7F1D1D] mx-auto rounded-full mb-6" />
-          <p className="text-lg text-stone-600 max-w-2xl mx-auto">
+          <p className="text-lg text-stone-400 max-w-2xl mx-auto">
             Pilihan terbaik untuk kebutuhan bangunan Anda — harga tertera per satuan
           </p>
         </div>
@@ -47,10 +47,10 @@ export default function LandingProducts({ products }: Props) {
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#7F1D1D] flex items-center justify-center">
               <Package className="w-8 h-8 text-white" />
             </div>
-            <h3 className="font-bold text-xl text-[#1C1917] mb-2">
+            <h3 className="font-bold text-xl text-stone-100 mb-2">
               Katalog produk segera hadir
             </h3>
-            <p className="text-stone-600 mb-6">
+            <p className="text-stone-400 mb-6">
               Produk unggulan belum tersedia saat ini. Hubungi kami untuk
               daftar harga terbaru.
             </p>
@@ -69,7 +69,7 @@ export default function LandingProducts({ products }: Props) {
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
                   {/* Image */}
-                  <div className="relative h-48 bg-gray-100">
+                  <div className="relative h-48 bg-white/[0.08]">
                     {product.imageUrl ? (
                       <Image
                         src={product.imageUrl}
@@ -79,13 +79,13 @@ export default function LandingProducts({ products }: Props) {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <Package className="w-16 h-16 text-gray-400" />
+                        <Package className="w-16 h-16 text-stone-500" />
                       </div>
                     )}
 
                     {/* Category Badge */}
                     <div className="absolute top-3 left-3 glass-card px-3 py-1">
-                      <span className="text-xs font-semibold text-gray-800">
+                      <span className="text-xs font-semibold text-stone-200">
                         {product.category.name}
                       </span>
                     </div>
@@ -93,7 +93,7 @@ export default function LandingProducts({ products }: Props) {
 
                   {/* Content: nama + deskripsi + harga */}
                   <div className="p-4">
-                    <h3 className="font-bold text-lg text-[#1C1917] line-clamp-2">
+                    <h3 className="font-bold text-lg text-stone-100 line-clamp-2">
                       {product.name}
                     </h3>
                     {product.description && (
@@ -101,7 +101,7 @@ export default function LandingProducts({ products }: Props) {
                         {product.description}
                       </p>
                     )}
-                    <p className="mt-3 text-lg font-bold text-[#7F1D1D]">
+                    <p className="mt-3 text-lg font-bold text-[#E5484D]">
                       {product.sellingPrice > 0
                         ? formatCurrency(product.sellingPrice)
                         : "Hubungi kami"}
