@@ -628,9 +628,15 @@ export function FleetMap() {
       </div>
 
       {/* Form tambah / edit kendaraan (SUPER_ADMIN saja) */}
+      {/* WS-3 (perbaikan ke-4): dulu wrapper bg-black/40 + panel
+          .glass-card (putih 10% + blur) — di atas peta OSM yang
+          TERANG, peta menembus panel dan form tidak terbaca.
+          Sekarang pola modal standar: overlay bg-black/80 blur-md
+          + panel .modal-container hampir solid (0.98), selaras
+          perbaikan kaca modal paket ke-3 item 9. */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="glass-card w-full max-w-lg max-h-[90vh] overflow-y-auto p-5">
+        <div className="modal-overlay">
+          <div className="modal-container w-full max-w-lg p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-lg text-stone-100">
                 {editingId ? "Edit Kendaraan" : "Tambah Kendaraan"}

@@ -461,7 +461,7 @@ export function CustomerViewModal({
                       value={pointsInput}
                       onChange={(e) => setPointsInput(e.target.value)}
                       placeholder="Jumlah poin"
-                      className="w-32 px-3 py-2 border border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
+                      className="w-32 px-3 py-2 border border-white/10 rounded-xl text-sm text-stone-100 bg-white/[0.08] placeholder:text-stone-500 [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
                     />
                     <button
                       onClick={() => handleAdjustPoints(1)}

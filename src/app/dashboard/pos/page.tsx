@@ -498,8 +498,12 @@ export default function POSPage() {
                     </div>
 
                     {/* Checkout + Hold Cart Buttons (Floating) */}
+                    {/* WS-3 (perbaikan ke-4): hanya desktop — di HP,
+                        right-[25rem] mendorong tombol ini keluar layar
+                        dan checkout HP sudah ada di dalam modal
+                        keranjang (showMobileCart). */}
                     {cartItems.length > 0 && (
-                        <div className="fixed bottom-6 right-[25rem] z-40 flex items-center gap-2">
+                        <div className="hidden md:flex fixed bottom-6 right-[25rem] z-40 items-center gap-2">
                             <button
                                 onClick={handleParkCart}
                                 className="px-5 py-4 bg-[#211E1B] text-stone-100 border border-white/15 rounded-full shadow-lg hover:bg-white/10 transition-all flex items-center gap-2 text-base font-semibold"
@@ -520,7 +524,13 @@ export default function POSPage() {
                     {parkedCarts.length > 0 && (
                         <button
                             onClick={() => setShowHoldPanel(true)}
-                            className="fixed bottom-6 left-6 z-40 px-4 py-3 bg-[#B45309] text-white rounded-full shadow-lg hover:bg-[#92400E] transition-all flex items-center gap-2 font-semibold"
+                            /* WS-3 (perbaikan ke-4): di HP tombol ini
+                               (fixed bottom-6 left-6) menumpuk tepat di
+                               atas bar merah "Lihat Keranjang" (bottom-0,
+                               z-50) — diangkat ke bottom-24 supaya tidak
+                               menutupi bar keranjang; di desktop tetap
+                               bottom-6. */
+                            className="fixed bottom-24 md:bottom-6 left-6 z-40 px-4 py-3 bg-[#B45309] text-white rounded-full shadow-lg hover:bg-[#92400E] transition-all flex items-center gap-2 font-semibold"
                         >
                             <Pause className="w-5 h-5" />
                             <span>Ditahan ({parkedCarts.length})</span>
@@ -577,7 +587,7 @@ export default function POSPage() {
                 />
                 {/* Mobile Cart Modal */}
                 {showMobileCart && (
-                    <div className="md:hidden fixed inset-0 bg-black/50 z-50 flex flex-col">
+                    <div className="md:hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex flex-col">
                         {/* Header */}
                         <div className="glass-card p-4 flex items-center justify-between border-b border-white/10">
                             <h2 className="text-lg font-semibold text-stone-100">Keranjang Belanja</h2>

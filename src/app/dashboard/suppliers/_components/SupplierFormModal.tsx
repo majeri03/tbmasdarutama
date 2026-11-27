@@ -109,7 +109,7 @@ export function SupplierFormModal({
 
   return (
     <div className="modal-overlay overflow-y-auto">
-      <div className="modal-container p-6 w-full max-w-2xl animate-slide-up my-8">
+      <div className="modal-container p-6 w-full max-w-2xl animate-slide-up">
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-center gap-3">
             <div

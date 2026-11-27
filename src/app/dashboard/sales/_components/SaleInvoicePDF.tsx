@@ -253,16 +253,20 @@ export function SaleInvoicePDF({ isOpen, onClose, saleId }: SaleInvoicePDFProps)
         )}
 
         {/* Preview Area */}
-        <div className="flex-1 bg-[#141210] overflow-auto relative" ref={previewWrapRef}>
+        {/* WS-5 (27 Nov 2026): area preview faktur WAJIB putih — dulu
+            bg gelap #141210, jadi sebelum/saat iframe belum ter-render
+            (dan di tepi kertas A4 yang mengecil di HP) layar terlihat
+            hitam semua. */}
+        <div className="flex-1 bg-white overflow-auto relative" ref={previewWrapRef}>
           {error ? (
-            <div className="p-8 text-center text-red-400 bg-[#1C1917] h-full flex items-center justify-center">
+            <div className="p-8 text-center text-red-600 bg-white h-full flex items-center justify-center">
                 {error}
             </div>
           ) : isLoading ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-[#141210]/85 z-10">
+            <div className="absolute inset-0 flex items-center justify-center bg-white/85 z-10">
               <div className="text-center">
                 <Loader2 className="w-8 h-8 animate-spin mx-auto text-[#E5484D]" />
-                <p className="text-sm text-stone-400 mt-2">Menyiapkan invoice...</p>
+                <p className="text-sm text-stone-500 mt-2">Menyiapkan invoice...</p>
               </div>
             </div>
           ) : (

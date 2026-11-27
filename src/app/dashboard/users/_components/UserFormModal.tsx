@@ -118,7 +118,9 @@ export function UserFormModal({ isOpen, onClose, initialData }: Props) {
             onClose={hideToast} 
         />
       )}
-      <div className="modal-container w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+      {/* WS-6b (27 Nov 2026): overflow-hidden dihapus — menimpa aturan
+          scroll .modal-container sehingga form user panjang terpotong. */}
+      <div className="modal-container w-full max-w-lg animate-in fade-in zoom-in duration-200">
         <div className="flex items-center justify-between p-4 border-b border-white/10">
           <h2 className="text-lg font-bold text-stone-200">
             {initialData ? "Edit User" : "Tambah User Baru"}
@@ -134,7 +136,7 @@ export function UserFormModal({ isOpen, onClose, initialData }: Props) {
                 <label className="text-xs font-semibold text-stone-400">Nama Lengkap</label>
                 <input
                 {...form.register("name")}
-                className="w-full px-3 py-2 border border-white/15 rounded-xl focus:ring-2 focus:ring-[#E5484D] focus:border-[#E5484D] outline-none transition-all text-sm"
+                className="glass-input text-sm"
                 placeholder="Nama user"
                 />
                 {form.formState.errors.name && <p className="text-xs text-red-500">{form.formState.errors.name.message}</p>}
@@ -144,7 +146,7 @@ export function UserFormModal({ isOpen, onClose, initialData }: Props) {
                 <input
                 type="email"
                 {...form.register("email")}
-                className="w-full px-3 py-2 border border-white/15 rounded-xl focus:ring-2 focus:ring-[#E5484D] focus:border-[#E5484D] outline-none transition-all text-sm"
+                className="glass-input text-sm"
                 placeholder="email@contoh.com"
                 />
                 {form.formState.errors.email && <p className="text-xs text-red-500">{form.formState.errors.email.message}</p>}
@@ -160,7 +162,7 @@ export function UserFormModal({ isOpen, onClose, initialData }: Props) {
                 <input
                 type="password"
                 {...form.register("password")}
-                className="w-full px-3 py-2 border border-white/15 rounded-xl focus:ring-2 focus:ring-[#E5484D] focus:border-[#E5484D] outline-none transition-all text-sm"
+                className="glass-input text-sm"
                 placeholder="******"
                 />
                 {passwordValue && (
@@ -187,7 +189,7 @@ export function UserFormModal({ isOpen, onClose, initialData }: Props) {
             <label className="text-xs font-semibold text-stone-400">No. Telepon</label>
             <input
               {...form.register("phone")}
-              className="w-full px-3 py-2 border border-white/15 rounded-xl focus:ring-2 focus:ring-[#E5484D] focus:border-[#E5484D] outline-none transition-all text-sm"
+              className="glass-input text-sm"
               placeholder="08..."
             />
           </div>
@@ -197,7 +199,7 @@ export function UserFormModal({ isOpen, onClose, initialData }: Props) {
             <textarea
               {...form.register("address")}
               rows={2}
-              className="w-full px-3 py-2 border border-white/15 rounded-xl focus:ring-2 focus:ring-[#E5484D] focus:border-[#E5484D] outline-none transition-all text-sm resize-none"
+              className="glass-input text-sm resize-none"
               placeholder="Alamat lengkap..."
             />
           </div>

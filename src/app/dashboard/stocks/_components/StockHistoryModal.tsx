@@ -79,17 +79,19 @@ export function StockHistoryModal({
     }).format(new Date(date));
   };
 
+  /* WS-3 (perbaikan ke-4) — pola backdrop-saudara yang sama dengan
+     StockAdjustmentModal (lihat komentar di sana): .modal-overlay
+     (fixed, z-50, backdrop-blur-md) sebagai saudara panel membuat
+     blur menutupi panel modal sendiri + halaman di belakangnya,
+     dan semua klik di modal mengenai backdrop. Diperbaiki ke pola
+     standar: .modal-overlay sebagai induk, .modal-container anak. */
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-4">
-        {/* Backdrop */}
-        <div
-          className="modal-overlay"
-          onClick={onClose}
-        />
-
-        {/* Modal */}
-        <div className="modal-container relative max-w-2xl w-full">
+    <div className="modal-overlay" onClick={onClose}>
+      {/* Modal */}
+      <div
+        className="modal-container relative max-w-2xl w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
           {/* Header */}
           <div className="border-b border-white/10 px-6 py-4 flex items-center justify-between rounded-t-2xl">
             <div className="flex items-center gap-3">
@@ -197,7 +199,6 @@ export function StockHistoryModal({
             </button>
           </div>
         </div>
-      </div>
     </div>
   );
 }

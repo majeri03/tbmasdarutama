@@ -11,7 +11,12 @@ const extractFilenameFromUrl = extractR2Filename;
 // PENTEST FIX (22 Nov 2026, L4/M14): pola key R2 yang sama seperti
 // DELETE /api/upload — dipakai untuk membedakan file R2 asli dari URL
 // luar (placeholder dsb.) yang tidak ada di R2.
-const R2_KEY_RE = /^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+(?:-[a-zA-Z0-9_-]+)*\.(jpg|jpeg|png|webp)$/;
+// WS-2 (27 Nov 2026): nama file boleh mengandung titik di tengah
+// (mis. file lama hasil backfill `foto.2024.jpg`) — dulu regex ini menolaknya
+// sebagai "bukan file R2" sehingga baris DB dihapus SEMENTARA objek R2-nya
+// tetap ada (status terhapus tapi gambar masih terlihat). Traversal tetap
+// mustahil: hanya SATU `/` (folder/nama.ext) dan tanpa `..` sebagai segmen.
+const R2_KEY_RE = /^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.\-]+(?:-[a-zA-Z0-9_.\-]+)*\.(jpg|jpeg|png|webp)$/;
 
 /**
  * Coba hapus satu file dari R2.

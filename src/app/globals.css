@@ -39,6 +39,13 @@
 
   html {
     background: #141210;
+    /* WS-3 (perbaikan ke-4): tanpa ini, browser menggambar kontrol
+       form bawaan (input/select/textarea, spinner angka, kalender)
+       dengan skema TERANG — latar putih — sementara teksnya mewarisi
+       warna terang tema gelap (#f5f5f4 dari body) sehingga tulisan
+       yang diketik tidak kelihatan (putih di atas putih). Dengan
+       color-scheme: dark, kontrol bawaan digambar gelap + teks terang. */
+    color-scheme: dark;
   }
 
   body {
@@ -57,6 +64,33 @@
 
   ::selection {
     background: rgba(229, 72, 77, 0.3);
+  }
+
+  /* WS-3 (perbaikan ke-4) — jaring pengaman kontras input: BANYAK
+     input di aplikasi ini tidak punya class latar/teks sendiri
+     (hanya border + rounded) sehingga mengandalkan latar bawaan
+     browser (putih) + warna teks warisan tema gelap (terang) —
+     tulisan yang diketik jadi tidak terlihat. Aturan ini memberi
+     semua field ketik latar gelap + teks terang + placeholder
+     redup yang kontras. Ada di @layer base supaya class apa pun
+     (.glass-input, .input-field, bg-*, text-*) tetap menang.
+     Checkbox/radio/file/submit/button dikecualikan. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="hidden"]),
+  select,
+  textarea {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #f5f5f4;
+    color-scheme: dark;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="hidden"])::placeholder,
+  textarea::placeholder {
+    color: #a8a29e;
+  }
+
+  select option {
+    background-color: #1c1917;
+    color: #f5f5f4;
   }
 
   body::before {
@@ -367,15 +401,49 @@
   }
   /* ==================== MODAL SYSTEM ==================== */
   .modal-overlay {
-    @apply fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4;
+    /* WS-6b (27 Nov 2026, kaca modal): dim 70 -> 80 + blur-sm -> blur-md.
+       Dengan 70, isi halaman di belakang modal masih terlalu jelas
+       sehingga teks modal bercampur dengannya. */
+    /* WS-3 (perbaikan ke-4): dulu `flex items-center justify-center`
+       TANPA overflow — kalau isi modal lebih tinggi dari viewport,
+       flex-centering memotong bagian atas & bawah dan bagian yang
+       terpotong TIDAK BISA di-scroll (bug klasik flexbox centering).
+       Itu yang memotong tombol Batal/Tambah di modal Tambah Supplier
+       dan bagian Dibayar di Buat PO, padahal WS-6b sudah membuat
+       .modal-container bisa di-scroll. Sekarang overlay-nya sendiri
+       bisa di-scroll (overflow-y-auto) + rata atas (items-start);
+       .modal-container memakai margin auto vertikal sehingga modal
+       pendek tetap di tengah, modal panjang menempel ke atas dan
+       bisa di-scroll sampai ujung. */
+    @apply fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-start justify-center p-4;
+    overflow-y: auto;
     animation: fade-in 0.2s ease-out;
   }
 
   .modal-container {
-    @apply relative w-full shadow-2xl overflow-hidden;
+    /* WS-6b (27 Nov 2026): dulu overflow-hidden + max-height 90vh TANPA
+       scroll — modal yang isinya lebih panjang dari viewport (form
+       panjang, detail penjualan/produk, dsb.) terpotong dan TIDAK BISA
+       digeser ke bawah. Sekarang container-nya sendiri bisa di-scroll
+       vertikal; overflow-x tetap hidden supaya sudut membulat tetap
+       terpotong rapi. Modal yang sudah punya area scroll sendiri di
+       dalam (mis. .modal-body) tetap bekerja seperti sebelumnya. */
+    /* WS-3 (perbaikan ke-4): margin vertikal auto — pasangan dari
+       items-start di .modal-overlay (lihat di atas). JANGAN tambah
+       class margin vertikal (my-, mt-, mb-) pada elemen
+       .modal-container: margin utilitas menimpa margin auto ini
+       dan mengembalikan bug centering. */
+    @apply relative w-full shadow-2xl;
+    margin-top: auto;
+    margin-bottom: auto;
+    flex-shrink: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
     border-radius: 24px;
     /* Permukaan baca tinggi: solid #211E1B nyaris pekat + blur. */
-    background: rgba(33, 30, 27, 0.95);
+    /* WS-6b (27 Nov 2026, kaca modal): 0.95 -> 0.98 supaya panel modal
+       hampir tidak tembus pandang. */
+    background: rgba(33, 30, 27, 0.98);
     backdrop-filter: blur(20px) saturate(160%);
     -webkit-backdrop-filter: blur(20px) saturate(160%);
     border: 1px solid rgba(255, 255, 255, 0.12);

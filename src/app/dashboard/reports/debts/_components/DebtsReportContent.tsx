@@ -89,7 +89,9 @@ export default function DebtsReportContent({ data }: DebtsReportContentProps) {
       {/* Customer Debts Table */}
       <div className="mb-8">
         <ReportSectionTitle>Detail Piutang Customer</ReportSectionTitle>
-        <table className="w-full text-sm">
+        {/* WS-4 (27 Nov 2026): tabel 7 kolom butuh scroll horizontal di HP. */}
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr className="border-b-2 border-white/40 print:border-[#111111]">
               <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">No</th>
@@ -129,12 +131,15 @@ export default function DebtsReportContent({ data }: DebtsReportContentProps) {
             </tr>
           </tfoot>
         </table>
+        </div>
       </div>
 
       {/* Supplier Debts Table */}
       <div className="mb-8">
         <ReportSectionTitle>Detail Hutang Supplier</ReportSectionTitle>
-        <table className="w-full text-sm">
+        {/* WS-4 (27 Nov 2026): tabel 7 kolom butuh scroll horizontal di HP. */}
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr className="border-b-2 border-white/40 print:border-[#111111]">
               <th className="px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-stone-100 print:text-[#111111]">No</th>
@@ -174,6 +179,7 @@ export default function DebtsReportContent({ data }: DebtsReportContentProps) {
             </tr>
           </tfoot>
         </table>
+        </div>
       </div>
 
       <ReportFooter storeName={store?.name ?? undefined} />

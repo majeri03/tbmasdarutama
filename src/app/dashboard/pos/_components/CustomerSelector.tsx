@@ -111,7 +111,16 @@ export function CustomerSelector({ selectedCustomer, onSelectCustomer, onQuickAd
                     <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
 
                     {/* Dropdown Content */}
-                    <div className="absolute top-full left-0 right-0 mt-2 z-50 glass-card shadow-xl max-h-96 flex flex-col">
+                    {/* WS-3 (perbaikan ke-4): dulu .glass-card (putih 10%
+                        + blur) — kartu produk di belakang menembus dan
+                        daftar customer bercampur dengan produk; label
+                        baris di belakang ("Sales") ikut terlihat
+                        menumpuk dengan isi dropdown. Sekarang panel
+                        solid #211E1B (sama seperti dropdown hasil
+                        pencarian Stock Opname yang sudah terbaca)
+                        + bayangan kuat, supaya daftar customer
+                        selalu di atas dan terbaca. */}
+                    <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-[#211E1B] border border-white/10 rounded-2xl shadow-2xl max-h-96 flex flex-col overflow-hidden">
                         {/* Search */}
                         <div className="p-3 border-b border-white/10">
                             <div className="relative">

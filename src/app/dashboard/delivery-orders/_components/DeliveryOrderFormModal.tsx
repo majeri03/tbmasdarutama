@@ -492,7 +492,7 @@ export function DeliveryOrderFormModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 flex-1 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6 flex-1 min-h-0 overflow-y-auto">
           {/* Section: Pilih Penjualan POS (Otomatis DO) */}
           <div className="p-4 bg-[#E5484D]/10 border border-[#E5484D]/30 rounded-xl space-y-2">
             <div className="flex items-center justify-between">

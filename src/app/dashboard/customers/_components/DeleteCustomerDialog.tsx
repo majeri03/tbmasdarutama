@@ -48,7 +48,7 @@ export function DeleteCustomerDialog({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
       <div className="glass-card w-full max-w-md p-6 animate-slide-up">
         {/* Header */}
         <div className="flex items-start gap-4 mb-6">

@@ -106,25 +106,26 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
     minute: '2-digit',
   });
 
-  const isPaid = sale.paymentMethod !== 'CREDIT' || Number(sale.paidAmount) >= Number(sale.grandTotal);
-  const watermarkText = isPaid ? 'PAID' : 'UNPAID';
-  const watermarkColor = '#9CA3AF';
-  // Hapus watermark khusus di PO dan Surat Jalan
-  const showWatermark = layout.layoutType !== 'SURAT_JALAN' && 
-                        !sale.invoiceNumber?.startsWith('PO-') && 
-                        !sale.invoiceNumber?.startsWith('DO-');
+  // Watermark PAID/UNPAID (item 211) DIHAPUS TOTAL — perbaikan ke-4
+  // (27 Nov 2026, atas permintaan user): tidak ada lagi watermark di
+  // layar, cetak, maupun download PDF, di semua layout.
 
   const items = sale.saleItems || [];
 
   if (layout.layoutType === 'STRUK_KECIL') {
     // 1. TEMPLATE STRUK KECIL (THERMAL 58mm/80mm)
+    // Baris item sebagai TABEL 2 kolom (bukan flex): di WebView HP, flex +
+    // font monospace yang lebarnya beda membuat "1 Zak x Rp 78.000" patah
+    // aneh; sel kanan nowrap menjamin subtotal tidak pernah terbelah.
     const itemsHtml = items.map((item: any) => `
-      <div style="margin-bottom: 8px; font-size: ${12 * scale}px;">
+      <div style="margin-bottom: 6px; font-size: ${12 * scale}px;">
         <div style="font-weight: bold;">${escapeHtml(item.product.name)}</div>
-        <div style="display: flex; justify-content: space-between; font-size: ${11 * scale}px; color: #4B5563; margin-top: 2px;">
-          <div>${item.quantity} ${escapeHtml(item.unit?.name || 'Unit')} x Rp ${item.unitPrice.toLocaleString('id-ID')}</div>
-          <div style="font-weight: bold; color: #111827;">Rp ${item.subtotal.toLocaleString('id-ID')}</div>
-        </div>
+        <table style="width: 100%; border-collapse: separate; border-spacing: 0; line-height: 1.3;">
+          <tr>
+            <td style="padding: 0; font-size: ${11 * scale}px; color: #4B5563;">${item.quantity} ${escapeHtml(item.unit?.name || 'Unit')} x Rp ${item.unitPrice.toLocaleString('id-ID')}</td>
+            <td style="padding: 0; width: 1%; text-align: right; font-size: ${11 * scale}px; font-weight: bold; color: #111827; white-space: nowrap;">Rp ${item.subtotal.toLocaleString('id-ID')}</td>
+          </tr>
+        </table>
         ${item.discount > 0 ? `
           <div style="font-size: ${10 * scale}px; color: #DC2626; text-align: right;">
             Diskon Item: -Rp ${item.discount.toLocaleString('id-ID')}
@@ -138,9 +139,12 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
       <html>
       <head>
         <meta charset="utf-8">
+        <meta name="color-scheme" content="light">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Struk POS</title>
         <style>
+          /* WS-5 (27 Nov 2026): faktur WAJIB terang walau HP mode gelap. */
+          html { background: #ffffff; color-scheme: light; }
           body {
             font-family: 'Courier New', Courier, monospace;
             color: #111827;
@@ -157,17 +161,20 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           }
           .divider {
             border-top: 1px dashed #000000;
-            margin: 8px 0;
+            margin: 6px 0;
           }
           .double-divider {
             border-top: 2px dashed #000000;
-            margin: 8px 0;
+            margin: 6px 0;
           }
           .row {
             display: flex;
             justify-content: space-between;
             font-size: ${11 * scale}px;
             margin: 3px 0;
+          }
+          .row div:last-child {
+            white-space: nowrap;
           }
           .bold {
             font-weight: bold;
@@ -179,11 +186,6 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
       </head>
       <body>
         <div class="container">
-          ${showWatermark ? `
-          <div style="position: absolute; top: 40%; left: 0; right: 0; text-align: center; opacity: 0.08; transform: rotate(-25deg); font-size: 44px; font-weight: 900; z-index: 1000; color: ${watermarkColor}; pointer-events: none; white-space: nowrap; font-family: sans-serif; letter-spacing: 4px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-            ${watermarkText}
-          </div>
-          ` : ''}
           ${layout.showHeader ? `
             <div class="center">
               <div style="font-size: ${16 * scale}px; font-weight: bold;">${escapeHtml(displayStoreName)}</div>
@@ -251,16 +253,16 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
   } else if (layout.layoutType === 'SURAT_JALAN') {
     // 2. TEMPLATE SURAT JALAN (DO - NO PRICE DETAILS)
     const itemsHtml = items.map((item: any, index: number) => `
-      <tr style="font-size: ${12 * scale}px;">
-        <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center;">${index + 1}</td>
-        <td style="padding: 10px 8px; border: 1px solid #000000;">
+      <tr style="font-size: ${11 * scale}px;">
+        <td style="padding: 6px 8px; border: none; border-right: 1px solid #000000; border-bottom: 1px solid #000000; text-align: center;">${index + 1}</td>
+        <td style="padding: 6px 8px; border: none; border-right: 1px solid #000000; border-bottom: 1px solid #000000;">
           <div style="font-weight: bold;">${escapeHtml(item.product.name)}</div>
           <div style="font-size: 10px; color: #4B5563;">${escapeHtml(item.product.code)}</div>
         </td>
-        <td style="padding: 10px 8px; border: 1px solid #000000; text-align: center; font-weight: bold;">
+        <td style="padding: 6px 8px; border: none; border-right: 1px solid #000000; border-bottom: 1px solid #000000; text-align: center; font-weight: bold; white-space: nowrap;">
           ${item.quantity} ${escapeHtml(item.unit?.name || 'Unit')}
         </td>
-        <td style="padding: 10px 8px; border: 1px solid #000000; font-style: italic; color: #4B5563;">
+        <td style="padding: 6px 8px; border: none; border-right: 1px solid #000000; border-bottom: 1px solid #000000; font-style: italic; color: #4B5563;">
           -
         </td>
       </tr>
@@ -271,15 +273,19 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
       <html>
       <head>
         <meta charset="utf-8">
+        <meta name="color-scheme" content="light">
         <title>Surat Jalan ${sale.invoiceNumber}</title>
         <style>
+          /* WS-5 (27 Nov 2026): faktur WAJIB terang walau HP mode gelap. */
+          html { background: #ffffff; color-scheme: light; }
           body {
             font-family: Arial, sans-serif;
             color: #000000;
             margin: 0;
-            padding: 30px;
-            font-size: ${12 * scale}px;
-            line-height: 1.4;
+            padding: 20px;
+            background: #ffffff;
+            font-size: ${11 * scale}px;
+            line-height: 1.35;
           }
           .container {
             max-width: 800px;
@@ -291,16 +297,19 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
             display: flex;
             justify-content: space-between;
             border: 2px solid #000000;
-            padding: 15px;
-            margin-bottom: 20px;
+            padding: 10px;
+            margin-bottom: 12px;
+          }
+          .header-box td {
+            white-space: nowrap;
           }
           .store-title {
-            font-size: ${18 * scale}px;
+            font-size: ${16 * scale}px;
             font-weight: bold;
             margin-bottom: 5px;
           }
           .do-title {
-            font-size: ${22 * scale}px;
+            font-size: ${20 * scale}px;
             font-weight: bold;
             text-align: right;
             letter-spacing: 1px;
@@ -316,34 +325,42 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           }
           .info-card {
             border: 1px solid #000000;
-            padding: 10px;
-            margin-bottom: 20px;
+            padding: 8px;
+            margin-bottom: 12px;
           }
           .info-card-title {
             font-weight: bold;
             text-transform: uppercase;
-            border-bottom: 1px solid #000000;
             padding-bottom: 4px;
-            margin-bottom: 6px;
+            margin-bottom: 2px;
             font-size: ${11 * scale}px;
           }
           .product-table {
             width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 30px;
+            /* Perbaikan ke-4 (html2canvas): separate, bukan collapse —
+               garis collapse salah letak di HP (menembus judul/kolom). */
+            border-collapse: separate;
+            border-spacing: 0;
+            border-top: 1px solid #000000;
+            border-left: 1px solid #000000;
+            margin-bottom: 16px;
+            table-layout: fixed;
           }
           .product-table th {
-            border: 1px solid #000000;
-            padding: 10px 8px;
+            border: none;
+            border-right: 1px solid #000000;
+            border-bottom: 1px solid #000000;
+            padding: 6px 8px;
             background: #E5E7EB;
             font-weight: bold;
             text-transform: uppercase;
             font-size: ${11 * scale}px;
+            white-space: nowrap;
           }
           .signature-section {
             display: flex;
             justify-content: space-between;
-            margin-top: 40px;
+            margin-top: 24px;
           }
           .signature-box {
             width: 28%;
@@ -351,18 +368,13 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           }
           .signature-line {
             border-top: 1px solid #000000;
-            margin-top: 70px;
+            margin-top: 50px;
             font-weight: bold;
           }
         </style>
       </head>
       <body>
         <div class="container">
-          ${showWatermark ? `
-          <div style="position: absolute; top: 35%; left: 0; right: 0; text-align: center; opacity: 0.08; transform: rotate(-30deg); font-size: 110px; font-weight: 900; z-index: 1000; color: ${watermarkColor}; pointer-events: none; white-space: nowrap; font-family: sans-serif; letter-spacing: 12px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-            ${watermarkText}
-          </div>
-          ` : ''}
           <div class="header-box">
             <div>
               <div class="store-title">${escapeHtml(displayStoreName)}</div>
@@ -371,7 +383,7 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
                 ${store.phone ? `No. Telp: ${escapeHtml(store.phone)}` : ''}
               </div>
             </div>
-            <div>
+            <div style="flex-shrink: 0;">
               <div class="do-title">SURAT JALAN</div>
               <table style="font-size: 11px; margin-top: 5px;">
                 <tr><td>No. Dokumen</td><td>: <b>DO-${sale.invoiceNumber}</b></td></tr>
@@ -383,6 +395,7 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
 
           <div class="info-card">
             <div class="info-card-title">Tujuan Pengiriman</div>
+            <div style="border-top: 1px solid #000000; margin-bottom: 6px;"></div>
             <table style="width: 100%;">
               <tr>
                 <td style="width: 15%; font-weight: bold;">Nama Penerima</td>
@@ -443,28 +456,28 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
       const gross = item.quantity * item.unitPrice;
       const discountPercent = item.discount > 0 ? Math.round((item.discount / gross) * 100) : 0;
       return `
-        <tr style="font-size: ${12 * scale}px;">
-          <td style="padding: 2px 8px; text-align: center;">${index + 1}</td>
-          <td style="padding: 2px 8px;">
+        <tr style="font-size: ${11 * scale}px;">
+          <td style="padding: 2px 6px; text-align: center; white-space: nowrap;">${index + 1}</td>
+          <td style="padding: 2px 6px;">
             <div style="font-weight: bold; color: #000000;">${escapeHtml(item.product.name)}</div>
             <div style="font-size: 10px; color: #4B5563; font-family: monospace;">${escapeHtml(item.product.code)}</div>
           </td>
-          <td style="padding: 2px 8px; text-align: center;">
+          <td style="padding: 2px 6px; text-align: center; white-space: nowrap;">
             ${item.quantity} ${escapeHtml(item.unit?.name || 'Unit')}
           </td>
-          <td style="padding: 2px 8px; text-align: right;">
+          <td style="padding: 2px 6px; text-align: right; white-space: nowrap;">
             Rp ${item.unitPrice.toLocaleString('id-ID')}
           </td>
-          <td style="padding: 2px 8px; text-align: right;">
+          <td style="padding: 2px 6px; text-align: right; white-space: nowrap;">
             Rp ${gross.toLocaleString('id-ID')}
           </td>
-          <td style="padding: 2px 8px; text-align: center;">
+          <td style="padding: 2px 6px; text-align: center; white-space: nowrap;">
             ${discountPercent}%
           </td>
-          <td style="padding: 2px 8px; text-align: right; color: #DC2626;">
+          <td style="padding: 2px 6px; text-align: right; color: #DC2626; white-space: nowrap;">
             ${item.discount > 0 ? `Rp ${item.discount.toLocaleString('id-ID')}` : 'Rp 0'}
           </td>
-          <td style="padding: 2px 8px; text-align: right; font-weight: bold;">
+          <td style="padding: 2px 6px; text-align: right; font-weight: bold; white-space: nowrap;">
             Rp ${item.subtotal.toLocaleString('id-ID')}
           </td>
         </tr>
@@ -478,15 +491,18 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
       <html>
       <head>
         <meta charset="utf-8">
+        <meta name="color-scheme" content="light">
         <title>Faktur NCR ${sale.invoiceNumber}</title>
         <style>
+          /* WS-5 (27 Nov 2026): faktur WAJIB terang walau HP mode gelap. */
+          html { background: #ffffff; color-scheme: light; }
           body {
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             color: #000000;
             margin: 0;
-            padding: 24px;
-            font-size: ${12 * scale}px;
-            line-height: 1.4;
+            padding: 16px;
+            font-size: ${11 * scale}px;
+            line-height: 1.35;
           }
           .container {
             max-width: 850px;
@@ -499,14 +515,14 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
             display: flex;
             justify-content: space-between;
             border-bottom: 2px solid #000000;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
           }
           .store-info {
             flex: 1.5;
           }
           .store-name {
-            font-size: ${18 * scale}px;
+            font-size: ${16 * scale}px;
             font-weight: bold;
             color: #000000;
             margin: 0 0 4px 0;
@@ -518,7 +534,7 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
             text-align: right;
           }
           .invoice-title {
-            font-size: ${24 * scale}px;
+            font-size: ${20 * scale}px;
             font-weight: bold;
             color: #000000;
             margin: 0 0 10px 0;
@@ -530,7 +546,8 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
             font-size: ${11 * scale}px;
           }
           .meta-table td {
-            padding: 3px 6px;
+            padding: 2px 4px;
+            white-space: nowrap;
           }
           .meta-label {
             font-weight: bold;
@@ -538,7 +555,7 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           }
           .card-box {
             padding: 0;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
           }
           .card-box-title {
             font-weight: bold;
@@ -549,21 +566,26 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           }
           .data-table {
             width: 100%;
-            border-collapse: collapse;
+            /* Perbaikan ke-4 (html2canvas): separate, bukan collapse —
+               garis collapse salah letak di HP (menembus teks header). */
+            border-collapse: separate;
+            border-spacing: 0;
             margin-bottom: 12px;
+            table-layout: fixed;
           }
           .data-table th {
             border-bottom: 1.5px solid #000000;
-            padding: 3px 8px;
+            padding: 3px 6px;
             background: transparent;
             font-weight: bold;
             text-transform: uppercase;
             font-size: ${11 * scale}px;
+            white-space: nowrap;
           }
           .bottom-container {
             display: flex;
             justify-content: space-between;
-            margin-top: 14px;
+            margin-top: 10px;
             gap: 20px;
           }
           .bottom-left {
@@ -593,7 +615,7 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           .signature-line {
             width: 120px;
             border-top: 1px solid #000000;
-            margin-top: 60px;
+            margin-top: 45px;
             font-weight: bold;
           }
           .bottom-right {
@@ -601,24 +623,27 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           }
           .totals-table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0;
             border: none;
           }
           .totals-table td {
-            padding: 5px 8px;
+            padding: 4px 6px;
             border: none;
           }
           .totals-label {
             font-weight: bold;
           }
           .grand-total-row {
-            border-top: 1px solid #000000;
             font-weight: bold;
             font-size: ${13 * scale}px;
           }
+          .grand-total-row td {
+            border-top: 1px solid #000000;
+          }
           .footer-terms {
             text-align: center;
-            margin-top: 20px;
+            margin-top: 14px;
             border-top: 2px solid #000000;
             padding-top: 8px;
             font-size: ${9 * scale}px;
@@ -629,11 +654,6 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
       </head>
       <body>
         <div class="container">
-          ${showWatermark ? `
-          <div style="position: absolute; top: 35%; left: 0; right: 0; text-align: center; opacity: 0.08; transform: rotate(-30deg); font-size: 110px; font-weight: 900; z-index: 1000; color: ${watermarkColor}; pointer-events: none; white-space: nowrap; font-family: sans-serif; letter-spacing: 12px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-            ${watermarkText}
-          </div>
-          ` : ''}
           <!-- ─── HEADER ─── -->
           ${layout.showHeader ? `
           <div class="header-box" style="align-items: center;">
@@ -688,13 +708,13 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
             <thead>
               <tr>
                 <th style="width: 5%; text-align: center;">No</th>
-                <th style="width: 40%; text-align: left;">Description</th>
-                <th style="width: 12%; text-align: center;">Qty</th>
+                <th style="width: 30%; text-align: left;">Description</th>
+                <th style="width: 10%; text-align: center;">Qty</th>
                 <th style="width: 12%; text-align: right;">Price</th>
                 <th style="width: 12%; text-align: right;">Gross</th>
                 <th style="width: 5%; text-align: center;">%</th>
                 <th style="width: 12%; text-align: right;">Disc</th>
-                <th style="width: 12%; text-align: right;">Net</th>
+                <th style="width: 14%; text-align: right;">Net</th>
               </tr>
             </thead>
             <tbody>
@@ -774,28 +794,28 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
       const gross = item.quantity * item.unitPrice;
       const discountPercent = item.discount > 0 ? Math.round((item.discount / gross) * 100) : 0;
       return `
-        <tr style="font-size: ${12 * scale}px;">
-          <td style="padding: 5px 8px; text-align: center;">${index + 1}</td>
-          <td style="padding: 5px 8px;">
+        <tr style="font-size: ${11 * scale}px;">
+          <td style="padding: 4px 6px; text-align: center; white-space: nowrap;">${index + 1}</td>
+          <td style="padding: 4px 6px;">
             <div style="font-weight: bold; color: #000000;">${escapeHtml(item.product.name)}</div>
             <div style="font-size: 10px; color: #4B5563; font-family: monospace;">${escapeHtml(item.product.code)}</div>
           </td>
-          <td style="padding: 5px 8px; text-align: center;">
+          <td style="padding: 4px 6px; text-align: center; white-space: nowrap;">
             ${item.quantity} ${escapeHtml(item.unit?.name || 'Unit')}
           </td>
-          <td style="padding: 5px 8px; text-align: right;">
+          <td style="padding: 4px 6px; text-align: right; white-space: nowrap;">
             Rp ${item.unitPrice.toLocaleString('id-ID')}
           </td>
-          <td style="padding: 5px 8px; text-align: right;">
+          <td style="padding: 4px 6px; text-align: right; white-space: nowrap;">
             Rp ${gross.toLocaleString('id-ID')}
           </td>
-          <td style="padding: 5px 8px; text-align: center;">
+          <td style="padding: 4px 6px; text-align: center; white-space: nowrap;">
             ${discountPercent}%
           </td>
-          <td style="padding: 5px 8px; text-align: right; color: #DC2626;">
+          <td style="padding: 4px 6px; text-align: right; color: #DC2626; white-space: nowrap;">
             ${item.discount > 0 ? `Rp ${item.discount.toLocaleString('id-ID')}` : 'Rp 0'}
           </td>
-          <td style="padding: 5px 8px; text-align: right; font-weight: bold;">
+          <td style="padding: 4px 6px; text-align: right; font-weight: bold; white-space: nowrap;">
             Rp ${item.subtotal.toLocaleString('id-ID')}
           </td>
         </tr>
@@ -809,15 +829,18 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
       <html>
       <head>
         <meta charset="utf-8">
+        <meta name="color-scheme" content="light">
         <title>Invoice A4 ${sale.invoiceNumber}</title>
         <style>
+          /* WS-5 (27 Nov 2026): faktur WAJIB terang walau HP mode gelap. */
+          html { background: #ffffff; color-scheme: light; }
           body {
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             color: #000000;
             margin: 0;
-            padding: 24px;
-            font-size: ${12 * scale}px;
-            line-height: 1.4;
+            padding: 16px;
+            font-size: ${11 * scale}px;
+            line-height: 1.35;
           }
           .container {
             max-width: 850px;
@@ -837,7 +860,7 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
             flex: 1.5;
           }
           .store-name {
-            font-size: ${18 * scale}px;
+            font-size: ${16 * scale}px;
             font-weight: bold;
             color: #000000;
             margin: 0 0 4px 0;
@@ -849,7 +872,7 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
             text-align: right;
           }
           .invoice-title {
-            font-size: ${24 * scale}px;
+            font-size: ${20 * scale}px;
             font-weight: bold;
             color: #000000;
             margin: 0 0 10px 0;
@@ -861,7 +884,8 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
             font-size: ${11 * scale}px;
           }
           .meta-table td {
-            padding: 3px 6px;
+            padding: 2px 4px;
+            white-space: nowrap;
           }
           .meta-label {
             font-weight: bold;
@@ -869,34 +893,38 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           }
           .card-box {
             border: 1px solid #000000;
-            padding: 10px 12px;
-            margin-bottom: 14px;
+            padding: 8px 12px;
+            margin-bottom: 10px;
           }
           .card-box-title {
             font-weight: bold;
             text-transform: uppercase;
-            border-bottom: 1px solid #000000;
             padding-bottom: 4px;
-            margin-bottom: 8px;
+            margin-bottom: 2px;
             font-size: ${11 * scale}px;
           }
           .data-table {
             width: 100%;
-            border-collapse: collapse;
+            /* Perbaikan ke-4 (html2canvas): separate, bukan collapse —
+               garis collapse salah letak di HP (menembus teks header). */
+            border-collapse: separate;
+            border-spacing: 0;
             margin-bottom: 12px;
+            table-layout: fixed;
           }
           .data-table th {
             border-bottom: 1.5px solid #000000;
-            padding: 5px 8px;
+            padding: 5px 6px;
             background: transparent;
             font-weight: bold;
             text-transform: uppercase;
             font-size: ${11 * scale}px;
+            white-space: nowrap;
           }
           .bottom-container {
             display: flex;
             justify-content: space-between;
-            margin-top: 14px;
+            margin-top: 10px;
             gap: 20px;
           }
           .bottom-left {
@@ -907,14 +935,14 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           }
           .terbilang-box {
             border: 1px solid #000000;
-            padding: 10px;
+            padding: 8px;
             font-size: ${11 * scale}px;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             background: #F9FAFB;
           }
           .transfer-box {
             border: 1px dashed #000000;
-            padding: 10px;
+            padding: 8px;
             font-size: ${11 * scale}px;
             background: #F3F4F6;
           }
@@ -928,7 +956,7 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           .signature-line {
             width: 120px;
             border-top: 1px solid #000000;
-            margin-top: 60px;
+            margin-top: 45px;
             font-weight: bold;
           }
           .bottom-right {
@@ -936,25 +964,28 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           }
           .totals-table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0;
             border: 1px solid #000000;
           }
           .totals-table td {
-            padding: 5px 8px;
+            padding: 4px 6px;
             border: none;
           }
           .totals-label {
             font-weight: bold;
           }
           .grand-total-row {
-            border-top: 1.5px solid #000000;
             background: transparent;
             font-weight: bold;
             font-size: ${13 * scale}px;
           }
+          .grand-total-row td {
+            border-top: 1.5px solid #000000;
+          }
           .footer-terms {
             text-align: center;
-            margin-top: 20px;
+            margin-top: 14px;
             border-top: 2px solid #000000;
             padding-top: 8px;
             font-size: ${9 * scale}px;
@@ -965,11 +996,6 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
       </head>
       <body>
         <div class="container">
-          ${showWatermark ? `
-          <div style="position: absolute; top: 35%; left: 0; right: 0; text-align: center; opacity: 0.08; transform: rotate(-30deg); font-size: 110px; font-weight: 900; z-index: 1000; color: ${watermarkColor}; pointer-events: none; white-space: nowrap; font-family: sans-serif; letter-spacing: 12px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-            ${watermarkText}
-          </div>
-          ` : ''}
           <!-- ─── HEADER ─── -->
           ${layout.showHeader ? `
           <div class="header-box" style="align-items: center;">
@@ -1017,6 +1043,7 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
           ${layout.showCustomerInfo ? `
             <div class="card-box">
               <div class="card-box-title">Customer Info</div>
+              <div style="border-top: 1px solid #000000; margin-bottom: 6px;"></div>
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="width: 12%; font-weight: bold;">Customer</td>
@@ -1033,13 +1060,13 @@ export const generateInvoiceHtml = (sale: any, store: any, customLayout?: any) =
             <thead>
               <tr>
                 <th style="width: 5%; text-align: center;">No</th>
-                <th style="width: 40%; text-align: left;">Description</th>
-                <th style="width: 12%; text-align: center;">Qty</th>
+                <th style="width: 30%; text-align: left;">Description</th>
+                <th style="width: 10%; text-align: center;">Qty</th>
                 <th style="width: 12%; text-align: right;">Price</th>
                 <th style="width: 12%; text-align: right;">Gross</th>
                 <th style="width: 5%; text-align: center;">%</th>
                 <th style="width: 12%; text-align: right;">Disc</th>
-                <th style="width: 12%; text-align: right;">Net</th>
+                <th style="width: 14%; text-align: right;">Net</th>
               </tr>
             </thead>
             <tbody>

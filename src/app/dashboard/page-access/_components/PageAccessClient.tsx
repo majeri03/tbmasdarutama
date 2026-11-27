@@ -63,8 +63,11 @@ export default function PageAccessClient({ initialMatrix }: PageAccessClientProp
       {error && <div className="p-3 bg-red-500/15 text-red-300 rounded-lg text-sm">{error}</div>}
       {msg && <div className="p-3 bg-green-500/15 text-green-400 rounded-lg text-sm transition-opacity">{msg}</div>}
 
+      {/* WS-4 (27 Nov 2026): tabel butuh scroll horizontal di HP — dulu
+          terpotong di dalam glass-card overflow-hidden. */}
       <div className="glass-card overflow-hidden">
-        <table className="min-w-full divide-y divide-white/10">
+        <div className="overflow-x-auto">
+        <table className="min-w-[720px] divide-y divide-white/10">
           <thead className="bg-white/[0.06]">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-bold text-stone-400 uppercase">Halaman</th>
@@ -115,6 +118,7 @@ export default function PageAccessClient({ initialMatrix }: PageAccessClientProp
             })}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

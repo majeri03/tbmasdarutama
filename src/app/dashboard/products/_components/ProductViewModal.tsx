@@ -75,7 +75,7 @@ export function ProductViewModal({ product, onClose, onEdit }: ProductViewModalP
   
   return (
     <div className="modal-overlay overflow-y-auto">
-      <div className="modal-container w-full max-w-4xl my-8 animate-slide-up max-h-[90vh] overflow-y-auto">
+      <div className="modal-container w-full max-w-4xl animate-slide-up max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-[#1C1917]/95 backdrop-blur-sm z-10 flex items-center justify-between p-6 border-b border-white/10">
           <div className="flex items-center gap-3">

@@ -112,9 +112,19 @@ export async function POST(request: NextRequest) {
     if (!session?.user?.id) return unauthorizedResponse();
     const userId = session.user.id;
 
-    const formData = await request.formData();
+    // WS-1 (27 Nov 2026): multipart yang rusak (mis. tanpa boundary dari
+    // klien lama) dulu jatuh ke catch umum -> 500 generik "Gagal
+    // mengunggah foto profil." Sekarang 400 dengan pesan yang jelas.
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch {
+      return validationErrorResponse(
+        "Foto tidak terbaca server (format pengiriman rusak). Perbarui aplikasi ke versi terbaru lalu coba lagi."
+      );
+    }
     const file = formData.get("file") as File | null;
-    if (!file) {
+    if (!file || file.size === 0) {
       return validationErrorResponse("Tidak ada file yang diunggah.");
     }
 
@@ -172,11 +182,25 @@ export async function POST(request: NextRequest) {
       body: arrayBuffer,
     });
     if (!uploadResponse.ok) {
+      // WS-1: dulu throw -> catch umum -> 500 generik, padahal penyebabnya
+      // Worker/R2. Sekarang 502 dengan pesan yang menjelaskan penyebabnya.
       const errorText = await uploadResponse.text();
-      console.error("[AVATAR_UPLOAD_ERROR]", errorText);
-      throw new Error("Upload to R2 failed");
+      console.error("[AVATAR_UPLOAD_ERROR]", uploadResponse.status, errorText);
+      return errorResponse(
+        "Foto gagal disimpan ke penyimpanan (Cloudflare). Coba lagi nanti.",
+        502
+      );
     }
     const result = await uploadResponse.json();
+    // WS-1: Worker yang tidak mengembalikan URL dulu diteruskan begitu saja
+    // (avatarUrl undefined -> update User gagal di Prisma -> 500 generik).
+    if (!result?.url || typeof result.url !== "string") {
+      console.error("[AVATAR_UPLOAD_ERROR] Worker tidak mengembalikan URL:", result);
+      return errorResponse(
+        "Server penyimpanan tidak mengembalikan alamat foto. Coba lagi nanti.",
+        502
+      );
+    }
 
     const tracked = await trackUpload({
       r2Key: filename,

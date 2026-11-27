@@ -417,9 +417,23 @@ export function StorageClient({ overview, files, pagination, filters }: Props) {
                   <tr key={f.id} className="border-b last:border-0 align-top">
                     <td className="py-2 pr-2">
                       <div className="flex items-center gap-2">
-                        <div className="relative w-10 h-10 rounded overflow-hidden bg-white/[0.08] flex-shrink-0">
-                          <Image src={f.url} alt={f.r2Key} fill className="object-cover" sizes="40px" />
-                        </div>
+                        {/* WS-2 (27 Nov 2026): baris berstatus Terhapus JANGAN
+                            lagi merender thumbnail dari URL R2 — URL itu masih
+                            bisa disajikan dari cache CDN/worker setelah objek
+                            dihapus, sehingga gambar "terhapus" tetap terlihat.
+                            Tampilkan placeholder Terhapus sebagai gantinya. */}
+                        {f.status === "DELETED" ? (
+                          <div
+                            className="w-10 h-10 rounded overflow-hidden bg-white/[0.08] flex-shrink-0 flex items-center justify-center"
+                            title="File sudah terhapus dari R2"
+                          >
+                            <Trash2 className="w-4 h-4 text-stone-500" />
+                          </div>
+                        ) : (
+                          <div className="relative w-10 h-10 rounded overflow-hidden bg-white/[0.08] flex-shrink-0">
+                            <Image src={f.url} alt={f.r2Key} fill className="object-cover" sizes="40px" />
+                          </div>
+                        )}
                         <span className="font-mono text-xs break-all">{f.r2Key}</span>
                       </div>
                     </td>

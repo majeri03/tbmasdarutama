@@ -124,17 +124,26 @@ export function StockAdjustmentModal({
   const newStock = calculateNewStock();
   const isStockNegative = newStock < 0;
 
+  /* WS-3 (perbaikan ke-4) — struktur lama di sini adalah penyebab
+     SELURUH layar blur saat modal dibuka: backdrop memakai class
+     .modal-overlay (fixed inset-0 z-50 + backdrop-blur-md) sebagai
+     SAUDARA dari panel modal di dalam wrapper flex. Karena z-50
+     backdrop LEBIH TINGGI dari panel (relative, z-auto), backdrop
+     blur itu ter-render DI ATAS panel modal — dan karena
+     backdrop-blur bekerja pada semua yang ada di belakangnya,
+     modal + halaman di belakangnya ikut ter-blur total sampai
+     tidak terbaca; klik apa pun di modal pun mengenai backdrop
+     (onClose). Struktur yang benar: .modal-overlay sebagai
+     INDUK (bukan saudara) dan .modal-container sebagai anaknya,
+     persis pola modal lain. Klik backdrop menutup modal, klik
+     di dalam panel tidak (stopPropagation). */
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-4">
-        {/* Backdrop */}
-        <div
-          className="modal-overlay"
-          onClick={onClose}
-        />
-
-        {/* Modal */}
-        <div className="modal-container relative max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="modal-overlay" onClick={onClose}>
+      {/* Modal */}
+      <div
+        className="modal-container relative max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
           {/* Header */}
           <div className="sticky top-0 bg-[#1C1917] border-b border-white/10 px-6 py-4 flex items-center justify-between rounded-t-2xl">
             <div className="flex items-center gap-3">
@@ -364,7 +373,6 @@ export function StockAdjustmentModal({
             </div>
           </form>
         </div>
-      </div>
     </div>
   );
 }

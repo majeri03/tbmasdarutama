@@ -7,6 +7,14 @@ import { formatCurrency } from "./pos-helpers";
 const escapeHtml = (s: unknown): string =>
   String(s ?? "").replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"} as Record<string, string>)[c]);
 
+// stripRp (perbaikan ke-4): formatCurrency() memakai Intl id-ID yang
+// mengembalikan "Rp\u00A078.000" — spasi di sana adalah NON-BREAKING SPACE
+// (U+00A0), jadi .replace('Rp ','') dengan spasi biasa TIDAK PERNAH cocok
+// dan "Rp " tersisa di mana-mana. Akibatnya baris item struk 58mm meluber
+// ("1 Zak x Rp 78.000" + "Rp 78.000" tidak muat 48mm) lalu patah aneh.
+const stripRp = (n: Parameters<typeof formatCurrency>[0]): string =>
+    formatCurrency(n).replace(/^Rp[\s\u00A0]*/, "");
+
 
 export interface InvoiceData {
     invoiceNumber: string;
@@ -144,39 +152,38 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                     showLogo && logoUrl ? `<img src="${escapeHtml(logoUrl)}" style="width: 44px; height: 44px; object-fit: contain; margin-right: 10px; border-radius: 4px;" />` :
                     showLogo ? `<div style="width: 36px; height: 36px; background-color: #DC2626; display: flex; align-items: center; justify-content: center; margin-right: 10px; color: white; font-weight: bold;">MU</div>` : '';
 
-    // Watermark lunas/kredit (item 211) — aturan sama dengan
-    // src/lib/invoicePdfGenerator.ts: non-CREDIT dianggap lunas; CREDIT
-    // lunas hanya bila paidAmount >= grandTotal. Surat jalan bukan invoice,
-    // jadi tidak ada status lunas/kredit dan tidak diberi watermark.
-    const isPaid = sale.paymentMethod !== "CREDIT" || Number(sale.paidAmount) >= Number(sale.grandTotal);
-    const watermarkText = isPaid ? "PAID" : "UNPAID";
-    const showWatermark = layoutType !== "SURAT_JALAN";
-    // Watermark harus berupa elemen DOM sungguhan (teks PAID/UNPAID di dalam
-    // div), bukan pseudo-element, supaya terbaca di DOM dan saat print.
-    // position:absolute terhadap body (position:relative) supaya html2canvas
-    // (download PDF) ikut merendernya.
-    const watermarkHtmlA4 = showWatermark ? `
-        <div style="position: absolute; top: 38%; left: 0; right: 0; text-align: center; opacity: 0.08; transform: rotate(-30deg); font-size: 110px; font-weight: 900; z-index: 1000; color: #9CA3AF; pointer-events: none; white-space: nowrap; font-family: Arial, Helvetica, sans-serif; letter-spacing: 12px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${watermarkText}</div>
-    ` : "";
-    const watermarkHtmlThermal = showWatermark ? `
-        <div style="position: absolute; top: 40%; left: 0; right: 0; text-align: center; opacity: 0.08; transform: rotate(-25deg); font-size: 40px; font-weight: 900; z-index: 1000; color: #9CA3AF; pointer-events: none; white-space: nowrap; font-family: Arial, Helvetica, sans-serif; letter-spacing: 4px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${watermarkText}</div>
-    ` : "";
+    // Watermark PAID/UNPAID (item 211) DIHAPUS TOTAL — perbaikan ke-4
+    // (27 Nov 2026, atas permintaan user): tidak ada lagi watermark di
+    // layar, cetak, maupun download PDF, di semua layout.
 
     // STRUK KECIL (THERMAL)
     if (layoutType === "STRUK_KECIL") {
         let widthCss = "48mm";
         let fontSize = "11px";
-        if (paperSize === "80mm") { widthCss = "72mm"; fontSize = "12px"; }
+        // 80mm: 70mm (bukan 72mm) supaya + padding 4mm kiri-kanan = 78mm,
+        // masih ada sisa 1mm tiap sisi — printer thermal tidak memotong tepi.
+        if (paperSize === "80mm") { widthCss = "70mm"; fontSize = "12px"; }
         else if (paperSize !== "58mm") { widthCss = `calc(${safePaperSize} - 10mm)`; fontSize = "12px"; }
+        // Font baris item 1px lebih kecil dari badan struk: di kertas 58mm
+        // yang sempit, "10 Zak x 78.000" + subtotal butuh tiap px supaya
+        // tetap satu baris; nama produk tetap sebesar badan struk.
+        const itemFontSize = fontSize === "12px" ? "11px" : "10px";
         
+        // Baris item struk sebagai TABEL 2 kolom (bukan flex): flex +
+        // html2canvas + font monospace yang lebarnya beda-beda di tiap HP
+        // membuat "1 Zak x Rp 78.000" patah aneh; sel kanan nowrap
+        // menjamin subtotal tidak pernah terbelah, sel kiri boleh
+        // membungkus hanya bila benar-benar tidak muat.
         const itemsHtml = sale.saleItems.map(item => `
-            <div style="margin-bottom: 6px;">
+            <div style="margin-bottom: 5px;">
                 <div style="font-weight: bold;">${escapeHtml(item.product.name)}</div>
-                <div style="display: flex; justify-content: space-between;">
-                    <div>${item.quantity} ${escapeHtml(item.unit.symbol || item.unit.name)} x ${formatCurrency(item.unitPrice).replace('Rp ','')}</div>
-                    <div style="font-weight: bold;">${formatCurrency(item.subtotal).replace('Rp ','')}</div>
-                </div>
-                ${item.discount > 0 ? `<div style="text-align: right; font-size: 0.9em; color: #444;">Disc: -${formatCurrency(item.discount).replace('Rp ','')}</div>` : ''}
+                <table style="width: 100%; border-collapse: separate; border-spacing: 0; line-height: 1.3; font-size: ${itemFontSize};">
+                    <tr>
+                        <td style="padding: 0;">${item.quantity} ${escapeHtml(item.unit.symbol || item.unit.name)} x ${stripRp(item.unitPrice)}</td>
+                        <td style="padding: 0; width: 1%; text-align: right; font-weight: bold; white-space: nowrap;">${stripRp(item.subtotal)}</td>
+                    </tr>
+                </table>
+                ${item.discount > 0 ? `<div style="text-align: right; font-size: 0.9em; color: #444;">Disc: -${stripRp(item.discount)}</div>` : ''}
             </div>
         `).join("");
 
@@ -185,11 +192,23 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                 <head>
                     <title>Struk - ${sale.invoiceNumber}</title>
                     <meta name="viewport" content="width=device-width, initial-scale=1">
-                    <style>
+                    <meta name="color-scheme" content="light">
+                    <style id="thermal-page" data-paper="${safePaperSize}">
+                        /* @page di <style> sendiri ber-id supaya script
+                           print (printInvoice) bisa menulis ulang size
+                           dengan tinggi isi yang terukur — lihat bawah. */
                         @page { margin: 0; size: ${safePaperSize} auto; }
+                    </style>
+                    <style>
+                        /* WS-5 (27 Nov 2026): faktur WAJIB terang di semua
+                           perangkat. Tanpa color-scheme: light, Chrome di HP
+                           yang mode gelapnya aktif menggelapkan halaman ini
+                           (teks hitam di atas latar gelap = hitam semua). */
+                        html { background: #ffffff; color-scheme: light; }
                         body { 
                             font-family: 'Courier New', Courier, monospace; 
                             font-size: ${fontSize}; 
+                            line-height: 1.35;
                             color: #000; 
                             margin: 0; 
                             padding: 4mm;
@@ -209,7 +228,6 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                     </style>
                 </head>
                 <body>
-                    ${watermarkHtmlThermal}
                     ${showHeader ? `
                     <div style="display:flex; justify-content:center; align-items:center; flex-direction:column; margin-bottom: 4px;">
                         ${logoImg}
@@ -230,15 +248,15 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                     ${itemsHtml}
                     
                     <div class="divider"></div>
-                    <div class="row"><span>Subtotal</span><span>${formatCurrency(sale.totalAmount).replace('Rp ','')}</span></div>
-                    ${sale.discount > 0 ? `<div class="row"><span>Diskon</span><span>-${formatCurrency(sale.discount).replace('Rp ','')}</span></div>` : ''}
-                    ${sale.tax > 0 ? `<div class="row"><span>Pajak</span><span>${formatCurrency(sale.tax).replace('Rp ','')}</span></div>` : ''}
+                    <div class="row"><span>Subtotal</span><span>${stripRp(sale.totalAmount)}</span></div>
+                    ${sale.discount > 0 ? `<div class="row"><span>Diskon</span><span>-${stripRp(sale.discount)}</span></div>` : ''}
+                    ${sale.tax > 0 ? `<div class="row"><span>Pajak</span><span>${stripRp(sale.tax)}</span></div>` : ''}
                     <div class="row bold" style="font-size: 1.1em; margin-top: 4px;">
-                        <span>TOTAL</span><span>${formatCurrency(sale.grandTotal).replace('Rp ','')}</span>
+                        <span>TOTAL</span><span>${stripRp(sale.grandTotal)}</span>
                     </div>
                     <div class="divider"></div>
-                    <div class="row"><span>Bayar (${escapeHtml(sale.paymentMethod)})</span><span>${formatCurrency(sale.paidAmount).replace('Rp ','')}</span></div>
-                    <div class="row bold"><span>Kembali</span><span>${formatCurrency(sale.changeAmount).replace('Rp ','')}</span></div>
+                    <div class="row"><span>Bayar (${escapeHtml(sale.paymentMethod)})</span><span>${stripRp(sale.paidAmount)}</span></div>
+                    <div class="row bold"><span>Kembali</span><span>${stripRp(sale.changeAmount)}</span></div>
 
                     ${showPaymentInfo && hasBankInfo ? `
                     <div class="divider"></div>
@@ -282,39 +300,39 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                     <b>${escapeHtml(item.product.name)}</b><br/>
                     <span style="font-size:10px; color:#555;">${escapeHtml(item.product.code)}</span>
                 </td>
-                <td style="text-align:center;">${item.quantity} ${escapeHtml(item.unit.symbol || item.unit.name)}</td>
+                <td style="text-align:center;" class="num">${item.quantity} ${escapeHtml(item.unit.symbol || item.unit.name)}</td>
                 ${showPrices ? `
-                <td style="text-align:right;">${formatCurrency(item.unitPrice).replace("Rp ","")}</td>
-                <td style="text-align:right;">${formatCurrency(gross).replace("Rp ","")}</td>
+                <td class="num" style="text-align:right;">${stripRp(item.unitPrice)}</td>
+                <td class="num" style="text-align:right;">${stripRp(gross)}</td>
                 ` : ''}
                 ${showDiscountAndNet ? `
-                <td style="text-align:center;">${discPercent}</td>
-                <td style="text-align:right;">${item.discount > 0 ? formatCurrency(item.discount).replace("Rp ","") : '-'}</td>
-                <td style="text-align:right; font-weight:bold;">${formatCurrency(item.subtotal).replace("Rp ","")}</td>
+                <td class="num" style="text-align:center;">${discPercent}</td>
+                <td class="num" style="text-align:right;">${item.discount > 0 ? stripRp(item.discount) : '-'}</td>
+                <td class="num" style="text-align:right; font-weight:bold;">${stripRp(item.subtotal)}</td>
                 ` : showPrices ? `
-                <td style="text-align:right; font-weight:bold;">${formatCurrency(item.subtotal).replace("Rp ","")}</td>
+                <td class="num" style="text-align:right; font-weight:bold;">${stripRp(item.subtotal)}</td>
                 ` : ''}
             </tr>
         `;
     }).join("");
 
-    let pageConfig = "@page { size: A4 portrait; margin: 12mm; }";
+    let pageConfig = "@page { size: A4 portrait; margin: 10mm; }";
     let bodyWidth = "max-width: 210mm;";
     const pLower = (paperSize || "A4").toLowerCase().trim();
     if (pLower === "a5") {
-        pageConfig = "@page { size: A5 portrait; margin: 10mm; }";
+        pageConfig = "@page { size: A5 portrait; margin: 8mm; }";
         bodyWidth = "max-width: 148mm;";
     } else if (pLower === "f4" || pLower === "hvs") {
-        pageConfig = "@page { size: 215mm 330mm; margin: 12mm; }";
+        pageConfig = "@page { size: 215mm 330mm; margin: 10mm; }";
         bodyWidth = "max-width: 215mm;";
     } else if (pLower === "letter") {
-        pageConfig = "@page { size: letter portrait; margin: 12mm; }";
+        pageConfig = "@page { size: letter portrait; margin: 10mm; }";
         bodyWidth = "max-width: 216mm;";
     } else if (/^\d+\s*mm\s*x\s*\d+\s*mm$/.test(pLower)) {
         const m = pLower.match(/(\d+)\s*mm\s*x\s*(\d+)\s*mm/);
         const w = m ? m[1] : "210";
         const h = m ? m[2] : "297";
-        pageConfig = `@page { size: ${w}mm ${h}mm; margin: 12mm; }`;
+        pageConfig = `@page { size: ${w}mm ${h}mm; margin: 10mm; }`;
         bodyWidth = `max-width: ${w}mm;`;
     } else if (pLower !== "a4") {
         bodyWidth = `max-width: ${safePaperSize};`;
@@ -325,16 +343,21 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
             <head>
                 <title>${docTitle} - ${sale.invoiceNumber}</title>
                 <meta name="viewport" content="width=device-width, initial-scale=1">
+                <meta name="color-scheme" content="light">
                 <style>
                     ${pageConfig}
+                    /* WS-5 (27 Nov 2026): lihat catatan di template struk —
+                       faktur harus terang walau HP dalam mode gelap. */
+                    html { background: #ffffff; color-scheme: light; }
                     body {
                         font-family: Arial, Helvetica, sans-serif;
-                        font-size: 12px;
+                        font-size: 11px;
+                        line-height: 1.4;
                         color: #000;
                         -webkit-print-color-adjust: exact;
                         print-color-adjust: exact;
                         margin: 0 auto;
-                        padding: 12mm 15mm;
+                        padding: 8mm 12mm;
                         background: #ffffff;
                         box-sizing: border-box;
                         overflow-x: hidden;
@@ -342,39 +365,54 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                         ${bodyWidth}
                     }
                     img { max-width: 100%; height: auto; }
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-                    th, td { border: 1px solid #000; padding: 6px 8px; }
+                    /* Perbaikan ke-4 (download PDF/html2canvas): JANGAN
+                       border-collapse: collapse — html2canvas salah menaruh
+                       garis collapse (di HP garis menembus teks header
+                       tabel & baris Tax). Pakai separate + border-spacing 0,
+                       garis hanya di sel (th/td), tidak pernah di tr/thead.
+                       line-height eksplisit supaya teks tidak "turun"
+                       menabrak garis di bawahnya. */
+                    table { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 12px; }
+                    th, td { border: 1px solid #000; padding: 5px 6px; line-height: 1.35; }
                     th { background: #f3f4f6; }
+                    /* Tabel grid surat jalan: garis 1px tunggal — tiap sel
+                       hanya menggambar sisi kanan + bawah, sisi kiri + atas
+                       digambar tabelnya, jadi tidak ada garis ganda. */
+                    table.invoice-grid { border-top: 1px solid #000; border-left: 1px solid #000; }
+                    table.invoice-grid th, table.invoice-grid td { border: none; border-right: 1px solid #000; border-bottom: 1px solid #000; }
+                    table.invoice-grid th { white-space: nowrap; }
                     /* Faktur/Invoice (bukan Surat Jalan): tanpa garis grid —
                        hanya satu garis di bawah baris header. */
-                    table.invoice-items { margin-bottom: 12px; }
-                    table.invoice-items th, table.invoice-items td { border: none; padding: 4px 8px; background: transparent; }
-                    table.invoice-items thead th { border-bottom: 1.5px solid #000; padding: 5px 8px; }
+                    table.invoice-items { margin-bottom: 10px; table-layout: fixed; }
+                    table.invoice-items th, table.invoice-items td { border: none; padding: 3px 6px; background: transparent; }
+                    table.invoice-items thead th { border-bottom: 1.5px solid #000; padding: 4px 6px; white-space: nowrap; }
+                    table.invoice-items td.num { white-space: nowrap; }
                     /* Faktur NCR: baris lebih rapat tapi tetap terbaca. */
-                    table.invoice-items-ncr th, table.invoice-items-ncr td { padding: 2px 8px; }
-                    table.invoice-items-ncr thead th { padding: 3px 8px; }
-                    .no-border td, .no-border th { border: none !important; padding: 2px !important; background: transparent !important;}
+                    table.invoice-items-ncr th, table.invoice-items-ncr td { padding: 2px 6px; }
+                    table.invoice-items-ncr thead th { padding: 3px 6px; }
+                    .no-border td, .no-border th { border: none !important; padding: 2px 4px !important; background: transparent !important;}
+                    .meta-table td { white-space: nowrap; }
                     .flex-between { display: flex; justify-content: space-between; align-items: flex-start; }
-                    .header-box { border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
-                    .title { font-size: 24px; font-weight: bold; margin: 0; }
+                    .header-box { border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 12px; }
+                    .header-box .head-right { flex-shrink: 0; }
+                    .title { font-size: 20px; font-weight: bold; margin: 0; }
                 </style>
             </head>
             <body>
-                ${watermarkHtmlA4}
                 ${showHeader ? `
                 <div class="flex-between header-box">
                     <div style="display:flex; align-items:center;">
                         ${logoImg}
                         <div>
-                            <h1 style="margin:0; font-size:20px;">${escapeHtml(storeName)}</h1>
-                            ${storeAddress ? `<p style="margin:4px 0 0 0;">${escapeHtml(storeAddress)}</p>` : ''}
-                            ${storePhone ? `<p style="margin:2px 0 0 0;">Phone: ${escapeHtml(storePhone)}</p>` : ''}
+                            <h1 style="margin:0; font-size:17px;">${escapeHtml(storeName)}</h1>
+                            ${storeAddress ? `<p style="margin:2px 0 0 0;">${escapeHtml(storeAddress)}</p>` : ''}
+                            ${storePhone ? `<p style="margin:1px 0 0 0;">Phone: ${escapeHtml(storePhone)}</p>` : ''}
                         </div>
                     </div>
-                    <div style="text-align:right;">
+                    <div class="head-right" style="text-align:right;">
                         <h2 class="title">${docTitle}</h2>
-                        <table class="no-border" style="margin-top:10px; width:auto; margin-left:auto;">
-                            <tr><td>Number</td><td>: <b>${layoutType === 'SURAT_JALAN' ? 'DO-' : ''}${sale.invoiceNumber}</b></td></tr>
+                        <table class="no-border meta-table" style="margin-top:8px; width:auto; margin-left:auto;">
+                            <tr><td>Number</td><td>: <b style="white-space: nowrap;">${layoutType === 'SURAT_JALAN' ? 'DO-' : ''}${sale.invoiceNumber}</b></td></tr>
                             <tr><td>Date</td><td>: ${dateStr}</td></tr>
                             ${layoutType !== 'SURAT_JALAN' ? `<tr><td>Payment</td><td>: ${escapeHtml(sale.paymentMethod)}</td></tr>` : ''}
                             <tr><td>Cashier</td><td>: ${escapeHtml(sale.cashier?.name || '-')}</td></tr>
@@ -384,9 +422,10 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                 ` : ''}
 
                 ${showCustomerInfo ? `
-                <div style="${isNcr ? 'padding: 0; margin-bottom: 12px;' : 'border: 1px solid #000; padding: 10px; margin-bottom: 20px;'} width: 50%;">
-                    <strong style="${isNcr ? '' : 'border-bottom:1px solid #000; '}display:block; margin-bottom:5px;">CUSTOMER INFO</strong>
-                    <table class="no-border">
+                <div style="${isNcr ? 'padding: 0; margin-bottom: 8px;' : 'border: 1px solid #000; padding: 8px; margin-bottom: 10px;'} width: 50%; line-height: 1.35;">
+                    <strong style="display:block;">CUSTOMER INFO</strong>
+                    ${isNcr ? '' : '<div style="border-top:1px solid #000; margin: 3px 0 5px;"></div>'}
+                    <table class="no-border" style="margin-bottom: 0;">
                         <tr><td style="width:60px;">Name</td><td>: <b>${escapeHtml(sale.customer?.name || 'Umum')}</b></td></tr>
                         <tr><td>Phone</td><td>: ${escapeHtml(sale.customer?.phone || '-')}</td></tr>
                         <tr><td>Address</td><td>: ${escapeHtml(sale.customer?.address || '-')}</td></tr>
@@ -394,11 +433,11 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                 </div>
                 ` : ''}
 
-                <table${showPrices ? (isNcr ? ' class="invoice-items invoice-items-ncr"' : ' class="invoice-items"') : ''}>
+                <table${showPrices ? (isNcr ? ' class="invoice-items invoice-items-ncr"' : ' class="invoice-items"') : ' class="invoice-grid"'}>
                     <thead>
                         <tr>
                             <th style="width: 5%;">No</th>
-                            <th style="width: ${showPrices ? '35%' : '75%'}; text-align:left;">Description</th>
+                            <th style="width: ${showPrices ? '35%' : '85%'}; text-align:left;">Description</th>
                             <th style="width: 10%;">Qty</th>
                             ${showPrices ? `
                             <th style="width: 12%; text-align:right;">Price</th>
@@ -421,28 +460,28 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                 <div class="flex-between">
                     <div style="width: 60%;">
                         ${showPrices ? `
-                        <div style="${isNcr ? 'padding: 0; margin-bottom: 8px;' : 'border:1px solid #000; padding:10px; margin-bottom:10px;'}">
+                        <div style="${isNcr ? 'padding: 0; margin-bottom: 8px;' : 'border:1px solid #000; padding:8px; margin-bottom:8px;'}">
                             <b>Terbilang:</b> <br/><i>${numberToWords(Math.floor(sale.grandTotal))} Rupiah</i>
                         </div>
                         ` : ''}
                         
                         ${showPaymentInfo && showPrices && hasBankInfo ? `
-                        <div style="${isNcr ? 'padding: 0; margin-bottom: 8px; display:inline-block;' : 'border:1px solid #000; padding:10px; margin-bottom:10px; display:inline-block;'}">
+                        <div style="${isNcr ? 'padding: 0; margin-bottom: 8px; display:inline-block;' : 'border:1px solid #000; padding:8px; margin-bottom:8px; display:inline-block;'}">
                             <b>REKENING BANK:</b> ${escapeHtml(storeSetting?.bankName || '')} - ${escapeHtml(storeSetting?.bankAccount || '')}<br/>
                             a/n ${escapeHtml(storeSetting?.bankHolder || '')}
                         </div>
                         ` : ''}
                         
                         ${showSignature ? `
-                        <div style="display:flex; justify-content:space-between; margin-top: 30px; text-align:center;">
+                        <div style="display:flex; justify-content:space-between; margin-top: 18px; text-align:center;">
                             <div style="width:30%;">
                                 <p>Penerima,</p>
-                                <br/><br/><br/>
+                                <br/><br/>
                                 <p style="border-top:1px solid #000; display:inline-block; width:80%;">(${escapeHtml(sale.customer?.name || 'Customer')})</p>
                             </div>
                             <div style="width:30%;">
                                 <p>Hormat Kami,</p>
-                                <br/><br/><br/>
+                                <br/><br/>
                                 <p style="border-top:1px solid #000; display:inline-block; width:80%;">(${escapeHtml(sale.cashier?.name || 'Admin')})</p>
                             </div>
                         </div>
@@ -452,19 +491,19 @@ export const generateInvoiceHtml = (sale: InvoiceData, storeSetting: StoreSettin
                     ${showPrices ? `
                     <div style="width: 35%;">
                         <table style="${isNcr ? 'border: none;' : 'border:1px solid #000;'}">
-                            <tr><td style="border:none; padding:3px 8px;">Gross Total</td><td style="border:none; padding:3px 8px; text-align:right;">${formatCurrency(sale.totalAmount).replace("Rp ","")}</td></tr>
-                            <tr><td style="border:none; padding:3px 8px;">Discount</td><td style="border:none; padding:3px 8px; text-align:right; color:red;">(${formatCurrency(sale.discount).replace("Rp ","")})</td></tr>
-                            <tr><td style="border:none; padding:3px 8px;">Tax</td><td style="border:none; padding:3px 8px; text-align:right;">${formatCurrency(sale.tax).replace("Rp ","")}</td></tr>
-                            <tr style="border-top:1px solid #000;"><td style="border:none; padding:3px 8px;"><b>Grand Total</b></td><td style="border:none; padding:3px 8px; text-align:right;"><b>${formatCurrency(sale.grandTotal).replace("Rp ","")}</b></td></tr>
-                            <tr><td style="border:none; padding:3px 8px;">Paid</td><td style="border:none; padding:3px 8px; text-align:right;">${formatCurrency(sale.paidAmount).replace("Rp ","")}</td></tr>
-                            <tr><td style="border:none; padding:3px 8px;">Change</td><td style="border:none; padding:3px 8px; text-align:right;">${formatCurrency(sale.changeAmount).replace("Rp ","")}</td></tr>
+                            <tr><td style="border:none; padding:2px 6px;">Gross Total</td><td style="border:none; padding:2px 6px; text-align:right;">${stripRp(sale.totalAmount)}</td></tr>
+                            <tr><td style="border:none; padding:2px 6px;">Discount</td><td style="border:none; padding:2px 6px; text-align:right; color:red;">(${stripRp(sale.discount)})</td></tr>
+                            <tr><td style="border:none; padding:2px 6px;">Tax</td><td style="border:none; padding:2px 6px; text-align:right;">${stripRp(sale.tax)}</td></tr>
+                            <tr><td style="border:none; border-top:1px solid #000; padding:2px 6px;"><b>Grand Total</b></td><td style="border:none; border-top:1px solid #000; padding:2px 6px; text-align:right;"><b>${stripRp(sale.grandTotal)}</b></td></tr>
+                            <tr><td style="border:none; padding:2px 6px;">Paid</td><td style="border:none; padding:2px 6px; text-align:right;">${stripRp(sale.paidAmount)}</td></tr>
+                            <tr><td style="border:none; padding:2px 6px;">Change</td><td style="border:none; padding:2px 6px; text-align:right;">${stripRp(sale.changeAmount)}</td></tr>
                         </table>
                     </div>
                     ` : ''}
                 </div>
                 
                 ${showFooter ? `
-                <div style="text-align:center; margin-top:40px; font-size:10px; border-top:2px solid #000; padding-top:10px;">
+                <div style="text-align:center; margin-top:20px; font-size:10px; border-top:2px solid #000; padding-top:6px;">
                     <b>${escapeHtml(footerTerms)}</b>
                 </div>
                 ` : ''}
@@ -522,6 +561,23 @@ export const printInvoice = (sale: InvoiceData, storeSetting: StoreSetting, cust
         <script>
             window.onload = function() {
                 setTimeout(() => {
+                    // Struk thermal: @page { size: 80mm auto } TIDAK dipatuhi
+                    // Chrome — ukuran 'auto' membuat seluruh deklarasi size
+                    // gugur dan kertas jatuh ke default (A4/Letter), isi
+                    // struk cuma menempati pojok kiri atas. Karena tinggi
+                    // struk dinamis (tergantung jumlah item), ukur tinggi
+                    // isi saat print lalu tulis ulang @page dengan tinggi
+                    // eksplisit (mm) supaya hasil cetak selebar struk dan
+                    // setinggi isi — hemat kertas, tidak A4 penuh.
+                    // (Terverifikasi di Chromium headless: 80mm x tinggi isi.)
+                    try {
+                        var pg = document.getElementById('thermal-page');
+                        if (pg) {
+                            var hMm = Math.ceil(document.body.scrollHeight * 25.4 / 96) + 2;
+                            var w = pg.getAttribute('data-paper') || '80mm';
+                            pg.textContent = '@page { size: ' + w + ' ' + hMm + 'mm; margin: 0; }';
+                        }
+                    } catch (e) {}
                     window.print();
                 }, 500);
             };

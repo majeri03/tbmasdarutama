@@ -261,7 +261,10 @@ export async function DELETE(request: NextRequest) {
     // hapus dari APK TIDAK PERNAH berhasil, tapi UI sudah bilang "terhapus".
     // extractR2Filename dulu, baru validasi key hasilnya.
     const r2Key = extractR2Filename(filename) || filename;
-    if (!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+(?:-[a-zA-Z0-9_-]+)*\.(jpg|jpeg|png|webp)$/.test(r2Key)) {
+    // WS-2 (27 Nov 2026): nama file boleh mengandung titik di tengah
+    // (mis. file lama `foto.2024.jpg`) — dulu ditolak 400 sehingga hapus
+    // dari APK tidak pernah berhasil untuk file seperti itu.
+    if (!/^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.\-]+(?:-[a-zA-Z0-9_.\-]+)*\.(jpg|jpeg|png|webp)$/.test(r2Key)) {
       return NextResponse.json({ error: "Nama file tidak valid" }, { status: 400 });
     }
     filename = r2Key;

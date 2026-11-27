@@ -221,7 +221,7 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 print:hidden">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:hidden">
             <div className="glass-card w-full max-w-4xl h-[92dvh] sm:h-[90vh] flex flex-col bg-[#1C1917] rounded-lg shadow-xl overflow-hidden">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border-b border-white/10 bg-[#1C1917] gap-3">
@@ -296,12 +296,15 @@ export function InvoicePreview({ isOpen, onClose, invoiceNumber, saleId }: Invoi
                 )}
 
                 {/* Preview Area (Menggunakan Iframe) */}
-                <div className="flex-1 bg-white/[0.04] overflow-auto relative" ref={previewWrapRef}>
+                {/* WS-5 (27 Nov 2026): area preview faktur WAJIB putih —
+                    dulu bg putih 4% di atas modal gelap, jadi faktur
+                    terlihat hitam di HP. */}
+                <div className="flex-1 bg-white overflow-auto relative" ref={previewWrapRef}>
                     {isLoading ? (
-                        <div className="absolute inset-0 flex items-center justify-center bg-[#141210]/80 z-10">
+                        <div className="absolute inset-0 flex items-center justify-center bg-white/85 z-10">
                             <div className="text-center">
                                 <Loader2 className="w-8 h-8 animate-spin mx-auto text-[#E5484D]" />
-                                <p className="text-sm text-stone-400 mt-2">Loading invoice details...</p>
+                                <p className="text-sm text-stone-500 mt-2">Loading invoice details...</p>
                             </div>
                         </div>
                     ) : (

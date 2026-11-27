@@ -304,7 +304,7 @@ export function EditSaleModal({ saleId, onClose, onSuccess }: EditSaleModalProps
 
   return (
     <div className="modal-overlay overflow-y-auto">
-      <div className="modal-container max-w-4xl my-8 animate-modal-slide-up">
+      <div className="modal-container max-w-4xl animate-modal-slide-up">
         <div className="modal-header bg-amber-600">
           <h2 className="text-lg font-semibold text-white flex items-center gap-2">
             <Pencil className="w-5 h-5" />

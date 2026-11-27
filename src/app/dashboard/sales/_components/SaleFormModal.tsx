@@ -280,7 +280,7 @@ export function SaleFormModal({ onSuccess }: SaleFormModalProps) {
 
             {isOpen && (
                 <div className="modal-overlay overflow-y-auto">
-                    <div className="modal-container max-w-7xl my-8 animate-modal-slide-up">
+                    <div className="modal-container max-w-7xl animate-modal-slide-up">
                         <form onSubmit={handleSubmit}>
                             <div className="modal-header bg-red-900">
                                 <h2 className="text-xl font-bold text-white flex items-center gap-2">

@@ -307,7 +307,7 @@ export function ProductFormModal({
 
   return (
     <div className="modal-overlay overflow-y-auto">
-      <div className="modal-container w-full max-w-4xl my-8 animate-slide-up max-h-[90vh] flex flex-col">
+      <div className="modal-container w-full max-w-4xl animate-slide-up max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/10">
           <div>
@@ -365,7 +365,7 @@ export function ProductFormModal({
         </div>
 
         {/* Form Content */}
-        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 min-h-0 overflow-y-auto">
           <div className="p-6 space-y-6">
             {/* Step 1: Basic Info */}
             {currentStep === "basic" && (

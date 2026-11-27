@@ -252,7 +252,7 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                 </div>
 
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4">
+                <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto p-4">
                     {/* Supplier & Date */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                         <div>
@@ -300,7 +300,7 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                                 value={searchProduct}
                                 onChange={(e) => setSearchProduct(e.target.value)}
                                 placeholder="Ketik nama atau kode produk..."
-                                className="w-full pl-10 pr-4 py-2 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
+                                className="glass-input pl-10"
                             />
                         </div>
 
@@ -367,7 +367,7 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                                                             onChange={(e) =>
                                                                 handleUpdateItem(index, "quantity", parseFloat(e.target.value) || 1)
                                                             }
-                                                            className="w-20 px-2 py-1 text-center border border-white/10 rounded focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
+                                                            className="w-20 px-2 py-1 text-center border border-white/10 rounded bg-white/[0.08] text-stone-100 [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
                                                         />
                                                     </td>
                                                     <td className="px-3 py-2">
@@ -391,7 +391,7 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                                                             onChange={(e) =>
                                                                 handleUpdateItem(index, "unitPrice", parseFloat(e.target.value) || 0)
                                                             }
-                                                            className="w-28 px-2 py-1 text-right border border-white/10 rounded focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
+                                                            className="w-28 px-2 py-1 text-right border border-white/10 rounded bg-white/[0.08] text-stone-100 [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
                                                         />
                                                     </td>
                                                     <td className="px-3 py-2">
@@ -402,7 +402,7 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                                                             onChange={(e) =>
                                                                 handleUpdateItem(index, "discount", parseFloat(e.target.value) || 0)
                                                             }
-                                                            className="w-24 px-2 py-1 text-right border border-white/10 rounded focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
+                                                            className="w-24 px-2 py-1 text-right border border-white/10 rounded bg-white/[0.08] text-stone-100 [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
                                                         />
                                                     </td>
                                                     <td className="px-3 py-2 text-right font-semibold">
@@ -435,7 +435,7 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                                 value={notes}
                                 onChange={(e) => setNotes(e.target.value)}
                                 rows={4}
-                                className="w-full px-3 py-2 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
+                                className="glass-input"
                                 placeholder="Catatan tambahan (opsional)"
                             />
                         </div>
@@ -454,7 +454,7 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                                     min="0"
                                     value={discount}
                                     onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                                    className="flex-1 px-3 py-2 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#E5484D] text-right"
+                                    className="glass-input text-right"
                                 />
                             </div>
 
@@ -465,7 +465,7 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                                     min="0"
                                     value={tax}
                                     onChange={(e) => setTax(parseFloat(e.target.value) || 0)}
-                                    className="flex-1 px-3 py-2 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#E5484D] text-right"
+                                    className="glass-input text-right"
                                 />
                             </div>
 
@@ -496,7 +496,7 @@ export function PurchaseFormModal({ isOpen, onClose, onSuccess, purchase }: Purc
                                     max={grandTotal}
                                     value={paidAmount}
                                     onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
-                                    className="w-full px-3 py-2 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#E5484D] text-right"
+                                    className="glass-input text-right"
                                 />
                             </div>
 

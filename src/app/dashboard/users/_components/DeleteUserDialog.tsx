@@ -53,7 +53,7 @@ export function DeleteUserDialog({ isOpen, onClose, user }: Props) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-in fade-in zoom-in duration-200 relative">
         {/* 4. RENDER KOMPONEN TOAST DI SINI AGAR MUNCUL */}
         {toast && (

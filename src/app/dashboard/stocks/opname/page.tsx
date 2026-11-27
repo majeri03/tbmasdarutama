@@ -232,7 +232,7 @@ export default function StockOpnamePage() {
                 }}
                 onFocus={() => setShowResults(true)}
                 placeholder="Cari produk (nama / kode / barcode)..."
-                className="w-full pl-9 pr-3 py-2.5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
+                className="w-full pl-9 pr-3 py-2.5 border border-white/10 rounded-lg bg-white/[0.08] text-stone-100 placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
               />
               {showResults && results.length > 0 && (
                 <div className="absolute z-20 w-full mt-1 bg-[#211E1B] border border-white/10 rounded-lg shadow-lg max-h-64 overflow-y-auto">
@@ -309,7 +309,7 @@ export default function StockOpnamePage() {
                             value={row.counted}
                             onChange={(e) => updateCounted(row.productId, e.target.value)}
                             placeholder="0"
-                            className="w-24 px-2 py-1.5 border border-white/10 rounded-lg text-right focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
+                            className="w-24 px-2 py-1.5 border border-white/10 rounded-lg text-right bg-white/[0.08] text-stone-100 placeholder:text-stone-500 [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-[#E5484D]"
                           />
                         </td>
                         <td

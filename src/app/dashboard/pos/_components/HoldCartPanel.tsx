@@ -20,8 +20,12 @@ export function HoldCartPanel({ isOpen, carts, onClose, onResume, onDelete }: Ho
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="glass-card w-full max-w-lg max-h-[80vh] flex flex-col">
+    /* WS-3 (perbaikan ke-4): diselaraskan ke pola modal standar
+       (overlay bg-black/80 blur-md + panel hampir solid); tadinya
+       glass-card tembus pandang di atas bg-black/70, daftar
+       keranjang ditahan bercampur dengan kartu produk di belakang. */
+    <div className="modal-overlay">
+      <div className="modal-container w-full max-w-lg max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-white/10">
           <h2 className="text-lg font-semibold text-stone-100 flex items-center gap-2">
             <Pause className="w-5 h-5 text-[#E5484D]" />
