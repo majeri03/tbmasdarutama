@@ -19,8 +19,16 @@ const envSchema = z.object({
   // ini tetap opsional di schema agar aplikasi tidak crash saat boot, tapi
   // endpoint yang memakainya sekarang fail-closed (kunci hilang = ditolak).
   // Set BOT_API_KEY dan WA_BOT_API_KEY di hosting sebelum deploy patch ini.
+  // WS-A (28 Nov 2026, API bot): WA_BOT_API_KEY minimal 32 karakter.
+  // Tetap .optional() — belum diisi = boleh (endpoint bot fail-closed
+  // sendiri kalau kunci env kosong), tapi kalau diisi kurang dari 32
+  // karakter maka boot production gagal (fail-closed). PENTING: field
+  // ini SEBELUMNYA tidak pernah dimasukkan ke safeParse di bawah, jadi
+  // min(16) yang lama tidak pernah divalidasi sama sekali — sekarang
+  // sudah dimasukkan ke input safeParse supaya validasinya benar jalan.
+  // BOT_API_KEY (kunci lama lain) TIDAK diubah — bukan urusan WS-A.
   BOT_API_KEY: z.string().min(16, "BOT_API_KEY minimal 16 karakter").optional(),
-  WA_BOT_API_KEY: z.string().min(16, "WA_BOT_API_KEY minimal 16 karakter").optional(),
+  WA_BOT_API_KEY: z.string().min(32, "WA_BOT_API_KEY minimal 32 karakter").optional(),
   CLOUDFLARE_WORKER_URL: z.string().url("CLOUDFLARE_WORKER_URL harus berupa URL valid").optional(),
   // FIX (22 Nov 2026, R2): kredensial S3-compatible untuk listing objek R2
   // langsung (ListObjectsV2) saat rekonsiliasi. Saat ini TIDAK ADA di env —
@@ -56,6 +64,11 @@ const getParsedEnv = () => {
     CRON_SECRET: process.env.CRON_SECRET,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     CLOUDFLARE_WORKER_URL: process.env.CLOUDFLARE_WORKER_URL,
+    // WS-A (28 Nov 2026): WA_BOT_API_KEY WAJIB ada di input safeParse —
+    // sebelumnya field ini hanya ada di schema tapi tidak pernah
+    // divalidasi (lihat komentar di schema di atas). BOT_API_KEY
+    // sengaja tidak ditambahkan (bukan urusan WS-A).
+    WA_BOT_API_KEY: process.env.WA_BOT_API_KEY,
     R2_ACCOUNT_ID: process.env.R2_ACCOUNT_ID,
     R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
     R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,

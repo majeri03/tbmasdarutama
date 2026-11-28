@@ -882,6 +882,33 @@ model RateLimit {
   @@map("rate_limits")
 }
 
+// WS-A (28 Nov 2026, API bot /api/bot/*): audit log semua tulis bot.
+// Satu baris per aksi tulis (produk/pelanggan/penjualan/pembayaran/
+// delivery/penyesuaian stok) supaya penyalahgunaan kunci bot bisa
+// ditelusuri: siapa (level + sender), kapan, endpoint apa, entitas
+// apa, sebelum/sesudah ringkas. Ditulis lewat writeBotAudit() di
+// src/lib/bot-auth.ts — gagal audit tidak pernah menggagalkan request.
+// JANGAN PERNAH mencatat kunci API di tabel ini.
+model BotAuditLog {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  level      Int
+  sender     String
+  method     String
+  endpoint   String
+  entityType String
+  entityId   String
+  before     Json?
+  after      Json?
+  success    Boolean  @default(true)
+  error      String?
+
+  @@index([createdAt])
+  @@index([sender])
+
+  @@map("bot_audit_logs")
+}
+
 // ==================== PAGE ACCESS MATRIX ====================
 model PageAccess {
   id        String   @id @default(cuid())
