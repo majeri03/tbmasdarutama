@@ -178,6 +178,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("[API_BOT_STOCK_ADJUST_POST_ERROR]", error);
-    return sanitizeBotError(error);
+    return botErr(sanitizeBotError(error), 500);
   }
 }

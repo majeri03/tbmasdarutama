@@ -310,6 +310,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
     });
   } catch (error) {
     console.error("[API_BOT_DEBTS_CUSTOMERS_PAY_POST_ERROR]", error);
-    return sanitizeBotError(error);
+    return botErr(sanitizeBotError(error), 500);
   }
 }

@@ -234,7 +234,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return botOk(serializeDetail(order));
   } catch (error) {
     console.error("[API_BOT_DELIVERY_ORDERS_ID_GET_ERROR]", error);
-    return sanitizeBotError(error);
+    return botErr(sanitizeBotError(error), 500);
   }
 }
 
@@ -698,7 +698,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     return botOk(serializeDetail(updated));
   } catch (error) {
     console.error("[API_BOT_DELIVERY_ORDERS_ID_PUT_ERROR]", error);
-    return sanitizeBotError(error);
+    return botErr(sanitizeBotError(error), 500);
   }
 }
 
@@ -824,6 +824,6 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     });
   } catch (error) {
     console.error("[API_BOT_DELIVERY_ORDERS_ID_DELETE_ERROR]", error);
-    return sanitizeBotError(error);
+    return botErr(sanitizeBotError(error), 500);
   }
 }

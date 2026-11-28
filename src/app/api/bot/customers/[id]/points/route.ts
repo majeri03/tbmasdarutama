@@ -126,6 +126,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
     if (error instanceof Error && error.message === "CUSTOMER_IS_UMUM")
       return botErr("Customer Umum tidak memiliki poin.", 400);
     console.error("[API_BOT_CUSTOMER_POINTS_POST_ERROR]", error);
-    return sanitizeBotError(error);
+    return botErr(sanitizeBotError(error), 500);
   }
 }

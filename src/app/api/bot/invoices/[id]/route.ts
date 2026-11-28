@@ -129,6 +129,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
     });
   } catch (error) {
     console.error("[API_BOT_INVOICES_ID_GET_ERROR]", error);
-    return sanitizeBotError(error);
+    return botErr(sanitizeBotError(error), 500);
   }
 }

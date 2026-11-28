@@ -89,6 +89,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
     });
   } catch (error) {
     console.error("[API_BOT_DEBTS_CUSTOMERS_ID_GET_ERROR]", error);
-    return sanitizeBotError(error);
+    return botErr(sanitizeBotError(error), 500);
   }
 }

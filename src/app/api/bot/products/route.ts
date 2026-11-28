@@ -198,7 +198,7 @@ export async function GET(request: NextRequest) {
     );
   } catch (error) {
     console.error("[API_BOT_PRODUCTS_GET_ERROR]", error);
-    return sanitizeBotError(error);
+    return botErr(sanitizeBotError(error), 500);
   }
 }
 
@@ -424,6 +424,6 @@ export async function POST(request: NextRequest) {
     return botOk(serializeProduct(full));
   } catch (error) {
     console.error("[API_BOT_PRODUCTS_POST_ERROR]", error);
-    return sanitizeBotError(error);
+    return botErr(sanitizeBotError(error), 500);
   }
 }

@@ -226,7 +226,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     return botOk(serializeProductUnit(updated));
   } catch (error) {
     console.error("[API_BOT_PRODUCT_UNIT_PUT_ERROR]", error);
-    return sanitizeBotError(error);
+    return botErr(sanitizeBotError(error), 500);
   }
 }
 
@@ -290,6 +290,6 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     });
   } catch (error) {
     console.error("[API_BOT_PRODUCT_UNIT_DELETE_ERROR]", error);
-    return sanitizeBotError(error);
+    return botErr(sanitizeBotError(error), 500);
   }
 }
